@@ -17,10 +17,8 @@ class LocalTreeApiClient:
         self._config = config
         cache_folder = self._remote.url.replace("file://", "")
         self._remote_cache_dir = "{}/.cache/conan_remote".format(cache_folder)
-        print(self._remote_cache_dir)
         from conans.cli.api.conan_api import ConanAPIV2
         self._conan_api = ConanAPIV2(self._remote_cache_dir)
-        self._conan_api.out.stream = open(os.devnull, "w")
         self.layout = ConanCenterIndexLayout(cache_folder)
 
     def _export_recipe(self, ref):

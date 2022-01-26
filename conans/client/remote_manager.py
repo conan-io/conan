@@ -130,7 +130,7 @@ class RemoteManager(object):
             uncompress_file(tgz_file, export_sources_folder)
             touch_folder(export_sources_folder)
 
-        # In case there are files not compressed (git remote conan)
+        # In case there are files not compressed (local tree remotes)
         mkdir(export_sources_folder)
         for file_name, file_path in zipped_files.items():  # copy other exports sources
             mkdir(os.path.join(export_sources_folder, os.path.dirname(file_name)))

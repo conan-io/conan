@@ -14,7 +14,7 @@ class RestApiClientFactory(object):
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
-        if remote.url.startswith("file://"):  # FIXME: remote type
+        if remote.url.startswith("file://"):  # FIXME: remote type?
             tmp = LocalTreeApiClient(remote, self._config)
         else:
             tmp = RestApiClient(remote, token, refresh_token, custom_headers,
