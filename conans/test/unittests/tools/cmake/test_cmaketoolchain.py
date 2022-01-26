@@ -375,7 +375,8 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
-    c.settings.os.sdk = os_sdk
+    if os_sdk:
+        c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
     c.settings.arch = arch
     c.settings.compiler = "apple-clang"
@@ -394,12 +395,12 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     assert 'set(CMAKE_OSX_SYSROOT %s CACHE STRING "" FORCE)' % expected_sdk in content
 
 
-@pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
-    ("iOS", None, "x86_64", ""),
-    ("watchOS", None, "armv8", ""),
-    ("tvOS", None, "x86_64", "")
+@pytest.mark.parametrize("os,arch,expected_sdk", [
+    ("iOS", "x86_64", ""),
+    ("watchOS", "armv8", ""),
+    ("tvOS", "x86_64", "")
 ])
-def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
+def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
     """
     Testing if CMAKE_OSX_SYSROOT is correctly set.
     Issue related: https://github.com/conan-io/conan/issues/10275
@@ -408,7 +409,6 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
-    c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
     c.settings.arch = arch
     c.settings.compiler = "apple-clang"
