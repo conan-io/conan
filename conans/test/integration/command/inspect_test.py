@@ -242,6 +242,7 @@ settings: None
 options: None
 default_options: None
 deprecated: None
+required_conan_version: None
 """, client.out)
 
     def test_inspect_filled_attributes(self):
@@ -291,6 +292,7 @@ default_options:
     bar: False
     foo: True
 deprecated: suggestion
+required_conan_version: None
 """, client.out)
 
     def test_default_options_list(self):
@@ -338,6 +340,7 @@ deprecated: suggestion
                 no_asm: False
                 shared: False
             deprecated: None
+            required_conan_version: None
             """), client.out)
 
     def test_mixed_options_instances(self):
@@ -385,6 +388,7 @@ default_options:
     bar: True
     foo: True
 deprecated: None
+required_conan_version: None
 """, client.out)
 
         client.save({"conanfile.py": conanfile.replace("\"foo=True\", \"bar=True\"",
@@ -413,6 +417,7 @@ default_options:
     bar: True
     foo: True
 deprecated: None
+required_conan_version: None
 """, client.out)
 
 
