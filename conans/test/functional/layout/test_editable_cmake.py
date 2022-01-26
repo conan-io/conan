@@ -6,10 +6,11 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
-def editable_cmake(generator):
+def editable_cmake(generator, build_folder=None):
     multi = (generator is None and platform.system() == "Windows") or \
             generator in ("Ninja Multi-Config", "Xcode")
     c = TestClient()
@@ -20,14 +21,17 @@ def editable_cmake(generator):
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
 
+    output_folder = '--output-folder="{}"'.format(build_folder) if build_folder else ""
+    build_folder = '--build-folder="{}"'.format(build_folder) if build_folder else ""
+
     def build_dep():
-        c.run("install . -if=install_release")
-        c.run("build . -if=install_release")
-        c.run("install . -s build_type=Debug -if=install_debug")
-        c.run("build . -if=install_debug")
+        c.run("install . -if=install_release {}".format(output_folder))
+        c.run("build . -if=install_release {}".format(build_folder))
+        c.run("install . -s build_type=Debug -if=install_debug {}".format(output_folder))
+        c.run("build . -if=install_debug {}".format(build_folder))
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@")
+        c.run("editable add . dep/0.1@ {}".format(output_folder))
         build_dep()
 
     def build_pkg(msg):
@@ -68,6 +72,11 @@ def editable_cmake(generator):
 @pytest.mark.tool_mingw64
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
+
+
+def test_editable_cmake_windows_folders():
+    build_folder = temp_folder()
+    editable_cmake(generator=None, build_folder=build_folder)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")

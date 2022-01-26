@@ -10,12 +10,14 @@ from conans.model.ref import PackageReference
 
 class PackageEditableLayout(object):
 
-    def __init__(self, base_folder, layout_file, ref, conanfile_path):
+    def __init__(self, base_folder, layout_file, ref, conanfile_path, source_folder, output_folder):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = base_folder
         self._layout_file = layout_file
         self._conanfile_path = conanfile_path
+        self.source_folder = source_folder
+        self.output_folder = output_folder
 
     @property
     def ref(self):
