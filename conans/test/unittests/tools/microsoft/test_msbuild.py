@@ -201,7 +201,7 @@ def test_is_msvc(compiler, expected):
 ])
 def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected):
     options = MockOptions({"shared": shared})
-    settings = MockSettings({"build_type": "Release",
+    settings = MockSettings({"build_type": build_type,
                              "arch": "x86_64",
                              "compiler": compiler,
                              "compiler.runtime": runtime,
