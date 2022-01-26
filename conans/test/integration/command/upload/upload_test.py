@@ -308,7 +308,7 @@ class UploadTest(unittest.TestCase):
         manifest.save(client2.cache.ref_layout(rrev2).export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
-        self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev2} already "
+        self.assertIn(f"hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7 already "
                       "in server, skipping upload", client2.out)
 
         # first client tries to upload again

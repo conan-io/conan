@@ -300,14 +300,14 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         reuse = textwrap.dedent("""
             from conan import ConanFile
-            from conans.tools import load
+            from conan.tools.files import load
             import os
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def build(self):
                     self.output.info("Exports sources! %s" % self.exports_sources)
-                    self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+                    self.output.info("HEADER CONTENT!: %s" % load(self, "header.h"))
                     self.output.info("Short paths! %s" % self.short_paths)
                     self.output.info("License! %s" % self.license)
                     self.output.info("Author! %s" % self.author)

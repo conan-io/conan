@@ -452,7 +452,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
                                 "pkg3/1.0": ("ad2a3c63a3adc6721aeaac45b34f80f0e1b72827",
                                              "Download (default)")})
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
-        pkg_id = "f1aefa3648a2e2defd70c3ed8c3915061e6c12eb"
+        pkg_id = "d39e9b0c4dd69b906e982d0d6e68b25292af38f3"
         self.assertIn(f"pkg2/1.0: Updated ID: {pkg_id}", t.out)
         self.assertIn("pkg2/1.0: Binary for updated ID from: Download", t.out)
         self.assertIn(f"pkg2/1.0: Retrieving package {pkg_id} from remote 'default'", t.out)

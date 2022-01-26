@@ -32,13 +32,13 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009:"\
+    assert "DefRef: openssl/0.1#705df323569bee67454c0ecb5929806f!!!" in client.out
+    assert "DefPRef: openssl/0.1#705df323569bee67454c0ecb5929806f:"\
            "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
            "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009:" \
+    assert "DefRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f!!!" in client.out
+    assert "DefPRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f:" \
            "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
            "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
 

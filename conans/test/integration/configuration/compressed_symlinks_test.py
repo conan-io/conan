@@ -21,7 +21,7 @@ class CompressSymlinksZeroSize(unittest.TestCase):
         conanfile = """
 import os
 from conan import ConanFile
-from conan.tools.files iport save
+from conan.tools.files import save
 
 class HelloConan(ConanFile):
 
