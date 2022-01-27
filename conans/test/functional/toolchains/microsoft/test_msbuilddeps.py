@@ -605,14 +605,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=tool --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conan import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 build_requires = "tool/1.0"
                 generators = "MSBuildDeps"
 
                 def build(self):
-                    deps = load("conandeps.props")
+                    deps = load(self, "conandeps.props")
                     assert "conan_tool.props" not in deps
                     self.output.info("Conan_tools.props not in deps")
             """)
