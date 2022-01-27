@@ -138,6 +138,9 @@ def install(conan_api, parser, *args):
     parser.add_argument("-if", "--install-folder", action=OnceArgument,
                         help='Use this directory as the directory where to put the generator'
                              'files.')
+    parser.add_argument("-of", "--output-folder",
+                        help='The root output folder for generated and build files')
+    parser.add_argument("-sf", "--source-folder", help='The root source folder')
     parser.add_argument("--no-imports", action='store_true', default=False,
                         help='Install specified packages but avoid running imports')
 
@@ -164,7 +167,10 @@ def install(conan_api, parser, *args):
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
                                        install_folder=install_folder, generators=args.generator,
-                                       no_imports=args.no_imports, conanfile_folder=conanfile_folder)
+                                       no_imports=args.no_imports, conanfile_folder=conanfile_folder,
+                                       source_folder=args.source_folder,
+                                       output_folder=args.output_folder
+                                       )
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
