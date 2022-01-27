@@ -50,11 +50,10 @@ class ConanProxy(object):
         # TODO: cache2.0: check with new --update flows
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
-        selected_remotes = self._conan_app.selected_remotes
 
         if self._conan_app.check_updates or self._conan_app.update:
 
-            remote, remote_ref = self._find_newest_recipe_in_remotes(reference, selected_remotes)
+            remote, remote_ref = self._find_newest_recipe_in_remotes(reference)
             if remote_ref:
                 # check if we already have the latest in local cache
                 # TODO: cache2.0 here if we already have a revision in the cache but we add the
@@ -95,11 +94,11 @@ class ConanProxy(object):
             status = RECIPE_INCACHE
             return conanfile_path, status, None, ref
 
-    def _find_newest_recipe_in_remotes(self, reference, remotes):
+    def _find_newest_recipe_in_remotes(self, reference):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
         results = []
-        for remote in remotes:
+        for remote in self._conan_app.selected_remotes:
             scoped_output.info(f"Checking remote: {remote.name}")
             if not reference.revision:
                 try:
@@ -142,7 +141,7 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
 
-        remote, latest_rref = self._find_newest_recipe_in_remotes(ref, remotes)
+        remote, latest_rref = self._find_newest_recipe_in_remotes(ref)
 
         if not latest_rref:
             msg = "Unable to find '%s' in remotes" % repr(ref)
