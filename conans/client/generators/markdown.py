@@ -5,14 +5,14 @@ import textwrap
 from jinja2 import DictLoader
 from jinja2 import Environment
 
+from conan.tools.cmake.cmakedeps.cmakedeps import CMakeDeps
 from conan.tools.cmake.cmakedeps.templates import (
-    get_target_namespace as cmake_get_target_namespace,
-    get_global_target_name as cmake_get_global_target_name,
-    get_component_alias as cmake_get_component_alias,
+    CMakeDepsFileTemplate,
     get_file_name as cmake_get_file_name)
-from conan.tools.gnu.pkgconfigdeps import (
-    get_component_alias as pkgconfig_get_component_alias,
-    get_target_namespace as pkgconfig_get_target_namespace
+from conan.tools.gnu.pkgconfigdeps.pc_info_loader import (
+    _get_component_name as pkgconfig_get_component_name,
+    _get_name_with_namespace as pkgconfig_get_name_with_namespace,
+    _get_package_name as pkgconfig_get_package_name
 )
 from conans.model import Generator
 
@@ -64,13 +64,13 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     find_package({{ cmake_variables.file_name }})
 
     # Use the global target
-    target_link_libraries(<target_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.global_target_name }})
+    target_link_libraries(<target_name> {{ cmake_variables.global_target_name }})
 
     {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     # Or link just one of its components
     {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
-    target_link_libraries(<target_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }})
+    target_link_libraries(<target_name> {{ cmake_variables.component_alias[component_name] }})
     {%- endif %}
     {%- endfor %}
     {%- endif %}
@@ -80,9 +80,9 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {% if cmake_build_modules %}
     This generator will include some _build modules_:
     {% for bm in cmake_build_modules -%}
-    * `{{ bm }}`
+    * `{{ relpath(bm, package_folder) }}`
       ```
-      {{ '/'.join([requirement.package_folder, bm])|read_pkg_file|indent(width=2) }}
+      {{ bm|read_pkg_file|indent(width=2) }}
       ```
     {%- endfor -%}
     {%- endif %}
@@ -154,6 +154,7 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     {%- endif %}
     {%- endfor %}
     {%- endif %}
+
     Use your *pkg-config* tool as usual to consume the information provided by the Conan package.
 """)
 
@@ -214,7 +215,7 @@ requirement_tpl = textwrap.dedent("""
     {%- if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     {%- for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
-    * Component ``{{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }}``:
+    * Component ``{{ cmake_variables.component_alias[component_name] }}``:
 
     {{- render_cpp_info(component)|indent(width=2) }}
     {%- endif %}
@@ -286,29 +287,35 @@ class MarkdownGenerator(Generator):
         from conans import __version__ as conan_version
         ret = {}
         for requirement in self.conanfile.dependencies.host.values():
+            cmake_deps = CMakeDeps(self.conanfile)
+            cmake_deps_template = CMakeDepsFileTemplate(cmake_deps,
+                                                        requirement,
+                                                        self.conanfile,
+                                                        find_module_mode=False)
+
             name = requirement.ref.name
 
             cmake_component_alias = {
-                component_name: cmake_get_component_alias(requirement, component_name)
+                component_name: cmake_deps_template.get_component_alias(requirement, component_name)
                 for component_name, _
                 in requirement.cpp_info.components.items()
                 if component_name
             }
             cmake_variables = {
-                'target_namespace': cmake_get_target_namespace(requirement),
-                'global_target_name': cmake_get_global_target_name(requirement),
+                'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(name),
                 'component_alias': cmake_component_alias,
                 'file_name': cmake_get_file_name(requirement)
             }
 
             pkgconfig_component_alias = {
-                component_name: pkgconfig_get_component_alias(requirement, component_name)
+                component_name: pkgconfig_get_component_name(requirement, component_name) or
+                                pkgconfig_get_name_with_namespace(pkgconfig_get_package_name(requirement), component_name)
                 for component_name, _
                 in requirement.cpp_info.components.items()
                 if component_name
             }
             pkgconfig_variables = {
-                'pkg_name': pkgconfig_get_target_namespace(requirement),
+                'pkg_name': pkgconfig_get_package_name(requirement),
                 'component_alias': pkgconfig_component_alias
             }
 
@@ -319,6 +326,8 @@ class MarkdownGenerator(Generator):
                 required_by=list(self._list_required_by(requirement)),
                 cmake_variables=cmake_variables,
                 pkgconfig_variables=pkgconfig_variables,
+                package_folder=requirement.package_folder,
+                relpath = os.path.relpath,
                 conan_version=conan_version,
                 now=datetime.datetime.now()
             )
