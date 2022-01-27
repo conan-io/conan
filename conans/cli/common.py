@@ -134,5 +134,4 @@ def get_multiple_remotes(conan_api, remote_names=None):
     if remote_names:
         return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
     elif remote_names is None:  # if we don't pass any remotes we want to retrieve only the enabled ones
-        app = ConanApp(conan_api.cache_folder)
-        return app.cache.remotes_registry.list(filter_disabled=True)
+        return conan_api.remotes.list(only_active=True)

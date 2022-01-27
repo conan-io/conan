@@ -163,9 +163,7 @@ class RemoteRegistry(object):
             ret["remotes"].append(remote)
         return json.dumps(ret, indent=True)
 
-    def list(self, filter_disabled=False):
-        if filter_disabled:
-            return [remote for remote in self._load_remotes().items() if not remote.disabled]
+    def list(self):
         return self._load_remotes().items()
 
     @property
