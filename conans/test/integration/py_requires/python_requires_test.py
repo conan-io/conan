@@ -746,7 +746,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "folder/other.h": "otherheader"})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
-            from conan import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             import os
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
@@ -754,20 +755,20 @@ class PyRequiresExtendTest(unittest.TestCase):
                     sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
-                    self.output.info("Source: tool header: %s" % load(file_h))
-                    self.output.info("Source: tool other: %s" % load(other_h))
+                    self.output.info("Source: tool header: %s" % load(self, file_h))
+                    self.output.info("Source: tool other: %s" % load(self, other_h))
                 def build(self):
                     sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
-                    self.output.info("Build: tool header: %s" % load(file_h))
-                    self.output.info("Build: tool other: %s" % load(other_h))
+                    self.output.info("Build: tool header: %s" % load(self, file_h))
+                    self.output.info("Build: tool other: %s" % load(self, other_h))
                 def package(self):
                     sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
-                    self.output.info("Package: tool header: %s" % load(file_h))
-                    self.output.info("Package: tool other: %s" % load(other_h))
+                    self.output.info("Package: tool header: %s" % load(self, file_h))
+                    self.output.info("Package: tool other: %s" % load(self, other_h))
             """)
         client.save({"conanfile.py": conanfile,
                      "name.txt": "MyPkg",

@@ -417,15 +417,15 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we only build pkg1, we get a new packageID for pkg3
         t.run("create package3.py --name=pkg3 --version=1.0 --build=pkg1", assert_error=True)
         t.assert_listed_binary({"pkg3/1.0": ("Package_ID_unknown", "Unknown")})
-        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
-        self.assertIn("ERROR: Missing binary: pkg3/1.0:f6770ce9c022ba560312e0efb75c278426f71cbf",
+        self.assertIn("pkg3/1.0: Updated ID: ecc3b206176748da6918e56a567e91f94864ceb7", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:ecc3b206176748da6918e56a567e91f94864ceb7",
                       t.out)
 
         # If we build both, we get the new package
         t.run("create package3.py --name=pkg3 --version=1.0 --build=pkg1 --build=pkg3")
         t.assert_listed_binary({"pkg3/1.0": ("Package_ID_unknown", "Unknown")})
-        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
-        self.assertIn("pkg3/1.0: Package 'f6770ce9c022ba560312e0efb75c278426f71cbf' created", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: ecc3b206176748da6918e56a567e91f94864ceb7", t.out)
+        self.assertIn("pkg3/1.0: Package 'ecc3b206176748da6918e56a567e91f94864ceb7' created", t.out)
 
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
