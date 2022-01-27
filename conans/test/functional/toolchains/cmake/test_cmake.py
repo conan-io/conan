@@ -19,7 +19,7 @@ from conans.util.files import save
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -96,7 +96,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import os
             class Pkg(ConanFile):
@@ -460,7 +460,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     save(client.cache.new_config_path,
          "tools.microsoft.msbuild:vs_version={}".format(vs_version))
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -493,7 +493,7 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -549,7 +549,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
     def test_cmake_cache_variables(self):
         # https://github.com/conan-io/conan/issues/7832
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -581,7 +581,7 @@ class TestCMakeFindPackagePreferConfig:
 
     def test_prefer_config(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"

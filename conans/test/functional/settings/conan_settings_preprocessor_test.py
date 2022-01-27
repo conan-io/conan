@@ -13,7 +13,7 @@ class ConanSettingsPreprocessorTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello0"

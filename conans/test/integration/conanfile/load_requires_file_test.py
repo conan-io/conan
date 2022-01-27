@@ -5,10 +5,10 @@ class TestLoadRequirementsTextFileTest:
 
     def test_load_reqs_from_text_file(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile, load
+        conanfile = """from conan import ConanFile
 def reqs():
     try:
-        content = load("reqs.txt")
+        content = open("reqs.txt", "r").read()
         lines = [line for line in content.splitlines() if line]
         return tuple(lines)
     except:

@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
 conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 
@@ -104,7 +104,7 @@ class DevInSourceFlowTest(unittest.TestCase):
 
 
 conanfile_out = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 

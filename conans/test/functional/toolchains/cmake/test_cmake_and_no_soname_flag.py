@@ -19,7 +19,7 @@ def test_no_soname_flag():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
     class {name}Conan(ConanFile):

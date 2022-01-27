@@ -100,7 +100,7 @@ class GraphManagerTest(unittest.TestCase):
     def alias_cache(self, alias, target):
         ref = RecipeReference.loads(alias)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Alias(ConanFile):
                 alias = "%s"
             """ % target)

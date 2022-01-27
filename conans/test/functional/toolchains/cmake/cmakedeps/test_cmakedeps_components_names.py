@@ -24,7 +24,7 @@ def setup_client_with_greetings():
     bye_cpp = gen_function_cpp(name="bye", includes=["bye"])
 
     conanfile_greetings = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class GreetingsConan(ConanFile):
@@ -88,7 +88,7 @@ def setup_client_with_greetings():
 
     test_package_greetings_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class GreetingsTestConan(ConanFile):
@@ -143,7 +143,7 @@ def setup_client_with_greetings():
 
 def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Chat(ConanFile):
@@ -185,7 +185,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class WorldTestConan(ConanFile):
@@ -424,7 +424,7 @@ def test_no_components(setup_client_with_greetings):
 def test_same_names():
     client = TestClient()
     conanfile_greetings = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class HelloConan(ConanFile):
@@ -463,7 +463,7 @@ def test_same_names():
         """)
     test_package_greetings_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class HelloTestConan(ConanFile):
@@ -511,7 +511,7 @@ class TestComponentsCMakeGenerators:
 
     def test_component_not_found(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class GreetingsConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["hello"].libs = ["hello"]
@@ -523,7 +523,7 @@ class TestComponentsCMakeGenerators:
         client.run("create . --name=greetings --version=0.0.1")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class WorldConan(ConanFile):
                 requires = "greetings/0.0.1"
                 def package_info(self):
@@ -551,7 +551,7 @@ class TestComponentsCMakeGenerators:
             .with_requirement(RecipeReference("final", "0.1", None, None))
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeDeps
             class HelloConan(ConanFile):
                 name = 'consumer'
@@ -570,7 +570,7 @@ class TestComponentsCMakeGenerators:
 
         def test_component_not_found(self):
             conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class GreetingsConan(ConanFile):
                     def package_info(self):
                         self.cpp_info.components["hello"].libs = ["hello"]
@@ -582,7 +582,7 @@ class TestComponentsCMakeGenerators:
             client.run("create . --name=greetings --version=0.0.1")
 
             conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class WorldConan(ConanFile):
                     requires = "greetings/0.0.1"
                     def package_info(self):
@@ -606,7 +606,7 @@ class TestComponentsCMakeGenerators:
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
 
             class Conan(ConanFile):
@@ -666,7 +666,7 @@ class TestComponentsCMakeGenerators:
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
                                       calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
 
             class Conan(ConanFile):
@@ -695,7 +695,7 @@ class TestComponentsCMakeGenerators:
         client.run("create . --name=middle --version=1.0")
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, cmake_layout
 
             class Conan(ConanFile):
@@ -769,7 +769,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeDeps
 
             class HelloConan(ConanFile):
@@ -841,7 +841,7 @@ def test_cmakedeps_targets_no_namespace():
     """
     client = TestClient()
     my_pkg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyPkg(ConanFile):
             name = "my_pkg"
             version = "0.1"
@@ -854,7 +854,7 @@ def test_cmakedeps_targets_no_namespace():
     client.run("create my_pkg")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class LibcurlConan(ConanFile):
             name = "libcurl"
             version = "0.1"
@@ -871,7 +871,7 @@ def test_cmakedeps_targets_no_namespace():
     client.run("create libcurl")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
         class Consumer(ConanFile):
             name = "consumer"

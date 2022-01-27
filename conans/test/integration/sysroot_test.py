@@ -8,7 +8,7 @@ class SysrootTest(unittest.TestCase):
 
     def test(self):
         client = TestClient()
-        sysroot = """from conans import ConanFile
+        sysroot = """from conan import ConanFile
 class Pkg(ConanFile):
     def package_info(self):
         self.cpp_info.sysroot = "HelloSysRoot"
@@ -16,7 +16,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": sysroot})
         client.run("create . --name=sysroot --version=0.1 --user=user --channel=testing")
 
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     requires = "sysroot/0.1@user/testing"
     def build(self):
@@ -24,7 +24,7 @@ class Pkg(ConanFile):
     def package_info(self):
         self.cpp_info.sysroot = "HelloSysRoot"
 """
-        test_conanfile = """from conans import ConanFile
+        test_conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         self.requires(self.tested_reference_str)

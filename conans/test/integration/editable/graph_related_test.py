@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 conanfile_base = textwrap.dedent("""\
-    from conans import ConanFile
+    from conan import ConanFile
 
     class APck(ConanFile):
         {body}

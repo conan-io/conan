@@ -26,7 +26,7 @@ class HeaderOnlyLibTestClient(TestClient):
 
     conanfile = textwrap.dedent("""\
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
 
         class Pkg(ConanFile):
             name = "MyLib"
@@ -88,7 +88,7 @@ class EditableReferenceTest(unittest.TestCase):
         client = TestClient(cache_folder=cache_folder)
         conanfile_py = """
 import os
-from conans import ConanFile, CMake
+from conan import ConanFile, CMake
 
 class TestConan(ConanFile):
     name = "pkg"

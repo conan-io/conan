@@ -1,9 +1,7 @@
 import copy
 import os
 import unittest
-from datetime import timedelta
 
-from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
@@ -29,12 +27,15 @@ class MockFileSaver(object):
         save(os.path.join(abspath, self.filename), self.content)
 
 
+DEFAULT_REVISION = "1234"
+
+
 class ConanServiceTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = RecipeReference.loads("openssl/2.0.3@lasote/testing#%s" % DEFAULT_REVISION_V1)
+        self.ref = RecipeReference.loads("openssl/2.0.3@lasote/testing#%s" % DEFAULT_REVISION)
 
-        self.pref = PkgReference(self.ref, "123123123", DEFAULT_REVISION_V1)
+        self.pref = PkgReference(self.ref, "123123123", DEFAULT_REVISION)
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
@@ -61,12 +62,12 @@ class ConanServiceTest(unittest.TestCase):
         """ check the dict is returned by get_packages_info service
         """
         # Creating and saving conans, packages, and conans.vars
-        ref2 = RecipeReference("openssl", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
-        ref3 = RecipeReference("Assimp", "1.10", "fenix", "stable", DEFAULT_REVISION_V1)
-        ref4 = RecipeReference("assimpFake", "0.1", "phil", "stable", DEFAULT_REVISION_V1)
+        ref2 = RecipeReference("openssl", "3.0", "lasote", "stable", DEFAULT_REVISION)
+        ref3 = RecipeReference("Assimp", "1.10", "fenix", "stable", DEFAULT_REVISION)
+        ref4 = RecipeReference("assimpFake", "0.1", "phil", "stable", DEFAULT_REVISION)
 
-        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION_V1)
-        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION_V1)
+        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION)
+        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION)
 
         conan_vars = """
 [options]
@@ -106,11 +107,11 @@ class ConanServiceTest(unittest.TestCase):
                                                 'settings': {}}})
 
     def test_remove(self):
-        ref2 = RecipeReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
-        ref3 = RecipeReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION_V1)
+        ref2 = RecipeReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION)
+        ref3 = RecipeReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION)
 
-        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION_V1)
-        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION_V1)
+        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION)
+        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION)
 
         save_files(self.server_store.export(ref2), {"fake.txt": "//fake"})
         self.server_store.update_last_revision(ref2)

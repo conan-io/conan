@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient, TestRequester
 
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.files import download
 
 class HelloConan(ConanFile):

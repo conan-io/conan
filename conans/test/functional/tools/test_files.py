@@ -43,7 +43,7 @@ class TestConanToolFiles:
 
     def test_load_save_mkdir(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import load, save, mkdir
 
             class Pkg(ConanFile):
@@ -77,7 +77,7 @@ class TestConanToolFiles:
 
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):
@@ -96,7 +96,7 @@ class TestConanToolFiles:
 
 def test_patch(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import patch
 
         class Pkg(ConanFile):
@@ -119,7 +119,7 @@ def test_patch(mock_patch_ng):
 
 def test_apply_conandata_patches(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -165,7 +165,7 @@ def test_apply_conandata_patches(mock_patch_ng):
 
 def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -196,7 +196,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
 
 def test_no_patch_file_entry():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -228,7 +228,7 @@ def test_no_patch_file_entry():
 
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -259,7 +259,7 @@ def test_patch_string_entry(mock_patch_ng):
 
 def test_relate_base_path_all_versions(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):

@@ -5,7 +5,7 @@ from requests import Response
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 
 myconan1 = """
-from conans import ConanFile
+from conan import ConanFile
 import platform
 
 class HelloConan(ConanFile):

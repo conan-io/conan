@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 def client():
     c = TestClient()
     conanfile = textwrap.dedent('''
-    from conans import ConanFile
+    from conan import ConanFile
     from conans.tools import save, chdir
     import os
 
@@ -70,7 +70,7 @@ main = textwrap.dedent("""
 
 consumer_conanfile = textwrap.dedent("""
     import os
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 
     class Consumer(ConanFile):

@@ -14,7 +14,7 @@ class DeployTest(unittest.TestCase):
     @parameterized.expand([(True, ), (False, )])
     def test_deploy(self, deploy_to_abs):
         client = TestClient()
-        libconanfile = """from conans import ConanFile
+        libconanfile = """from conan import ConanFile
 from conans.tools import save
 
 class Lib(ConanFile):
@@ -40,7 +40,7 @@ class Lib(ConanFile):
             mkdir(dll_folder)
         else:
             dll_folder = ""
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import save
 
 class Pkg(ConanFile):

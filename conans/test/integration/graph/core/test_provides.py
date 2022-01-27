@@ -236,7 +236,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
 def test_conditional():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = 'req/v1'

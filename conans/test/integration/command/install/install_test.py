@@ -40,7 +40,7 @@ def test_four_subfolder_install(client):
 
 def test_install_system_requirements(client):
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyPkg(ConanFile):
             def system_requirements(self):
                 self.output.info("Running system requirements!!")
@@ -59,7 +59,7 @@ def test_install_system_requirements(client):
 def test_install_transitive_pattern(client):
     # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             options = {"shared": [True, False, "header"]}
             default_options = {"shared": False}
@@ -69,7 +69,7 @@ def test_install_transitive_pattern(client):
     client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkg/0.1@user/testing"
             options = {"shared": [True, False, "header"]}
@@ -133,7 +133,7 @@ def test_install_transitive_pattern(client):
 def test_install_package_folder(client):
     # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
     client.save({"conanfile.py": textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         class Pkg(ConanFile):
             def package_info(self):
@@ -151,13 +151,13 @@ def test_install_cwd(client):
     client.save({"conanfile.txt": "[requires]\nhello/0.1@lasote/stable"}, clean_first=True)
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
-    assert "hello/0.1@lasote/stable#a44254cfa891c2fe4d98ee6aff203222 - Cache" in client.out
+    assert "hello/0.1@lasote/stable#a20db3358243e96aa07f654eaada1564 - Cache" in client.out
 
 
 def test_install_with_profile(client):
     # Test for https://github.com/conan-io/conan/pull/2043
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os"
             def requirements(self):
@@ -217,7 +217,7 @@ def test_install_broken_reference(client):
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class BoostConan(ConanFile):
             name = "boost"
             version = "0.1"

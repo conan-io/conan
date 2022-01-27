@@ -192,7 +192,7 @@ class AliasPythonRequiresTest(GraphManagerTest):
         self.recipe_cache("tool/0.2")
         self.alias_cache("tool/latest", "tool/0.1")
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "app"
                 version = "0.1"

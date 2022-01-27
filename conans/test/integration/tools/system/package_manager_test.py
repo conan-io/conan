@@ -22,7 +22,7 @@ from conans.test.utils.mocks import ConanFileMock
 def test_package_manager_platform(platform, tool):
     with mock.patch("platform.system", return_value=platform):
         with mock.patch("distro.id", return_value=''):
-            with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+            with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
                 context_mock.return_value = "host"
                 conanfile = ConanFileMock()
                 conanfile.settings = Settings()
@@ -33,7 +33,7 @@ def test_package_manager_platform(platform, tool):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_msys2():
     with mock.patch("platform.system", return_value="Windows"):
-        with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
             context_mock.return_value = "host"
             conanfile = ConanFileMock()
             conanfile.conf = Conf()
@@ -56,7 +56,7 @@ def test_msys2():
 def test_package_manager_distro(distro, tool):
     with mock.patch("platform.system", return_value="Linux"):
         with mock.patch("distro.id", return_value=distro):
-            with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+            with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
                 context_mock.return_value = "host"
                 conanfile = ConanFileMock()
                 conanfile.settings = Settings()
@@ -76,7 +76,7 @@ def test_sudo_str(sudo, sudo_askpass, expected_str):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:sudo"] = sudo
     conanfile.conf["tools.system.package_manager:sudo_askpass"] = sudo_askpass
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         apt = Apt(conanfile)
     assert apt.sudo_str == expected_str
@@ -92,7 +92,7 @@ def test_apt_install_recommends(recommends, recommends_str):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = "apt-get"
     conanfile.conf["tools.system.package_manager:mode"] = "install"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         apt = Apt(conanfile)
         apt.install(["package1", "package2"], recommends=recommends)
@@ -106,7 +106,7 @@ def test_tools_install_mode_check(tool_class):
     conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
@@ -127,7 +127,7 @@ def test_tools_update_mode_check(tool_class):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "check"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
@@ -157,7 +157,7 @@ def test_tools_update_mode_install(tool_class, result):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "install"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.update()
@@ -181,7 +181,7 @@ def test_tools_install_mode_install(tool_class, result):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "install"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.install(["package1", "package2"])
@@ -204,7 +204,7 @@ def test_tools_check(tool_class, result):
     conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.check(["package"])

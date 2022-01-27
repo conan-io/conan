@@ -16,7 +16,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """
 
     top = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -27,7 +27,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     middle = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "middle"
@@ -37,7 +37,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -83,7 +83,7 @@ class PropagateSpecificComponents(unittest.TestCase):
 @pytest.fixture
 def top_conanfile():
     return textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -102,7 +102,7 @@ def test_wrong_component(top_conanfile, from_component):
     """
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -125,7 +125,7 @@ def test_unused_requirement(top_conanfile):
         This error is known when creating the package if the requirement is consumed.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -146,7 +146,7 @@ def test_wrong_requirement(top_conanfile):
         This error is known when creating the package if the requirement is not there.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -164,7 +164,7 @@ def test_wrong_requirement(top_conanfile):
 @pytest.mark.tool_cmake
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -180,7 +180,7 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -221,7 +221,7 @@ def test_components_system_libs():
 @pytest.mark.tool_cmake
 def test_components_exelinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -237,7 +237,7 @@ def test_components_exelinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -275,7 +275,7 @@ def test_components_exelinkflags():
 @pytest.mark.tool_cmake
 def test_components_sharedlinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -291,7 +291,7 @@ def test_components_sharedlinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):

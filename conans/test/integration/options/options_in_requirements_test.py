@@ -10,7 +10,7 @@ class ChangeOptionsInRequirementsTest(unittest.TestCase):
     def test_basic(self):
         client = TestClient()
         zlib = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "zlib"
@@ -23,7 +23,7 @@ class ConanLib(ConanFile):
         client.save(files)
         client.run("export . --user=lasote --channel=testing")
 
-        boost = """from conans import ConanFile
+        boost = """from conan import ConanFile
 from conans import tools
 import platform, os, sys
 

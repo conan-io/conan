@@ -19,7 +19,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load, rmdir
 
 conanfile_py = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -31,7 +31,7 @@ class HelloConan(ConanFile):
 
 
 combined_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -45,7 +45,7 @@ class HelloConan(ConanFile):
 
 
 nested_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -59,7 +59,7 @@ class HelloConan(ConanFile):
 
 
 overlap_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"

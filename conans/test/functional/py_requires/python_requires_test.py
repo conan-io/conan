@@ -12,7 +12,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class SomeBase(object):
                 scm = {"type" : "git",
                        "url" : "somerepo",
@@ -25,7 +25,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.SomeBase"
@@ -45,7 +45,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_customize_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class SomeBase(object):
                 base_repo = "somerepo"
                 scm = {"type" : "git",
@@ -59,7 +59,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 base_repo = "other_repo"
                 python_requires = "base/1.1@user/testing"
@@ -85,7 +85,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         # This only works when using conandata.yml, conanfile.py replace is broken
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class SomeBase(object):
                 scm = {"type" : "git",
                        "url" : "remote1",
@@ -99,7 +99,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export base --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 name = "%s"
                 python_requires = "base/1.1@user/testing"

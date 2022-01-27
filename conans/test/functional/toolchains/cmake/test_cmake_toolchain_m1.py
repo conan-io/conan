@@ -32,7 +32,7 @@ def test_m1(op_system):
     cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"])
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestConan(ConanFile):

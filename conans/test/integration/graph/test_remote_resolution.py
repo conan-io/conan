@@ -19,7 +19,7 @@ def test_build_requires_ranges():
     client.run("remove cmake/1.0* -f")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             {}
             tool_requires = "cmake/{}"

@@ -19,7 +19,7 @@ def source_helper(output):
     '''
 
         if scope_imports:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 from myhelper import build_helper
 from myhelpers.other import source_helper
 
@@ -33,7 +33,7 @@ class ConanFileToolsTest(ConanFile):
         build_helper(self.output)
 '''
         else:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 import myhelper
 from myhelpers import other
 

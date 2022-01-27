@@ -11,7 +11,7 @@ def test_build_modules_alias_target(use_components):
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             name = "hello"
@@ -43,7 +43,7 @@ def test_build_modules_alias_target(use_components):
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -85,7 +85,7 @@ def test_build_modules_components_selection_is_not_possible():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             name = "openssl"
@@ -129,7 +129,7 @@ def test_build_modules_components_selection_is_not_possible():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -176,7 +176,7 @@ def test_build_modules_components_selection_is_not_possible2():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             name = "openssl"
@@ -220,7 +220,7 @@ def test_build_modules_components_selection_is_not_possible2():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):

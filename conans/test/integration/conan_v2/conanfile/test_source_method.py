@@ -10,7 +10,7 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         # self.setting is not available in 'source'
         t = self.get_client()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 settings = "os",
@@ -26,7 +26,7 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         # self.setting is not available in 'source'
         t = self.get_client()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 options = {'shared': [True, False]}

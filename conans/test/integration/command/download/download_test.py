@@ -37,7 +37,7 @@ class DownloadTest(unittest.TestCase):
         servers["other"] = TestServer()
 
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -74,7 +74,7 @@ class Pkg(ConanFile):
 
     def test_download_reference_with_packages(self):
         client = TurboTestClient(default_server_user=True)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -103,12 +103,13 @@ class Pkg(ConanFile):
         client = TurboTestClient(default_server_user=True)
         ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.export(ref)
+        rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable:wrong", assert_error=True)
         self.assertIn("ERROR: Binary package not found: "
-                      "'pkg/0.1@lasote/stable#f3367e0e7d170aa12abccb175fee5f97:wrong'",
+                      f"'pkg/0.1@lasote/stable#{rrev}:wrong'",
                       client.out)
 
     def test_download_pattern(self):

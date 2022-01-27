@@ -1,4 +1,4 @@
-from conans import ConanFile
+from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators

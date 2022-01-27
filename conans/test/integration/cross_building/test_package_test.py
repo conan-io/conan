@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class TestPackageTestCase(unittest.TestCase):
     conanfile_tpl = Template(textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conan.tools.env import VirtualBuildEnv
 

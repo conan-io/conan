@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 makefile = gen_makefile(apps=["app"], libs=["hello"])
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
     from conan.tools.gnu import Autotools
 
     class App(ConanFile):

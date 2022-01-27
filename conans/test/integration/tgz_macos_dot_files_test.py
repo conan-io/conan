@@ -59,7 +59,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
             """
 
         conanfile = textwrap.dedent("""\
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 name = "lib"
