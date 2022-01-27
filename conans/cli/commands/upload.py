@@ -36,7 +36,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
     args = parser.parse_args(*args)
 
-    remote = conan_api.remotes.get([args.remote])[0]
+    remote = conan_api.remotes.get(args.remote)
 
     upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
 

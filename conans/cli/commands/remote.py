@@ -124,7 +124,7 @@ def remote_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     if not (args.url is not None or args.secure is not None):
         subparser.error("Please add at least one argument to update")
-    r = conan_api.remotes.get([args.remote])[0]
+    r = conan_api.remotes.get(args.remote)
     if args.url is not None:
         r.url = args.url
     if args.secure is not None:
@@ -140,7 +140,7 @@ def remote_rename(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Current name of the remote")
     subparser.add_argument("new_name", help="New name for the remote")
     args = parser.parse_args(*args)
-    r = conan_api.remotes.get([args.remote])[0]
+    r = conan_api.remotes.get(args.remote)
     conan_api.remotes.rename(r, args.new_name)
 
 
@@ -153,7 +153,7 @@ def remote_move(conan_api, parser, subparser, *args):
     subparser.add_argument("index", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
-    r = conan_api.remotes.get([args.remote])[0]
+    r = conan_api.remotes.get(args.remote)
     index = _check_index_argument(args.index)
     conan_api.remotes.move(r, index)
 

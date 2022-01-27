@@ -243,7 +243,7 @@ class RemoteTest(unittest.TestCase):
         # If you write the same URL, up to you
         self.client.run("remote update remote1 --url %s" % url)
 
-        remote1 = self.client.api.remotes.get(["remote1"])[0]
+        remote1 = self.client.api.remotes.get("remote1")
         assert remote1.url == url
 
     def test_missing_subarguments(self):
