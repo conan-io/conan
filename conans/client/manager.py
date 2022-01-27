@@ -1,5 +1,3 @@
-import os.path
-
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -18,8 +16,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
                  graph_lock, root_ref, build_modes=None, generators=None,
                  no_imports=False, create_reference=None,
                  is_build_require=False, require_overrides=None,
-                 conanfile_path=None, test=None):
-
+                 conanfile_path=None, test=None, source_folder=None, output_folder=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: RecipeReference or path to user space conanfile
@@ -64,9 +61,10 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     installer.install(deps_graph, build_modes)
 
     if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_install(conanfile_path)
-        conanfile.folders.set_base_imports(conanfile_path)
-        conanfile.folders.set_base_generators(conanfile_path)
+        conanfile.folders.set_base_source(source_folder or conanfile_path)
+        conanfile.folders.set_base_install(output_folder or conanfile_path)
+        conanfile.folders.set_base_imports(output_folder or conanfile_path)
+        conanfile.folders.set_base_generators(output_folder or conanfile_path)
     else:
         conanfile.folders.set_base_install(install_folder)
         conanfile.folders.set_base_imports(install_folder)
