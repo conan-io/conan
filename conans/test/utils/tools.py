@@ -559,7 +559,7 @@ class TestClient(object):
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-' * 80,
                 cmd=command,
-                output=str(self.stderr) + str(self.stdout)
+                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
             )
             raise Exception(exc_message)
 
