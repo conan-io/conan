@@ -3,7 +3,8 @@ import os
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments
+from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
+    get_multiple_remotes
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -32,7 +33,7 @@ def test(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
-    remotes = conan_api.remotes.get_remotes(args.remote)
+    remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()

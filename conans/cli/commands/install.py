@@ -4,7 +4,7 @@ from conans.cli.commands import make_abs_path
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile
+    get_profiles_from_args, get_lockfile, get_multiple_remotes
 from conans.cli.output import ConanOutput
 from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
@@ -54,7 +54,7 @@ def graph_compute(args, conan_api, strict_lockfile=True):
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = conan_api.remotes.get_remotes(args.remote)
+    remotes = get_multiple_remotes(conan_api, args.remote)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=strict_lockfile)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
     root_ref = RecipeReference(name=args.name, version=args.version,
@@ -154,7 +154,7 @@ def install(conan_api, parser, *args):
     conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
 
-    remote = conan_api.remotes.get_remotes(args.remote)
+    remote = get_multiple_remotes(conan_api, args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api)
 
