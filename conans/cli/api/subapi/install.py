@@ -31,7 +31,7 @@ class InstallAPI:
     @staticmethod
     def install_consumer(deps_graph, install_folder, base_folder, conanfile_folder,
                          generators=None, reference=None, no_imports=False, create_reference=None,
-                         test=None):
+                         test=None, source_folder=None, output_folder=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer, or calling imports()/deploy() to copy things to user space.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -40,9 +40,10 @@ class InstallAPI:
         conanfile = root_node.conanfile
 
         if hasattr(conanfile, "layout") and not test:
-            conanfile.folders.set_base_install(conanfile_folder)
-            conanfile.folders.set_base_imports(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
+            conanfile.folders.set_base_source(source_folder or conanfile_folder)
+            conanfile.folders.set_base_install(output_folder or conanfile_folder)
+            conanfile.folders.set_base_imports(output_folder or conanfile_folder)
+            conanfile.folders.set_base_generators(output_folder or conanfile_folder)
         else:
             conanfile.folders.set_base_install(install_folder)
             conanfile.folders.set_base_imports(install_folder)
