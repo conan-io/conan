@@ -98,10 +98,7 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     # We set DYLD_LIBRARY_PATH=@executable_path, now it works again, because it has the shared
     # imported into the exe folder
     client.run_command("DYLD_LIBRARY_PATH=@executable_path "
-                       "{}".format(os.path.join(exe_folder, "test")))
+                       "./{}".format(os.path.join(exe_folder, "test")))
 
     # Alternative 2, set the rpath in cmake
     # PENDING, only viable when installing
-
-
-
