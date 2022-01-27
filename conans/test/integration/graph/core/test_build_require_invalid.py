@@ -133,6 +133,7 @@ class TestInvalidBuildPackageID:
                del self.info.settings.os
        """)
     linux_package_id = NO_SETTINGS_PACKAGE_ID
+    windows_package_id = NO_SETTINGS_PACKAGE_ID
 
     @pytest.fixture(scope="class")
     def client(self):
@@ -157,7 +158,7 @@ class TestInvalidBuildPackageID:
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Windows --build", assert_error=True)
         # Only when trying to build, it will try to build the Windows one
-        client.assert_listed_binary({"pkg/0.1": ("INVALID", "Invalid")})
+        client.assert_listed_binary({"pkg/0.1": (self.windows_package_id, "Invalid")})
         assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
 
     def test_valid_build_require_two_profiles(self, client):
@@ -194,3 +195,4 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
                    self.compatible_packages.append(compatible_pkg)
        """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
+    windows_package_id = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"

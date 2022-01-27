@@ -287,7 +287,6 @@ class Command(object):
                                     conf=args.conf_build)
 
         self._warn_python_version()
-
         self._conan_api.imports(args.path,
                             args.import_folder, settings=args.settings_host,
                             options=args.options_host, env=args.env_host,

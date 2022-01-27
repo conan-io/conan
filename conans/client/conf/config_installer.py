@@ -1,7 +1,8 @@
 import os
 import shutil
+
+from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
-from urllib.parse import urlparse
 
 from conans import load
 from conans.cli.output import ConanOutput
@@ -137,7 +138,9 @@ def _process_download(config, cache, requester):
     output = ConanOutput()
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
-        zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
+        path = urlsplit(config.uri).path
+        filename = os.path.basename(path)
+        zippath = os.path.join(tmp_folder, filename)
         try:
             downloader = FileDownloader(requester=requester, verify=config.verify_ssl,
                                         config_retry=None, config_retry_wait=None)

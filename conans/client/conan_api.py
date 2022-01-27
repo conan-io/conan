@@ -123,7 +123,6 @@ class ConanAPIV1(object):
                                    env=env, conf=conf)
 
         cwd = cwd or os.getcwd()
-
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
