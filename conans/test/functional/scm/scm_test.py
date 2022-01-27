@@ -806,7 +806,8 @@ class ConanLib(ConanFile):
 
     def test_source_removed_in_local_cache(self):
         conanfile = '''
-from conan import ConanFile, tools
+from conan import ConanFile
+from conan.tools.files import load
 
 class ConanLib(ConanFile):
     scm = {
@@ -816,9 +817,8 @@ class ConanLib(ConanFile):
     }
 
     def build(self):
-        contents = tools.load("myfile")
+        contents = load(self, "myfile")
         self.output.warning("Contents: %s" % contents)
-
 '''
         project_url, _ = self.create_project(files={"myfile": "contents",
                                                     "conanfile.py": conanfile})
@@ -844,7 +844,8 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
+from conan.tools.files import save
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -861,7 +862,7 @@ class ConanLib(ConanFile):
         self.output.warning("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "myfile")))
-        tools.save("cosa.txt", "contents")
+        save(self, "cosa.txt", "contents")
 
     def build(self):
         assert(os.path.exists("file.txt"))
