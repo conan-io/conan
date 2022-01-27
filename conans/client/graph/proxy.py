@@ -77,6 +77,8 @@ class ConanProxy(object):
                             status = RECIPE_UPDATEABLE
                     else:
                         status = RECIPE_NEWER
+                        # If your recipe in cache is newer it does not make sense to return a remote?
+                        remote = None
                 else:
                     # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
                     #  the date
