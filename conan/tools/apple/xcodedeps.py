@@ -71,7 +71,7 @@ class XcodeDeps(object):
         self.configuration = conanfile.settings.get_safe("build_type")
 
         arch = conanfile.settings.get_safe("arch")
-        self.architecture = to_apple_arch(arch) or arch
+        self.architecture = to_apple_arch(arch, default=arch)
 
         # TODO: check if it makes sense to add a subsetting for sdk version
         #  related to: https://github.com/conan-io/conan/issues/9608

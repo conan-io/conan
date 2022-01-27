@@ -14,9 +14,7 @@ PACKAGES_FOLDER = "p"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
-SYSTEM_REQS_FOLDER = "se"
 SCM_SRC_FOLDER = "sc"
-SYSTEM_REQS = "system_reqs.txt"
 
 
 class LayoutBase:
@@ -129,23 +127,6 @@ class PackageLayout(LayoutBase):
 
     def download_package(self):
         return os.path.join(self.base_folder, "dl")
-
-    def system_reqs(self):
-        return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)
-
-    def system_reqs_package(self):
-        return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER,
-                            self._ref.package_id, SYSTEM_REQS)
-
-    def remove_system_reqs(self):
-        system_reqs_folder = os.path.join(self.base_folder, SYSTEM_REQS_FOLDER)
-        if not os.path.exists(system_reqs_folder):
-            return
-        try:
-            rmdir(system_reqs_folder)
-        except OSError as e:
-            raise ConanException(f"Unable to remove system requirements at {system_reqs_folder}: "
-                                 f"{str(e)}")
 
     def package_manifests(self):
         package_folder = self.package()

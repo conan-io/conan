@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_name
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build import build_jobs, use_win_mingw, cross_building
 from conan.tools.cmake.utils import is_multi_configuration
@@ -322,41 +322,18 @@ class AppleSystemBlock(Block):
         {% endif %}
         """)
 
-    def _get_architecture(self):
-        # check valid combinations of architecture - os ?
-        # for iOS a FAT library valid for simulator and device
-        # can be generated if multiple archs are specified:
-        # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        arch = self._conanfile.settings.get_safe("arch")
-        return {"x86": "i386",
-                "x86_64": "x86_64",
-                "armv8": "arm64",
-                "armv8_32": "arm64_32"}.get(arch, arch)
-
-    def _apple_sdk_name(self):
-        """
-        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
-        there could be several ones depending on the OS architecture.
-
-        Note: In case of MacOS it'll be the same for all the architectures.
-        """
-        os_ = self._conanfile.settings.get_safe('os')
-        os_sdk = self._conanfile.settings.get_safe('os.sdk')
-        if os_sdk:
-            return os_sdk
-        elif os_ == "Macos":  # it has only a single value for all the architectures for now
-            return "macosx"
-        else:
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
         if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
             return None
 
-        host_architecture = self._get_architecture()
+        arch = self._conanfile.settings.get_safe("arch")
+        # check valid combinations of architecture - os ?
+        # for iOS a FAT library valid for simulator and device can be generated
+        # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
+        host_architecture = to_apple_arch(arch, default=arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
-        host_sdk_name = self._apple_sdk_name()
+        host_sdk_name = get_apple_sdk_name(self._conanfile)
 
         ctxt_toolchain = {}
         if host_sdk_name:

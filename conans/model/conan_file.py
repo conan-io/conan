@@ -181,9 +181,6 @@ class ConanFile:
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
         managers, as apt-get
-
-        You can define self.global_system_requirements = True, if you want the installation
-        to be for all packages (not depending on settings/options/requirements)
         """
 
     def config_options(self):

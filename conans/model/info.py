@@ -18,7 +18,6 @@ from conans.util.sha import sha1
 PREV_UNKNOWN = "PREV unknown"
 RREV_UNKNOWN = "RREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
-PACKAGE_ID_INVALID = "INVALID"
 
 
 class _VersionRepr:
@@ -123,8 +122,6 @@ class RequirementInfo(object):
     def sha(self):
         if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
             return None
-        if self.package_id == PACKAGE_ID_INVALID:
-            return PACKAGE_ID_INVALID
 
         ref = RecipeReference(self.name, self.version, self.user, self.channel,
                                  self.recipe_revision)
@@ -251,8 +248,6 @@ class RequirementsInfo(UserRequirementsDict):
             s = req_info.sha
             if s is None:
                 return None
-            if s == PACKAGE_ID_INVALID:
-                return PACKAGE_ID_INVALID
             result.append(s)
         result.sort()  # Show always in alphabetical order
         result.insert(0, "[requires]")
@@ -545,9 +540,6 @@ class ConanInfo(object):
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
-        if requires_sha == PACKAGE_ID_INVALID:
-            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
-            return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)

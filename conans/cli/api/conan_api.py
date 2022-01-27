@@ -12,9 +12,9 @@ from conans.cli.api.subapi.remotes import RemotesAPI
 from conans.cli.api.subapi.remove import RemoveAPI
 from conans.cli.api.subapi.search import SearchAPI
 from conans.cli.api.subapi.upload import UploadAPI
-from conans.cli.output import ConanOutput
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
+from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
@@ -27,7 +27,7 @@ class ConanAPIV2(object):
         if version.major == 2 or version.minor < 6:
             raise ConanException("Conan needs Python >= 3.6")
 
-        self.out = ConanOutput()
+        init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
         self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
 

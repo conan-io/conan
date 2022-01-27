@@ -244,16 +244,7 @@ def _handle_system_requirements(install_node, package_layout):
     # Instead of calling empty methods
     if type(conanfile).system_requirements == ConanFile.system_requirements:
         return
-
-    system_reqs_path = package_layout.system_reqs()
-    system_reqs_package_path = package_layout.system_reqs_package()
-
-    ret = call_system_requirements(conanfile)
-    ret = str(ret or "")
-    if getattr(conanfile, "global_system_requirements", None):
-        save(system_reqs_path, ret)
-    else:
-        save(system_reqs_package_path, ret)
+    call_system_requirements(conanfile)
 
 
 def call_system_requirements(conanfile):
@@ -352,6 +343,11 @@ class BinaryInstaller(object):
                     raise_missing([package], self._out)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._download_pkg(package)
+                elif node.binary == BINARY_EDITABLE:
+                    self._handle_node_editable(node)
+                    # Need a temporary package revision for package_revision_mode
+                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+                    node.prev = "editable"
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:

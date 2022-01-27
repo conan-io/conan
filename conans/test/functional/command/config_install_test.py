@@ -166,10 +166,7 @@ class ConfigInstallTest(unittest.TestCase):
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
-        self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
-        self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
-        self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
