@@ -35,7 +35,8 @@ def upload(conan_api: ConanAPIV2, parser, *args):
                         help='Upload all matching recipes without confirmation')
 
     args = parser.parse_args(*args)
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+
+    remote = conan_api.remotes.get(args.remote)
 
     upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
 
