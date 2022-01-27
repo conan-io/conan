@@ -18,7 +18,8 @@ from conans.test.utils.tools import TestClient, TestServer
 
 base = '''
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 def get_svn_remote(path_from_conanfile):
     from conans.errors import ConanException
@@ -71,7 +72,7 @@ class GitSCMTest(unittest.TestCase):
 
     def test_scm_other_type_ignored(self):
         conanfile = '''
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -85,7 +86,7 @@ class ConanLib(ConanFile):
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -177,7 +178,7 @@ class ConanLib(ConanFile):
         # https://github.com/conan-io/conan/issues/6070
         conanfile = textwrap.dedent("""
             import os
-            from conan import ConanFile, tools
+            from conan import ConanFile
 
             class ConanLib(ConanFile):
                 name = "lib"
@@ -351,7 +352,7 @@ class ConanLib(ConanFile):
         # Use explicit URL to avoid local optimization (scm_folder.txt)
         conanfile = '''
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -385,7 +386,8 @@ class ConanLib(ConanFile):
 
     def test_source_removed_in_local_cache(self):
         conanfile = textwrap.dedent('''
-            from conan import ConanFile, tools
+            from conan import ConanFile
+            from conan.tools.files import load
 
             class ConanLib(ConanFile):
                 scm = {
@@ -395,7 +397,7 @@ class ConanLib(ConanFile):
                 }
 
                 def build(self):
-                    contents = tools.load("myfile")
+                    contents = load(self, "myfile")
                     self.output.warning("Contents: %s" % contents)
             ''')
 
@@ -420,7 +422,7 @@ class ConanLib(ConanFile):
 
         # Check old (default) behaviour
         tmp = '''
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -443,7 +445,7 @@ class ConanLib(ConanFile):
 
         # Check invalid value
         tmp = '''
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -495,7 +497,7 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -518,7 +520,8 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
+from conan.tools.files import save
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -535,7 +538,7 @@ class ConanLib(ConanFile):
         self.output.warning("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "nested", "myfile")))
-        tools.save("cosa.txt", "contents")
+        save(self, "cosa.txt", "contents")
 
     def build(self):
         assert(os.path.exists("file.txt"))
@@ -602,7 +605,7 @@ class SVNSCMTest(SVNLocalRepoTestCase):
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
-from conan import ConanFile, tools
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"

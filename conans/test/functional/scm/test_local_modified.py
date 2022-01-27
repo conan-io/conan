@@ -13,7 +13,8 @@ from conans.test.utils.scm import create_local_git_repo
 @pytest.mark.tool_git
 class SCMFolderObsoleteTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
-        from conan import ConanFile, tools
+        from conan import ConanFile
+        from conan.tools.files import load
 
         class Pkg(ConanFile):
             scm = {"type": "git",
@@ -21,7 +22,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
                    "revision": "auto"}
 
             def build(self):
-                content = tools.load("file.txt")
+                content = load(self, "file.txt")
                 self.output.info(">>>> I'm {}/{}@{}/{}".format(self.name, self.version,
                                                                self.user, self.channel))
                 self.output.info(">>>> content: {} ".format(content))
