@@ -15,8 +15,7 @@ class TestSelectedRemotesInstall:
                                                    users={"user": "password"})
         self.client = TestClient(servers=servers, inputs=3 * ["user", "password"])
 
-    # remotes have to be reordered like the order in the registry
-    def test_selected_remotes_install(self):
+    def test_selected_remotes(self):
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0").with_build_msg("OLDREV")})
         self.client.run("create .")
         self.client.run("upload liba/1.0 -r server0 -c")
@@ -33,8 +32,20 @@ class TestSelectedRemotesInstall:
         # changing the order of the remotes in the arguments does not change the result
         # we install the revision from the server with more preference
         assert "OLDREV" in self.client.out
+        # select two remotes, just one has liba, will install the rev from that one
+        self.client.run("remove * -f")
+        self.client.run("install --reference=liba/1.0 -r server2 -r server1 --build")
+        assert "NEWER_REV" in self.client.out
 
-    # check multiple remotes is not allowed for several commands like upload, ...
+        self.client.save({"consumer.py": GenConanfile().with_require("liba/1.0")})
+        self.client.run("remove * -f")
+        self.client.run("create . --build -r server0 -r server1 -r server2")
+        assert "NEWER_REV" in self.client.out
+
     def test_upload_raise_multiple_remotes(self):
         self.client.run("upload liba -r server0 -r server1 -c", assert_error=True)
         assert "conan upload: error: -r can only be specified once" in self.client.out
+
+    def test_remove_raise_multiple_remotes(self):
+        self.client.run("remove liba -r server0 -r server1 -f", assert_error=True)
+        assert "conan remove: error: -r can only be specified once" in self.client.out
