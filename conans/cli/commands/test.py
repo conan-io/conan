@@ -43,8 +43,9 @@ def test(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
-                                                         profile_host, profile_build, remotes,
+                                                         profile_host, profile_build,
                                                          require_overrides=args.require_override,
+                                                         remotes=remotes,
                                                          update=args.update,
                                                          lockfile=lockfile)
 

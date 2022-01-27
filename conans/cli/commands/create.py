@@ -63,8 +63,9 @@ def create(conan_api, parser, *args):
         if args.build_require:
             raise ConanException("--build-require should not be specified, test_package does it")
         root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
-                                                             profile_host, profile_build, remotes,
+                                                             profile_host, profile_build,
                                                              require_overrides=args.require_override,
+                                                             remotes=remotes,
                                                              update=args.update,
                                                              lockfile=lockfile)
     else:
