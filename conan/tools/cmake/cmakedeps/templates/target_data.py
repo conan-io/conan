@@ -212,7 +212,6 @@ class _TargetDataContext(object):
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        self.include_path = join_paths_single_var(cpp_info.includedirs)
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
