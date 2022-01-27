@@ -137,7 +137,7 @@ class MultiRemotesTest(unittest.TestCase):
                       client.out)
 
         client.run("install --reference=hello0/0.0@lasote/stable --update -r default")
-        self.assertIn("hello0/0.0@lasote/stable#4963e851819c02f9578b9d6bcecd01aa - Cache",
+        self.assertIn("hello0/0.0@lasote/stable#4963e851819c02f9578b9d6bcecd01aa - Newer",
                       client.out)
 
         sleep(1)  # For timestamp and updates checks

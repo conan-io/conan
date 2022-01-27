@@ -27,6 +27,7 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
+    # return the remote where the recipe was found or None if the recipe was not found
     def _get_recipe(self, reference):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
@@ -49,7 +50,6 @@ class ConanProxy(object):
         # TODO: cache2.0: check with new --update flows
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
-        selected_remote = self._conan_app.selected_remote
 
         if self._conan_app.check_updates or self._conan_app.update:
 
@@ -76,19 +76,20 @@ class ConanProxy(object):
                             status = RECIPE_UPDATEABLE
                     else:
                         status = RECIPE_NEWER
+                        # If your recipe in cache is newer it does not make sense to return a remote?
+                        remote = None
                 else:
                     # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
                     #  the date
                     if cache_time >= remote_ref.timestamp:
                         status = RECIPE_INCACHE
                     else:
-                        selected_remote = remote
                         self._cache.update_recipe_timestamp(remote_ref)
                         status = RECIPE_INCACHE_DATE_UPDATED
-                return conanfile_path, status, selected_remote, ref
+                return conanfile_path, status, remote, ref
             else:
                 status = RECIPE_NOT_IN_REMOTE
-                return conanfile_path, status, selected_remote, ref
+                return conanfile_path, status, None, ref
         else:
             status = RECIPE_INCACHE
             return conanfile_path, status, None, ref
@@ -97,7 +98,7 @@ class ConanProxy(object):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
         results = []
-        for remote in self._conan_app.enabled_remotes:
+        for remote in self._conan_app.selected_remotes:
             scoped_output.info(f"Checking remote: {remote.name}")
             if not reference.revision:
                 try:
@@ -135,20 +136,8 @@ class ConanProxy(object):
             scoped_output.info("Downloaded recipe revision %s" % reference.revision)
             return reference
 
-        if self._conan_app.selected_remote:
-            remote = self._conan_app.selected_remote
-            scoped_output.info("Retrieving from server '%s' " % remote.name)
-            try:
-                new_ref = _retrieve_from_remote(remote, ref)
-                return remote, new_ref
-            except NotFoundException:
-                msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
-                raise NotFoundException(msg)
-            except RequestException as exc:
-                raise exc
-
         scoped_output.info("Not found in local cache, looking in remotes...")
-        remotes = self._conan_app.enabled_remotes
+        remotes = self._conan_app.selected_remotes
         if not remotes:
             raise ConanException("No remote defined")
 

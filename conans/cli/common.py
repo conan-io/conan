@@ -1,6 +1,7 @@
 import os
 
 from conans.cli.command import Extender, OnceArgument
+from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -72,8 +73,8 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
-    parser.add_argument("-r", "--remote", action=OnceArgument,
-                        help='Look in the specified remote server')
+    parser.add_argument("-r", "--remote", action=Extender, default=None,
+                        help='Look in the specified remote or remotes server')
 
     if not update_help:
         update_help = ("Will check the remote and in case a newer version and/or revision of "
@@ -127,3 +128,10 @@ def get_lockfile(lockfile, strict=False):
         graph_lock.strict = strict
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
     return graph_lock
+
+
+def get_multiple_remotes(conan_api, remote_names=None):
+    if remote_names:
+        return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
+    elif remote_names is None:  # if we don't pass any remotes we want to retrieve only the enabled ones
+        return conan_api.remotes.list(only_active=True)
