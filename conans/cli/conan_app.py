@@ -48,20 +48,11 @@ class ConanApp(object):
         self.graph_manager = GraphManager(self)
 
         # Remotes
-        self._selected_remotes = []
+        self.selected_remotes = []
         self.enabled_remotes = []
         self.all_remotes = []
         self.update = False
         self.check_updates = False
-
-    # TODO: may remove later
-    @property
-    def selected_remotes(self):
-        return self._selected_remotes
-
-    @selected_remotes.setter
-    def selected_remotes(self, remotes):
-        self._selected_remotes = remotes
 
     def load_remotes(self, remotes=None, update=False, check_updates=False):
         self.all_remotes = self.cache.remotes_registry.list()
