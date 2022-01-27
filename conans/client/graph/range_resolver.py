@@ -66,8 +66,7 @@ class RangeResolver(object):
 
     def _search_and_resolve_remotes(self, search_ref, version_range):
         results = []
-        remotes = self._conan_app.enabled_remotes
-        for remote in remotes:
+        for remote in self._conan_app.selected_remotes:
             remote_results = self._search_remote_recipes(remote, search_ref)
             remote_results = [ref for ref in remote_results
                               if ref.user == search_ref.user
