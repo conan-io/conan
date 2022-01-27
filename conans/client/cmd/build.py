@@ -29,6 +29,9 @@ def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_f
         # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
         #  Only base_path and conanfile_path will remain
         if hasattr(conan_file, "layout"):
+            print("PATH!!!!!!!!!!", conanfile_path)
+            print("LAYOUT BUILD ", layout_build_folder)
+            print("LAYOUT SOURCE ", layout_source_folder)
             conanfile_folder = os.path.dirname(conanfile_path)
             conan_file.folders.set_base_build(layout_build_folder or conanfile_folder)
             conan_file.folders.set_base_source(layout_source_folder or conanfile_folder)

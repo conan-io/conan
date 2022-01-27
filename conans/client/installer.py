@@ -406,6 +406,7 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_build(output_folder or base_path)
             conanfile.folders.set_base_install(output_folder or base_path)
             conanfile.folders.set_base_imports(output_folder or base_path)
+            conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"

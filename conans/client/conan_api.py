@@ -123,14 +123,14 @@ class ConanAPIV1(object):
                                    env=env, conf=conf)
 
         cwd = cwd or os.getcwd()
+        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
-        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
 
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
