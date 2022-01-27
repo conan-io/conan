@@ -382,6 +382,10 @@ class BinaryInstaller(object):
             n.prev = pref.revision  # Make sure the prev is assigned
             conanfile = n.conanfile
             # Call the info method
+            conanfile.folders.set_base_package(pkg_folder)
+            conanfile.folders.set_base_source(None)
+            conanfile.folders.set_base_build(None)
+            conanfile.folders.set_base_install(None)
             self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -389,21 +393,25 @@ class BinaryInstaller(object):
             # Get source of information
             conanfile = node.conanfile
             ref = node.ref
-            conanfile_path = self._cache.editable_path(ref)
+            editable = self._cache.editable_packages.get(ref)
+            conanfile_path = editable["path"]
+            output_folder = editable.get("output_folder")
+            source_folder = editable.get("source_folder")
             # TODO: Check, this assumes the folder is always the conanfile one
             base_path = os.path.dirname(conanfile_path)
-            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
             # New editables mechanism based on Folders
-            conanfile.folders.set_base_package(base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
-            # FIXME: output_folder needed here
-            conanfile.folders.set_base_imports(base_path)
+            conanfile.folders.set_base_package(output_folder or base_path)
+            conanfile.folders.set_base_source(source_folder or base_path)
+            conanfile.folders.set_base_build(output_folder or base_path)
+            conanfile.folders.set_base_install(output_folder or base_path)
+            conanfile.folders.set_base_imports(output_folder or base_path)
+            conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+
+            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # It will only run generation and imports once
         node = install_node.nodes[0]
@@ -446,10 +454,6 @@ class BinaryInstaller(object):
         return pref
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
-        conanfile.folders.set_base_package(package_folder)
-        conanfile.folders.set_base_source(None)
-        conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_install(None)
 
         conanfile.user_info = UserInfo()
 
@@ -465,9 +469,6 @@ class BinaryInstaller(object):
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
-                    conanfile.folders.set_base_build(package_folder)
-                    conanfile.folders.set_base_source(package_folder)
-                    conanfile.folders.set_base_generators(package_folder)
 
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build.copy()

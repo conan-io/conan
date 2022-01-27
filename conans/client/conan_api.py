@@ -123,6 +123,8 @@ class ConanAPIV1(object):
                                    env=env, conf=conf)
 
         cwd = cwd or os.getcwd()
+        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -141,6 +143,8 @@ class ConanAPIV1(object):
                                      ref_or_path=conanfile_path,
                                      install_folder=install_folder,
                                      base_folder=cwd,
+                                     source_folder=layout_source_folder,
+                                     output_folder=layout_build_folder,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
@@ -157,7 +161,9 @@ class ConanAPIV1(object):
             conanfile = deps_info.root.conanfile
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
                       source_folder=source_folder, build_folder=build_folder,
-                      package_folder=package_folder, install_folder=install_folder)
+                      package_folder=package_folder, install_folder=install_folder,
+                      layout_source_folder=layout_source_folder,
+                      layout_build_folder=layout_build_folder)
         except ConanException as exc:
             raise
 
