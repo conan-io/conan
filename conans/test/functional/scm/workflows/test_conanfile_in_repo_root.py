@@ -27,7 +27,7 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
 
         def get_remote_url():
             here = os.path.dirname(__file__)
-            svn = tools.SVN(os.path.join(here, "."))
+            svn = SVN(os.path.join(here, "."))
             return svn.get_remote_url()
 
     """

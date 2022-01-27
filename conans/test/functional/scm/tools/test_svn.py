@@ -553,7 +553,8 @@ class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
     conanfile = """
 import os
-from conan import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 class HelloConan(ConanFile):
     name = "hello"
