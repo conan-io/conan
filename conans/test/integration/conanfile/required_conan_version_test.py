@@ -12,7 +12,7 @@ class RequiredConanVersionTest(unittest.TestCase):
     def test_required_conan_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             required_conan_version = ">=100.0"
 

@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class ExportMetadataTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             revision_mode = "{revision_mode}"

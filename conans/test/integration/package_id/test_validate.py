@@ -16,7 +16,7 @@ class TestValidate(unittest.TestCase):
     def test_validate_create(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.errors import ConanInvalidConfiguration
             class Pkg(ConanFile):
                 settings = "os"
@@ -44,7 +44,7 @@ class TestValidate(unittest.TestCase):
     def test_validate_compatible_create(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.errors import ConanInvalidConfiguration
             class Pkg(ConanFile):
                 settings = "os"
@@ -80,7 +80,7 @@ class TestValidate(unittest.TestCase):
     def test_validate_remove_package_id_create(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-               from conans import ConanFile
+               from conan import ConanFile
                from conans.errors import ConanInvalidConfiguration
                class Pkg(ConanFile):
                    settings = "os"
@@ -109,7 +109,7 @@ class TestValidate(unittest.TestCase):
     def test_validate_compatible_also_invalid(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                settings = "os", "build_type"
@@ -147,7 +147,7 @@ class TestValidate(unittest.TestCase):
     def test_validate_compatible_also_invalid_fail(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                settings = "os", "build_type"
@@ -210,7 +210,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=dep --version=0.1")
         client.run("create . --name=dep --version=0.1 -o dep:myoption=2")
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.errors import ConanErrorConfiguration
            class Pkg(ConanFile):
                requires = "dep/0.1"
@@ -239,7 +239,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=dep --version=0.1")
         client.run("create . --name=dep --version=0.2")
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                requires = "dep/0.1"
@@ -263,7 +263,7 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         save(client.cache.new_config_path, "core.package_id:default_mode=full_package_mode")
         conanfile = textwrap.dedent("""
-          from conans import ConanFile
+          from conan import ConanFile
           from conans.errors import ConanInvalidConfiguration
           class Pkg(ConanFile):
               settings = "os"
@@ -290,7 +290,7 @@ class TestValidate(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/9797
         c = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.errors import ConanInvalidConfiguration
 
             class TestConan(ConanFile):

@@ -15,7 +15,7 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
     def setUp(self):
         # Create a sample SVN repository
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class Lib(ConanFile):
                 scm = {"type": "svn", "url": "auto", "revision": "auto"}

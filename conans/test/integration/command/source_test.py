@@ -2,33 +2,30 @@ import os
 import unittest
 from collections import OrderedDict
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import mkdir
 
 
 class SourceTest(unittest.TestCase):
 
     def test_local_flow_patch(self):
         # https://github.com/conan-io/conan/issues/2327
-        conanfile = """from conans import ConanFile, tools
-from conans.tools import save
+        conanfile = """from conan import ConanFile
+from conan.tools.files import save, load
 import os
 class TestexportConan(ConanFile):
     exports = "mypython.py"
     exports_sources = "patch.patch"
 
     def source(self):
-        save("hello/hello.h", "my hello header!")
+        save(self, "hello/hello.h", "my hello header!")
         patch = os.path.join(self.source_folder, "patch.patch")
-        self.output.info("PATCH: %s" % tools.load(patch))
+        self.output.info("PATCH: %s" % load(self, patch))
         header = os.path.join(self.source_folder, "hello/hello.h")
-        self.output.info("HEADER: %s" % tools.load(header))
+        self.output.info("HEADER: %s" % load(self, header))
         python = os.path.join(self.source_folder, "mypython.py")
-        self.output.info("PYTHON: %s" % tools.load(python))
+        self.output.info("PYTHON: %s" % load(self, python))
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile,
@@ -55,7 +52,7 @@ class TestexportConan(ConanFile):
         # Test if a patch can be applied in source() both in create
         # and local flow
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import load
 import os
 class Pkg(ConanFile):
@@ -76,7 +73,7 @@ class Pkg(ConanFile):
 
     def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
-        conanfile = '''from conans import ConanFile
+        conanfile = '''from conan import ConanFile
 class ConanLib(ConanFile):
     pass
 '''
@@ -104,7 +101,7 @@ class ConanLib(ConanFile):
     def test_source_local_cwd(self):
         conanfile = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "hello"
@@ -126,7 +123,7 @@ class ConanLib(ConanFile):
     def test_local_source_src_not_exist(self):
         conanfile = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 class ConanLib(ConanFile):
     name = "hello"
     version = "0.1"
@@ -139,7 +136,7 @@ class ConanLib(ConanFile):
 
     def test_repeat_args_fails(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 class ConanLib(ConanFile):
 
     def source(self):
@@ -157,7 +154,7 @@ class ConanLib(ConanFile):
 
     def test_local_source(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 
 class ConanLib(ConanFile):
@@ -195,6 +192,7 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "sources.cpp": "sources"})
         client.run("create . --name=hello --version=0.1")
+        rrev = client.exported_recipe_revision()
         client.run("upload hello/0.1 -r server0")
         client.run("remove * -f")
 
@@ -210,8 +208,7 @@ class ConanLib(ConanFile):
         client.run("remove * -f")
         client.run("install --reference=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
-        assert "hello/0.1#02da70a3eeda6a0f01a16b75607a2e73 already in server, skipping upload" in \
-               client.out
+        assert f"hello/0.1#{rrev} already in server, skipping upload" in client.out
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Sources downloaded from 'server0'", client.out)
 

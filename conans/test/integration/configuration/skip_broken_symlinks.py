@@ -20,7 +20,7 @@ class TestSkipBrokenSymlinks(unittest.TestCase):
 
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class HelloConan(ConanFile):
 
@@ -58,7 +58,7 @@ class HelloConan(ConanFile):
 
     def test_broken_in_local_sources(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class SymlinksConan(ConanFile):
                 name = "symlinks"

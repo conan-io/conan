@@ -14,7 +14,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_svn
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             scm = {{"type": "{repo_type}",
@@ -41,7 +41,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
 @pytest.mark.tool_git
 class ExportCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             scm = {{"type": "{repo_type}",

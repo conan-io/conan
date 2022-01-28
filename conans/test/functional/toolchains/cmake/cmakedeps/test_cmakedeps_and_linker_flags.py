@@ -16,7 +16,7 @@ def test_shared_link_flags():
     Issue: https://github.com/conan-io/conan/issues/9936
     """
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMake, cmake_layout
 
 

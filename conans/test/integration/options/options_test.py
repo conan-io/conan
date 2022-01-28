@@ -12,7 +12,7 @@ class OptionsTest(unittest.TestCase):
     def test_general_scope_options_test_package(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 options = {"shared": ["1", "2"]}
                 def configure(self):
@@ -52,7 +52,7 @@ class OptionsTest(unittest.TestCase):
     def test_general_scope_priorities(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 options = {"shared": ["1", "2", "3"], "other": [4, 5, 6]}
                 def configure(self):
@@ -83,7 +83,7 @@ class OptionsTest(unittest.TestCase):
     def test_parsing(self):
         client = TestClient()
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
@@ -109,7 +109,7 @@ equal:opt=a=b
         # https://github.com/conan-io/conan/issues/2538
         client = TestClient()
         conanfile_liba = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class LibA(ConanFile):
                 options = {"shared": [True, False]}
 
@@ -121,7 +121,7 @@ equal:opt=a=b
         self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
 
         conanfile_libb = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class LibB(ConanFile):
                 options = {"shared": [True, False]}
                 requires = "liba/0.1@danimtb/testing"
@@ -160,7 +160,7 @@ equal:opt=a=b
         client.run("create . --name=liba --version=0.1 --user=user --channel=testing -o liba:shared=False")
         client.run("create . --name=liba --version=0.1 --user=user --channel=testing -o liba:shared=True")
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "liba/0.1@user/testing"
                 options = {"shared": [True, False]}
@@ -223,7 +223,7 @@ equal:opt=a=b
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=liba --version=0.1 --user=user --channel=testing")
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "liba/0.1@user/testing"
                 options = {"shared": [True, False]}
@@ -249,7 +249,7 @@ equal:opt=a=b
         client = TestClient()
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def package_id(self):
                     self.info.shared_library_package_id()

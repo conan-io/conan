@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 def client():
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
 
         class Library(ConanFile):

@@ -20,7 +20,7 @@ class RunnerTest(unittest.TestCase):
         return client
 
     def test_ignore_error(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def source(self):
         ret = self.run("not_a_command", ignore_errors=True)
@@ -33,7 +33,7 @@ class Pkg(ConanFile):
 
     def test_runner_capture_output(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def source(self):
                     self.run("echo 'hello Conan!'")
@@ -47,7 +47,7 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/7888
         conanfile = textwrap.dedent("""
             from io import StringIO
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def source(self):
                     my_buf = StringIO()
@@ -63,7 +63,7 @@ class Pkg(ConanFile):
         conanfile = textwrap.dedent("""
             import os
             import platform
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 def export(self):

@@ -16,7 +16,7 @@ Check that the link order of libraries is preserved when using CMake generators
 
 
 conanfile = Template(textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Recipe(ConanFile):
         name = "{{ref.name}}"
@@ -73,7 +73,7 @@ conanfile = Template(textwrap.dedent("""
 """))
 
 conanfile_headeronly = Template(textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class HeaderOnly(ConanFile):
         name = "{{ref.name}}"

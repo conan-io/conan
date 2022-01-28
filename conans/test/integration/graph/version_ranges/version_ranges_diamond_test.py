@@ -18,7 +18,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5333
         client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Boost(ConanFile):
                 pass
             """)
@@ -88,7 +88,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
     def test_update_pkg(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class HelloReuseConan(ConanFile):
     def package_info(self):
         self.output.info("PACKAGE_INFO {}")
@@ -98,7 +98,7 @@ class HelloReuseConan(ConanFile):
         client.save({"conanfile.py": conanfile.format("1.2")})
         client.run("create . --name=pkg --version=1.2 --user=lasote --channel=testing")
         client.run("upload pkg* -r=default --confirm")
-        consumer = """from conans import ConanFile
+        consumer = """from conan import ConanFile
 class HelloReuseConan(ConanFile):
     requires = "pkg/[~1]@lasote/testing"
 """
@@ -146,7 +146,7 @@ class VersionRangesMultiRemoteTest(unittest.TestCase):
     def _export(self, name, version, deps=None, export=True, upload=True, remote="default"):
         deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'
         conanfile = """
-from conans import ConanFile, CMake
+from conan import ConanFile, CMake
 import os
 
 class HelloReuseConan(ConanFile):
@@ -189,7 +189,7 @@ class VersionRangesDiamondTest(unittest.TestCase):
     def _export(self, name, version, deps=None, export=True, upload=True):
         deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'
         conanfile = """
-from conans import ConanFile, CMake
+from conan import ConanFile, CMake
 import os
 
 class HelloReuseConan(ConanFile):

@@ -12,7 +12,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
+                    from conan import ConanFile
                     class HelloConan(ConanFile):
                         def package_info(self):
                             self.cpp_info.filenames['cmake_find_package'] = 'FooBar'
@@ -33,7 +33,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
                     import os
-                    from conans import ConanFile
+                    from conan import ConanFile
 
                     class HelloConan(ConanFile):
                         exports_sources = 'bm.cmake'

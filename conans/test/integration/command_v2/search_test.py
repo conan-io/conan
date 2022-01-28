@@ -64,7 +64,7 @@ class TestRemotes:
 
     def _add_recipe(self, remote, reference):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyLib(ConanFile):
                 pass
             """)

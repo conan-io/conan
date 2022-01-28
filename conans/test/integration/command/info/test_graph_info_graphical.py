@@ -10,7 +10,7 @@ class InfoTest(unittest.TestCase):
 
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class pkg(ConanFile):
                 name = "{name}"
                 version = "{version}"
@@ -134,7 +134,7 @@ class InfoTest(unittest.TestCase):
 
     def test_topics_graph(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"

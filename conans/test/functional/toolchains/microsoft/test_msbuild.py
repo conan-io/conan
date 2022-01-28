@@ -319,7 +319,7 @@ def test_msvc_runtime_flag_vs2022():
 def check_msvc_runtime_flag(vs_version, msvc_version):
     client = TestClient()
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.microsoft import msvc_runtime_flag
        class App(ConanFile):
            settings = "os", "arch", "compiler", "build_type"
@@ -354,7 +354,7 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuildToolchain, MSBuild, MSBuildDeps
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"

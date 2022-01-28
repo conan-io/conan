@@ -54,17 +54,6 @@ class ConanApp(object):
         self.update = False
         self.check_updates = False
 
-    @property
-    def selected_remote(self):
-        # FIXME: To ease the migration to N selected remotes
-        if len(self.selected_remotes) == 0:
-            return None
-        if len(self.selected_remotes) == 1:
-            return self.selected_remotes[0]
-        else:
-            assert False, "It makes no sense to obtain the selected remote when there are several " \
-                          "selected remotes"
-
     def load_remotes(self, remotes=None, update=False, check_updates=False):
         self.all_remotes = self.cache.remotes_registry.list()
         self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
@@ -78,3 +67,6 @@ class ConanApp(object):
                     if tmp.disabled:
                         raise ConanException("Remote '{}' is disabled".format(tmp.name))
                     self.selected_remotes.append(tmp)
+            # sort the list based on the index preference in the remotes list
+            if self.selected_remotes:
+                self.selected_remotes.sort(key=lambda remote: self.cache.remotes_registry.get_remote_index(remote))

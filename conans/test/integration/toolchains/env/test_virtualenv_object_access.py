@@ -24,7 +24,7 @@ def client():
 def test_virtualenv_object_access(client):
     conanfile = textwrap.dedent("""
     import os
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 
     class ConanFileToolsTest(ConanFile):

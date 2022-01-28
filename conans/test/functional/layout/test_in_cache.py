@@ -53,7 +53,7 @@ def test_create_test_package_no_layout(conanfile):
     conanfile_test = textwrap.dedent("""
         import os
 
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
 
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -79,7 +79,7 @@ def test_create_test_package_with_layout(conanfile):
     conanfile_test = textwrap.dedent("""
         import os
 
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
         from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
 
         class HelloTestConan(ConanFile):
@@ -223,7 +223,7 @@ def test_cpp_package():
 
     conan_hello = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import save
         class Pkg(ConanFile):
             def package(self):
@@ -238,14 +238,14 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+    rrev = client.exported_recipe_revision()
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
     package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             requires = "hello/1.0"
@@ -275,7 +275,7 @@ def test_git_clone_with_source_layout():
     repo = temp_folder()
     conanfile = textwrap.dedent("""
            import os
-           from conans import ConanFile
+           from conan import ConanFile
            class Pkg(ConanFile):
                exports = "*.txt"
 

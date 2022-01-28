@@ -5,7 +5,7 @@ from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies
+    _help_build_policies, get_multiple_remotes
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -38,7 +38,7 @@ def create(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+    remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
@@ -65,7 +65,7 @@ def create(conan_api, parser, *args):
         root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
                                                              profile_host, profile_build,
                                                              require_overrides=args.require_override,
-                                                             remote=remote,
+                                                             remotes=remotes,
                                                              update=args.update,
                                                              lockfile=lockfile)
     else:
@@ -79,7 +79,7 @@ def create(conan_api, parser, *args):
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
-                                            remote=remote,
+                                            remotes=remotes,
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
@@ -88,12 +88,12 @@ def create(conan_api, parser, *args):
         build_modes = [ref.name]
     else:
         build_modes = args.build
-    conan_api.graph.analyze_binaries(deps_graph, build_modes, remote=remote, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update)
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
-                                       remote=remote, update=args.update)
+                                       remotes=remotes, update=args.update)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)

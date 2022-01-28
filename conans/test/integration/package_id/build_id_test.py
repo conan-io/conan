@@ -10,7 +10,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 from conans.util.files import save
 class MyTest(ConanFile):
     name = "pkg"
@@ -38,7 +38,7 @@ pkg/0.1@user/channel
 ., * -> .
 """
 
-consumer_py = """from conans import ConanFile
+consumer_py = """from conan import ConanFile
 class MyTest(ConanFile):
     name = "mytest"
     version = "0.1"
@@ -254,7 +254,7 @@ class BuildIdTest(unittest.TestCase):
     def test_failed_build(self):
         # Repeated failed builds keep failing
         fail_conanfile = textwrap.dedent("""\
-            from conans import ConanFile
+            from conan import ConanFile
             class MyTest(ConanFile):
                 settings = "os"
                 def build(self):

@@ -11,11 +11,11 @@ class UserChannelTestPackage(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/2501
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class SayConan(ConanFile):
     pass
 """
-        test = """from conans import ConanFile
+        test = """from conan import ConanFile
 class SayConan(ConanFile):
     def requirements(self):
         self.output.info("USER: %s!!" % self.user)
@@ -37,7 +37,7 @@ class SameUserChannelTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -52,7 +52,7 @@ class SayConan(ConanFile):
             self.client.run(f"export . --user={user} --channel={channel}")
 
         self.conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -101,7 +101,7 @@ class HelloConan(ConanFile):
         # Now use the default_ methods to declare user and channel
         self.client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -128,7 +128,7 @@ class BuildRequireUserChannelTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/2254
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     def build_requirements(self):

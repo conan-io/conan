@@ -14,7 +14,7 @@ def test_dependencies_visit():
     client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.2")})
     client.run("create . --name=cmake --version=0.1")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/0.1"
             build_requires = "cmake/0.1"
@@ -32,13 +32,13 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009:"\
+    assert "DefRef: openssl/0.1#705df323569bee67454c0ecb5929806f!!!" in client.out
+    assert "DefPRef: openssl/0.1#705df323569bee67454c0ecb5929806f:"\
            "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
            "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009:" \
+    assert "DefRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f!!!" in client.out
+    assert "DefPRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f:" \
            "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
            "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
 
@@ -54,7 +54,7 @@ def test_dependencies_visit_settings_options():
     client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.1")})
     client.run("create . --name=pkg --version=0.1  -s os=Linux")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkg/0.1"
 
@@ -107,7 +107,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . --name=cmake --version=0.2")
 
     app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     class Pkg(ConanFile):
 
         def requirements(self):
@@ -142,7 +142,7 @@ def test_invisible_not_colliding_test_requires():
     client.run("create . --name=bar --version=0.1")
 
     app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     class Pkg(ConanFile):
 
         def requirements(self):
@@ -168,7 +168,7 @@ def test_dependencies_visit_build_requires_profile():
     client.save({"conanfile.py": GenConanfile("cmake", "0.1")})
     client.run("create .")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
 
             def validate(self):

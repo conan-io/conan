@@ -24,7 +24,7 @@ class TestProxiesConfTest:
         client = TestClient(requester_class=MyHttpRequester)
         save(client.cache.new_config_path, 'core.net.http:proxies = {"myproxykey": "myvalue"}')
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):
@@ -55,7 +55,7 @@ class TestProxiesConfTest:
              'core.net.http:proxies = {"http": "value"}')
         for url in ("**otherexcluded_one***", "MyUrl", "MyExcludedUrl***", "**MyExcludedUrl***"):
             conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 from conan.tools.files import download
 
                 class Pkg(ConanFile):
@@ -74,7 +74,7 @@ class TestProxiesConfTest:
     def test_environ_kept(self):
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):
@@ -105,7 +105,7 @@ class TestProxiesConfTest:
 
     def test_environ_removed(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):

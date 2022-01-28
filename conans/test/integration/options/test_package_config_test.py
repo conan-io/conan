@@ -4,7 +4,7 @@ import pytest
 
 from conans.test.utils.tools import TestClient
 
-test_conanfile = """from conans import ConanFile
+test_conanfile = """from conan import ConanFile
 
 class test_packageConan(ConanFile):
     name = "conan_test_package"
@@ -27,7 +27,7 @@ class test_packageConan(ConanFile):
 """
 
 
-create_conanfile = """from conans import ConanFile
+create_conanfile = """from conan import ConanFile
 
 class test_packageConan(ConanFile):
     options = {"shared": [True, False]}
@@ -41,7 +41,7 @@ class test_packageConan(ConanFile):
 """
 
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 
 class PkgConan(ConanFile):
     name = "conan_package"

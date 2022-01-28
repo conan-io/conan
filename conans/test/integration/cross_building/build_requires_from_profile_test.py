@@ -32,7 +32,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
     """)
 
     library_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "library"
@@ -57,7 +57,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
 
 class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "mytoolchain"
@@ -68,7 +68,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -82,7 +82,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -147,7 +147,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
 
 class BuildRequiresBothContextsTest(unittest.TestCase):
     toolchain_creator = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "creator"
@@ -158,7 +158,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -172,7 +172,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -186,7 +186,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -239,7 +239,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         # Declaring the build_requires in the recipe works, it is just the profile that is
         # not transitive
         toolchain = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             import os
 
             class Recipe(ConanFile):

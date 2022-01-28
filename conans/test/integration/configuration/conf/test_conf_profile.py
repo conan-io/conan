@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 def client():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Pkg(ConanFile):
@@ -110,7 +110,7 @@ def test_config_profile_forbidden(client):
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class Pkg(ConanFile):
@@ -141,7 +141,7 @@ def test_msbuild_config():
 def test_msbuild_compile_options():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             settings = "os", "arch", "compiler", "build_type"

@@ -71,7 +71,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
@@ -85,7 +85,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
     client.run("create . --name=toolchain --version=0.1")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -128,7 +128,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
@@ -145,7 +145,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
     client.run("create . --name=toolchain2 --version=0.1")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -187,7 +187,7 @@ def test_cmaketoolchain_no_warnings():
     # Issue https://github.com/conan-io/conan/issues/10288
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Conan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"

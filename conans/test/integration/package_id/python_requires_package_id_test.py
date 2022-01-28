@@ -12,7 +12,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=tool --version=1.1.1")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 python_requires ="tool/[*]"
             """)
@@ -58,7 +58,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
     def test_change_mode_package_id(self):
         # change the policy in package_id
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 python_requires ="tool/[*]"
                 def package_id(self):
@@ -87,7 +87,7 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
         client.run("create . --name=tool --version=1.1.1")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 python_requires ="tool/[>=0.0]"
             """)

@@ -1,7 +1,7 @@
 from conans.test.utils.tools import TestClient
 
 base_conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class TestSystemReqs(ConanFile):
     name = "test"

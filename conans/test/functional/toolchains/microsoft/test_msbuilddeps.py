@@ -421,7 +421,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
@@ -472,7 +472,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = "MSBuildDeps"
@@ -506,7 +506,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildDeps
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -540,7 +540,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildDeps
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -572,7 +572,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=pkgb --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
@@ -605,14 +605,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=tool --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 build_requires = "tool/1.0"
                 generators = "MSBuildDeps"
 
                 def build(self):
-                    deps = load("conandeps.props")
+                    deps = load(self, "conandeps.props")
                     assert "conan_tool.props" not in deps
                     self.output.info("Conan_tools.props not in deps")
             """)
@@ -662,7 +663,7 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
     client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
@@ -721,7 +722,7 @@ def check_build_vs_project_with_a(vs_version):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=updep.pkg.team --version=0.1")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
@@ -761,7 +762,7 @@ def check_build_vs_project_with_a(vs_version):
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
@@ -813,7 +814,7 @@ def check_build_vs_project_with_test_requires(vs_version):
     client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
@@ -869,7 +870,7 @@ def test_build_requires():
     package = "self.copy('*', src=str(self.settings.arch), dst='bin')"
     dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"

@@ -8,7 +8,7 @@ from conans.test.assets.sources import gen_function_cpp
 from ..microsoft.test_msbuild import sln_file, myapp_vcxproj
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, MSBuild, MSBuildToolchain
+    from conan import ConanFile, MSBuild, MSBuildToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'

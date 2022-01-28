@@ -16,7 +16,7 @@ class GenConanfile(object):
     """
 
     def __init__(self, name=None, version=None, new_import=False):
-        self._imports = ["from conans import ConanFile" if not new_import
+        self._imports = ["from conan import ConanFile" if not new_import
                          else "from conan import ConanFile"]
         self._name = name
         self._version = version

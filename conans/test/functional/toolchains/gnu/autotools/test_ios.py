@@ -37,7 +37,7 @@ def test_ios():
     configure_ac = gen_configure_ac()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):

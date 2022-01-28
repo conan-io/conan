@@ -14,7 +14,7 @@ from conans.test.utils.tools import TestClient
 def test_reuse_with_modules_and_config(cmake_find_mode):
     t = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             def package_info(self):
