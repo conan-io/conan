@@ -135,7 +135,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     add_executable(test  src/test.cpp )
     target_link_libraries(test  hello::hello)
     # Hardcoded installation path to keep the exe in the same place in the tests
-    install(TARGETS test DESTINATION "cmake-build-release")
+    install(TARGETS test DESTINATION "bin")
     """
     # Same test conanfile but calling cmake.install()
     cf = textwrap.dedent("""
@@ -160,8 +160,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
                         cmake.install()
 
                     def imports(self):
-                        self.copy("*.dll", dst=self.folders.build, src="bin")
-                        self.copy("*.dylib", dst=self.folders.build, src="lib")
+                        self.copy("*.dylib", dst="bin", src="lib")
 
                     def test(self):
                         cmd = os.path.join(self.cpp.build.bindirs[0], "test")
@@ -173,7 +172,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
     test_client_shared.run("create . -o hello:shared=True")
     test_client_shared.run("remove '*' -f")
-    exe_folder = os.path.join("test_package", "cmake-build-release")
+    exe_folder = os.path.join("test_package", "bin")
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
