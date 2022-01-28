@@ -1,15 +1,13 @@
 import os
 import unittest
 
-import pytest
 
-from conans import load
 from conans.client.hook_manager import HookManager
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
-from conans.util.files import save
+from conans.util.files import save, load
 
 my_hook = """
 def pre_export(output, **kwargs):

@@ -15,13 +15,13 @@ def test_conanfile_txt_deps_revisions(requires):
     client = TestClient()
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing"})
-    client.run("create pkg pkg/0.1@user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     assert "REV1!!!" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
-    client.run("create pkg pkg/0.1@user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     assert "REV2!!!" in client.out
 
     client.run("install consumer/conanfile.txt --lockfile=conan.lock")
@@ -42,16 +42,16 @@ def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "pkg/conanfile.py": GenConanfile().with_requires(f"dep/{req_version}@user/testing"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/{req_version}@user/testing"})
-    client.run("create dep dep/0.1@user/testing")
+    client.run("create dep --name=dep --version=0.1 --user=user --channel=testing")
     assert "REV1!!!" in client.out
-    client.run("create pkg pkg/0.1@user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "dep/0.1@user/testing from local cache - Cache" in client.out
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "dep/0.1@user/testing#" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
-    client.run("create dep dep/0.1@user/testing")
+    client.run("create dep --name=dep --version=0.1 --user=user --channel=testing")
     assert "REV2!!!" in client.out
 
     client.run("install consumer/conanfile.txt --lockfile=conan.lock")
@@ -71,12 +71,12 @@ def test_conanfile_txt_strict_revisions(requires):
     client = TestClient()
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing"})
-    client.run("create pkg pkg/0.1@user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
-    client.run("create pkg pkg/0.1@user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     rrev = re.search(r"pkg/0.1@user/testing: Exported revision: (\S+)", str(client.out)).group(1)
 
     # Not strict mode works
@@ -95,7 +95,7 @@ def test_conditional_os(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent(f"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -108,27 +108,27 @@ def test_conditional_os(requires):
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV1!!!!')"),
                  "pkg/conanfile.py": pkg_conanfile,
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1"})
-    client.run("create dep win/0.1@")
-    client.run("create dep nix/0.1@")
+    client.run("create dep --name=win --version=0.1")
+    client.run("create dep --name=nix --version=0.1")
 
-    client.run("create pkg pkg/0.1@ -s os=Windows")
-    client.run("create pkg pkg/0.1@ -s os=Linux")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
                " -s:b os=Windows")
-    assert "win/0.1 from local cache - Cache" in client.out
-    assert "pkg/0.1 from local cache - Cache" in client.out
+    assert "win/0.1#" in client.out
+    assert "pkg/0.1#" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
-    assert "nix/0.1 from local cache - Cache" in client.out
-    assert "pkg/0.1 from local cache - Cache" in client.out
+    assert "nix/0.1#" in client.out
+    assert "pkg/0.1#" in client.out
 
     # New dependencies will not be used if using the lockfile
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
-    client.run("create dep win/0.1@")
-    client.run("create dep nix/0.1@")
-    client.run("create pkg pkg/0.1@ -s os=Windows")
-    client.run("create pkg pkg/0.1@ -s os=Linux")
+    client.run("create dep --name=win --version=0.1")
+    client.run("create dep --name=nix --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
     client.run("install consumer --lockfile=conan.lock -s os=Windows -s:b os=Windows")
     assert "REV1!!!" in client.out
@@ -155,7 +155,7 @@ def test_conditional_same_package_revisions(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -168,14 +168,14 @@ def test_conditional_same_package_revisions(requires):
                  "dep2/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')"),
                  "pkg/conanfile.py": pkg_conanfile,
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1"})
-    client.run("create dep1 dep/0.1@")
+    client.run("create dep1 --name=dep --version=0.1")
     rrev1 = re.search(r"dep/0.1: Exported revision: (\S+)", str(client.out)).group(1)
-    client.run("create dep2 dep/0.1@")
+    client.run("create dep2 --name=dep --version=0.1")
     rrev2 = re.search(r"dep/0.1: Exported revision: (\S+)", str(client.out)).group(1)
     client.save({"pkg/conanfile.py": pkg_conanfile.format(rrev1, rrev2)})
 
-    client.run("create pkg pkg/0.1@ -s os=Windows")
-    client.run("create pkg pkg/0.1@ -s os=Linux")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
+    client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
                " -s:b os=Windows")

@@ -11,9 +11,8 @@ def pkg_cmake(name, version, requires=None, exe=False):
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
         import os
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             name = "{pkg_name}"
@@ -71,13 +70,15 @@ def pkg_cmake(name, version, requires=None, exe=False):
 def pkg_cmake_test(require_name):
     conanfile = textwrap.dedent("""\
         import os
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps", "VirtualRunEnv"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def layout(self):
                 cmake_layout(self)
@@ -107,9 +108,8 @@ def pkg_cmake_app(name, version, requires=None):
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
         import os
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             name = "{pkg_name}"

@@ -1,10 +1,8 @@
-import copy
 import os
 import shutil
 
 import yaml
 
-from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 from conans.client.tools import chdir
@@ -16,30 +14,6 @@ from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
-
-
-def export_alias(alias_ref, target_ref, cache):
-    revision_mode = "hash"
-    conanfile = """
-from conans import ConanFile
-
-class AliasConanfile(ConanFile):
-    alias = "%s"
-    revision_mode = "%s"
-""" % (repr(target_ref), revision_mode)
-
-    alias_layout = cache.create_export_recipe_layout(alias_ref)
-
-    save(alias_layout.conanfile(), conanfile)
-    manifest = FileTreeManifest.create(alias_layout.export())
-    manifest.save(folder=alias_layout.export())
-
-    rrev = calc_revision(scoped_output=ConanOutput(),
-                         path=None, manifest=manifest, revision_mode=revision_mode)
-    ref_with_rrev = copy.copy(alias_ref)
-    ref_with_rrev.revision = rrev
-    alias_layout.reference = ref_with_rrev
-    cache.assign_rrev(alias_layout)
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,

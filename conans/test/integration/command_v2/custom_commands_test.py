@@ -14,10 +14,10 @@ class TestCustomCommands:
             from conans.cli.command import conan_command
 
             def output_mycommand_cli(info):
-                cli_out_write(f"Conan cache folder is: {info.get('cache_folder')}")
+                return f"Conan cache folder is: {info.get('cache_folder')}"
 
             def output_mycommand_json(info):
-                cli_out_write(json.dumps(info))
+                return json.dumps(info)
 
             @conan_command(group="custom commands",
                            formatters={"cli": output_mycommand_cli,
@@ -33,7 +33,7 @@ class TestCustomCommands:
         client = TestClient()
         command_file_path = os.path.join(client.cache_folder, 'commands', 'cmd_mycommand.py')
         client.save({f"{command_file_path}": mycommand})
-        client.run("mycommand")
+        client.run("mycommand -f cli")
         foldername = os.path.basename(client.cache_folder)
         assert f'Conan cache folder is: {foldername}' in client.out
         client.run("mycommand -f json")
@@ -47,10 +47,10 @@ class TestCustomCommands:
             from conans.cli.command import conan_command, conan_subcommand
 
             def output_cli(info):
-                cli_out_write(f"{info.get('argument1')}")
+                return f"{info.get('argument1')}"
 
             def output_json(info):
-                cli_out_write(json.dumps(info))
+                return json.dumps(info)
 
             @conan_subcommand(formatters={"cli": output_cli, "json": output_json})
             def complex_sub1(conan_api, parser, subparser, *args):
@@ -72,7 +72,7 @@ class TestCustomCommands:
         client = TestClient()
         command_file_path = os.path.join(client.cache_folder, 'commands', 'cmd_complex.py')
         client.save({f"{command_file_path}": complex_command})
-        client.run("complex sub1 myargument")
+        client.run("complex sub1 myargument -f=cli")
         assert "myargument" in client.out
         client.run("complex sub1 myargument -f json")
         assert f'{{"argument1": "myargument"}}' in client.out

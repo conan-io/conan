@@ -10,7 +10,7 @@ class ChangeOptionsInRequirementsTest(unittest.TestCase):
     def test_basic(self):
         client = TestClient()
         zlib = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "zlib"
@@ -23,7 +23,7 @@ class ConanLib(ConanFile):
         client.save(files)
         client.run("export . --user=lasote --channel=testing")
 
-        boost = """from conans import ConanFile
+        boost = """from conan import ConanFile
 from conans import tools
 import platform, os, sys
 
@@ -41,7 +41,7 @@ class BoostConan(ConanFile):
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
-        client.run("create . lasote/testing -o boostdbg:shared=True --build=missing")
+        client.run("create . --user=lasote --channel=testing -o boostdbg:shared=True --build=missing")
         ref = RecipeReference.loads("zlib/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()

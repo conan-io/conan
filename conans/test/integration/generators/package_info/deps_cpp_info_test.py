@@ -15,17 +15,17 @@ class DepsCppInfoTest(unittest.TestCase):
         client = TestClient()
 
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . dep/0.1@user/testing")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=testing")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "dep/0.1@user/testing"
                 def build(self):
                     self.output.info("DEPS_CPP_INFO_BIN: %s" % self.dependencies["dep"].cpp_info.bin_paths)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: DEPS_CPP_INFO_BIN: []", client.out)
         client.run("install .")
         client.run("build .")

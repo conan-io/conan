@@ -270,6 +270,10 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
+            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
+                downstream_require.headers = False
+            if pkg_type in (PackageType.SHARED, PackageType.APP):
+                downstream_require.libs = False
 
         assert require.visible, "at this point require should be visible"
 
@@ -391,7 +395,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None,options=None):
+                      run=None, options=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -412,7 +416,6 @@ class Requirements:
         self._requires[req] = req
 
     def override(self, ref):
-        name = ref.name
         req = Requirement(ref)
         old_requirement = self._requires.get(req)
         if old_requirement is not None:

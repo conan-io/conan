@@ -14,7 +14,7 @@ class DeployTest(unittest.TestCase):
     @parameterized.expand([(True, ), (False, )])
     def test_deploy(self, deploy_to_abs):
         client = TestClient()
-        libconanfile = """from conans import ConanFile
+        libconanfile = """from conan import ConanFile
 from conans.tools import save
 
 class Lib(ConanFile):
@@ -32,7 +32,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create . lib/0.1@user/testing")
+        client.run("create . --name=lib --version=0.1 --user=user --channel=testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -40,7 +40,7 @@ class Lib(ConanFile):
             mkdir(dll_folder)
         else:
             dll_folder = ""
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import save
 
 class Pkg(ConanFile):
@@ -58,7 +58,7 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertNotIn("deploy()", client.out)
 
         def test_install_in(folder):

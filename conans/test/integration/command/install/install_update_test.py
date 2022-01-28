@@ -11,7 +11,7 @@ from conans.util.files import load
 def test_update_binaries():
     client = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os, random
         class Pkg(ConanFile):
@@ -21,16 +21,16 @@ def test_update_binaries():
                 self.copy("file.txt")
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@lasote/testing")
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --reference=pkg/0.1@lasote/testing")
     value = load(os.path.join(client2.current_folder, "file.txt"))
 
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . pkg/0.1@lasote/testing")  # Because of random, this should be NEW prev
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.run("install --reference=pkg/0.1@lasote/testing")
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
@@ -43,11 +43,11 @@ def test_update_binaries():
 
     # Now check newer local modifications are not overwritten
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . pkg/0.1@lasote/testing")
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.save({"conanfile.py": conanfile})
-    client2.run("create . pkg/0.1@lasote/testing")
+    client2.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client2.run("install --reference=pkg/0.1@lasote/testing")
     value2 = load(os.path.join(client2.current_folder, "file.txt"))
     client2.run("install --reference=pkg/0.1@lasote/testing --update -r default")
@@ -65,7 +65,7 @@ def test_update_not_date():
                 with_requirement("hello0/1.0@lasote/stable")},
                 clean_first=True)
     client.run("install . --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     prev = client.get_latest_package_reference("hello0/1.0@lasote/stable")
 
@@ -77,7 +77,8 @@ def test_update_not_date():
     time.sleep(1)
 
     # Change and rebuild package
-    client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_test("pass")}, clean_first=True)
+    client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_class_attribute("author = 'O'")},
+                clean_first=True)
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
 
@@ -94,7 +95,7 @@ def test_update_not_date():
     client.run("install . --update")
     # *1 With revisions here is removing the package because it doesn't belong to the recipe
 
-    assert "hello0/1.0@lasote/stable from local cache - Newer" in client.out
+    client.assert_listed_require({"hello0/1.0@lasote/stable": "Newer"})
 
     failed_update_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
     failed_update_package_timestamp = client.cache.get_package_timestamp(client.get_latest_package_reference(ref))
@@ -110,7 +111,7 @@ def test_reuse():
                  "header.h": "content1"})
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --reference=hello0/1.0@lasote/stable")
@@ -121,7 +122,7 @@ def test_reuse():
     sleep(1)
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2.run("install --reference=hello0/1.0@lasote/stable --update")
     ref = RecipeReference.loads("hello0/1.0@lasote/stable")
@@ -134,7 +135,7 @@ def test_reuse():
 def test_update_binaries_failed():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("install --reference=pkg/0.1@lasote/testing --update")
     assert "pkg/0.1@lasote/testing: WARN: Can't update, there are no remotes configured or " \
            "enabled" in client.out

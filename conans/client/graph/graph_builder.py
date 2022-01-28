@@ -222,7 +222,6 @@ class DepsGraphBuilder(object):
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
 
         if recipe_status == RECIPE_EDITABLE:
-            dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
 
         return new_ref, dep_conanfile, recipe_status, remote
@@ -272,6 +271,10 @@ class DepsGraphBuilder(object):
         graph.add_edge(node, new_node, require)
         if node.propagate_downstream(require, new_node):
             raise GraphError.runtime(node, new_node)
+
+        ancestor = node.check_loops(new_node)
+        if ancestor is not None:
+            raise GraphError.loop(new_node, require, ancestor)
 
         return new_node
 

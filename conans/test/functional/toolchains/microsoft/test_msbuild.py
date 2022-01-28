@@ -319,7 +319,7 @@ def test_msvc_runtime_flag_vs2022():
 def check_msvc_runtime_flag(vs_version, msvc_version):
     client = TestClient()
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.microsoft import msvc_runtime_flag
        class App(ConanFile):
            settings = "os", "arch", "compiler", "build_type"
@@ -354,7 +354,7 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuildToolchain, MSBuild, MSBuildDeps
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -464,8 +464,8 @@ class WinTest(unittest.TestCase):
         settings_h = " ".join('-s:h %s="%s"' % (k, v) for k, v in settings if v)
         settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
-        client.run("new hello/0.1 -m=cmake_lib")
-        client.run("create . hello/0.1@ %s" % settings_h)
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.run("create . %s" % settings_h)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -509,8 +509,8 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
-        client.run("new hello/0.1 --template=cmake_lib")
-        client.run("create . hello/0.1@ %s -tf=None" % (settings,))
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.run("create . %s -tf=None" % (settings,))
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -545,7 +545,7 @@ class WinTest(unittest.TestCase):
                     ("compiler.cppstd", "17")]
 
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
-        client.run("new hello/0.1 -m=cmake_lib")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
         configs = [("Release", "x86", True), ("Release", "x86_64", True),
                    ("Debug", "x86", False), ("Debug", "x86_64", False)]
         for build_type, arch, shared in configs:
@@ -555,7 +555,7 @@ class WinTest(unittest.TestCase):
             if os.path.exists(build_test_folder):
                 shutil.rmtree(build_test_folder)
             runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
+            client.run("create . --name=hello --version=0.1 %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         # Prepare the actual consumer package

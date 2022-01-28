@@ -50,13 +50,13 @@ class GraphManagerTest(unittest.TestCase):
         app.cache = cache
         app.remote_manager = self.remote_manager
         app.enabled_remotes = []
-        app.selected_remote = None
+        app.selected_remotes = []
         app.check_updates = False
         app.update = False
         app.range_resolver = RangeResolver(app)
         app.proxy = ConanProxy(app)
         pyreq_loader = PyRequireLoader(app.proxy, app.range_resolver)
-        app.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
+        app.loader = ConanFileLoader(pyreq_loader=pyreq_loader)
         app.binaries_analyzer = GraphBinariesAnalyzer(app)
         app.graph_manager = GraphManager(app)
         app.hook_manager = Mock()
@@ -100,7 +100,7 @@ class GraphManagerTest(unittest.TestCase):
     def alias_cache(self, alias, target):
         ref = RecipeReference.loads(alias)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Alias(ConanFile):
                 alias = "%s"
             """ % target)

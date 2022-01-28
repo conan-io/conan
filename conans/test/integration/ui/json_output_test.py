@@ -35,7 +35,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
         # Result of an install retrieving only the recipe
-        self.client.run("upload cc/1.0@private_user/channel -c -r default")
+        self.client.run("upload cc/1.0@private_user/channel -c -r default --only-recipe")
         self.client.run("remove '*' -f")
         self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json --build missing ")
         my_json = json.loads(self.client.load("myfile.json"))
@@ -51,7 +51,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
         # Upload the binary too
-        self.client.run("upload cc/1.0@private_user/channel --all -c -r default")
+        self.client.run("upload cc/1.0@private_user/channel -c -r default")
         self.client.run("remove '*' -f")
         self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json")
         my_json = json.loads(self.client.load("myfile.json"))
@@ -92,7 +92,7 @@ class JsonOutputTest(unittest.TestCase):
         # Missing binary package
         self.client.save({"conanfile.py": GenConanfile("c", "1.0")}, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
-        self.client.run("upload c/1.0@private_user/channel -c -r default")
+        self.client.run("upload c/1.0@private_user/channel -c -r default --only-recipe")
         self.client.run("remove '*' -f")
         self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json", assert_error=True)
         my_json = json.loads(self.client.load("myfile.json"))
@@ -129,7 +129,7 @@ class JsonOutputTest(unittest.TestCase):
                          clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
 
-        self.client.run('upload "*" -c --all -r default')
+        self.client.run('upload "*" -c -r default')
 
         conanfile = str(GenConanfile("BB", "1.0")) + """
     def configure(self):
@@ -140,13 +140,13 @@ class JsonOutputTest(unittest.TestCase):
 """
         self.client.save({"conanfile.py": conanfile}, clean_first=True)
         self.client.run("create . private_user/channel --build missing")
-        self.client.run('upload "*" -c --all -r default')
+        self.client.run('upload "*" -c -r default')
 
         self.client.save({"conanfile.py": GenConanfile("AA", "1.0").
                          with_require("BB/1.0@private_user/channel")},
                          clean_first=True)
         self.client.run("create . private_user/channel")
-        self.client.run('upload "*" -c --all -r default')
+        self.client.run('upload "*" -c -r default')
 
         save(os.path.join(self.client.cache.profiles_path, "mybr"),
              """
@@ -175,7 +175,7 @@ AA*: c/1.0@private_user/channel
 
     def test_json_create_multiconfig(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 def package_info(self):
@@ -186,7 +186,7 @@ AA*: c/1.0@private_user/channel
 
             """)
         self.client.save({'conanfile.py': conanfile})
-        self.client.run("create . name/version@user/channel --json=myfile.json")
+        self.client.run("create . --name=name --version=version --user=user --channel=channel --json=myfile.json")
         my_json = self.client.load("myfile.json")
         my_json = json.loads(my_json)
 

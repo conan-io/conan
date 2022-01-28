@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 def client():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Pkg(ConanFile):
@@ -39,7 +39,7 @@ def test_cmake_no_config(client):
         build_type=Release
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
 
 
@@ -56,7 +56,7 @@ def test_cmake_config(client):
         tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
@@ -73,7 +73,7 @@ def test_cmake_config_error(client):
         tools.microsoft.msbuild:verbosity=non-existing
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile", assert_error=True)
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
     assert "Unknown msbuild verbosity: non-existing" in client.out
 
 
@@ -90,9 +90,9 @@ def test_cmake_config_package(client):
         dep*:tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
-    client.run("create . dep/0.1@ -pr=myprofile")
+    client.run("create . --name=dep --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
@@ -110,7 +110,7 @@ def test_config_profile_forbidden(client):
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class Pkg(ConanFile):
@@ -132,7 +132,7 @@ def test_msbuild_config():
         tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
@@ -141,7 +141,7 @@ def test_msbuild_config():
 def test_msbuild_compile_options():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             settings = "os", "arch", "compiler", "build_type"

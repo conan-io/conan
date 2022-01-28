@@ -18,7 +18,7 @@ from conans.util.files import touch
 @pytest.mark.tool_autotools()
 def test_autotools():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create .")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
@@ -26,7 +26,7 @@ def test_autotools():
     configure_ac = gen_configure_ac()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
@@ -62,7 +62,7 @@ def build_windows_subsystem(profile, make_program):
     """
     # FIXME: cygwin in CI (my local machine works) seems broken for path with spaces
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     # TODO: Test Windows subsystems in CMake, at least msys is broken
     os.rename(os.path.join(client.current_folder, "test_package"),
               os.path.join(client.current_folder, "test_package2"))
@@ -73,7 +73,7 @@ def build_windows_subsystem(profile, make_program):
     makefile = gen_makefile(apps=["app"])
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 
         class TestConan(ConanFile):

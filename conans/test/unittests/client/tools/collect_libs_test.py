@@ -12,7 +12,7 @@ class CollectLibsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0")
     def test_collect_libs(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):
@@ -25,7 +25,7 @@ class CollectLibsTest(unittest.TestCase):
         lib_name = "mylibname.%s" % ("a" if platform.system() != "Windows" else "lib")
         client.save({"conanfile.py": conanfile,
                      lib_name: ""})
-        client.run("create . mylib/0.1@user/channel")
+        client.run("create . --name=mylib --version=0.1 --user=user --channel=channel")
 
         # reusing the binary already in cache
         client.save({"conanfile.py": GenConanfile().with_require("mylib/0.1@user/channel")

@@ -19,7 +19,7 @@ from conans.util.files import save
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -96,7 +96,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import os
             class Pkg(ConanFile):
@@ -108,8 +108,8 @@ class Base(unittest.TestCase):
                          % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . hello/0.1@ -s build_type=Debug")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Debug")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -351,8 +351,8 @@ class LinuxTest(Base):
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
-        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
+        cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
                   'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
                   '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
                   '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
@@ -460,7 +460,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     save(client.cache.new_config_path,
          "tools.microsoft.msbuild:vs_version={}".format(vs_version))
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -482,7 +482,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                  "app.cpp": main,
                  })
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-    client.run("create . app/1.0@ {}".format(settings))
+    client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
     check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
@@ -493,7 +493,7 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -535,7 +535,7 @@ class CMakeInstallTest(unittest.TestCase):
                                                     "include", "header.h")))"""
 
         # The create flow must work
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)
@@ -549,7 +549,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
     def test_cmake_cache_variables(self):
         # https://github.com/conan-io/conan/issues/7832
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -581,7 +581,7 @@ class TestCMakeFindPackagePreferConfig:
 
     def test_prefer_config(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"

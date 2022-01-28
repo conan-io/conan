@@ -12,7 +12,7 @@ from conans.util.files import save
 
 
 conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.files import download
 
     class Pkg(ConanFile):
@@ -45,7 +45,7 @@ class ClientCertsTest(unittest.TestCase):
         # TODO: Discuss if dropping a "xxx.cert" file inthe cache would work as it is the default
         client = TestClient(requester_class=MyHttpRequester)
         client.save({"conanfile.py": conanfile})
-        client.run("create . foo/1.0@")
+        client.run("create . --name=foo --version=1.0")
 
         assert "KWARGS auth: None" in client.out
 
@@ -53,7 +53,7 @@ class ClientCertsTest(unittest.TestCase):
         tools.save(config.client_cert_path, "Fake cert")
         tools.save(config.client_cert_key_path, "Fake key")
 
-        client.run("create . foo/1.0@")
+        client.run("create . --name=foo --version=1.0")
         assert "KWARGS cert: ('{}', '{}')".format(config.client_cert_path,
                                                   config.client_cert_key_path).replace("\\", '\\\\') in client.out
 
@@ -73,5 +73,5 @@ class ClientCertsTest(unittest.TestCase):
                                 """.format(mycert_path, mykey_path))
         client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
-        client.run("create . foo/1.0@")
+        client.run("create . --name=foo --version=1.0")
         assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path) in client.out

@@ -17,7 +17,7 @@ from conans.util.files import save
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -59,10 +59,10 @@ class CustomConfigurationTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        self.client.run("new hello/0.1 --template=cmake_lib")
-        self.client.run("create . hello/0.1@ -s compiler.version=15 "
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
+        self.client.run("create . -s compiler.version=15 "
                         "-s build_type=Release -o hello:shared=True -tf=None")
-        self.client.run("create . hello/0.1@ -s compiler.version=15 "
+        self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 "
                         "-s build_type=Release -tf=None")
 
         # Prepare the actual consumer package
@@ -103,7 +103,7 @@ class CustomConfigurationTest(unittest.TestCase):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
 
         class App(ConanFile):
@@ -143,7 +143,7 @@ class CustomSettingsTest(unittest.TestCase):
         settings = get_default_settings_yml()
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
-        self.client.run("new hello/0.1 --template=cmake_lib")
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")
 
         cmake = cmake.replace("cmake_minimum_required", """
@@ -157,7 +157,7 @@ class CustomSettingsTest(unittest.TestCase):
             add_library"""))
         cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
         self.client.save({"CMakeLists.txt": cmake})
-        self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease "
+        self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 -s build_type=MyRelease "
                         "-s:b build_type=MyRelease -tf=None")
 
         # Prepare the actual consumer package
@@ -194,7 +194,7 @@ class CustomSettingsTest(unittest.TestCase):
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
-       from conans import ConanFile
+       from conan import ConanFile
        from conans.tools import save
 
        class Dep(ConanFile):
@@ -207,8 +207,8 @@ def test_changing_build_type():
                self.copy("*.h", dst="include")
            """)
     client.save({"conanfile.py": dep_conanfile})
-    client.run("create . dep/0.1@ -s build_type=Release")
-    client.run("create . dep/0.1@ -s build_type=Debug")
+    client.run("create . --name=dep --version=0.1 -s build_type=Release")
+    client.run("create . --name=dep --version=0.1 -s build_type=Debug")
 
     cmakelists = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)

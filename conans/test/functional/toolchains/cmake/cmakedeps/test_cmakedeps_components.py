@@ -16,7 +16,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """
 
     top = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -27,7 +27,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     middle = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "middle"
@@ -37,7 +37,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -52,8 +52,8 @@ class PropagateSpecificComponents(unittest.TestCase):
             'middle.py': self.middle,
             'app.py': self.app
         })
-        client.run('create top.py top/version@')
-        client.run('create middle.py middle/version@')
+        client.run('create top.py --name=top --version=version')
+        client.run('create middle.py --name=middle --version=version')
         self.cache_folder = client.cache_folder
 
     def test_cmakedeps_app(self):
@@ -69,8 +69,7 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.run('install --reference=middle/version@ -g CMakeDeps')
 
         content = t.load('middle-release-x86_64-data.cmake')
-        self.assertIn("set(middle_FIND_DEPENDENCY_NAMES ${middle_FIND_DEPENDENCY_NAMES} top)",
-                      content)
+        self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-config.cmake')
         self.assertIn("find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)", content)
@@ -84,7 +83,7 @@ class PropagateSpecificComponents(unittest.TestCase):
 @pytest.fixture
 def top_conanfile():
     return textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -103,7 +102,7 @@ def test_wrong_component(top_conanfile, from_component):
     """
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -113,8 +112,8 @@ def test_wrong_component(top_conanfile, from_component):
 
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@')
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version')
 
     t.run('install --reference=wrong/version@ -g CMakeDeps', assert_error=True)
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
@@ -126,7 +125,7 @@ def test_unused_requirement(top_conanfile):
         This error is known when creating the package if the requirement is consumed.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -135,8 +134,8 @@ def test_unused_requirement(top_conanfile):
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
     assert "wrong/version package_info(): Package require 'top' not used in components " \
            "requires" in t.out
 
@@ -147,7 +146,7 @@ def test_wrong_requirement(top_conanfile):
         This error is known when creating the package if the requirement is not there.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -156,8 +155,8 @@ def test_wrong_requirement(top_conanfile):
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
     assert "wrong/version package_info(): Package require 'other' declared in " \
            "components requires but not defined as a recipe requirement" in t.out
 
@@ -165,7 +164,7 @@ def test_wrong_requirement(top_conanfile):
 @pytest.mark.tool_cmake
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -181,7 +180,7 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -214,6 +213,114 @@ def test_components_system_libs():
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
+    # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
+    #       <CONFIG:Debug>
+
+
+@pytest.mark.tool_cmake
+def test_components_exelinkflags():
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Requirement(ConanFile):
+            name = "requirement"
+            version = "system"
+
+            settings = "os", "arch", "compiler", "build_type"
+
+            def package_info(self):
+                self.cpp_info.components["component"].exelinkflags = ["-Wl,-link1", "-Wl,-link2"]
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": conanfile})
+    t.run("create .")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "requirement/system"
+            generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "CMakeLists.txt"
+            settings = "os", "arch", "compiler", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+    """)
+
+    cmakelists = textwrap.dedent("""
+        project(consumer)
+        cmake_minimum_required(VERSION 3.1)
+        find_package(requirement)
+        get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        message("component options: ${tmp_options}")
+    """)
+
+    t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    t.run("create . --build missing -s build_type=Release")
+    assert ('component options: '
+            '$<$<CONFIG:Release>:'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-link1;-Wl,-link2>>') in t.out
+    # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
+    #       <CONFIG:Debug>
+
+
+@pytest.mark.tool_cmake
+def test_components_sharedlinkflags():
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Requirement(ConanFile):
+            name = "requirement"
+            version = "system"
+
+            settings = "os", "arch", "compiler", "build_type"
+
+            def package_info(self):
+                self.cpp_info.components["component"].sharedlinkflags = ["-Wl,-link1", "-Wl,-link2"]
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": conanfile})
+    t.run("create .")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "requirement/system"
+            generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "CMakeLists.txt"
+            settings = "os", "arch", "compiler", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+    """)
+
+    cmakelists = textwrap.dedent("""
+        project(consumer)
+        cmake_minimum_required(VERSION 3.1)
+        find_package(requirement)
+        get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        message("component options: ${tmp_options}")
+    """)
+
+    t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    t.run("create . --build missing -s build_type=Release")
+    assert ('component options: '
+            '$<$<CONFIG:Release>:'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>

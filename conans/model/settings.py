@@ -154,6 +154,9 @@ class Settings(object):
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
+    def serialize(self):
+        return {k: v.value for k, v in self._data.items()}
+
     def get_safe(self, name, default=None):
         try:
             tmp = self

@@ -244,16 +244,7 @@ def _handle_system_requirements(install_node, package_layout):
     # Instead of calling empty methods
     if type(conanfile).system_requirements == ConanFile.system_requirements:
         return
-
-    system_reqs_path = package_layout.system_reqs()
-    system_reqs_package_path = package_layout.system_reqs_package()
-
-    ret = call_system_requirements(conanfile)
-    ret = str(ret or "")
-    if getattr(conanfile, "global_system_requirements", None):
-        save(system_reqs_path, ret)
-    else:
-        save(system_reqs_package_path, ret)
+    call_system_requirements(conanfile)
 
 
 def call_system_requirements(conanfile):
@@ -352,6 +343,11 @@ class BinaryInstaller(object):
                     raise_missing([package], self._out)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._download_pkg(package)
+                elif node.binary == BINARY_EDITABLE:
+                    self._handle_node_editable(node)
+                    # Need a temporary package revision for package_revision_mode
+                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+                    node.prev = "editable"
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
@@ -386,6 +382,10 @@ class BinaryInstaller(object):
             n.prev = pref.revision  # Make sure the prev is assigned
             conanfile = n.conanfile
             # Call the info method
+            conanfile.folders.set_base_package(pkg_folder)
+            conanfile.folders.set_base_source(None)
+            conanfile.folders.set_base_build(None)
+            conanfile.folders.set_base_install(None)
             self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -393,21 +393,25 @@ class BinaryInstaller(object):
             # Get source of information
             conanfile = node.conanfile
             ref = node.ref
-            conanfile_path = self._cache.editable_path(ref)
+            editable = self._cache.editable_packages.get(ref)
+            conanfile_path = editable["path"]
+            output_folder = editable.get("output_folder")
+            source_folder = editable.get("source_folder")
             # TODO: Check, this assumes the folder is always the conanfile one
             base_path = os.path.dirname(conanfile_path)
-            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
             # New editables mechanism based on Folders
-            conanfile.folders.set_base_package(base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(base_path)
-
+            conanfile.folders.set_base_package(output_folder or base_path)
+            conanfile.folders.set_base_source(source_folder or base_path)
+            conanfile.folders.set_base_build(output_folder or base_path)
+            conanfile.folders.set_base_install(output_folder or base_path)
+            conanfile.folders.set_base_imports(output_folder or base_path)
+            conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+
+            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # It will only run generation and imports once
         node = install_node.nodes[0]
@@ -450,10 +454,6 @@ class BinaryInstaller(object):
         return pref
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
-        conanfile.folders.set_base_package(package_folder)
-        conanfile.folders.set_base_source(None)
-        conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_install(None)
 
         conanfile.user_info = UserInfo()
 
@@ -464,20 +464,19 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                conanfile.cpp.package.set_relative_base_folder(package_folder)
+
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
-                    conanfile.folders.set_base_build(package_folder)
-                    conanfile.folders.set_base_source(package_folder)
-                    conanfile.folders.set_base_generators(package_folder)
 
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build.copy()
-                    build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+                    build_cppinfo.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source.copy()
-                    source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+                    source_cppinfo.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)

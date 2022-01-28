@@ -10,7 +10,7 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         # self.setting is not available in 'source'
         t = self.get_client()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 settings = "os",
@@ -19,14 +19,14 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
                     self.output.info("conanfile::source(): settings.os={}".format(self.settings.os))
         """)
         t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@ -s os=Linux', assert_error=True)
+        t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
         self.assertIn("'self.settings' access in source() method is deprecated", t.out)
 
     def test_no_options(self):
         # self.setting is not available in 'source'
         t = self.get_client()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 options = {'shared': [True, False]}
@@ -35,5 +35,5 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
                     self.output.info("conanfile::source(): options.shared={}".format(self.options.shared))
         """)
         t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@ -o shared=False', assert_error=True)
+        t.run('create . --name=name --version=version -o shared=False', assert_error=True)
         self.assertIn("'self.options' access in source() method is deprecated", t.out)

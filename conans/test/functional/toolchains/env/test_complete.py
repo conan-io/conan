@@ -6,11 +6,11 @@ from conans.test.utils.tools import TestClient
 
 def test_cmake_virtualenv():
     client = TestClient()
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . -tf=None")
 
     cmakewrapper = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conans.tools import save, chdir
         class Pkg(ConanFile):
@@ -25,7 +25,7 @@ def test_cmake_virtualenv():
                 self.buildenv_info.prepend_path("PATH", self.package_folder)
             """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -58,22 +58,22 @@ def test_cmake_virtualenv():
                  "consumer/CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create cmakewrapper cmakewrapper/0.1@")
-    client.run("create consumer consumer/0.1@")
+    client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
+    client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
     assert "consumer/0.1: Created package" in client.out
 
 
 def test_complete():
     client = TestClient()
-    client.run("new myopenssl/1.0 -m=cmake_lib")
+    client.run("new cmake_lib -d name=myopenssl -d version=1.0")
     client.run("create . -o myopenssl:shared=True")
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
     mycmake_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -107,10 +107,10 @@ def test_complete():
     client.save({"conanfile.py": mycmake_conanfile,
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
-    client.run("create . mycmake/1.0@")
+    client.run("create . --name=mycmake --version=1.0")
 
     mylib = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
@@ -151,7 +151,7 @@ def test_complete():
                  "CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create . myapp/0.1@ -s:b build_type=Release -s:h build_type=Debug")
+    client.run("create . --name=myapp --version=0.1 -s:b build_type=Release -s:h build_type=Debug")
     first, last = str(client.out).split("RUNNING MYAPP")
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first

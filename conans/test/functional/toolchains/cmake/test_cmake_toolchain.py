@@ -71,7 +71,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
@@ -82,10 +82,10 @@ def test_cmake_toolchain_user_toolchain_from_dep():
         """)
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain.cmake !!!running!!!")'})
-    client.run("create . toolchain/0.1@")
+    client.run("create . --name=toolchain --version=0.1")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -99,7 +99,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
 
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     assert "mytoolchain.cmake !!!running!!!" in client.out
 
 
@@ -115,3 +115,99 @@ def test_cmake_toolchain_without_build_type():
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
     assert "CMAKE_BUILD_TYPE" not in toolchain
+
+
+def test_cmake_toolchain_multiple_user_toolchain():
+    """ A consumer consuming two packages that declare:
+            self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
+        The consumer wants to use apply both toolchains in the CMakeToolchain.
+        There are two ways to customize the CMakeToolchain (parametrized):
+                1. Altering the context of the block (with_context = True)
+                2. Using the t.blocks["user_toolchain"].user_toolchains = [] (with_context = False)
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            exports_sources = "*"
+            def package(self):
+                self.copy("*")
+            def package_info(self):
+                f = os.path.join(self.package_folder, "mytoolchain.cmake")
+                self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "mytoolchain.cmake": 'message(STATUS "mytoolchain1.cmake !!!running!!!")'})
+    client.run("create . --name=toolchain1 --version=0.1")
+    client.save({"conanfile.py": conanfile,
+                 "mytoolchain.cmake": 'message(STATUS "mytoolchain2.cmake !!!running!!!")'})
+    client.run("create . --name=toolchain2 --version=0.1")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt"
+            tool_requires = "toolchain1/0.1", "toolchain2/0.1"
+
+
+            def generate(self):
+                # Get the toolchains from "tools.cmake.cmaketoolchain:user_toolchain" conf at the
+                # tool_requires
+                user_toolchains = []
+                for dep in self.dependencies.direct_build.values():
+                    ut = dep.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
+                    if ut:
+                        user_toolchains.append(ut.replace('\\\\', '/'))
+
+                # Modify the context of the user_toolchain block
+                t = CMakeToolchain(self)
+                t.blocks["user_toolchain"].values["paths"] = user_toolchains
+                t.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
+    client.run("create . --name=pkg --version=0.1")
+    assert "mytoolchain1.cmake !!!running!!!" in client.out
+    assert "mytoolchain2.cmake !!!running!!!" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmaketoolchain_no_warnings():
+    """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
+    and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail
+    """
+    # Issue https://github.com/conan-io/conan/issues/10288
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Conan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain", "CMakeDeps"
+            requires = "dep/0.1"
+        """)
+    consumer = textwrap.dedent("""
+       set(CMAKE_CXX_COMPILER_WORKS 1)
+       set(CMAKE_CXX_ABI_COMPILED 1)
+       project(MyHello CXX)
+       cmake_minimum_required(VERSION 3.15)
+
+       find_package(dep CONFIG REQUIRED)
+       """)
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                 "conanfile.py": conanfile,
+                 "CMakeLists.txt": consumer})
+
+    client.run("create dep")
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
+                       "-Werror=dev --warn-uninitialized")
+    assert "Using Conan toolchain" in client.out
+    # The real test is that there are no errors, it returns successfully

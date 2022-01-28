@@ -10,7 +10,7 @@ def test_cmake_namespace():
     client = TestClient()
     namespace = "somename"
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain, CMake
 
             class Conan(ConanFile):
@@ -40,7 +40,7 @@ def test_bazel_namespace():
     client = TestClient()
     namespace = "somename"
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.google import BazelToolchain, Bazel
 
             class Conan(ConanFile):
@@ -79,7 +79,7 @@ def test_autotools_namespace():
     client = TestClient()
     namespace = "somename"
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.gnu import AutotoolsToolchain, Autotools
 
             class Conan(ConanFile):
@@ -112,7 +112,7 @@ def test_multiple_toolchains_one_recipe():
     client = TestClient()
     namespaces = ["autotools", "bazel", "cmake"]
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.gnu import AutotoolsToolchain, Autotools
             from conan.tools.google import BazelToolchain, Bazel
             from conan.tools.cmake import CMakeToolchain, CMake

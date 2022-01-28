@@ -25,7 +25,7 @@ unknown
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_srcdirs(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import save
 import os
 class TestConan(ConanFile):
@@ -36,7 +36,7 @@ class TestConan(ConanFile):
 """
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . mysrc/0.1@user/testing")
+        client.run("create . --name=mysrc --version=0.1 --user=user --channel=testing")
         client.run("install --reference=mysrc/0.1@user/testing -g cmake")
 
         cmake = client.load("conanbuildinfo.cmake")

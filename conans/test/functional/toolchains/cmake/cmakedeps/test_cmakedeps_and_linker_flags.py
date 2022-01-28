@@ -16,9 +16,8 @@ def test_shared_link_flags():
     Issue: https://github.com/conan-io/conan/issues/9936
     """
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
-    from conan.tools.cmake import CMake
-    from conan.tools.layout import cmake_layout
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, cmake_layout
 
 
     class HelloConan(ConanFile):
@@ -49,7 +48,7 @@ def test_shared_link_flags():
     """)
 
     client = TestClient()
-    client.run("new hello/1.0 -m cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=1.0")
     client.save({"conanfile.py": conanfile})
     client.run("create .")
     t = os.path.join("test_package", "cmake-build-release", "conan", "hello-release-x86_64-data.cmake")

@@ -18,13 +18,19 @@ class MesonTest(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "PkgConfigDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                self.folders.build = "build"
 
             def generate(self):
                 tc = MesonToolchain(self)
@@ -42,7 +48,7 @@ class MesonTest(TestMesonBase):
         """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 --template=cmake_lib")
+        self.t.run("new cmake_lib -d name=hello -d version=0.1")
 
         test_package_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
@@ -50,6 +56,6 @@ class MesonTest(TestMesonBase):
                      os.path.join("test_package", "meson.build"): self._test_package_meson_build,
                      os.path.join("test_package", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@")
+        self.t.run("create . --name=hello --version=0.1")
 
         self._check_binary()

@@ -1,8 +1,9 @@
 #!/usr/bin/python
 import os
 
-from conans import SERVER_CAPABILITIES, REVISIONS
+from conans import REVISIONS
 from conans.paths import conan_expand_user
+from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager

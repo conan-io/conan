@@ -29,9 +29,9 @@ class ProfileLoader:
 
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
-            msg = ("The default profile file doesn't exist:\n"
-                   "{}\n"
-                   "You need to create a default profile or specify your own profile")
+            msg = ("The default host profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:host=<myprofile>'")
             # TODO: Add detailed instructions when cli is improved
             raise ConanException(msg.format(default_profile))
         return default_profile
@@ -41,9 +41,9 @@ class ProfileLoader:
         default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
-            msg = ("The default profile file doesn't exist:\n"
-                   "{}\n"
-                   "You need to create a default profile or specify your own profile")
+            msg = ("The default build profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:build=<myprofile>'")
             # TODO: Add detailed instructions when cli is improved
             raise ConanException(msg.format(default_profile))
         return default_profile

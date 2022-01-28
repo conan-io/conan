@@ -11,7 +11,7 @@ class SourceTest(unittest.TestCase):
     @pytest.mark.tool_git
     def test_conanfile_removed(self):
         # https://github.com/conan-io/conan/issues/4013
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class ScmtestConan(ConanFile):
     scm = {
         "type": "git",

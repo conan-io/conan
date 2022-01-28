@@ -1,9 +1,11 @@
 import copy
 import os
+import platform
 import time
 import unittest
 from collections import OrderedDict
 
+import pytest
 from mock import patch
 from parameterized.parameterized import parameterized
 
@@ -17,7 +19,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load, rmdir
 
 conanfile_py = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -29,7 +31,7 @@ class HelloConan(ConanFile):
 
 
 combined_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -43,7 +45,7 @@ class HelloConan(ConanFile):
 
 
 nested_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -57,7 +59,7 @@ class HelloConan(ConanFile):
 
 
 overlap_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -270,7 +272,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
 
         # upload to remote
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
@@ -292,7 +294,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
 
-        self.client.run("upload hello/0.1@lasote/testing -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default --only-recipe")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
@@ -317,17 +319,17 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')
         self.client.run("install --reference=hello/0.1@lasote/testing")
         self._get_folders()
 
         # upload to remote again, the folder remains as installed
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
-        self.client.run("upload hello/0.1@lasote/testing --all -r=other")
+        self.client.run("upload hello/0.1@lasote/testing -r=other")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
@@ -338,7 +340,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')
         self.client.run("install --reference=hello/0.1@lasote/testing")
 
@@ -349,11 +351,11 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_installed_folder(mode)
 
         self.client.save({f"license.lic": "mylicense"})
-        self.client.run("create . lasote/testing")
+        self.client.run("create . --user=lasote --channel=testing")
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload hello/0.1@lasote/testing --all -r default")
+            self.client.run("upload hello/0.1@lasote/testing#latest -r default")
 
         ref = RecipeReference.loads('hello/0.1@lasote/testing')
         self.client.run(f"remove hello/0.1@lasote/testing"
@@ -383,6 +385,7 @@ def absolute_existing_folder():
     return tmp
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
 def test_exports_does_not_follow_symlink():
     linked_abs_folder = absolute_existing_folder()
     client = TurboTestClient(default_server_user=True)

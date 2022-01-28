@@ -13,7 +13,7 @@ from conans.test.utils.scm import create_local_git_repo
 class RemoveCredentials(unittest.TestCase):
 
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             scm = {"type": "git", "url": "auto"}

@@ -11,7 +11,7 @@ class NoCopySourceTest(unittest.TestCase):
 
     def test_basic(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 
@@ -51,7 +51,7 @@ class ConanFileToolsTest(ConanFile):
     @pytest.mark.xfail(reason="cache2.0 create --build not considered yet")
     def test_source_folder(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 
@@ -68,7 +68,7 @@ class ConanFileToolsTest(ConanFile):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
-        client.run("create . lasote/testing --build")
+        client.run("create . --user=lasote --channel=testing --build")
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
@@ -80,7 +80,7 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         client.save({"conanfile.py": conanfile % "False"})
-        client.run("create . lasote/testing --build")
+        client.run("create . --user=lasote --channel=testing --build")
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_recipe_reference(ref)

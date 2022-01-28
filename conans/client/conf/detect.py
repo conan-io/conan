@@ -250,6 +250,15 @@ def _detect_compiler_version(result):
             result.append(("compiler.base.version", "4.8"))
         else:
             result.append(("compiler.base.version", "4.4"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
+
+    if compiler != "msvc":
+        cppstd = _cppstd_default(compiler, version)
+        result.append(("compiler.cppstd", cppstd))
 
 
 def _get_solaris_architecture():
@@ -390,3 +399,42 @@ def detect_defaults_settings():
     result.append(("build_type", "Release"))
 
     return result
+
+
+def _cppstd_default(compiler, compiler_version):
+    assert isinstance(compiler_version, Version)
+    default = {"gcc": _gcc_cppstd_default(compiler_version),
+               "clang": _clang_cppstd_default(compiler_version),
+               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
+               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
+    return default
+
+
+def _clang_cppstd_default(compiler_version):
+    # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _gcc_cppstd_default(compiler_version):
+    if compiler_version >= "11":
+        return "gnu17"
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _visual_cppstd_default(compiler_version):
+    if compiler_version >= "14":  # VS 2015 update 3 only
+        return "14"
+    return None
+
+
+def _intel_visual_cppstd_default(_):
+    return None
+
+
+def _intel_gcc_cppstd_default(_):
+    return "gnu98"
+
+
+def _mcst_lcc_cppstd_default(compiler_version):
+    return "gnu14" if compiler_version >= "1.24" else "gnu98"

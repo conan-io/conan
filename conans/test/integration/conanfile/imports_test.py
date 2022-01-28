@@ -1,12 +1,11 @@
 import os
-import re
 import textwrap
 import unittest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 
 class TestConan(ConanFile):
     name = "%s"
@@ -40,7 +39,7 @@ class ImportTest(unittest.TestCase):
 
     def test_repackage(self):
         client = self._set_up()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class TestConan(ConanFile):
     requires='libc/0.1@lasote/testing'
     keep_imports = True
@@ -51,8 +50,8 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing --build=missing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing --build=missing")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
         pref = client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@user/testing"),
@@ -135,7 +134,7 @@ libc/0.1@lasote/testing
         # https://github.com/conan-io/conan/issues/2293
         client = TestClient()
         pkg_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):
@@ -145,7 +144,7 @@ libc/0.1@lasote/testing
                      "a.dll": "",
                      "Foo/b.dll": "",
                      "Baz/b.dll": ""})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             [requires]
@@ -204,7 +203,7 @@ libc/0.1@lasote/testing
     def test_wrong_path_sep(self):
         # https://github.com/conan-io/conan/issues/7856
         pkg_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import os
 
@@ -215,9 +214,9 @@ libc/0.1@lasote/testing
             """)
         client = TestClient()
         client.save({"conanfile.py": pkg_conanfile})
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         consumer_conanfile = textwrap.dedent(r"""
-            from conans import ConanFile
+            from conan import ConanFile
             import platform
 
             class TestConan(ConanFile):

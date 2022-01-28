@@ -45,7 +45,7 @@ def test_different_options_values_profile():
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
@@ -58,8 +58,8 @@ def test_different_options_values_profile():
             "consumer/conanfile.py": GenConanfile().with_requires("protobuf/1.0")
            .with_build_requires("protobuf/1.0")})
 
-    c.run("create protobuf protobuf/1.0@")
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=True")
+    c.run("create protobuf --name=protobuf --version=1.0")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=True")
     c.run("install consumer")
     assert "protobuf/1.0: MYOPTION: host-False" in c.out
     assert "protobuf/1.0: MYOPTION: build-False" in c.out
@@ -88,7 +88,7 @@ def test_different_options_values_recipe(scope):
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
@@ -97,7 +97,7 @@ def test_different_options_values_recipe(scope):
                 self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
         """)
     consumer_recipe = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             def requirements(self):
                 self.requires("protobuf/1.0", options={{"{scope}shared": {host}}})
@@ -106,8 +106,8 @@ def test_different_options_values_recipe(scope):
         """)
     c.save({"conanfile.py": protobuf})
 
-    c.run("create . protobuf/1.0@")
-    c.run("create . protobuf/1.0@ -o protobuf:shared=True")
+    c.run("create . --name=protobuf --version=1.0")
+    c.run("create . --name=protobuf --version=1.0 -o protobuf:shared=True")
 
     for host, build in ((True, True), (True, False), (False, True), (False, False)):
         c.save({"conanfile.py": consumer_recipe.format(host=host, build=build, scope=scope)})
@@ -126,7 +126,7 @@ def test_different_options_values_recipe_priority():
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [1, 2, 3]}
             default_options = {"shared": 1}
@@ -135,7 +135,7 @@ def test_different_options_values_recipe_priority():
                 self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
         """)
     my_pkg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             def requirements(self):
                 self.requires("protobuf/1.0", options={"shared": 2})
@@ -147,9 +147,9 @@ def test_different_options_values_recipe_priority():
             "consumer/conanfile.py": GenConanfile().with_requires("mypkg/1.0")
            .with_default_option("protobuf:shared", 3)})
 
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=2")
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=3")
-    c.run("create mypkg mypkg/1.0@")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=2")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=3")
+    c.run("create mypkg --name=mypkg --version=1.0")
 
     c.run("install consumer")
     assert f"protobuf/1.0: MYOPTION: host-3" in c.out

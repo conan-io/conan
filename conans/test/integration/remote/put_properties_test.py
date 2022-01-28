@@ -52,7 +52,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . --user=lasote --channel=stable")
-        client.run("upload hello0/0.1@lasote/stable -c -r default")
+        client.run("upload hello0/0.1@lasote/stable -c -r default --only-recipe")
 
     def test_matrix_params(self):
         test_server = TestServer(server_capabilities=[MATRIX_PARAMS, ])
@@ -92,7 +92,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . --user=lasote --channel=stable")
-        client.run("upload hello0/0.1@lasote/stable -c -r default")
+        client.run("upload hello0/0.1@lasote/stable -c -r default --only-recipe")
 
 
 def _create_property_files(client, values):

@@ -61,16 +61,15 @@ class RemoteManager(object):
         assert ref.revision, "get_recipe_snapshot requires revision"
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
-    def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload, deleted, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
-        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
-                          retry, retry_wait)
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted)
 
-    def upload_package(self, pref, files_to_upload, remote, retry, retry_wait):
+    def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
-        self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
+        self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote):
         """
@@ -209,8 +208,11 @@ class RemoteManager(object):
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)
 
-    def remove_packages(self, ref, remove_ids, remote):
-        return self._call_remote(remote, "remove_packages", ref, remove_ids)
+    def remove_packages(self, prefs, remote):
+        return self._call_remote(remote, "remove_packages", prefs)
+
+    def remove_all_packages(self, ref, remote):
+        return self._call_remote(remote, "remove_all_packages", ref)
 
     def get_recipe_file(self, ref, path, remote):
         return self._call_remote(remote, "get_recipe_file", ref, path)

@@ -11,7 +11,7 @@ class MesonInstall(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
         import os
         import shutil
-        from conans import ConanFile, tools
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -25,10 +25,13 @@ class MesonInstall(TestMesonBase):
                 if self.settings.os == "Windows":
                     del self.options.fPIC
 
+            def layout(self):
+                self.folders.build = "build"
+
             def generate(self):
                 tc = MesonToolchain(self)
                 # https://mesonbuild.com/Release-notes-for-0-50-0.html#libdir-defaults-to-lib-when-cross-compiling
-                tc.definitions["libdir"] = "lib"
+                tc.project_options["libdir"] = "lib"
                 tc.generate()
 
             def build(self):
@@ -38,7 +41,6 @@ class MesonInstall(TestMesonBase):
 
             def package(self):
                 meson = Meson(self)
-                meson.configure()
                 meson.install()
 
                 # https://mesonbuild.com/FAQ.html#why-does-building-my-project-with-msvc-output-static-libraries-called-libfooa
@@ -58,13 +60,16 @@ class MesonInstall(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile, tools
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.build import cross_building
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeToolchain", "CMakeDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def layout(self):
                 cmake_layout(self)
@@ -75,7 +80,7 @@ class MesonInstall(TestMesonBase):
                 cmake.build()
 
             def test(self):
-                if not tools.cross_building(self):
+                if not cross_building(self):
                     cmd = os.path.join(self.cpp.build.bindirs[0], "test_package")
                     self.run(cmd, env=["conanrunenv"])
         """)
@@ -84,9 +89,8 @@ class MesonInstall(TestMesonBase):
         cmake_minimum_required(VERSION 3.1)
         project(test_package CXX)
 
-        find_package(hello REQUIRED)
-
         add_executable(${PROJECT_NAME} src/test_package.cpp)
+        find_package(hello CONFIG REQUIRED)
         target_link_libraries(${PROJECT_NAME} hello::hello)
         """)
 
@@ -104,6 +108,6 @@ class MesonInstall(TestMesonBase):
                      os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
                      os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@")
+        self.t.run("create . --name=hello --version=0.1")
 
         self._check_binary()

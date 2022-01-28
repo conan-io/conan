@@ -9,21 +9,18 @@ from conans.errors import ConanException
 
 
 def from_timestamp_to_iso8601(timestamp):
+    # Used exclusively by conan_server to return the date in iso format (same as artifactory)
     return "%sZ" % datetime.datetime.utcfromtimestamp(int(timestamp)).isoformat()
 
 
-def from_iso8601_to_datetime(iso_str):
+def _from_iso8601_to_datetime(iso_str):
     return parser.isoparse(iso_str)
 
 
 def from_iso8601_to_timestamp(iso_str):
-    datetime_time = from_iso8601_to_datetime(iso_str)
+    # used by RestClient v2 to transform from HTTP API (iso) to Conan internal timestamp
+    datetime_time = _from_iso8601_to_datetime(iso_str)
     return datetime_time.timestamp()
-
-
-def iso8601_to_str(iso_str):
-    dt = from_iso8601_to_datetime(iso_str)
-    return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def timestamp_now():
@@ -36,6 +33,7 @@ def revision_timestamp_now():
 
 
 def timestamp_to_str(timestamp):
+    # used by ref.repr_humantime() to print human readable time
     assert timestamp is not None
     return datetime.datetime.utcfromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S UTC')
 

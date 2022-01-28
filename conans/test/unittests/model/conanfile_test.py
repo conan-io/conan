@@ -19,7 +19,7 @@ class ConanFileTest(unittest.TestCase):
 
     def test_conanfile_naming_complete(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     pass
     def package_info(self):
@@ -31,10 +31,10 @@ class Pkg(ConanFile):
                 assert(member.startswith('_conan'))
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkga/0.1@user/testing")
+        client.run("create . --name=pkga --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": conanfile.replace("pass",
                                                        "requires = 'pkga/0.1@user/testing'")})
-        client.run("create . pkgb/0.1@user/testing")
+        client.run("create . --name=pkgb --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": conanfile.replace("pass",
                                                        "requires = 'pkgb/0.1@user/testing'")})
-        client.run("create . pkgc/0.1@user/testing")
+        client.run("create . --name=pkgc --version=0.1 --user=user --channel=testing")

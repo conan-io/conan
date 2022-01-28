@@ -14,7 +14,7 @@ from conans.util.files import load
 def test_shallow_none_string():
     client = TestClient()
     client.save({'conanfile.py': textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             scm = {"type": "git", "url": "https://github.com/repo/library.git",
@@ -31,7 +31,7 @@ def test_shallow_none_string():
                       {"shallow": 'None'}])  # Explicit 'None' written in the recipe
 class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.errors import ConanException
         from io import StringIO
 
@@ -41,7 +41,7 @@ class GitShallowTestCase(unittest.TestCase):
             def build(self):
                 try:
                     mybuf = StringIO()
-                    out = self.run("git describe --tags", output=mybuf)
+                    out = self.run("git describe --tags", stdout=mybuf)
                     self.output.info(">>> tags: {{}}".format(mybuf.getvalue()))
                 except ConanException:
                     self.output.info(">>> describe-fails")
@@ -54,19 +54,6 @@ class GitShallowTestCase(unittest.TestCase):
         if self.shallow is not None:
             shallow_attrib_str = '"shallow": {}'.format(self.shallow)
         return shallow_attrib_str
-
-    def _check_info_values(self, client):
-        client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
-        if self.shallow in [None]:
-            self.assertNotIn('shallow', str(client.out))
-        elif self.shallow in [True]:  # This is the default value
-            not_appears = 'shallow' not in str(client.out)
-            value_explicit = 'shallow: True' in str(client.out)
-            self.assertTrue(not_appears or value_explicit)
-        elif self.shallow in ['None']:
-            self.assertIn('shallow: None', str(client.out))
-        else:
-            self.assertIn('shallow: False', str(client.out))
 
     def test_export_scm_to_conandata(self):
         # Check the shallow value is stored and propagated with the proper value
@@ -85,8 +72,6 @@ class GitShallowTestCase(unittest.TestCase):
         else:
             self.assertIn('shallow: false', content)
 
-        self._check_info_values(client)
-
     # FIXME : https://github.com/conan-io/conan/issues/8449
     # scm_to_conandata=1 changes behavior for shallow=None
     @pytest.mark.xfail
@@ -102,7 +87,7 @@ class GitShallowTestCase(unittest.TestCase):
                                                url="https://github.com/conan-io/conan.git",
                                                rev=revision)})
 
-        client.run("create . {}".format(self.ref))
+        client.run(f"create . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
 
         if self.shallow in [None, True] and shallow_works:
             self.assertIn(">>> describe-fails", client.out)

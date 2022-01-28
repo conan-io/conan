@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -192,11 +193,10 @@ def test_cross_build_conf():
     assert "set(CMAKE_SYSTEM_PROCESSOR myarm)" in toolchain
 
 
-@pytest.mark.parametrize("find_builddir", [True, False, None])
-def test_find_builddirs(find_builddir):
+def test_find_builddirs():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
 
@@ -204,10 +204,10 @@ def test_find_builddirs(find_builddir):
                 self.cpp_info.builddirs = ["/path/to/builddir"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . dep/1.0@")
+    client.run("create . --name=dep --version=1.0")
 
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain
 
             class Conan(ConanFile):
@@ -220,14 +220,8 @@ def test_find_builddirs(find_builddir):
                     cmake.generate()
             """)
 
-    if find_builddir is not None:
-        conanfile = conanfile.format('cmake.find_builddirs = {}'.format(str(find_builddir)))
-
     client.save({"conanfile.py": conanfile})
-    client.run("install .  -s os=Linux -s compiler=gcc -s compiler.version=6 "
-               "-s compiler.libcxx=libstdc++11")
-    contents = client.load("conan_toolchain.cmake")
-    if find_builddir is True or find_builddir is None:
+    client.run("install . ")
+    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
+        contents = f.read()
         assert "/path/to/builddir" in contents
-    else:
-        assert "/path/to/builddir" not in contents

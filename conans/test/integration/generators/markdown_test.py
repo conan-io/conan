@@ -12,7 +12,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
+                    from conan import ConanFile
                     class HelloConan(ConanFile):
                         def package_info(self):
                             self.cpp_info.filenames['cmake_find_package'] = 'FooBar'
@@ -22,7 +22,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
                     """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . bar/0.1.0@user/testing")
+        client.run("create . --name=bar --version=0.1.0 --user=user --channel=testing")
         client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 
@@ -33,7 +33,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
                     import os
-                    from conans import ConanFile
+                    from conan import ConanFile
 
                     class HelloConan(ConanFile):
                         exports_sources = 'bm.cmake'
@@ -50,7 +50,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "bm.cmake": "Content of build_module" })
-        client.run("create . bar/0.1.0@user/testing")
+        client.run("create . --name=bar --version=0.1.0 --user=user --channel=testing")
         client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 

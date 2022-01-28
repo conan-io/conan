@@ -44,16 +44,16 @@ def test_absolute_to_relative_symlinks(folders):
     tools.files.symlinks.absolute_to_relative_symlinks(None, folder)
 
     # Check the results
-    linked_to = os.readlink(os.path.join(folder, "foo/var/other/absolute.txt"))
+    linked_to = os.readlink(os.path.join(folder, "foo/var/other/absolute.txt")).replace("\\", "/")
     assert linked_to == "../file.txt"
 
-    linked_to = os.readlink(os.path.join(folder, "foo/var/other/other/myfolder"))
+    linked_to = os.readlink(os.path.join(folder, "foo/var/other/other/myfolder")).replace("\\", "/")
     assert linked_to == "../.."
 
-    linked_to = os.readlink(os.path.join(folder, "foo/absolute.txt"))
+    linked_to = os.readlink(os.path.join(folder, "foo/absolute.txt")).replace("\\", "/")
     assert linked_to == "var/file.txt"
 
-    linked_to = os.readlink(os.path.join(folder, "foo/var/other/relative.txt"))
+    linked_to = os.readlink(os.path.join(folder, "foo/var/other/relative.txt")).replace("\\", "/")
     assert linked_to == "foo/var/file.txt"
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/broken.txt"))

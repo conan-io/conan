@@ -18,12 +18,6 @@ def _get_pc_file_template():
         {%- for shared_flag in (cpp_info.sharedlinkflags + cpp_info.exelinkflags) -%}
         {{  shared_flag + " " }}
         {%- endfor -%}
-        {%- for _ in libdirs -%}
-        {%- set flag = gnudeps_flags._rpath_flags(["${libdir%s}" % loop.index]) -%}
-        {%- if flag|length -%}
-        {{ flag[0] + " " }}
-        {%- endif -%}
-        {%- endfor -%}
         {%- for framework in (gnudeps_flags.frameworks + gnudeps_flags.framework_paths) -%}
         {{ framework + " " }}
         {%- endfor -%}
@@ -100,7 +94,7 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
     prefix_path = package_folder.replace("\\", "/")
     libdirs = _get_formatted_dirs(cpp_info.libdirs, prefix_path)
     includedirs = _get_formatted_dirs(cpp_info.includedirs, prefix_path)
-    custom_content = cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps")
+    custom_content = cpp_info.get_property("pkg_config_custom_content")
 
     context = {
         "prefix_path": prefix_path,
@@ -116,7 +110,7 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
     }
     template = Template(_get_pc_file_template(), trim_blocks=True, lstrip_blocks=True,
                         undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)
 
 
 def get_alias_pc_filename_and_content(dep, name, requires, description):
@@ -128,4 +122,4 @@ def get_alias_pc_filename_and_content(dep, name, requires, description):
     }
     template = Template(_get_alias_pc_file_template(), trim_blocks=True,
                         lstrip_blocks=True, undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)

@@ -51,7 +51,7 @@ class CppPackage(object):
                 #  target names via set_property
                 conanfile.cpp_info.components[cname].set_property("cmake_target_name",
                                                                   "{}::{}".format(conanfile.ref.name,
-                                                                                  gname), generator)
+                                                                                  gname))
 
     def add_component(self, name):
         """

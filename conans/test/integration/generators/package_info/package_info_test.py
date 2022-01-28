@@ -14,7 +14,7 @@ class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_name(self):
         dep = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -22,13 +22,13 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.name = "MyCustomGreatName"
                 """)
         intermediate = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
                 """)
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -42,15 +42,15 @@ class TestPackageInfo(unittest.TestCase):
         client.save({"conanfile_dep.py": dep,
                      "conanfile_intermediate.py": intermediate,
                      "conanfile_consumer.py": consumer})
-        client.run("create conanfile_dep.py dep/1.0@us/ch")
-        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
-        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        client.run("create file_dep.py --name=dep --version=1.0 --user=us --channel=ch")
+        client.run("create file_intermediate.py --name=intermediate --version=1.0 --user=us --channel=ch")
+        client.run("create file_consumer.py --name=consumer --version=1.0 --user=us --channel=ch")
         self.assertIn("intermediate name: intermediate", client.out)
         self.assertIn("dep name: MyCustomGreatName", client.out)
 
     def test_package_info_system_libs(self):
         dep = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -58,7 +58,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.system_libs = ["sysdep1"]
                 """)
         intermediate = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
@@ -67,7 +67,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.system_libs = ["sysdep2", "sysdep3"]
                 """)
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -82,9 +82,9 @@ class TestPackageInfo(unittest.TestCase):
         client.save({"conanfile_dep.py": dep,
                      "conanfile_intermediate.py": intermediate,
                      "conanfile_consumer.py": consumer})
-        client.run("create conanfile_dep.py dep/1.0@us/ch")
-        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
-        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        client.run("create file_dep.py --name=dep --version=1.0 --user=us --channel=ch")
+        client.run("create file_intermediate.py --name=intermediate --version=1.0 --user=us --channel=ch")
+        client.run("create file_consumer.py --name=consumer --version=1.0 --user=us --channel=ch")
         dep_system_libs = ["sysdep1"]
         intermediate_system_libs = ["sysdep2", "sysdep3"]
         merged_system_libs = intermediate_system_libs + dep_system_libs
@@ -95,7 +95,7 @@ class TestPackageInfo(unittest.TestCase):
     def test_package_info_components(self):
         dep = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -109,7 +109,7 @@ class TestPackageInfo(unittest.TestCase):
                 """)
         intermediate = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
@@ -128,7 +128,7 @@ class TestPackageInfo(unittest.TestCase):
                 """)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -152,7 +152,7 @@ class TestPackageInfo(unittest.TestCase):
                      "conanfile_consumer.py": consumer})
         client.run("export conanfile_dep.py --name=dep --version=1.0 --user=us --channel=ch")
         client.run("export conanfile_intermediate.py --name=intermediate --version=1.0 --user=us --channel=ch")
-        client.run("create conanfile_consumer.py consumer/1.0@us/ch --build missing")
+        client.run("create file_consumer.py --name=consumer --version=1.0 --user=us --channel=ch --build missing")
 
         self.assertIn("deps_cpp_info.libs: ['libint1', 'libint2', 'libdep1', 'libdep2']", client.out)
         self.assertIn("deps_cpp_info.defines: ['definedep1', 'defint1', 'defint2']", client.out)
@@ -172,7 +172,7 @@ class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_raise_components(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConan(ConanFile):
 
@@ -182,12 +182,12 @@ class TestPackageInfo(unittest.TestCase):
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        client.run("create file.py --name=dep --version=1.0 --user=us --channel=ch", assert_error=True)
         self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
                       "with self.cpp_info global values at the same time", client.out)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConan(ConanFile):
 
@@ -196,12 +196,12 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.components["int1"].libs.append("libint1")
         """)
         client.save({"conanfile.py": conanfile})
-        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        client.run("create file.py --name=dep --version=1.0 --user=us --channel=ch", assert_error=True)
         self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
                       "with self.cpp_info configs (release/debug/...) at the same time", client.out)
 
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
+                    from conan import ConanFile
 
                     class MyConan(ConanFile):
 
@@ -209,14 +209,14 @@ class TestPackageInfo(unittest.TestCase):
                             self.cpp_info.components["dep"].libs.append("libint1")
                 """)
         client.save({"conanfile.py": conanfile})
-        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        client.run("create file.py --name=dep --version=1.0 --user=us --channel=ch", assert_error=True)
         self.assertIn("dep/1.0@us/ch package_info(): Component name cannot be the same as the "
                       "package name: 'dep'", client.out)
 
     def test_package_info_components_complete(self):
         dep = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             class Dep(ConanFile):
                 exports_sources = "*"
                 def package(self):
@@ -236,7 +236,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.components["ISS"].requires = ["Starlight", "Launcher"]
         """)
         consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             requires = "dep/1.0@us/ch"
             def build(self):
@@ -276,8 +276,8 @@ class TestPackageInfo(unittest.TestCase):
                      "iss_libs/libiss": "",
                      "bin/exelauncher": ""})
         dep_ref = RecipeReference("dep", "1.0", "us", "ch")
-        client.run("create conanfile_dep.py dep/1.0@us/ch")
-        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        client.run("create file_dep.py --name=dep --version=1.0 --user=us --channel=ch")
+        client.run("create file_consumer.py --name=consumer --version=1.0 --user=us --channel=ch")
         dep_pref = client.get_latest_package_reference(dep_ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.get_latest_pkg_layout(dep_pref).package()
 
@@ -436,17 +436,17 @@ class TestPackageInfo(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7854
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Package(ConanFile):
                 def package_info(self):
                     self.cpp_info.names["cmake_find_package"] = "GTest"
                     self.cpp_info.filenames["cmake_find_package"] = "GtesT"
                 """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . gtest/1.0@")
+        client.run("create . --name=gtest --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Package(ConanFile):
                 settings = "build_type"
                 requires = 'gtest/1.0'
@@ -458,7 +458,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.output.info("GTEST_FILEINFO: %s" % fileinfo)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
         self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
         client.run("build . --name=pkg --version=1.0")

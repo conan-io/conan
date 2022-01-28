@@ -13,9 +13,8 @@ def client_weird_lib_name():
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os, platform
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             exports_sources = "CMakeLists.txt", "src/*"
@@ -52,7 +51,7 @@ def client_weird_lib_name():
             "src/hello.cpp": src,
             "CMakeLists.txt": cmake,
             "conanfile.py": conanfile})
-    c.run("create . hello/0.1@")
+    c.run("create . --name=hello --version=0.1")
     return c
 
 
@@ -60,5 +59,5 @@ def client_weird_lib_name():
 def test_cmakedeps(client_weird_lib_name):
     c = client_weird_lib_name
     c.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
-    c.run("create . chat/0.1@")
+    c.run("create . --name=chat --version=0.1")
     assert "chat/0.1: Created package" in c.out

@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 tool_conanfile = """
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class tool(ConanFile):
     name = "tool"
@@ -24,7 +24,7 @@ class tool(ConanFile):
 """
 
 lib_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class mylib(ConanFile):
     name = "mylib"
@@ -106,9 +106,11 @@ class BuildRequiresTest(unittest.TestCase):
 
         test_conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class Testmylib(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
 
     def build(self):
         self.run("mytool")
@@ -121,7 +123,7 @@ class Testmylib(ConanFile):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
 
-        client.run("create . lasote/stable --profile ./profile.txt --build missing")
+        client.run("create . --user=lasote --channel=stable --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.out).splitlines().count("Hello World!"))
 
     def test_consumer_patterns(self):
@@ -130,7 +132,7 @@ class Testmylib(ConanFile):
 
         test_conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class Testmylib(ConanFile):
 
@@ -141,7 +143,7 @@ class Testmylib(ConanFile):
         """
         lib_conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class mylib(ConanFile):
     name = "mylib"
@@ -158,7 +160,7 @@ nonexistingpattern*: sometool/1.2@user/channel
                      "test_package/conanfile.py": test_conanfile,
                      "profile.txt": profile_patterns}, clean_first=True)
 
-        client.run("create . lasote/stable --profile=./profile.txt --build=missing")
+        client.run("create . --user=lasote --channel=stable --profile=./profile.txt --build=missing")
         self.assertEqual(1, str(client.out).splitlines().count("Hello World!"))
 
     def test_build_requires_options(self):
@@ -167,7 +169,7 @@ nonexistingpattern*: sometool/1.2@user/channel
         client.run("export . --user=lasote --channel=stable")
 
         conanfile = """
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class mylib(ConanFile):
     name = "mylib"

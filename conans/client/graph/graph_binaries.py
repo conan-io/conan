@@ -6,7 +6,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_ERROR)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
-from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
 
 
@@ -47,26 +47,12 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove()
                 return
 
-    # if we have a remote.selected then do not search in other remotes
-    # and error if it's not in the selected
-    # otherwise if we did not pin a remote:
+    # check through all the selected remotes:
     # - if not --update: get the first package found
     # - if --update: get the latest remote searching in all of them
     def _get_package_from_remotes(self, node, pref):
-        remote = self._app.selected_remote
-        if remote:
-            try:
-                info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_reference(pref, remote, info=info)
-                pref.revision = pref_rev.revision
-                pref.timestamp = pref_rev.timestamp
-                return remote
-            except Exception:
-                node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
-                raise
-
         results = []
-        for r in self._app.enabled_remotes:
+        for r in self._app.selected_remotes:
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})
@@ -101,6 +87,10 @@ class GraphBinariesAnalyzer(object):
                 node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
+
+            # this line fixed the compatible_packages with private case.
+            # https://github.com/conan-io/conan/issues/9880
+            node._package_id = previous_node.package_id
             return True
         self._evaluated[pref] = [node]
 
@@ -118,7 +108,10 @@ class GraphBinariesAnalyzer(object):
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
                 if node.conanfile.compatible_packages:
                     compatible_build_mode = BuildMode(None)
+                    original_info = node.conanfile.info
+                    original_binary = node.binary
                     for compatible_package in node.conanfile.compatible_packages:
+                        node.conanfile.info = compatible_package  # Redefine current
                         package_id = compatible_package.package_id()
                         if package_id == node.package_id:
                             node.conanfile.output.info("Compatible package ID %s equal to the "
@@ -141,14 +134,16 @@ class GraphBinariesAnalyzer(object):
                             # TODO: Conan 2.0 clean this ugly
                             node.conanfile.options._package_options = compatible_package.options._package_options
                             break
-                    if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
-                        node.binary = BINARY_INVALID
+                    else:  # If no compatible is found, restore original state
+                        node.binary = original_binary
+                        node.conanfile.info = original_info
+
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
-            node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
+            # BINARY_BUILD IS NOT A VIABLE fallback for invalid
             node.binary = BINARY_INVALID
 
     def _process_node(self, node, pref, build_mode):
@@ -160,17 +155,13 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_ERROR
             return
 
+        # If the CLI says this package needs to be built, it doesn't make sense to mark
+        # it as invalid
+        if self._evaluate_build(node, build_mode):
+            return
+
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
-            return
-
-        if pref.package_id == PACKAGE_ID_INVALID:
-            # annotate pattern, so unused patterns in --build are not displayed as errors
-            build_mode.forced(node.conanfile, node.ref)
-            node.binary = BINARY_INVALID
-            return
-
-        if self._evaluate_build(node, build_mode):
             return
 
         cache_latest_prev = self._cache.get_latest_package_reference(pref)
@@ -219,6 +210,12 @@ class GraphBinariesAnalyzer(object):
                 node.binary_remote = None
                 node.prev = cache_latest_prev.revision
                 assert node.prev, "PREV for %s is None" % str(pref)
+
+        # The INVALID should only prevail if a compatible package, due to removal of
+        # settings in package_id() was not found
+        if node.binary in (BINARY_MISSING, BINARY_BUILD):
+            if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
+                node.binary = BINARY_INVALID
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()

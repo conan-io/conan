@@ -14,7 +14,6 @@ class GnuDepsFlags(object):
         # From cppinfo, calculated flags
         self.include_paths = self._format_include_paths(cpp_info.includedirs)
         self.lib_paths = self._format_library_paths(cpp_info.libdirs)
-        self.rpath_flags = self._rpath_flags(cpp_info.libdirs)
         self.defines = self._format_defines(cpp_info.defines)
         self.libs = self._format_libraries(cpp_info.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
@@ -35,16 +34,8 @@ class GnuDepsFlags(object):
 
     _GCC_LIKE = ['clang', 'apple-clang', 'gcc']
 
-    def _rpath_flags(self, lib_paths):
-        if not lib_paths:
-            return []
-        if self._base_compiler in self._GCC_LIKE:
-            rpath_separator = ","
-            return ['-Wl,-rpath%s"%s"' % (rpath_separator, self._adjust_path(x))
-                    for x in lib_paths if x]
-        return []
-
-    def _format_defines(self, defines):
+    @staticmethod
+    def _format_defines(defines):
         return ["-D%s" % define for define in defines] if defines else []
 
     def _format_frameworks(self, frameworks):

@@ -19,7 +19,7 @@ class DownloadCacheTest(unittest.TestCase):
     def test_download_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
@@ -27,15 +27,10 @@ class DownloadCacheTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm -r default")
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
         cache_folder = temp_folder()
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            download_cache = {}
-        """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        #client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
@@ -46,21 +41,11 @@ class DownloadCacheTest(unittest.TestCase):
         # TODO: Verify it doesn't really download
 
         # removing the config downloads things
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
         # TODO: Verify it doesn't really download
         # restoring config cache works again
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            download_cache = {}
-            """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        # client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
@@ -71,17 +56,9 @@ class DownloadCacheTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
 
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    download_cache = {}
-                    [log]
-                    """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
-        client.run("create . pkg/0.1@")
-        client.run("upload * --all -c -r default")
+        client.run("create . --name=pkg --version=0.1")
+        client.run("upload * -c -r default")
         client.run("remove * -f")
         client.run("install --reference=pkg/0.1@")
         for f in os.listdir(cache_folder):
@@ -115,7 +92,7 @@ class DownloadCacheTest(unittest.TestCase):
         save(client.cache.new_config_path, "tools.files.download:download_cache=%s" % cache_folder)
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conan.tools.files import download
            class Pkg(ConanFile):
                def source(self):
@@ -131,7 +108,7 @@ class DownloadCacheTest(unittest.TestCase):
 
         # This is the right checksum
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
             class Pkg(ConanFile):
                 def source(self):
@@ -175,7 +152,7 @@ class DownloadCacheTest(unittest.TestCase):
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
@@ -185,8 +162,8 @@ class DownloadCacheTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm -r default")
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers)
         cache_folder = temp_folder()
@@ -205,8 +182,9 @@ class DownloadCacheTest(unittest.TestCase):
         # modify non-revisioned pkg
         client.save({"conanfile.py": conanfile,
                      "header.h": "header2"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm -r default")
+
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
 
         client2.run("remove * -f")
         client2.run("install --reference=mypkg/0.1@user/testing")

@@ -179,7 +179,7 @@ class RestApiTest(unittest.TestCase):
         data = self.api.search_packages(ref)
         self.assertEqual(len(data), 5)
 
-        self.api.remove_packages(ref, ["1"])
+        self.api.remove_packages([PkgReference(ref, "1")])
         self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         self.assertFalse(os.path.exists(folders["1"]))
         self.assertTrue(os.path.exists(folders["2"]))
@@ -187,7 +187,7 @@ class RestApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(folders["4"]))
         self.assertTrue(os.path.exists(folders["5"]))
 
-        self.api.remove_packages(ref, ["2", "3"])
+        self.api.remove_packages([PkgReference(ref, "2"), PkgReference(ref, "3")])
         self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         self.assertFalse(os.path.exists(folders["1"]))
         self.assertFalse(os.path.exists(folders["2"]))
@@ -195,7 +195,7 @@ class RestApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(folders["4"]))
         self.assertTrue(os.path.exists(folders["5"]))
 
-        self.api.remove_packages(ref, [])
+        self.api.remove_all_packages(ref)
         self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         for sha in ["1", "2", "3", "4", "5"]:
             self.assertFalse(os.path.exists(folders[sha]))
@@ -214,15 +214,15 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, str(content))
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
+        self.api.upload_package(package_reference, abs_paths)
 
-    def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
+    def _upload_recipe(self, ref, base_files=None):
 
         files = {"conanfile.py": GenConanfile("3").with_requires("1", "12")}
         if base_files:
             files.update(base_files)
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class MyConan(ConanFile):
     name = "%s"
@@ -242,4 +242,4 @@ class MyConan(ConanFile):
         abs_paths[CONAN_MANIFEST] = os.path.join(tmp_dir, CONAN_MANIFEST)
         conan_digest.save(tmp_dir)
 
-        self.api.upload_recipe(ref, abs_paths, None, retry, retry_wait)
+        self.api.upload_recipe(ref, abs_paths, None)

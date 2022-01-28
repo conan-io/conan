@@ -12,7 +12,7 @@ class UserInfoTestCase(unittest.TestCase):
     """
 
     library = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Library(ConanFile):
             name = "library"
@@ -23,7 +23,7 @@ class UserInfoTestCase(unittest.TestCase):
     """)
 
     br = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class BuildRequires(ConanFile):
             settings = "os"
@@ -36,7 +36,7 @@ class UserInfoTestCase(unittest.TestCase):
 
     # FIXME: Commented build_requires, interface not defined yet
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Library(ConanFile):
             name = "app"
@@ -72,10 +72,10 @@ class UserInfoTestCase(unittest.TestCase):
                     'app.py': cls.app,
                     'host': '[settings]\nos=Windows',
                     'build': '[settings]\nos=Linux', })
-        cls.t.run("create library.py library/1.0@ --profile=host")
-        cls.t.run("create library.py library/1.0@ --profile=build")
-        cls.t.run("create build_requires.py br_host/1.0@ --profile=host")
-        cls.t.run("create build_requires.py br_build/1.0@ --profile=build")
+        cls.t.run("create library.py --name=library --version=1.0 --profile=host")
+        cls.t.run("create library.py --name=library --version=1.0 --profile=build")
+        cls.t.run("create build_requires.py --name=br_host --version=1.0 --profile=host")
+        cls.t.run("create build_requires.py --name=br_build --version=1.0 --profile=build")
 
     def _check_user_info_data(self, app_scope, output):
         # Check information from the host context (using deps_user_info attribute)
@@ -88,7 +88,7 @@ class UserInfoTestCase(unittest.TestCase):
         #self.assertIn(app_scope + ": [build] br_build.DATA=br_build-Linux", output)
 
     def test_user_info_from_requirements(self):
-        self.t.run("create app.py app/1.0@ --profile:host=host --profile:build=build")
+        self.t.run("create app.py --name=app --version=1.0 --profile:host=host --profile:build=build")
         self._check_user_info_data("app/1.0", self.t.out)
 
     def test_user_info_local_workflow(self):

@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 def test_cmake_lib_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")
@@ -36,7 +36,7 @@ def test_cmake_lib_template():
 
 def test_cmake_exe_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new greet/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=greet -d version=0.1")
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")

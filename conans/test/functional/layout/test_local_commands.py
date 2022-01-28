@@ -127,10 +127,9 @@ def test_local_build_change_base():
         tools.save("build_file.dll", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=common")
-    client.run("build . -if=common -bf=common")
-    # -bf is ignored here, the layout defines it
-    dll = os.path.join(client.current_folder, "my_build", "build_file.dll")
+    client.run("install . -if=common --output-folder=common")
+    client.run("build . -if=common --build-folder=common")
+    dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
 
@@ -265,7 +264,7 @@ def test_export_pkg_local():
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
     # Doing a conan create: Same as export-pkg, there is "my_package" in the cache
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     ref = RecipeReference.loads("lib/1.0@")
     pref = PkgReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     pf_cache = client.get_latest_pkg_layout(pref).package()
@@ -290,7 +289,7 @@ def test_imports():
         self.copy("*.dll")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
 
     # Consumer of the hello importing the shared
     conan_file = str(GenConanfile().with_import("from conans import tools"))
@@ -315,7 +314,7 @@ def test_imports():
     assert os.path.exists(dll_path)
 
     # If we do a conan create, the imports folder is used also in the cache
-    client.run("create . foo/1.0@")
+    client.run("create . --name=foo --version=1.0")
     package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("foo/1.0@")
     pref = PkgReference(ref, package_id)
@@ -340,7 +339,7 @@ def test_start_dir_failure():
 def test_importdir_failure():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import save
         class Cosumer(ConanFile):
             requires = "dep/0.1"
@@ -356,7 +355,7 @@ def test_importdir_failure():
         """)
     c.save({"dep/conanfile.py": GenConanfile().with_package_file("myfile.txt", "mycontent"),
             "consumer/conanfile.py": conanfile})
-    c.run("create dep dep/0.1@")
+    c.run("create dep --name=dep --version=0.1")
     with c.chdir("consumer"):
         c.run("install . -s build_type=Release")
         expected_path_release = os.path.join(c.current_folder, "ImportRelease", "myfile.txt")

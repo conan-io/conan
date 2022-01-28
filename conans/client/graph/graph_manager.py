@@ -5,6 +5,7 @@ from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
+
 from conans.client.graph.profile_node_definer import txt_definer, virtual_definer, \
     initialize_conanfile_profile
 from conans.client.profile_loader import ProfileLoader
@@ -45,6 +46,7 @@ class GraphManager(object):
 
             run_configure_method(conanfile, down_options=Options(),
                                  profile_options=profile_host.options,  ref=None)
+
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path)
             txt_definer(conanfile, profile_host)
@@ -74,7 +76,6 @@ class GraphManager(object):
     def _load_root_node(self, reference, create_reference, profile_build, profile_host,
                         graph_lock, root_ref,
                         is_build_require, require_overrides):
-
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         # create (without test_package), install|info|graph|export-pkg <ref>
@@ -91,6 +92,7 @@ class GraphManager(object):
             profile_host.options.scope(create_reference.name)
             return self._load_root_test_package(path, profile_build, profile_host,
                                                 create_reference, require_overrides)
+
 
         # It is a path to conanfile.py or conanfile.txt
         root_node = self._load_root_consumer(path, graph_lock, profile_build, profile_host,
@@ -162,19 +164,7 @@ class GraphManager(object):
                                      False)
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
-
-        # Injection of the tested reference
-        test_type = getattr(conanfile, "test_type", ("requires", ))
-        if not isinstance(test_type, (list, tuple)):
-            test_type = (test_type, )
-        if "build_requires" in test_type:
-            conanfile.requires.build_require(str(create_reference))
-        if "requires" in test_type:
-            require = False # conanfile.requires.get(create_reference.name)
-            if require:
-                require.ref = require.range_ref = create_reference
-            else:
-                conanfile.requires(repr(create_reference))
+        conanfile.tested_reference_str = repr(create_reference)
 
         ref = RecipeReference(conanfile.name, conanfile.version, create_reference.user,
                               create_reference.channel)

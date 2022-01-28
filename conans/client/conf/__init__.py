@@ -18,7 +18,6 @@ os:
     Linux:
     Macos:
         version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
-        sdk: [None, "macosx"]
         subsystem: [None, catalyst]
     Android:
         api_level: ANY
@@ -27,16 +26,16 @@ os:
                   "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                   "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
                   "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
-        sdk: [None, "iphoneos", "iphonesimulator"]
+        sdk: ["iphoneos", "iphonesimulator"]
     watchOS:
         version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
                   "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
-        sdk: [None, "watchos", "watchsimulator"]
+        sdk: ["watchos", "watchsimulator"]
     tvOS:
         version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                   "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
                   "15.0", "15.1"]
-        sdk: [None, "appletvos", "appletvsimulator"]
+        sdk: ["appletvos", "appletvsimulator"]
     FreeBSD:
     SunOS:
     AIX:
@@ -46,6 +45,8 @@ os:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
     baremetal:
+    VxWorks:
+        version: ["7"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
 compiler:
     sun-cc:
@@ -62,8 +63,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1", "11.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -83,7 +84,7 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
-                  "8", "9", "10", "11", "12", "13"]
+                  "8", "9", "10", "11", "12", "13", "14"]
         libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [None, MD, MT, MTd, MDd]
@@ -133,33 +134,8 @@ def get_default_settings_yml():
 
 _t_default_client_conf = textwrap.dedent("""
     [log]
-    run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
-    run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
     level = critical            # environment CONAN_LOGGING_LEVEL
     # trace_file =              # environment CONAN_TRACE_FILE
-    print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
-
-    [general]
-    sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
-
-    # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
-    # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-
-    # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
-
-    # cpu_count = 1             # environment CONAN_CPU_COUNT
-
-    # Change the default location for building test packages to a temporary folder
-    # which is deleted after the test.
-    # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
-
-    # config_install_interval = 1h
-
-    [storage]
-    # This is the default path, but you can write your own. It must be an absolute path or a
-    # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even
-    # with "~/", will be relative to the conan user home, not to the system user home)
-    path = ./data
     """)
 
 
@@ -244,36 +220,6 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def logging_file(self):
         return get_env('CONAN_LOGGING_FILE', None)
-
-    @property
-    def print_commands_to_output(self):
-        try:
-            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS")
-            if print_commands_to_output is None:
-                print_commands_to_output = self.get_item("log.print_run_commands")
-            return print_commands_to_output.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
-    def generate_run_log_file(self):
-        try:
-            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
-            if generate_run_log_file is None:
-                generate_run_log_file = self.get_item("log.run_to_file")
-            return generate_run_log_file.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
-    def log_run_to_output(self):
-        try:
-            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT")
-            if log_run_to_output is None:
-                log_run_to_output = self.get_item("log.run_to_output")
-            return log_run_to_output.lower() in ("1", "true")
-        except ConanException:
-            return True
 
     @staticmethod
     def get_log_level_by_name(level_name):

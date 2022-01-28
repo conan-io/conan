@@ -4,7 +4,7 @@ from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def configure(self):
         self.output.info("Develop %s configure!" % self.develop)
@@ -33,7 +33,7 @@ class DevelopTest(unittest.TestCase):
         else:
             client.save({"conanfile.py": conanfile,
                          "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("Develop True configure!", client.out)
         self.assertIn("Develop True requirements!", client.out)
         self.assertIn("Develop True source!", client.out)
@@ -46,7 +46,7 @@ class DevelopTest(unittest.TestCase):
         self.assertNotIn("Develop True", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
-        client.run("create . other/1.0@user/testing")
+        client.run("create . --name=other --version=1.0 --user=user --channel=testing")
         self.assertNotIn("Develop True", client.out)
 
     def test_local_commands(self):

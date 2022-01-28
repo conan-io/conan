@@ -26,9 +26,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
     @property
     def template(self):
         return textwrap.dedent("""
-        function(conan_message MESSAGE_OUTPUT)
+        function(conan_message MESSAGE_TYPE MESSAGE_CONTENT)
             if(NOT CONAN_CMAKE_SILENT_OUTPUT)
-                message(${ARGV${0}})
+                message(${MESSAGE_TYPE} "${MESSAGE_CONTENT}")
             endif()
         endfunction()
 
@@ -39,16 +39,18 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
-                       message("Framework found! ${FRAMEWORKS_FOUND}")
+                       conan_message(DEBUG "Framework found! ${FRAMEWORKS_FOUND}")
                    else()
-                       message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
+                       conan_message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
                    endif()
                endforeach()
            endif()
        endmacro()
 
        function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target config_suffix package_name)
-           unset(_CONAN_ACTUAL_TARGETS CACHE)
+           set(_out_libraries "")
+           set(_out_libraries_target "")
+           set(_CONAN_ACTUAL_TARGETS "")
 
            foreach(_LIBRARY_NAME ${libraries})
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
@@ -65,7 +67,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        # Create a micro-target for each lib/a found
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                        set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                       set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
+                       list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    else()
                        conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
                    endif()

@@ -13,7 +13,8 @@ from conans.test.utils.scm import create_local_git_repo
 @pytest.mark.tool_git
 class SCMFolderObsoleteTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile, tools
+        from conan import ConanFile
+        from conan.tools.files import load
 
         class Pkg(ConanFile):
             scm = {"type": "git",
@@ -21,14 +22,14 @@ class SCMFolderObsoleteTest(unittest.TestCase):
                    "revision": "auto"}
 
             def build(self):
-                content = tools.load("file.txt")
+                content = load(self, "file.txt")
                 self.output.info(">>>> I'm {}/{}@{}/{}".format(self.name, self.version,
                                                                self.user, self.channel))
                 self.output.info(">>>> content: {} ".format(content))
         """)
 
     def setUp(self):
-        self.reference = "pkg/v1@user/channel"
+        self.reference = "pkg/v1@"
         self.t = TestClient(path_with_spaces=False)
 
         # Create pkg/v1
@@ -36,7 +37,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
                                               'file.txt': self.reference},
                                        folder=self.t.current_folder)
         self.t.run_command('git remote add origin {}'.format(url))
-        self.t.run("create . {}".format(self.reference))
+        self.t.run("create . --name=pkg --version=v1")
         self.assertIn(">>>> I'm {}".format(self.reference), self.t.out)
         self.assertIn(">>>> content: {}".format(self.reference), self.t.out)
 
@@ -46,7 +47,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
 
     def test_create_workflow(self):
         """ Use the 'create' command, local changes are reflected in the cache """
-        self.t.run("create . {}".format(self.reference))
+        self.t.run("create . --name=pkg --version=v1")
         self.assertIn(">>>> I'm {}".format(self.reference), self.t.out)
         self.assertIn(">>>> content: {}".format(self.new_content), self.t.out)
 

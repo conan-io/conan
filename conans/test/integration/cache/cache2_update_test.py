@@ -37,7 +37,7 @@ class TestUpdateFlows:
         # will be older than the ones we create in local
         self.server_times[remote] = self.the_time
         with patch.object(RevisionList, '_now', return_value=self.the_time):
-            client.run(f"upload {ref} -r {remote} --all -c")
+            client.run(f"upload {ref} -r {remote} -c")
 
     def test_revision_fixed_version(self):
         # NOTES:
@@ -79,7 +79,7 @@ class TestUpdateFlows:
 
         # client2 already has a revision for this recipe, don't install anything
         self.client2.run("install --reference=liba/1.0.0@")
-        assert "liba/1.0.0 from local cache - Cache" in self.client2.out
+        self.client2.assert_listed_require({"liba/1.0.0": "Cache"})
         assert "liba/1.0.0: Already installed!" in self.client2.out
 
         self.client.run("remove * -f")
@@ -95,7 +95,7 @@ class TestUpdateFlows:
         # will not find revisions for the recipe -> search remotes by order and install the
         # first match that is rev1 from server0
         # --> result: install rev from server0
-        assert "liba/1.0.0 from 'server0' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Downloaded (server0)"})
         assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server0'" in self.client.out
 
@@ -115,7 +115,7 @@ class TestUpdateFlows:
         # will find the latest revision: REV1 from server2 we already have that
         # revision but the date is newer
         # --> result: do not download anything, but update REV1 date in cache
-        assert "liba/1.0.0 from 'server2' - Cache (Updated date)" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         # now create a newer REV2 in server2 and if we do --update it should update the date
@@ -139,7 +139,7 @@ class TestUpdateFlows:
         self.client.run("install --reference=liba/1.0.0@ --update")
         # --> result: Update date and server because server0 has a newer date
         latest_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
-        assert "liba/1.0.0 from 'server2' - Updated" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Updated (server2)"})
         assert "liba/1.0.0: Downloaded package" in self.client.out
         assert self.client.cache.get_recipe_timestamp(latest_rrev) == self.server_times["server2"]
 
@@ -165,7 +165,7 @@ class TestUpdateFlows:
         # we will check all the remotes, find the latest revision
         # this revision will be oldest than the one in the cache
         # --> result: don't install anything
-        assert "liba/1.0.0 from local cache - Newer" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Newer"})
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         # create newer revisions in servers so that the ones from the clients are older
@@ -188,7 +188,7 @@ class TestUpdateFlows:
         # when we use --update: first check all remotes (no -r argument) get latest revision
         # check if it is in cache, if it is --> stop, if it is not --> check date and install
         # --> result: install rev from server2
-        assert "liba/1.0.0 from 'server2' - Updated" in self.client2.out
+        self.client2.assert_listed_require({"liba/1.0.0": "Updated (server2)"})
         assert f"liba/1.0.0: Downloaded recipe revision {rev_to_upload.revision}" in self.client2.out
         assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server2'" in self.client2.out
@@ -210,7 +210,7 @@ class TestUpdateFlows:
         # --> result: don't install that
         latest_rrev = self.client.cache.get_latest_recipe_reference(self.liba)
         self.client.run(f"install --reference={latest_rrev}@#{latest_rrev.revision}")
-        assert "liba/1.0.0 from local cache - Cache" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Cache"})
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         self.client.run("remove * -f")
@@ -278,7 +278,7 @@ class TestUpdateFlows:
         latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev_norev)
         assert latest_cache_revision != server_rrev
         assert self.the_time == self.client.cache.get_recipe_timestamp(server_rrev)
-        assert "liba/1.0.0 from 'server2' - Cache (Updated date)" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
         self.client.run("remove * -f")
         self.client.run("remove '*' -f -r server0")
@@ -310,7 +310,7 @@ class TestUpdateFlows:
 
         latest_rrev_cache = self.client.cache.get_latest_recipe_reference(self.liba)
         assert latest_server_time == self.client.cache.get_recipe_timestamp(latest_rrev_cache)
-        assert "liba/1.0.0 from 'server2' - Cache (Updated date)" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -335,7 +335,7 @@ class TestUpdateFlows:
 
         latest_rrev_cache = self.client.cache.get_latest_recipe_reference(self.liba)
         assert latest_server_time == self.client.cache.get_recipe_timestamp(latest_rrev_cache)
-        assert "liba/1.0.0 from 'server2' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Downloaded (server2)"})
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -379,7 +379,7 @@ class TestUpdateFlows:
         # first match that is 1.0 from server0
         # --> result: install 1.0 from server0
         assert "liba/[>0.9.0]: liba/1.0.0" in self.client.out
-        assert "liba/1.0.0 from 'server0' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.0.0": "Downloaded (server0)"})
 
         latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("liba/1.0.0@"))
         assert self.client.cache.get_recipe_timestamp(latest_rrev) == self.server_times["server0"]
@@ -394,7 +394,7 @@ class TestUpdateFlows:
         # first match that is 1.1 from server1
         # --> result: install 1.1 from server1
         assert "liba/[>1.0.0]: liba/1.1.0" in self.client.out
-        assert "liba/1.1.0 from 'server1' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.1.0": "Downloaded (server1)"})
 
         # | CLIENT         | CLIENT2        | SERVER0        | SERVER1        | SERVER2        |
         # |----------------|----------------|----------------|----------------|----------------|
@@ -406,7 +406,7 @@ class TestUpdateFlows:
         # check all servers
         # --> result: install 1.2 from server2
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
-        assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
 
         # If we have multiple revisions with different names for the same version and we
         # do a --update we are going to first resolver the version range agains server0
@@ -432,6 +432,6 @@ class TestUpdateFlows:
 
         self.client.run("install --reference=liba/[>1.0.0]@ --update")
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
-        assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
+        self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
                "from remote 'server2' " in self.client.out

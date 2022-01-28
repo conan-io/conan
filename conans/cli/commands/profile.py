@@ -3,41 +3,46 @@ import os
 from conans.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
 from conans.cli.common import add_profiles_args, get_profiles_from_args
-from conans.cli.output import cli_out_write, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import save
 
 
-def profiles_cli_output(profiles):
+def print_profiles(profiles):
     host, build = profiles
-    cli_out_write("Host profile:")
-    cli_out_write(host.dumps())
-    cli_out_write("Build profile:")
-    cli_out_write(build.dumps())
+    out = ConanOutput()
+    out.writeln("Host profile:")
+    out.writeln(host.dumps())
+    out.writeln("Build profile:")
+    out.writeln(build.dumps())
 
 
 def profiles_list_cli_output(profiles):
-    cli_out_write("Profiles found in the cache:")
+    out = ConanOutput()
+    out.writeln("Profiles found in the cache:")
     for p in profiles:
-        cli_out_write(p)
+        out.writeln(p)
 
 
 def detected_profile_cli_output(detect_profile):
-    cli_out_write("Detected profile:")
-    cli_out_write(detect_profile.dumps())
+    out = ConanOutput()
+    out.writeln("Detected profile:")
+    out.writeln(detect_profile.dumps())
 
 
-@conan_subcommand(formatters={"cli": profiles_cli_output})
+@conan_subcommand()
 def profile_show(conan_api, parser, subparser, *args):
     """
     Show profiles
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-    return get_profiles_from_args(conan_api, args)
+    result = get_profiles_from_args(conan_api, args)
+    print_profiles(result)
+    return result
 
 
-@conan_subcommand(formatters={"cli": cli_out_write, "json": json_formatter})
+@conan_subcommand(formatters={"text": lambda x: x, "json": json_formatter})
 def profile_path(conan_api, parser, subparser, *args):
     """
     Show profile path location
@@ -46,36 +51,43 @@ def profile_path(conan_api, parser, subparser, *args):
     subparser.add_argument("name", help="Profile name")
     args = parser.parse_args(*args)
     result = conan_api.profiles.get_path(args.name)
+    out = ConanOutput()
+    out.writeln(result)
     return result
 
 
-@conan_subcommand(formatters={"cli": detected_profile_cli_output})
+@conan_subcommand()
 def profile_detect(conan_api, parser, subparser, *args):
     """
     Detect default profile
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
-    subparser.add_argument("--force", action='store_true', help="Overwrite if exists")
+    subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
     profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd(), exists=False)
     if not args.force and os.path.exists(profile_pathname):
-        raise ConanException(f"Profile '{profile_pathname} already exists")
+        raise ConanException(f"Profile '{profile_pathname}' already exists")
 
     detected_profile = conan_api.profiles.detect()
+    detected_profile_cli_output(detected_profile)
     contents = detected_profile.dumps()
-    ConanOutput().info(f"Saving detected profile to {profile_pathname}")
+    ConanOutput().warning("This profile is a guess of your environment, please check it.")
+    ConanOutput().warning("The output of this command is not guaranteed to be stable and can "
+                          "change in future Conan versions")
+    ConanOutput().success(f"Saving detected profile to {profile_pathname}")
     save(profile_pathname, contents)
-    return detected_profile
 
 
-@conan_subcommand(formatters={"cli": profiles_list_cli_output, "json": json_formatter})
+@conan_subcommand(formatters={"json": json_formatter})
 def profile_list(conan_api, parser, subparser, *args):
     """
     List all profiles in the cache
     """
-    return conan_api.profiles.list()
+    result = conan_api.profiles.list()
+    profiles_list_cli_output(result)
+    return result
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])

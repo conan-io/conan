@@ -140,20 +140,18 @@ class RestV2Methods(RestCommonMethods):
                     ret.append(tmp)
         return sorted(ret)
 
-    def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
+    def _upload_recipe(self, ref, files_to_upload):
         # Direct upload the recipe
         urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
+        self._upload_files(files_to_upload, urls, display_name=str(ref))
 
-    def _upload_package(self, pref, files_to_upload, retry, retry_wait):
+    def _upload_package(self, pref, files_to_upload):
         urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
+        self._upload_files(files_to_upload, urls, display_name=pref.repr_reduced())
 
-        short_pref_name = "%s:%s" % (pref.ref, pref.package_id[0:4])
-        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
-
-    def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
+    def _upload_files(self, files, urls, display_name=None):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
@@ -169,7 +167,7 @@ class RestV2Methods(RestCommonMethods):
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                dedup=self._checksum_deploy,
                                 headers=headers, display_name=display_name)
             except (AuthenticationException, ForbiddenException):
                 raise
@@ -200,57 +198,45 @@ class RestV2Methods(RestCommonMethods):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
 
-    def remove_packages(self, ref, package_ids):
-        """ Remove any packages specified by package_ids"""
-        # FIXME: package_ids containing the revisions is a mess, why not passing prefs directly
-        #        and separate the methods to not do many different things???
+    def remove_all_packages(self, ref):
+        """ Remove all packages from the specified reference"""
         self.check_credentials()
+        assert ref.revision is not None, "remove_packages needs RREV"
 
-        if ref.revision is None:
-            # Remove the packages from all the RREVs
-            refs = self.get_recipe_revisions_references(ref)
-        else:
-            refs = [ref]
+        url = self.router.remove_all_packages(ref)
+        response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
+                                         headers=self.custom_headers)
+        if response.status_code == 404:
+            # Double check if it is a 404 because there are no packages
+            try:
+                package_search_url = self.router.search_packages(ref)
+                if not self.get_json(package_search_url):
+                    return
+            except Exception as e:
+                logger.warning("Unexpected error searching {} packages"
+                               " in remote {}: {}".format(ref, self.remote_url, e))
+        if response.status_code != 200:  # Error message is text
+            # To be able to access ret.text (ret.content are bytes)
+            response.charset = "utf-8"
+            raise get_exception_from_error(response.status_code)(response.text)
 
-        for ref in refs:
-            assert ref.revision is not None, "remove_packages needs RREV"
-            if not package_ids:
-                url = self.router.remove_all_packages(ref)
-                response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
-                                                 headers=self.custom_headers)
+    def remove_packages(self, prefs):
+        self.check_credentials()
+        for pref in prefs:
+            if not pref.revision:
+                prevs = self.get_package_revisions_references(pref)
+            else:
+                prevs = [pref]
+            for prev in prevs:
+                url = self.router.remove_package(prev)
+                response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                                 verify=self.verify_ssl)
                 if response.status_code == 404:
-                    # Double check if it is a 404 because there are no packages
-                    try:
-                        package_search_url = self.router.search_packages(ref)
-                        if not self.get_json(package_search_url):
-                            return
-                    except Exception as e:
-                        logger.warning("Unexpected error searching {} packages"
-                                       " in remote {}: {}".format(ref, self.remote_url, e))
+                    raise PackageNotFoundException(pref)
                 if response.status_code != 200:  # Error message is text
                     # To be able to access ret.text (ret.content are bytes)
                     response.charset = "utf-8"
                     raise get_exception_from_error(response.status_code)(response.text)
-            else:
-                for mix_pid in package_ids:
-                    _tmp = mix_pid.split("#") if "#" in mix_pid else (mix_pid, None)
-                    pid, revision = _tmp
-                    pref = PkgReference(ref, pid, revision=revision)
-                    if not revision:
-                        prefs = self.get_package_revisions_references(pref)
-                    else:
-                        prefs = [pref]
-                    for pref in prefs:
-                        url = self.router.remove_package(pref)
-                        response = self.requester.delete(url, auth=self.auth,
-                                                         headers=self.custom_headers,
-                                                         verify=self.verify_ssl)
-                        if response.status_code == 404:
-                            raise PackageNotFoundException(pref)
-                        if response.status_code != 200:  # Error message is text
-                            # To be able to access ret.text (ret.content are bytes)
-                            response.charset = "utf-8"
-                            raise get_exception_from_error(response.status_code)(response.text)
 
     def remove_recipe(self, ref):
         """ Remove a recipe and packages """

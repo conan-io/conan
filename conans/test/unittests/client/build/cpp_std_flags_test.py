@@ -1,8 +1,9 @@
 import unittest
 
-from conans.client.build.cppstd_flags import cppstd_default
+from conan.tools.build.flags import cppstd_flag
+from conans.client.conf.detect import _cppstd_default
+from conans.model.version import Version
 from conans.test.utils.mocks import MockSettings
-from conans.tools import cppstd_flag
 
 
 def _make_cppstd_flag(compiler, compiler_version, cppstd=None, compiler_base=None):
@@ -14,12 +15,8 @@ def _make_cppstd_flag(compiler, compiler_version, cppstd=None, compiler_base=Non
     return cppstd_flag(settings)
 
 
-def _make_cppstd_default(compiler, compiler_version, compiler_base=None):
-    settings = MockSettings({"compiler": compiler,
-                             "compiler.version": compiler_version})
-    if compiler_base:
-        settings.values["compiler.base"] = compiler_base
-    return cppstd_default(settings)
+def _make_cppstd_default(compiler, compiler_version):
+    return _cppstd_default(compiler, Version(compiler_version))
 
 
 class CompilerFlagsTest(unittest.TestCase):
@@ -233,12 +230,6 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("Visual Studio", "14"), "14")
         self.assertEqual(_make_cppstd_default("Visual Studio", "15"), "14")
 
-    def test_intel_visual_cppstd_defaults(self):
-        self.assertEqual(_make_cppstd_default("intel", "19", "Visual Studio"), None)
-
-    def test_intel_gcc_cppstd_defaults(self):
-        self.assertEqual(_make_cppstd_default("intel", "19", "gcc"), 'gnu98')
-
     def test_intel_visual_cppstd_flag(self):
         self.assertEqual(_make_cppstd_flag("intel", "19.1", "gnu98", "Visual Studio"), None)
         self.assertEqual(_make_cppstd_flag("intel", "19.1", "11", "Visual Studio"), '/Qstd=c++11')
@@ -314,13 +305,13 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("intel", "11", "20", "gcc"), None)
 
     def test_mcst_lcc_cppstd_defaults(self):
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.19", "gcc"), "gnu98")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.20", "gcc"), "gnu98")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.21", "gcc"), "gnu98")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.22", "gcc"), "gnu98")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.23", "gcc"), "gnu98")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.24", "gcc"), "gnu14")
-        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.25", "gcc"), "gnu14")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.19"), "gnu98")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.20"), "gnu98")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.21"), "gnu98")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.22"), "gnu98")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.23"), "gnu98")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.24"), "gnu14")
+        self.assertEqual(_make_cppstd_default("mcst-lcc", "1.25"), "gnu14")
 
     def test_mcst_lcc_cppstd_flag(self):
         self.assertEqual(_make_cppstd_flag("mcst-lcc", "1.19", "98", "gcc"), "-std=c++98")

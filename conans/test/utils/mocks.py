@@ -2,8 +2,8 @@ import os
 from collections import namedtuple
 from io import StringIO
 
-from conans import ConanFile
-from conans.model.conf import ConfDefinition
+from conan import ConanFile
+from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders
 from conans.model.options import Options
 from conans.util.log import logger
@@ -80,8 +80,7 @@ class MockConanfile(ConanFile):
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
-
-        self.package_folder = None
+        self.conf = Conf()
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -99,7 +98,6 @@ class ConanFileMock(ConanFile):
         self.settings = None
         self.settings_build = MockSettings({})
         self.options = Options()
-        self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.generators = []
@@ -115,7 +113,7 @@ class ConanFileMock(ConanFile):
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
 
-    def run(self, command, win_bash=False, subsystem=None, env=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command

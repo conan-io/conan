@@ -8,7 +8,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 conanfile_py = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "MyPackage"
@@ -17,7 +17,7 @@ class AConan(ConanFile):
 """
 
 with_deps_path_file = """
-from conans import ConanFile
+from conan import ConanFile
 
 class BConan(ConanFile):
     name = "MyPackage2"
@@ -61,7 +61,7 @@ class InfoFoldersTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6915
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 options = {"myOption": [True, False]}

@@ -151,6 +151,16 @@ class Node(object):
         source_node = dependant.src
         return source_node.check_downstream_exists(down_require)
 
+    def check_loops(self, new_node):
+        if self.ref == new_node.ref:
+            return self
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        dependant = self.dependants[0]
+        source_node = dependant.src
+        return source_node.check_loops(new_node)
+
     @property
     def package_id(self):
         return self._package_id
@@ -187,6 +197,20 @@ class Node(object):
 
     def __repr__(self):
         return repr(self.conanfile)
+
+    def serialize(self):
+        result = OrderedDict()
+        result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
+        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
+        result["recipe"] = self.recipe
+        result["package_id"] = self.package_id
+        from conans.client.installer import build_id
+        result["build_id"] = build_id(self.conanfile)
+        result["binary"] = self.binary
+        result.update(self.conanfile.serialize())
+        result["context"] = self.context
+        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
+        return result
 
 
 class Edge(object):
@@ -264,3 +288,12 @@ class DepsGraph(object):
     def report_graph_error(self):
         if self.error:
             raise self.error
+
+    def serialize(self):
+        for i, n in enumerate(self.nodes):
+            n.id = i
+        result = OrderedDict()
+        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        return result
+

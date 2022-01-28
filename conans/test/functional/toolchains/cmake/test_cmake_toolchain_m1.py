@@ -13,24 +13,26 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.parametrize("op_system", ["Macos", "iOS"])
 def test_m1(op_system):
     os_version = "os.version=12.0" if op_system == "iOS" else ""
+    os_sdk = "" if op_system == "Macos" else "os.sdk=iphoneos"
     profile = textwrap.dedent("""
         include(default)
         [settings]
         os={}
         {}
+        {}
         arch=armv8
-    """.format(op_system, os_version))
+    """.format(op_system, os_sdk, os_version))
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"])
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestConan(ConanFile):

@@ -8,15 +8,17 @@ class BuildTypeSettingTest(unittest.TestCase):
     def test_build_type(self):
         # https://github.com/conan-io/conan/issues/2500
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
     def build(self):
         self.output.info("BUILD TYPE: %s" % (self.settings.build_type or "Not defined"))
 """
-        test_conanfile = """from conans import ConanFile
+        test_conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def build(self):
         self.output.info("BUILD TYPE: %s" % (self.settings.build_type or "Not defined"))
     def test(self):
@@ -32,7 +34,7 @@ class Pkg(ConanFile):
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
         # test_package is totally consinstent with the regular package
-        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))
 
         client.save({"conanfile.py": conanfile,
@@ -43,7 +45,7 @@ class Pkg(ConanFile):
         client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Release"))
 
-        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Release"))
 
         # Explicit build_tyep=None
@@ -56,5 +58,5 @@ class Pkg(ConanFile):
         client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
-        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))

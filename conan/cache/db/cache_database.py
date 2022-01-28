@@ -90,13 +90,13 @@ class CacheDatabase:
         return [d["ref"]
                 for d in self._recipes.all_references()]
 
-    def get_package_revisions_references(self, ref: PkgReference, only_latest_prev=False):
+    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         return [d["pref"]
-                for d in self._packages.get_package_revisions_references(ref, only_latest_prev)]
+                for d in self._packages.get_package_revisions_references(pref, only_latest_prev)]
 
-    def get_package_references(self, ref: RecipeReference):
+    def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
-                for d in self._packages.get_package_references(ref)]
+                for d in self._packages.get_package_references(ref, only_latest_prev)]
 
     def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
         return [d["ref"]

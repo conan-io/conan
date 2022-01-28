@@ -3,6 +3,7 @@
 import os
 import textwrap
 
+from conans.model.recipe_ref import RecipeReference
 from conans.util.env import environment_update
 
 
@@ -15,7 +16,9 @@ class TestWorkflow(object):
 
     conanfile_base = textwrap.dedent("""\
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile
+        from conans import tools
+        from conan.tools.files import load
 
         {extra_header}
 
@@ -30,7 +33,7 @@ class TestWorkflow(object):
 
             def source(self):
                 self.output.info(self.source_folder)
-                content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
+                content = load(self, os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
                 self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version,
                                                                        self.user, self.channel))
                 self.output.info(">>>> content: {{}} ".format(content))
@@ -65,7 +68,9 @@ class TestWorkflow(object):
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
             t.current_folder = working_dir
-            t.run("create {} {}".format(path_to_conanfile, self.lib1_ref))
+            r = RecipeReference.loads(self.lib1_ref)
+            n = f"--name={r.name} --version={r.version} --user={r.user} --channel={r.channel}"
+            t.run("create {} {}".format(path_to_conanfile, n))
             self.assertIn(">>>> I'm {}".format(self.lib1_ref), t.out)
             self.assertIn(">>>> content: {}".format(self.lib1_ref), t.out)
         finally:

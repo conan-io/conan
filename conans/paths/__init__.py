@@ -31,7 +31,6 @@ CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
 BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
-SYSTEM_REQS = "system_reqs.txt"
 ARTIFACTS_PROPERTIES_FILE = "artifacts.properties"
 ARTIFACTS_PROPERTIES_PUT_PREFIX = "artifact_property_"
 PACKAGE_TGZ_NAME = "conan_package.tgz"

@@ -8,7 +8,7 @@ from conans.test.assets.sources import gen_function_cpp
 from ..microsoft.test_msbuild import sln_file, myapp_vcxproj
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, MSBuild, MSBuildToolchain
+    from conan import ConanFile, MSBuild, MSBuildToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
@@ -34,7 +34,7 @@ class MSBuildIntelTestCase:
     def test_use_msbuild_toolchain(self):
         self.t.save({'profile': self.profile})
         self.t.run("new hello/0.1 -s")
-        self.t.run("create . hello/0.1@ -pr:h=profile")
+        self.t.run("create . --name=hello --version=0.1 -pr:h=profile")
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 

@@ -7,7 +7,7 @@ from parameterized import parameterized
 from conans.client.graph.graph_error import GraphError
 from conans.model.recipe_ref import RecipeReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 def _check_transitive(node, transitive_deps):
@@ -130,12 +130,6 @@ class BuildRequiresGraphTest(GraphManagerTest):
         _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
-
-
-
-
-
-
 
     @pytest.mark.xfail(reason="Not updated yet")
     def test_transitive_build_require_recipe_profile(self):
@@ -569,7 +563,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "app"
                 version = "0.1"
@@ -585,3 +579,77 @@ class PublicBuildRequiresTest(GraphManagerTest):
 
         self._check_node(app, "app/0.1@", deps=[tool], dependents=[])
         self._check_node(tool, "gtest/0.1#123", deps=[], dependents=[app])
+
+
+class TestLoops(GraphManagerTest):
+
+    def test_direct_loop_error(self):
+        # app -(br)-> cmake/0.1 -(br itself)-> cmake/0.1....
+        # causing an infinite loop
+        self._cache_recipe("cmake/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_build_requires("cmake/0.1"),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.LOOP
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        tool = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[tool], dependents=[])
+        self._check_node(tool, "cmake/0.1#123", deps=[], dependents=[app])
+
+    def test_indirect_loop_error(self):
+        # app -(br)-> gtest/0.1 -(br)-> cmake/0.1 -(br)->gtest/0.1 ....
+        # causing an infinite loop
+        self._cache_recipe("gtest/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        self._cache_recipe("cmake/0.1", GenConanfile().with_test_requires("gtest/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile().with_build_requires("cmake/0.1"),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.LOOP
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        cmake = app.dependencies[0].dst
+        gtest = cmake.dependencies[0].dst
+        cmake2 = gtest.dependencies[0].dst
+
+        assert deps_graph.error.ancestor == cmake
+        assert deps_graph.error.node == cmake2
+
+
+def test_tool_requires():
+    """Testing temporary tool_requires attribute being "an alias" of build_require and
+    introduced to provide a compatible recipe with 2.0. At 2.0, the meaning of a build require being
+    a 'tool' will be a tool_require."""
+
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name=tool1 --version=1.0")
+    client.run("create . --name=tool2 --version=1.0")
+    client.run("create . --name=tool3 --version=1.0")
+    client.run("create . --name=tool4 --version=1.0")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "tool2/1.0"
+            build_requires = "tool3/1.0"
+
+            def build_requirements(self):
+                self.tool_requires("tool1/1.0")
+                self.build_requires("tool4/1.0")
+
+            def generate(self):
+                assert len(self.dependencies.build.values()) == 4
+    """)
+    client.save({"conanfile.py": consumer})
+    client.run("create . --name=consumer --version=1.0")
+    client.assert_listed_require({"tool1/1.0": "Cache",
+                                  "tool2/1.0": "Cache",
+                                  "tool3/1.0": "Cache",
+                                  "tool4/1.0": "Cache"}, build=True)

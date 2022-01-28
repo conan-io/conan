@@ -1,8 +1,7 @@
 import unittest
 from parameterized.parameterized import parameterized
 
-from conans.client.build.compiler_flags import architecture_flag, \
-    build_type_flags, libcxx_define, libcxx_flag, pic_flag
+from conan.tools.build.flags import architecture_flag, build_type_flags
 from conans.test.utils.mocks import MockSettings
 
 
@@ -72,67 +71,6 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "compiler.base": "gcc",
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
-
-    @parameterized.expand([("gcc", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
-                           ("gcc", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
-                           ("clang", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
-                           ("clang", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
-                           ("clang", "libc++", ""),
-                           ("Visual Studio", None, ""),
-                           ])
-    def test_libcxx_define(self, compiler, libcxx, define):
-        settings = MockSettings({"compiler": compiler,
-                                 "compiler.libcxx": libcxx})
-        self.assertEqual(libcxx_define(settings), define)
-
-    @parameterized.expand([("gcc", "libstdc++", ""),
-                           ("gcc", "libstdc++11", ""),
-                           ("clang", "libstdc++", "-stdlib=libstdc++"),
-                           ("clang", "libstdc++11", "-stdlib=libstdc++"),
-                           ("clang", "libc++", "-stdlib=libc++"),
-                           ("apple-clang", "libstdc++", "-stdlib=libstdc++"),
-                           ("apple-clang", "libstdc++11", "-stdlib=libstdc++"),
-                           ("apple-clang", "libc++", "-stdlib=libc++"),
-                           ("Visual Studio", None, ""),
-                           ("sun-cc", "libCstd", "-library=Cstd"),
-                           ("sun-cc", "libstdcxx", "-library=stdcxx4"),
-                           ("sun-cc", "libstlport", "-library=stlport4"),
-                           ("sun-cc", "libstdc++", "-library=stdcpp")
-                           ])
-    def test_libcxx_flags(self, compiler, libcxx, flag):
-        settings = MockSettings({"compiler": compiler,
-                                 "compiler.libcxx": libcxx})
-        self.assertEqual(libcxx_flag(settings), flag)
-
-    @parameterized.expand([("cxx",),
-                           ("gpp",),
-                           ("cpp",),
-                           ("cpp-ne",),
-                           ("acpp",),
-                           ("acpp-ne",),
-                           ("ecpp",),
-                           ("ecpp-ne",)])
-    def test_libcxx_flags_qnx(self, libcxx):
-        settings = MockSettings({"compiler": "qcc",
-                                 "compiler.libcxx": libcxx})
-        arch_flags = libcxx_flag(settings)
-        self.assertEqual(arch_flags, '-Y _%s' % libcxx)
-
-    def test_pic_flags(self):
-        flag = pic_flag(MockSettings({}))
-        self.assertEqual(flag, '')
-
-        flags = pic_flag(MockSettings({"compiler": 'gcc'}))
-        self.assertEqual(flags, '-fPIC')
-
-        flags = pic_flag(MockSettings({"compiler": 'Visual Studio'}))
-        self.assertEqual(flags, "")
-
-        flags = pic_flag(MockSettings({"compiler": 'intel', "compiler.base": "gcc"}))
-        self.assertEqual(flags, '-fPIC')
-
-        flags = pic_flag(MockSettings({"compiler": 'intel', "compiler.base": "Visual Studio"}))
-        self.assertEqual(flags, '')
 
     @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
                            ("Visual Studio", "Release", None, "-O2 -Ob2"),

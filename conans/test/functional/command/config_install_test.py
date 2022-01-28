@@ -1,17 +1,14 @@
-import json
 import os
 import shutil
 import textwrap
-import time
 import unittest
 
 import pytest
 from mock import patch
-from parameterized import parameterized
 
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
-from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
+from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.paths import DEFAULT_CONAN_HOME
@@ -121,7 +118,7 @@ class ConfigInstallTest(unittest.TestCase):
         save_files(folder, {"remotes.txt": remotes})
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         conf = load(client.cache.conan_conf_path)
         conf = conf.replace("path = ./data", "")
         save(client.cache.conan_conf_path, conf)
@@ -153,13 +150,6 @@ class ConfigInstallTest(unittest.TestCase):
         return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
-        typ, uri, verify, args = [p.strip() for p in params.split(",")]
-        configs = json.loads(load(self.client.cache.config_install_file))
-        config = _ConfigOrigin(configs[-1])  # Check the last one
-        self.assertEqual(config.type, typ)
-        self.assertEqual(config.uri, uri)
-        self.assertEqual(str(config.verify_ssl), verify)
-        self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         api = self.client.get_conan_api()
@@ -176,10 +166,7 @@ class ConfigInstallTest(unittest.TestCase):
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
-        self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
-        self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
-        self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
@@ -254,38 +241,6 @@ class ConfigInstallTest(unittest.TestCase):
         content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
-    def test_install_multiple_configs(self):
-        folder = temp_folder()
-        save_files(folder, {"subf/file.txt": "hello",
-                            "subf2/file2.txt": "bye"})
-        self.client.run('config install "%s" -sf=subf' % folder)
-        content = load(os.path.join(self.client.cache_folder, "file.txt"))
-        file2 = os.path.join(self.client.cache_folder, "file2.txt")
-        self.assertEqual(content, "hello")
-        self.assertFalse(os.path.exists(file2))
-        self.client.run('config install "%s" -sf=subf2' % folder)
-        content = load(file2)
-        self.assertEqual(content, "bye")
-        save_files(folder, {"subf/file.txt": "HELLO!!",
-                            "subf2/file2.txt": "BYE!!"})
-        self.client.run('config install')
-        content = load(os.path.join(self.client.cache_folder, "file.txt"))
-        self.assertEqual(content, "HELLO!!")
-        content = load(file2)
-        self.assertEqual(content, "BYE!!")
-
-    def test_dont_duplicate_configs(self):
-        folder = temp_folder()
-        save_files(folder, {"subf/file.txt": "hello"})
-        self.client.run('config install "%s" -sf=subf' % folder)
-        self.client.run('config install "%s" -sf=subf' % folder)
-        content = load(self.client.cache.config_install_file)
-        self.assertEqual(1, content.count("subf"))
-        self.client.run('config install "%s" -sf=other' % folder)
-        content = load(self.client.cache.config_install_file)
-        self.assertEqual(1, content.count("subf"))
-        self.assertEqual(1, content.count("other"))
-
     def test_install_remotes_json_error(self):
         folder = temp_folder()
         save_files(folder, {"remotes.json": ""})
@@ -319,6 +274,18 @@ class ConfigInstallTest(unittest.TestCase):
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
+    def test_install_url_query(self):
+        """ should install from a URL
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            # repeat the process to check it works with ?args
+            self.client.run("config install http://myfakeurl.com/myconf.zip?sha=1")
+            self._check("url, http://myfakeurl.com/myconf.zip?sha=1, True, None")
+
     def test_install_change_only_verify_ssl(self):
         def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
             self._create_zip(file_path)
@@ -351,14 +318,6 @@ class ConfigInstallTest(unittest.TestCase):
     def test_failed_install_http(self):
         """ should install from a http zip
         """
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    general.retry_wait=0
-                """)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
-
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
@@ -434,12 +393,6 @@ class ConfigInstallTest(unittest.TestCase):
         client.run('config install httpnonexisting --type=url', assert_error=True)
         self.assertIn("Error downloading file httpnonexisting: 'Invalid URL 'httpnonexisting'",
                       client.out)
-
-    def test_reinstall_error(self):
-        """ should use configured URL in conan.conf
-        """
-        self.client.run("config install", assert_error=True)
-        self.assertIn("Called config install without arguments", self.client.out)
 
     def test_removed_credentials_from_url_unit(self):
         """
@@ -522,38 +475,23 @@ class ConfigInstallTest(unittest.TestCase):
             save(os.path.join(folder, "hooks", "cust", "cust.py"), "")
             self.client.run_command('git add .')
             self.client.run_command('git commit -m "my file"')
-            self.client.run_command('git tag 0.0.1')
-            self.client.run_command('git checkout master')
 
-        # Without checkout
-        self.client.run('config install "%s/.git"' % folder)
-        check_path = os.path.join(folder, ".git")
-        self._check("git, %s, True, None" % check_path)
-        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
-        self.assertFalse(os.path.exists(file_path))
-        # With checkout tag and reuse url
-        self.client.run('config install --args="-b 0.0.1"')
-        check_path = os.path.join(folder, ".git")
-        self._check("git, %s, True, -b 0.0.1" % check_path)
-        self.assertTrue(os.path.exists(file_path))
-        # With checkout branch and reuse url
-        self.client.run('config install --args="-b other_branch"')
+        self.client.run('config install "%s/.git" --args "-b other_branch"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
-        self.assertTrue(os.path.exists(file_path))
+        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
+        assert load(file_path) == ""
+
         # Add changes to that branch and update
         with self.client.chdir(folder):
-            self.client.run_command('git checkout other_branch')
-            save(os.path.join(folder, "hooks", "other", "other.py"), "")
+            save(os.path.join(folder, "hooks", "cust", "cust.py"), "new content")
             self.client.run_command('git add .')
             self.client.run_command('git commit -m "my other file"')
             self.client.run_command('git checkout master')
-        other_path = os.path.join(self.client.cache_folder, "hooks", "other", "other.py")
-        self.assertFalse(os.path.exists(other_path))
-        self.client.run('config install')
+        self.client.run('config install "%s/.git" --args "-b other_branch"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
-        self.assertTrue(os.path.exists(other_path))
+        assert load(file_path) == "new content"
 
     def test_config_install_requester(self):
         # https://github.com/conan-io/conan/issues/4169
@@ -570,34 +508,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
-
-    def test_error_missing_origin(self):
-        path = self._create_zip()
-        self.client.run('config install "%s"' % path)
-        os.remove(path)
-        self.client.run('config install', assert_error=True)
-        self.assertIn("ERROR: Failed conan config install", self.client.out)
-
-    def test_list_remove(self):
-        path = self._create_zip()
-        self.client.run('config install "%s"' % path)
-        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
-        self.assertIn("myconfig.zip", configs[0]["uri"])
-        self.client.run("config install --list")
-        self.assertIn("myconfig.zip", self.client.out)
-        self.client.run("config install --remove=0")
-        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
-        self.assertEqual(0, len(configs))
-        self.client.run("config install --list")
-        self.assertNotIn("myconfig.zip", self.client.out)
-
-    def test_list_empty_config(self):
-        self.client.run("config install --list")
-        self.assertEqual("", self.client.out)
-
-    def test_remove_empty_config(self):
-        self.client.run("config install --remove=0", assert_error=True)
-        self.assertIn("There is no config data. Need to install config first.", self.client.out)
 
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
@@ -627,17 +537,6 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client = TestClient()
         self.client.save({"conanfile.txt": ""})
 
-    def test_config_install_sched_file(self):
-        """ Config install can be executed without restriction
-        """
-        self.client.run('config install "%s"' % self.folder)
-        self.assertIn("Copying file global.conf", self.client.out)
-        content = load(self.client.cache.new_config_path)
-        self.assertEqual(1, content.count("config_install_interval"))
-        self.assertIn("core:config_install_interval=5m", content.splitlines())
-        self.assertTrue(os.path.exists(self.client.cache.config_install_file))
-        self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
-
     def test_execute_more_than_once(self):
         """ Once executed by the scheduler, conan config install must executed again
             when invoked manually
@@ -647,49 +546,6 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
         self.client.run('config install "%s"' % self.folder)
         self.assertIn("Copying file global.conf", self.client.out)
-        self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_sched_timeout(self):
-        """ Conan config install must be executed when the scheduled time reaches
-        """
-        self.client.run('config install "%s"' % self.folder)
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    config_install_interval=1m
-                """)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
-
-        self.assertNotIn("Copying file global.conf", self.client.out)
-        past_time = int(time.time() - 120)  # 120 seconds in the past
-        os.utime(self.client.cache.config_install_file, (past_time, past_time))
-
-        self.client.run('search')  # any command will fire it
-        self.assertIn("Copying file global.conf", self.client.out)
-        self.client.run('search')  # not again, it was fired already
-        self.assertNotIn("Copying file global.conf", self.client.out)
-
-    def test_invalid_scheduler(self):
-        """ An exception must be raised when conan_config.json is not listed
-        """
-        self.client.run('config install "%s"' % self.folder)
-        os.remove(self.client.cache.config_install_file)
-        self.client.run('config help', assert_error=True)
-        self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
-
-    @parameterized.expand([("1y",), ("2015t",), ("42",)])
-    @pytest.mark.xfail(reason="Will fail until we migrate config install to new CLI and the APIv2")
-    def test_invalid_time_interval(self, internal):
-        """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
-        """
-        self.client.save({"global.conf": f"core:config_install_interval={internal}"},
-                         path=self.client.cache.cache_folder)
-        # Any conan invocation will fire the configuration error
-        self.client.run('install .')
-        self.assertIn("Conf 'core:config_install_interval' value '{}' "
-                      "must be 'timedelta_from_text'".format(internal), self.client.out)
 
     @pytest.mark.tool_git
     def test_config_install_remove_git_repo(self):
@@ -704,51 +560,6 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('config install "%s/.git" --type git' % self.folder)
         self.assertIn("Copying file global.conf", self.client.out)
         self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
-        folder_name = self.folder
-        new_name = self.folder + "_test"
-        os.rename(self.folder, new_name)
-        with patch("conans.client.command.is_config_install_scheduled", return_value=True):
-            self.client.run("config --help", assert_error=True)
-            # scheduled task has been executed. Without a remote, the user should fix the config
-            self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
-
-            # restore the remote
-            os.rename(new_name, folder_name)
-            self.client.run("config --help")
-            self.assertIn("Repo cloned!", self.client.out)
-
-    @pytest.mark.tool_git
-    def test_config_install_remove_config_repo(self):
-        """ config_install_interval should not run when config list is empty
-        """
-        with self.client.chdir(self.folder):
-            self.client.run_command('git init .')
-            self.client.run_command('git add .')
-            self.client.run_command('git config user.name myname')
-            self.client.run_command('git config user.email myname@mycompany.com')
-            self.client.run_command('git commit -m "mymsg"')
-        self.client.run('config install "%s/.git" --type git' % self.folder)
-        self.assertIn("Copying file global.conf", self.client.out)
-        self.assertIn("Repo cloned!", self.client.out)
-        # force scheduled time for all commands
-        with patch("conans.client.conf.config_installer._is_scheduled_intervals", return_value=True):
-            self.client.run("config --help")
-            self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
-
-            # config install must not run scheduled config
-            self.client.run("config install --remove 0")
-            self.assertEqual("", self.client.out)
-            self.client.run("config install --list")
-            self.assertEqual("", self.client.out)
-
-            last_change = os.path.getmtime(self.client.cache.config_install_file)
-            # without a config in configs file, scheduler only emits a warning
-            self.client.run("remote list")
-            self.assertIn("WARN: Skipping scheduled config install, "
-                          "no config listed in config_install file", self.client.out)
-            self.assertNotIn("Repo cloned!", self.client.out)
-            # ... and updates the next schedule
-            self.assertGreater(os.path.getmtime(self.client.cache.config_install_file), last_change)
 
     def test_config_fails_git_folder(self):
         # https://github.com/conan-io/conan/issues/8594
@@ -764,10 +575,11 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
         conf = load(client.cache.new_config_path)
-        assert "core:config_install_interval=5m" in conf
         dirs = os.listdir(client.cache.cache_folder)
         assert ".git" not in dirs
 
+
+class TestConfigInstall:
     def test_config_install_reestructuring_source(self):
         """  https://github.com/conan-io/conan/issues/9885 """
 

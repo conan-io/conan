@@ -11,7 +11,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load, mkdir, save
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 import os
 
@@ -89,7 +89,7 @@ class SymLinksTest(unittest.TestCase):
     def test_package_files(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
@@ -159,14 +159,14 @@ class TestConan(ConanFile):
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload hello/0.1@lasote/stable --all -r default")
+        client.run("upload hello/0.1@lasote/stable -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")
         self._check(client, pref, build=False)
 
     def test_export_pattern(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"
     version = "3.0.0"
@@ -198,7 +198,7 @@ class ConanSymlink(ConanFile):
             self.assertTrue(os.path.exists(cache_cmake))
 
     def test_export_ignore_case(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"
     version = "3.0.0"
@@ -241,7 +241,7 @@ class ConanSymlink(ConanFile):
     def test_create_keep_folder_symlink(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             class ConanSymlink(ConanFile):
                 name = "ConanSymlink"
                 version = "3.0.0"
@@ -288,7 +288,7 @@ class ConanSymlink(ConanFile):
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymlinkExportSources(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class SymlinksConan(ConanFile):
             name = "symlinks"
@@ -318,7 +318,7 @@ class SymlinkExportSources(unittest.TestCase):
         self.assertEqual(os.path.realpath(local_content),
                          os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
-        t.run("create . user/channel")
+        t.run("create . --user=user --channel=channel")
 
         # Check that things are in place (in the cache): exists and points to 'source' directory
         layout = t.get_latest_ref_layout(RecipeReference.loads("symlinks/1.0.0@user/channel"))

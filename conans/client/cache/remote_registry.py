@@ -142,12 +142,6 @@ class RemoteRegistry(object):
             remotes.add(remote)
             self.save_remotes(remotes)
 
-    def reset_remotes(self):
-        if os.path.exists(self._filename):
-            os.chmod(self._filename, stat.S_IWRITE)
-            os.remove(self._filename)
-        self.initialize_remotes()
-
     def _load_remotes(self):
         self.initialize_remotes()
         content = load(self._filename)
@@ -182,6 +176,12 @@ class RemoteRegistry(object):
         if not ret:
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
         return ret
+
+    def get_remote_index(self, remote: Remote):
+        try:
+            return self.list().index(remote)
+        except ValueError:
+            raise ConanException("No remote: '{}' found".format(remote.name))
 
     def add(self, remote: Remote):
         self._validate_url(remote.url)

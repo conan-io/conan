@@ -245,7 +245,8 @@ class GitToolTest(unittest.TestCase):
     def test_git_to_capture_branch(self):
         conanfile = """
 import re
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 def get_version():
     git = tools.Git()
@@ -267,7 +268,7 @@ class HelloConan(ConanFile):
         path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
         client = TestClient()
         client.current_folder = path
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
 
     def test_git_helper_in_recipe(self):
         client = TestClient()
@@ -283,7 +284,8 @@ class HelloConan(ConanFile):
 
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -298,12 +300,15 @@ class HelloConan(ConanFile):
         assert(os.path.exists("file.h"))
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
 
         # Now clone in a subfolder with later checkout
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
+from conan.tools.files import mkdir
+
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -311,7 +316,7 @@ class HelloConan(ConanFile):
     exports_sources = "other"
 
     def source(self):
-        tools.mkdir("src")
+        mkdir(self, "src")
         git = tools.Git("./src")
         git.clone("%s")
         git.checkout("dev")
@@ -320,12 +325,13 @@ class HelloConan(ConanFile):
         assert(os.path.exists(os.path.join("src", "file.h")))
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
 
         # Base dir, with exports without subfolder and not specifying checkout fails
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -340,7 +346,7 @@ class HelloConan(ConanFile):
         assert(os.path.exists("file.h"))
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel", assert_error=True)
+        client.run("create . --user=user --channel=channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
     def test_git_commit_message(self):

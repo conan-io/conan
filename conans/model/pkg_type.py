@@ -13,6 +13,9 @@ class PackageType(Enum):
     PYTHON = "python-require"
     UNKNOWN = "unknown"
 
+    def __str__(self):
+        return self.value
+
     @staticmethod
     def compute_package_type(conanfile):
         # This doesnt implement the header_only option without shared one. Users should define

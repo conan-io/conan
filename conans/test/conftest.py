@@ -106,11 +106,14 @@ tools_locations = {
         "exe": "make",
         "system": {"path": {'Windows': "C:/cygwin64/bin"}},
     },
-    'bazel':  {
+    'bazel': {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
+    'premake': {},
+    'apt_get': { "exe": "apt-get"},
+    'brew': {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

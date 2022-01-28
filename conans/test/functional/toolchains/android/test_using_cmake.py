@@ -24,7 +24,7 @@ class AndroidToolchainTestCase(unittest.TestCase):
         create_library(self.t)
         self.t.save({
             'conanfile.py': textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 from conan.tools.cmake import CMake, CMakeToolchain
 
                 class Library(ConanFile):
@@ -63,7 +63,7 @@ class AndroidToolchainTestCase(unittest.TestCase):
             https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
         """
         # Build in the cache
-        self.t.run('create . library/version@ --profile:host=profile_host --profile:build=default')
+        self.t.run('create . --name=library --version=version --profile:host=profile_host --profile:build=default')
 
         # Build locally
         self.t.run('install . library/version@ --profile:host=profile_host --profile:build=default')

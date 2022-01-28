@@ -1,12 +1,25 @@
 import copy
 import json
+import os
 from json import JSONEncoder
 from typing import List
 
-from conans.cli.api.model import Remote, PackageConfiguration
-from conans.cli.output import cli_out_write
+from conans.cli.api.model import Remote, PkgConfiguration
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+
+
+def make_abs_path(path, cwd=None):
+    """convert 'path' to absolute if necessary (could be already absolute)
+    if not defined (empty, or None), will return 'default' one or 'cwd'
+    """
+    if path is None:
+        return None
+    if os.path.isabs(path):
+        return path
+    cwd = cwd or os.getcwd()
+    abs_path = os.path.normpath(os.path.join(cwd, path))
+    return abs_path
 
 
 class CommandResult(dict):
@@ -49,7 +62,7 @@ class ConanJSONEncoder(JSONEncoder):
             return repr(o)
         elif isinstance(o, Remote):
             return o.name
-        elif isinstance(o, PackageConfiguration):
+        elif isinstance(o, PkgConfiguration):
             return {"settings": o.settings, "options": o.options, "requires": o.requires}
         raise TypeError("Don't know how to serialize a {} object".format(o.__class__))
 
@@ -75,4 +88,4 @@ def _fix_dict_keys(result: CommandResult):
 def json_formatter(data: List[CommandResult]):
     _data = [_fix_dict_keys(result) for result in data]
     myjson = json.dumps(_data, indent=4, cls=ConanJSONEncoder)
-    cli_out_write(myjson)
+    return myjson

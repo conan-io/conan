@@ -1,4 +1,3 @@
-import re
 import unittest
 from collections import OrderedDict
 
@@ -12,13 +11,13 @@ class RemoteChecksTest(unittest.TestCase):
                                ("server2", TestServer()),
                                ("server3", TestServer())])
         client = TestClient(servers=servers, inputs=3*["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     pass"""
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing")
-        client.run("upload Pkg* --all -r=server1 --confirm")
-        client.run("upload Pkg* --all -r=server2 --confirm")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("upload pkg* -r=server1 --confirm")
+        client.run("upload pkg* -r=server2 --confirm")
 
         # It takes the default remote
         client.run("remove * -f")
@@ -26,9 +25,8 @@ class Pkg(ConanFile):
         # Exported recipe gets binary from default remote
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing")
-        self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server1)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
@@ -36,9 +34,8 @@ class Pkg(ConanFile):
         client.run("remove * -f")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing -r=server2")
-        self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
@@ -47,8 +44,8 @@ class Pkg(ConanFile):
         client.run("remove * -f -r=server1")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing")
-        self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
@@ -56,8 +53,8 @@ class Pkg(ConanFile):
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
         client.run("install --reference=pkg/0.1@lasote/testing")
-        self.assertIn("pkg/0.1@lasote/testing from 'server2' - Downloaded", client.out)
-        self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
@@ -66,31 +63,28 @@ class Pkg(ConanFile):
         servers["server1"] = TestServer()
         servers["server2"] = TestServer()
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=1")
-        client.run("upload pkg* --all -r=server1 --confirm")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=1")
+        client.run("upload pkg* -r=server1 --confirm")
         client.run("remove * -p -f")
-        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=2")
-        package_id2 = re.search(r"pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
-        client.run("upload Pkg* --all -r=server2 --confirm")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=2")
+        package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
+        client.run("upload pkg* -r=server2 --confirm")
         client.run("remove * -p -f")
 
         # recipe is cached, takes binary from server2
         client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2")
-        self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn(f"pkg/0.1@lasote/testing:{package_id2} - Download", client.out)
+        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
         self.assertIn(f"pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
         client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2 -u")
-        self.assertIn("pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
-        self.assertIn(f"pkg/0.1@lasote/testing:{package_id2} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Cache")})
 
         # Build missing
         client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3 -r=server2", assert_error=True)
