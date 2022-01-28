@@ -44,46 +44,42 @@ def test_shared_cmake_toolchain_test_package():
     assert "hello: Release!" in client.out
 
 
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
-    """
-    If we build an executable in Mac and we want it to locate the shared libraries in the same
-    directory, we have different alternatives
-    """
+@pytest.fixture()
+def test_client_shared():
     client = TestClient()
     files = pkg_cmake("hello", "0.1")
     files.update(pkg_cmake_test("hello"))
     test_conanfile = textwrap.dedent("""
-            import os
-            from conan import ConanFile
-            from conan.tools.cmake import CMake, cmake_layout
+                import os
+                from conan import ConanFile
+                from conan.tools.cmake import CMake, cmake_layout
 
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "CMakeToolchain", "CMakeDeps"
+                class Pkg(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    generators = "CMakeToolchain", "CMakeDeps"
 
-                def requirements(self):
-                    self.requires(self.tested_reference_str)
+                    def requirements(self):
+                        self.requires(self.tested_reference_str)
 
-                def layout(self):
-                    cmake_layout(self)
+                    def layout(self):
+                        cmake_layout(self)
 
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
 
-                def imports(self):
-                    self.copy("*.dll", dst=self.folders.build, src="bin")
-                    self.copy("*.dylib", dst=self.folders.build, src="lib")
+                    def imports(self):
+                        self.copy("*.dll", dst=self.folders.build, src="bin")
+                        self.copy("*.dylib", dst=self.folders.build, src="lib")
 
-                def test(self):
-                    cmd = os.path.join(self.cpp.build.bindirs[0], "test")
-                    # This is working without runenv because CMake is puting an internal rpath
-                    # to the executable pointing to the dylib of hello, internally is doing something
-                    # like: install_name_tool -add_rpath /path/to/hello/lib/libhello.dylib test
-                    self.run(cmd)
-            """)
+                    def test(self):
+                        cmd = os.path.join(self.cpp.build.bindirs[0], "test")
+                        # This is working without runenv because CMake is puting an internal rpath
+                        # to the executable pointing to the dylib of hello, internally is doing something
+                        # like: install_name_tool -add_rpath /path/to/hello/lib/libhello.dylib test
+                        self.run(cmd)
+                """)
     files["test_package/conanfile.py"] = test_conanfile
 
     client.save(files)
@@ -97,16 +93,32 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     client.run_command(os.path.join(exe_folder, "test"))
 
     # We try to remove the hello package and run again the executable from the test package,
-    # this time it should fail
+    # this time it should fail, it doesn't find the shared library
     client.run("remove '*' -f")
     client.run_command(os.path.join(exe_folder, "test"), assert_error=True)
-    old_folder = client.current_folder
+    return client
 
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_shared_same_dir_using_tool(test_client_shared):
+    """
+    If we build an executable in Mac and we want it to locate the shared libraries in the same
+    directory, we have different alternatives, here we use the "install_name_tool"
+    """
+    exe_folder = os.path.join("test_package", "cmake-build-release")
     # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
-    client.current_folder = os.path.join(client.current_folder, exe_folder)
-    client.run_command("install_name_tool -add_rpath '.' test")
-    client.run_command("./{}".format("test"))
-    client.current_folder = old_folder
+    test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
+    test_client_shared.run_command("install_name_tool -add_rpath '.' test")
+    test_client_shared.run_command("./{}".format("test"))
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_shared_same_dir_using_cmake(test_client_shared):
+    """
+        If we build an executable in Mac and we want it to locate the shared libraries in the same
+        directory, we have different alternatives, here we use CMake to adjust CMAKE_INSTALL_RPATH
+        to @executable_path so the exe knows that can replace @rpath with the current dir
+    """
 
     # Alternative 2, set the rpath in cmake
     # Only viable when installing with cmake
@@ -126,25 +138,76 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     # Hardcoded installation path to keep the exe in the same place in the tests
     install(TARGETS test DESTINATION "cmake-build-release")
     """
-    cf = test_conanfile.replace("cmake.build()", "cmake.build()\n        cmake.install()")
-    client.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
-    client.run("create . -o hello:shared=True")
-    client.run("remove '*' -f")
-    client.run_command(os.path.join(exe_folder, "test"))
+    # Same test conanfile but calling cmake.install()
+    cf = textwrap.dedent("""
+                import os
+                from conan import ConanFile
+                from conan.tools.cmake import CMake, cmake_layout
+
+                class Pkg(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    generators = "CMakeToolchain", "CMakeDeps"
+
+                    def requirements(self):
+                        self.requires(self.tested_reference_str)
+
+                    def layout(self):
+                        cmake_layout(self)
+
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
+                        cmake.install()
+
+                    def imports(self):
+                        self.copy("*.dll", dst=self.folders.build, src="bin")
+                        self.copy("*.dylib", dst=self.folders.build, src="lib")
+
+                    def test(self):
+                        cmd = os.path.join(self.cpp.build.bindirs[0], "test")
+                        # This is working without runenv because CMake is puting an internal rpath
+                        # to the executable pointing to the dylib of hello, internally is doing something
+                        # like: install_name_tool -add_rpath /path/to/hello/lib/libhello.dylib test
+                        self.run(cmd)
+                """)
+    test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
+    test_client_shared.run("create . -o hello:shared=True")
+    test_client_shared.run("remove '*' -f")
+    exe_folder = os.path.join("test_package", "cmake-build-release")
+    test_client_shared.run_command(os.path.join(exe_folder, "test"))
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
+    """
+        If we build an executable in Mac and we want it to locate the shared libraries in the same
+        directory, we have different alternatives, here we set DYLD_LIBRARY_PATH before calling
+        the executable but running in current dir
+    """
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
-    client.current_folder = old_folder
-    rmdir(os.path.join(client.current_folder, exe_folder))
-    client.run("create . -o hello:shared=True")
-    client.run("remove '*' -f")
-    client.current_folder = os.path.join(client.current_folder, exe_folder)
-    client.run_command("DYLD_LIBRARY_PATH=$(pwd) ./test")
-    client.run_command("DYLD_LIBRARY_PATH=. ./test")
-    client.run_command("DYLD_LIBRARY_PATH=@executable_path ./test")
+    exe_folder = os.path.join("test_package", "cmake-build-release")
+    rmdir(os.path.join(test_client_shared.current_folder, exe_folder))
+    test_client_shared.run("create . -o hello:shared=True")
+    test_client_shared.run("remove '*' -f")
+    test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=$(pwd) ./test")
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=. ./test")
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=@executable_path ./test")
 
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_shared_same_dir_using_env_var_other_dir(test_client_shared):
+    """
+        If we build an executable in Mac and we want it to locate the shared libraries in the same
+        directory, we have different alternatives, here we set DYLD_LIBRARY_PATH before calling
+        the executable but running in another directory
+    """
     # Alternative 3b, FAILING IN CI, set DYLD_LIBRARY_PATH
-    client.current_folder = old_folder
-    rmdir(os.path.join(client.current_folder, exe_folder))
-    client.run("create . -o hello:shared=True")
-    client.run("remove '*' -f")
-    client.run_command("DYLD_LIBRARY_PATH=@executable_path '{}'".format(os.path.join(client.current_folder, exe_folder, "test")))
+    exe_folder = os.path.join("test_package", "cmake-build-release")
+    rmdir(os.path.join(test_client_shared.current_folder, exe_folder))
+    test_client_shared.run("create . -o hello:shared=True")
+    test_client_shared.run("remove '*' -f")
+    path = os.path.join(test_client_shared.current_folder, exe_folder, "test")
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=@executable_path '{}'".format(path))
