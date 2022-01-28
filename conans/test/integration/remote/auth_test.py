@@ -17,7 +17,7 @@ from conans.util.env import environment_update
 from conans.util.files import save
 
 conan_content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"

@@ -17,7 +17,7 @@ class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conan.tools.google import Bazel
-        from conans import ConanFile
+        from conan import ConanFile
 
         class App(ConanFile):
             name="test_bazel_app"
@@ -63,7 +63,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)  # bazel doesn't work with paths with spaces
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import os
             class Pkg(ConanFile):

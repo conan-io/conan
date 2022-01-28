@@ -11,7 +11,7 @@ class RemoteChecksTest(unittest.TestCase):
                                ("server2", TestServer()),
                                ("server3", TestServer())])
         client = TestClient(servers=servers, inputs=3*["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     pass"""
         client.save({"conanfile.py": conanfile})
@@ -63,7 +63,7 @@ class Pkg(ConanFile):
         servers["server1"] = TestServer()
         servers["server2"] = TestServer()
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}
 """

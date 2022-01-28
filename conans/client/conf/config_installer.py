@@ -1,9 +1,10 @@
 import os
 import shutil
-from contextlib import contextmanager
-from urllib.parse import urlparse
 
-from conans import load
+from urllib.parse import urlparse, urlsplit
+from contextlib import contextmanager
+
+
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt
@@ -11,7 +12,7 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove
+from conans.util.files import mkdir, rmdir, remove, load
 
 
 def _hide_password(resource):
@@ -137,7 +138,9 @@ def _process_download(config, cache, requester):
     output = ConanOutput()
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
-        zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
+        path = urlsplit(config.uri).path
+        filename = os.path.basename(path)
+        zippath = os.path.join(tmp_folder, filename)
         try:
             downloader = FileDownloader(requester=requester, verify=config.verify_ssl,
                                         config_retry=None, config_retry_wait=None)

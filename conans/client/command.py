@@ -1,7 +1,5 @@
 import argparse
 import inspect
-import json
-import os
 import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
@@ -9,15 +7,12 @@ from difflib import get_close_matches
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput
-from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, ProfileData
-from conans.client.conan_command_output import CommandOutputer
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import exception_message_safe
-from conans.util.files import save
 from conans.util.log import logger
 
 
@@ -292,91 +287,11 @@ class Command(object):
                                     conf=args.conf_build)
 
         self._warn_python_version()
-
         self._conan_api.imports(args.path,
                             args.import_folder, settings=args.settings_host,
                             options=args.options_host, env=args.env_host,
                             profile_names=args.profile_host, profile_build=profile_build,
                             lockfile=args.lockfile)
-
-    def upload(self, *args):
-        """
-        Uploads a recipe and binary packages to a remote.
-
-        If no remote is specified, it fails.
-        """
-        parser = argparse.ArgumentParser(description=self.upload.__doc__,
-                                         prog="conan upload",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('pattern_or_reference', help=_PATTERN_REF_OR_PREF_HELP)
-        parser.add_argument('-q', '--query', default=None, action=OnceArgument,
-                            help="Only upload packages matching a specific query. " + _QUERY_HELP)
-        # using required, we may want to pass this as a positional argument?
-        parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
-                            help='upload to this specific remote')
-        parser.add_argument("--all", action='store_true', default=False,
-                            help='Upload both package recipe and packages')
-        parser.add_argument("--skip-upload", action='store_true', default=False,
-                            help='Do not upload anything, just run the checks and the compression')
-        parser.add_argument("--force", action='store_true', default=False,
-                            help='Ignore checks before uploading the recipe: it will bypass missing'
-                                 ' fields in the scm attribute and it will override remote recipe'
-                                 ' with local regardless of recipe date')
-        parser.add_argument("--check", action='store_true', default=False,
-                            help='Perform an integrity check, using the manifests, before upload')
-        parser.add_argument('-c', '--confirm', default=False, action='store_true',
-                            help='Upload all matching recipes without confirmation')
-        parser.add_argument('--retry', default=None, type=int, action=OnceArgument,
-                            help="In case of fail retries to upload again the specified times.")
-        parser.add_argument('--retry-wait', default=None, type=int, action=OnceArgument,
-                            help='Waits specified seconds before retry again')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the upload information will be written to')
-        parser.add_argument("--parallel", action='store_true', default=False,
-                            help='Upload files in parallel using multiple threads. '
-                                 'The default number of launched threads is set to the value of '
-                                 'cpu_count and can be configured using the CONAN_CPU_COUNT '
-                                 'environment variable or defining cpu_count in conan.conf')
-
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PkgReference.loads(args.pattern_or_reference)
-        except ConanException:
-            reference = args.pattern_or_reference
-        else:
-            reference = repr(pref)
-            if args.query:
-                raise ConanException("'--query' argument cannot be used together with "
-                                     "full reference")
-
-        if args.force and args.skip_upload:
-            raise ConanException("'--skip-upload' argument cannot be used together with '--force'")
-
-        self._warn_python_version()
-
-        if args.force:
-            policy = UPLOAD_POLICY_FORCE
-        elif args.skip_upload:
-            policy = UPLOAD_POLICY_SKIP
-        else:
-            policy = None
-
-        info = None
-        try:
-            info = self._conan_api.upload(pattern=reference,
-                                      query=args.query, remote_name=args.remote,
-                                      all_packages=args.all, policy=policy,
-                                      confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, integrity_check=args.check,
-                                      parallel_upload=args.parallel)
-
-        except ConanException as exc:
-            info = exc.info
-            raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, os.getcwd())
 
     def _commands(self):
         """ Returns a list of available commands.

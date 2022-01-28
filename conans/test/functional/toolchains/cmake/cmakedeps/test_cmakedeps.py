@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 def client():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
         class Pkg(ConanFile):
@@ -97,7 +97,7 @@ def test_transitive_multi(client):
 @pytest.mark.tool_cmake
 def test_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -171,7 +171,7 @@ def test_do_not_mix_cflags_cxxflags():
     client.run("create .")
 
     consumer_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -207,7 +207,7 @@ def test_do_not_mix_cflags_cxxflags():
 def test_custom_configuration(client):
     """  The configuration may differ from the build context and the host context"""
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMakeDeps
 
        class Consumer(ConanFile):

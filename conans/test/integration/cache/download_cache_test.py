@@ -19,7 +19,7 @@ class DownloadCacheTest(unittest.TestCase):
     def test_download_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
@@ -92,7 +92,7 @@ class DownloadCacheTest(unittest.TestCase):
         save(client.cache.new_config_path, "tools.files.download:download_cache=%s" % cache_folder)
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conan.tools.files import download
            class Pkg(ConanFile):
                def source(self):
@@ -108,7 +108,7 @@ class DownloadCacheTest(unittest.TestCase):
 
         # This is the right checksum
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
             class Pkg(ConanFile):
                 def source(self):
@@ -152,7 +152,7 @@ class DownloadCacheTest(unittest.TestCase):
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):

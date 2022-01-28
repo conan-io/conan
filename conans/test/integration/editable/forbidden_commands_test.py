@@ -16,7 +16,7 @@ class ForbiddenRemoveTest(unittest.TestCase):
                               "TODO: cache2.0 fix with editables")
     def test_remove(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class APck(ConanFile):
                 pass

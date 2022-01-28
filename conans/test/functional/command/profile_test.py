@@ -128,4 +128,4 @@ class DetectCompilersTest(unittest.TestCase):
         self.assertIn("os=", load(pr_path))
 
         client.run("profile detect --name=./MyProfile2", assert_error=True)
-        self.assertIn("MyProfile2 already exists", client.out)
+        self.assertIn("MyProfile2' already exists", client.out)

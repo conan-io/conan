@@ -13,7 +13,7 @@ def test_vcvars_generator(scope):
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import VCVars
 
         class TestConan(ConanFile):
@@ -41,7 +41,7 @@ def test_vcvars_generator_string():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"
@@ -59,7 +59,7 @@ def test_vcvars_2015_error():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"

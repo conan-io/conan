@@ -276,7 +276,7 @@ class CppInfo(object):
             self.libdirs = ["lib"]
             self.resdirs = ["res"]
             self.bindirs = ["bin"]
-            self.builddirs = [""]
+            self.builddirs = []
             self.frameworkdirs = ["Frameworks"]
 
         self._aggregated = None  # A _NewComponent object with all the components aggregated

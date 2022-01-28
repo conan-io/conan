@@ -38,7 +38,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             settings += ["cppstd"]
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 settings = "{}"

@@ -14,7 +14,7 @@ class LibcxxSettingTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_declared_stdlib_and_passed(self):
         file_content = textwrap.dedent('''
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileToolsTest(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"

@@ -9,7 +9,7 @@ from conans.util.env import get_env
 from conans.util.files import save
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "hello"

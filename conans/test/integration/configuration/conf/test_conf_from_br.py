@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 def test_basic():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
 
@@ -17,7 +17,7 @@ def test_basic():
     client.run("create . --name=android_ndk --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -55,7 +55,7 @@ def test_basic():
 def test_basic_conf_through_cli():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
 
@@ -66,7 +66,7 @@ def test_basic_conf_through_cli():
     client.run("create . --name=android_ndk --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -103,7 +103,7 @@ def test_declared_generators_get_conf():
     # https://github.com/conan-io/conan/issues/9571
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
                 self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = "mytoolchain.cmake"
@@ -112,7 +112,7 @@ def test_declared_generators_get_conf():
     client.run("create . --name=mytool --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -125,7 +125,7 @@ def test_declared_generators_get_conf():
     assert 'include("mytoolchain.cmake")' in toolchain
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain
 
         class Pkg(ConanFile):

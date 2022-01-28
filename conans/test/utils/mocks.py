@@ -2,7 +2,7 @@ import os
 from collections import namedtuple
 from io import StringIO
 
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders
 from conans.model.options import Options

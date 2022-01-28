@@ -3,7 +3,8 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
+    get_apple_sdk_name
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -154,18 +155,17 @@ class MesonToolchain(object):
             return
 
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+        sdk_path = conanfile.conf["tools.apple:sdk_path"]
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
-        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and os_ != "Macos":
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
+        os_sdk = get_apple_sdk_name(conanfile)
         arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        os_version = conanfile.settings.get_safe("os.version")
+        subsystem = conanfile.settings.get_safe("os.subsystem")
+
         # Calculating the main Apple flags
-        deployment_target_flag = apple_min_version_flag(conanfile)
+        deployment_target_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
         sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
         arch_flag = "-arch " + arch if arch else ""
 

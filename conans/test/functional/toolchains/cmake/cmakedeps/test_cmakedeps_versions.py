@@ -44,7 +44,7 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
         """).format(name=name, version=version, params=params)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -79,7 +79,7 @@ def test_no_version_file(hello_client):
         """)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):

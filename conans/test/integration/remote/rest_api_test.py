@@ -222,7 +222,7 @@ class RestApiTest(unittest.TestCase):
         if base_files:
             files.update(base_files)
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class MyConan(ConanFile):
     name = "%s"

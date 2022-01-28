@@ -26,7 +26,7 @@ def test_autotools():
     configure_ac = gen_configure_ac()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
@@ -73,7 +73,7 @@ def build_windows_subsystem(profile, make_program):
     makefile = gen_makefile(apps=["app"])
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 
         class TestConan(ConanFile):

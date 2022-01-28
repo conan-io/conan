@@ -66,7 +66,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             exports = "*"
             def layout(self):
@@ -127,7 +127,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         import os
         class TestConan(ConanFile):
@@ -214,7 +214,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             exports = "*"
@@ -231,7 +231,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
     client.run("create . --name=hello --version=0.1 {} {}".format(settings, br_flag))
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class PkgConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             {require_type} = "hello/0.1"
@@ -269,7 +269,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*"
@@ -322,7 +322,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     client = TurboTestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*"
@@ -340,7 +340,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     build_folder = client.get_latest_pkg_layout(pref_build).base_folder
     build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello_host/0.1"
@@ -386,7 +386,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     client = TurboTestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*"
@@ -408,7 +408,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello_host/0.1"

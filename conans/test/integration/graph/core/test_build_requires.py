@@ -563,7 +563,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "app"
                 version = "0.1"
@@ -635,7 +635,7 @@ def test_tool_requires():
     client.run("create . --name=tool4 --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             tool_requires = "tool2/1.0"
             build_requires = "tool3/1.0"

@@ -1,12 +1,13 @@
 from conan.tools import args_to_string
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_name
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
 from conan.tools.env import Environment
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conans.errors import ConanException
+from conan.tools.microsoft import VCVars, is_msvc
 
 
 class AutotoolsToolchain:
@@ -47,7 +48,12 @@ class AutotoolsToolchain:
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
 
-        self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+        os_sdk = get_apple_sdk_name(conanfile)
+        os_version = conanfile.settings.get_safe("os.version")
+        subsystem = conanfile.settings.get_safe("os.subsystem")
+
+        self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
+
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
@@ -59,8 +65,11 @@ class AutotoolsToolchain:
 
             # Apple Stuff
             if os_build == "Macos":
-                sdk_path = apple_sdk_path(conanfile)
-                apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+                # SDK path is mandatory for cross-building
+                sdk_path = conanfile.conf["tools.apple:sdk_path"]
+                if not sdk_path:
+                    raise ConanException("You must provide a valid SDK path for cross-compilation.")
+                apple_arch = to_apple_arch(arch_host)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
@@ -111,6 +120,10 @@ class AutotoolsToolchain:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
+        if is_msvc(self._conanfile):
+            env.define("CXX", "cl")
+            env.define("CC", "cl")
+
         # FIXME: Previously these flags where checked if already present at env 'CFLAGS', 'CXXFLAGS'
         #        and 'self.cxxflags', 'self.cflags' before adding them
         for f in list(filter(bool, [self.apple_isysroot_flag,
@@ -134,6 +147,7 @@ class AutotoolsToolchain:
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
+        VCVars(self._conanfile).generate(scope=scope)
 
     def generate_args(self):
         configure_args = []

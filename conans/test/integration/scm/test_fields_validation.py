@@ -10,7 +10,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
     def test_fail_string(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 scm = {"type": "git", "revision": "123", "username": True}
@@ -25,7 +25,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
     def test_fail_revision(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 scm = {"type": "git", "revision": True}
@@ -40,7 +40,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
     def test_fail_boolean(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 scm = {"type": "git", "revision": "123", "verify_ssl": "True"}
@@ -55,7 +55,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
     def test_ok_none(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 scm = {"type": "git", "revision": None, "shallow": False}

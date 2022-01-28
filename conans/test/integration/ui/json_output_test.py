@@ -175,7 +175,7 @@ AA*: c/1.0@private_user/channel
 
     def test_json_create_multiconfig(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 def package_info(self):

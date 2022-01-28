@@ -11,7 +11,7 @@ class StdCppTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_set_default_package_id(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 
 class TestConan(ConanFile):
     name = "MyLib"

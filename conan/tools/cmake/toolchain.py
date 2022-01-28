@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_name
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build import build_jobs, use_win_mingw, cross_building
 from conan.tools.cmake.utils import is_multi_configuration
@@ -96,6 +96,7 @@ class VSRuntimeBlock(Block):
             {% set genexpr.str = genexpr.str +
                                   '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
         {% endfor %}
+        set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
         """)
 
@@ -321,41 +322,18 @@ class AppleSystemBlock(Block):
         {% endif %}
         """)
 
-    def _get_architecture(self):
-        # check valid combinations of architecture - os ?
-        # for iOS a FAT library valid for simulator and device
-        # can be generated if multiple archs are specified:
-        # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        arch = self._conanfile.settings.get_safe("arch")
-        return {"x86": "i386",
-                "x86_64": "x86_64",
-                "armv8": "arm64",
-                "armv8_32": "arm64_32"}.get(arch, arch)
-
-    def _apple_sdk_name(self):
-        """
-        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
-        there could be several ones depending on the OS architecture.
-
-        Note: In case of MacOS it'll be the same for all the architectures.
-        """
-        os_ = self._conanfile.settings.get_safe('os')
-        os_sdk = self._conanfile.settings.get_safe('os.sdk')
-        if os_sdk:
-            return os_sdk
-        elif os_ == "Macos":  # it has only a single value for all the architectures for now
-            return "macosx"
-        else:
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
         if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
             return None
 
-        host_architecture = self._get_architecture()
+        arch = self._conanfile.settings.get_safe("arch")
+        # check valid combinations of architecture - os ?
+        # for iOS a FAT library valid for simulator and device can be generated
+        # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
+        host_architecture = to_apple_arch(arch, default=arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
-        host_sdk_name = self._apple_sdk_name()
+        host_sdk_name = get_apple_sdk_name(self._conanfile)
 
         ctxt_toolchain = {}
         if host_sdk_name:
@@ -383,17 +361,8 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_MODULE_PATH
-        {% if build_build_paths %}
-        # Explicitly defined "buildirs" of "build" context dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ build_build_paths }})
-        {% endif %}
-        {% if host_build_paths_noroot %}
-        # Explicitly defined "builddirs" of "host" dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_noroot }})
-        {% endif %}
-        {% if host_build_paths_root %}
-        # The root (which is the default builddirs) path of dependencies in the host context
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_root }})
+        {% if build_paths %}
+        list(PREPEND CMAKE_MODULE_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # the generators folder (where conan generates files, like this toolchain)
@@ -401,9 +370,9 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
-        {% if host_build_paths_noroot %}
+        {% if build_paths %}
         # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
-        list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
+        list(PREPEND CMAKE_PREFIX_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # The Conan local "generators" folder, where this toolchain is saved.
@@ -462,17 +431,13 @@ class FindFiles(Block):
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
-        host_build_paths_root = []
-        host_build_paths_noroot = []
+        build_paths = []
         host_lib_paths = []
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            # If the builddir is the package_folder, then it is the default "root" one
-            nf = os.path.normpath(req.package_folder)
-            host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
-            host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            build_paths.extend(cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
@@ -480,19 +445,16 @@ class FindFiles(Block):
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        build_build_paths = []
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_build_paths.extend(cppinfo.builddirs)
+            build_paths.extend(cppinfo.builddirs)
             build_bin_paths.extend(cppinfo.bindirs)
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "host_build_paths_root": self._join_paths(host_build_paths_root),
-            "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
-            "build_build_paths": self._join_paths(build_build_paths),
+            "build_paths": self._join_paths(build_paths),
             "cmake_program_path": self._join_paths(build_bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
@@ -777,6 +739,10 @@ class CMakeToolchain(object):
 
         if(CMAKE_TOOLCHAIN_FILE)
             message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
+        endif()
+
+        if(${CMAKE_VERSION} VERSION_LESS "3.15")
+            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
         endif()
 
         {% for conan_block in conan_blocks %}

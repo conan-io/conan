@@ -12,7 +12,7 @@ from conans.util.files import mkdir
 
 
 conanfile_scope_env = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     requires = "hello/0.1@lasote/testing"
@@ -28,7 +28,7 @@ class AConan(ConanFile):
 
 conanfile_dep = """
 import os
-from conans import ConanFile
+from conan import ConanFile
 from conans.tools import mkdir
 
 class AConan(ConanFile):
@@ -66,7 +66,7 @@ class ConanBuildTest(unittest.TestCase):
     def test_build_different_folders(self):
         conanfile = """
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
 
@@ -146,7 +146,7 @@ class AConan(ConanFile):
         """
         client = TestClient()
         conanfile_dep = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     pass
@@ -155,7 +155,7 @@ class AConan(ConanFile):
         client.run("create . --name=Hello.pkg --version=0.1 --user=lasote --channel=testing")
         client.run("create . --name=Hello-Tools --version=0.1 --user=lasote --channel=testing")
         conanfile_scope_env = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     requires = "Hello.pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
@@ -176,7 +176,7 @@ class AConan(ConanFile):
     def test_build_with_deps_env_info(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile, CMake
+from conan import ConanFile, CMake
 
 class AConan(ConanFile):
     name = "lib"
@@ -190,7 +190,7 @@ class AConan(ConanFile):
         client.run("export . --user=lasote --channel=stable")
 
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 import os
 
@@ -224,7 +224,7 @@ class AConan(ConanFile):
         # https://github.com/conan-io/conan/issues/2899
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Conan(ConanFile):
                 name = "{name}"
                 {requires}

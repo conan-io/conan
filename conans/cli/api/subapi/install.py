@@ -1,4 +1,4 @@
-from conans import ConanFile
+from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
@@ -13,16 +13,15 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, build_modes=None, remote=None, update=False):
+    def install_binaries(self, deps_graph, build_modes=None, remotes=None, update=False):
         """ Install binaries for dependency graph
         @param deps_graph: Dependency graph to intall packages for
         @param build_modes:
-        @param remote:
+        @param remotes:
         @param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
-        remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update)
+        app.load_remotes(remotes, update=update)
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         build_modes = BuildMode(build_modes)
@@ -32,7 +31,7 @@ class InstallAPI:
     @staticmethod
     def install_consumer(deps_graph, install_folder, base_folder, conanfile_folder,
                          generators=None, reference=None, no_imports=False, create_reference=None,
-                         test=None):
+                         test=None, source_folder=None, output_folder=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer, or calling imports()/deploy() to copy things to user space.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -41,9 +40,10 @@ class InstallAPI:
         conanfile = root_node.conanfile
 
         if hasattr(conanfile, "layout") and not test:
-            conanfile.folders.set_base_install(conanfile_folder)
-            conanfile.folders.set_base_imports(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
+            conanfile.folders.set_base_source(source_folder or conanfile_folder)
+            conanfile.folders.set_base_install(output_folder or conanfile_folder)
+            conanfile.folders.set_base_imports(output_folder or conanfile_folder)
+            conanfile.folders.set_base_generators(output_folder or conanfile_folder)
         else:
             conanfile.folders.set_base_install(install_folder)
             conanfile.folders.set_base_imports(install_folder)

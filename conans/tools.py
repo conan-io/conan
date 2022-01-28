@@ -10,34 +10,13 @@
     the currification.
 """
 
-import requests
-
 # Tools from conans.client.tools
-from conans.client.tools import files as tools_files, \
-    system_pm as tools_system_pm
+from conans.client.tools import files as tools_files
 
 from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
-from conans.client.tools.apple import *
 # Tools form conans.util
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
-
-# This global variables are intended to store the configuration of the running Conan application
-_global_requester = None
-_global_config = None
-
-
-def set_global_instances(the_requester, config):
-    global _global_requester
-    global _global_config
-
-    # TODO: pass here the configuration file, and make the work here (explicit!)
-    _global_requester = the_requester
-    _global_config = config
-
-
-# Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_requester=requests, config=None)
 
 
 """
@@ -76,59 +55,3 @@ def replace_in_file(*args, **kwargs):
 
 def replace_path_in_file(*args, **kwargs):
     return tools_files.replace_path_in_file(*args, **kwargs)
-
-
-# from conans.client.tools.system_pm
-class SystemPackageTool(tools_system_pm.SystemPackageTool):
-    def __init__(self, *args, **kwargs):
-        super(SystemPackageTool, self).__init__(*args, **kwargs)
-
-
-class NullTool(tools_system_pm.NullTool):
-    def __init__(self, *args, **kwargs):
-        super(NullTool, self).__init__(*args, **kwargs)
-
-
-class AptTool(tools_system_pm.AptTool):
-    def __init__(self, *args, **kwargs):
-        super(AptTool, self).__init__(*args, **kwargs)
-
-
-class DnfTool(tools_system_pm.DnfTool):
-    def __init__(self, *args, **kwargs):
-        super(DnfTool, self).__init__(*args, **kwargs)
-
-
-class YumTool(tools_system_pm.YumTool):
-    def __init__(self, *args, **kwargs):
-        super(YumTool, self).__init__(*args, **kwargs)
-
-
-class BrewTool(tools_system_pm.BrewTool):
-    def __init__(self, *args, **kwargs):
-        super(BrewTool, self).__init__(*args, **kwargs)
-
-
-class PkgTool(tools_system_pm.PkgTool):
-    def __init__(self, *args, **kwargs):
-        super(PkgTool, self).__init__(*args, **kwargs)
-
-
-class ChocolateyTool(tools_system_pm.ChocolateyTool):
-    def __init__(self, *args, **kwargs):
-        super(ChocolateyTool, self).__init__(*args, **kwargs)
-
-
-class PkgUtilTool(tools_system_pm.PkgUtilTool):
-    def __init__(self, *args, **kwargs):
-        super(PkgUtilTool, self).__init__(*args, **kwargs)
-
-
-class PacManTool(tools_system_pm.PacManTool):
-    def __init__(self, *args, **kwargs):
-        super(PacManTool, self).__init__(*args, **kwargs)
-
-
-class ZypperTool(tools_system_pm.ZypperTool):
-    def __init__(self, *args, **kwargs):
-        super(ZypperTool, self).__init__(*args, **kwargs)

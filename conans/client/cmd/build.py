@@ -9,7 +9,9 @@ from conans.util.log import logger
 
 
 def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_folder,
-              package_folder, install_folder, test=False):
+              package_folder, install_folder, test=False, layout_source_folder=None,
+              layout_build_folder=None):
+
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
@@ -27,12 +29,16 @@ def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_f
         # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
         #  Only base_path and conanfile_path will remain
         if hasattr(conan_file, "layout"):
+            print("PATH!!!!!!!!!!", conanfile_path)
+            print("LAYOUT BUILD ", layout_build_folder)
+            print("LAYOUT SOURCE ", layout_source_folder)
             conanfile_folder = os.path.dirname(conanfile_path)
-            conan_file.folders.set_base_build(conanfile_folder)
-            conan_file.folders.set_base_source(conanfile_folder)
-            conan_file.folders.set_base_package(conanfile_folder)
-            conan_file.folders.set_base_generators(conanfile_folder)
-            conan_file.folders.set_base_install(conanfile_folder)
+            conan_file.folders.set_base_build(layout_build_folder or conanfile_folder)
+            conan_file.folders.set_base_source(layout_source_folder or conanfile_folder)
+            conan_file.folders.set_base_package(layout_build_folder or conanfile_folder)
+            conan_file.folders.set_base_generators(layout_build_folder or conanfile_folder)
+            conan_file.folders.set_base_install(layout_build_folder or conanfile_folder)
+            conan_file.folders.set_base_imports(layout_build_folder or conanfile_folder)
         else:
             conan_file.folders.set_base_build(build_folder)
             conan_file.folders.set_base_source(source_folder)

@@ -17,7 +17,7 @@ from conans.util.files import save
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -103,7 +103,7 @@ class CustomConfigurationTest(unittest.TestCase):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
 
         class App(ConanFile):
@@ -194,7 +194,7 @@ class CustomSettingsTest(unittest.TestCase):
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
-       from conans import ConanFile
+       from conan import ConanFile
        from conans.tools import save
 
        class Dep(ConanFile):

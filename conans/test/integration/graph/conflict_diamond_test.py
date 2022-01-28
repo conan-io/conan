@@ -13,7 +13,7 @@ import json
 @pytest.mark.xfail(reason="Conflict Output have changed")
 class ConflictDiamondTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloReuseConan(ConanFile):
             name = "%s"
@@ -66,23 +66,23 @@ class ConflictDiamondTest(unittest.TestCase):
 @pytest.mark.xfail(reason="UX conflict error to be completed")
 def test_create_werror():
     client = TestClient()
-    client.save({"conanfile.py": """from conans import ConanFile
+    client.save({"conanfile.py": """from conan import ConanFile
 class Pkg(ConanFile):
 pass
     """})
     client.run("export . --name=LibA --version=0.1 --user=user --channel=channel")
     client.run("export conanfile.py --name=LibA --version=0.2 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conans import ConanFile
+    client.save({"conanfile.py": """from conan import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.1@user/channel"
     """})
     client.run("export ./ --name=LibB --version=0.1 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conans import ConanFile
+    client.save({"conanfile.py": """from conan import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.2@user/channel"
     """})
     client.run("export . --name=LibC --version=0.1 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conans import ConanFile
+    client.save({"conanfile.py": """from conan import ConanFile
 class Pkg(ConanFile):
 requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
     """})

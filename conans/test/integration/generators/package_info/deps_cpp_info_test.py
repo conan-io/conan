@@ -18,7 +18,7 @@ class DepsCppInfoTest(unittest.TestCase):
         client.run("create . --name=dep --version=0.1 --user=user --channel=testing")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "dep/0.1@user/testing"
                 def build(self):

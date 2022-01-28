@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
     lib_ref = RecipeReference.loads("lib/version")
     lib_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             def package_info(self):
@@ -24,7 +24,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
     """)
 
     app_conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conan import ConanFile, CMake
 
         class App(ConanFile):
             requires = "{}"
@@ -66,7 +66,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
-                from conans import ConanFile, CMake, tools
+                from conan import ConanFile, CMake, tools
 
                 class AppleframeworkConan(ConanFile):
                     settings = "os", "compiler", "build_type", "arch"
@@ -211,7 +211,7 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
 
         # FIXME: test() The normal requires do not propagate environment in new build/host contexts
         test_conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, tools
+            from conan import ConanFile, CMake, tools
             class TestPkg(ConanFile):
                 generators = "cmake"
                 settings = "os", "arch", "compiler", "build_type"

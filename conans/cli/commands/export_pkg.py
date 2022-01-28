@@ -51,12 +51,12 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     # TODO: loading virtual->(ref from cache)
     root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
                                                lockfile, None, create_reference=ref,
-                                               remote=None,
+                                               remotes=None,
                                                update=None)
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
-                                            remote=None,
+                                            remotes=None,
                                             update=None)
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name])
     deps_graph.report_graph_error()

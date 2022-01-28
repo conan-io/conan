@@ -9,7 +9,7 @@ class PerPackageSettingTest(unittest.TestCase):
     def test_per_package_setting(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os"
             """)
@@ -22,7 +22,7 @@ class PerPackageSettingTest(unittest.TestCase):
     def test_per_package_setting_no_userchannel(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os"
             """)
@@ -35,7 +35,7 @@ class PerPackageSettingTest(unittest.TestCase):
     def test_per_package_subsetting(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler"
             """)

@@ -166,10 +166,7 @@ class ConfigInstallTest(unittest.TestCase):
                                            "windows")).splitlines(),
                          win_profile.splitlines())
         conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
-        self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
-        self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
-        self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
@@ -276,6 +273,18 @@ class ConfigInstallTest(unittest.TestCase):
                 # repeat the process to check
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
+
+    def test_install_url_query(self):
+        """ should install from a URL
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            # repeat the process to check it works with ?args
+            self.client.run("config install http://myfakeurl.com/myconf.zip?sha=1")
+            self._check("url, http://myfakeurl.com/myconf.zip?sha=1, True, None")
 
     def test_install_change_only_verify_ssl(self):
         def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable

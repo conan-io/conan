@@ -12,7 +12,7 @@ class DownloadRetriesTest(unittest.TestCase):
 
         test_server = TestServer(server_capabilities=[REVISIONS])
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
-        conanfile = '''from conans import ConanFile
+        conanfile = '''from conan import ConanFile
 class MyConanfile(ConanFile):
     pass
 '''

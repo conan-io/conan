@@ -33,7 +33,7 @@ class DefaultProfileTest(unittest.TestCase):
     def test_change_default_profile(self):
         br = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 
 class MyConanfile(ConanFile):
@@ -67,7 +67,7 @@ class MyConanfile(ConanFile):
     def test_profile_applied_ok(self):
         br = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class BuildRequireConanfile(ConanFile):
     name = "br"
@@ -98,7 +98,7 @@ mypackage:option1=2
 
         cf = '''
 import os, platform
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 
 class MyConanfile(ConanFile):
@@ -149,7 +149,7 @@ br/1.0@lasote/stable"""
     def test_env_default_profile(self):
         conanfile = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 
 class MyConanfile(ConanFile):
@@ -193,8 +193,9 @@ class MyConanfile(ConanFile):
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
         with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
-            client.run("create . --name=name --version=version --user=user --channel=channel", assert_error=True)
-            self.assertIn("The default profile file doesn't exist", client.out)
+            client.run("create . --name=name --version=version --user=user --channel=channel",
+                       assert_error=True)
+            self.assertIn("You need to create a default profile", client.out)
 
 
 def test_conf_default_two_profiles():

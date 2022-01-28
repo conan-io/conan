@@ -1,4 +1,4 @@
-from conans.client.tools import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.model.version import Version
 
 
@@ -23,6 +23,8 @@ def architecture_flag(settings):
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
+                # TODO: Could we define anything like `to_apple_target()`?
+                #       Check https://github.com/rust-lang/rust/issues/48862
                 return '--target=%s-apple-ios-macabi' % apple_arch
         elif arch in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
