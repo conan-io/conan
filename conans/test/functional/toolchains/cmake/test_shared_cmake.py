@@ -101,16 +101,38 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     client.current_folder = os.path.join(client.current_folder, exe_folder)
     client.run_command("install_name_tool -add_rpath '.' test")
     client.run_command("./{}".format("test"))
-
+    client.current_folder = old_folder
 
     # Alternative 2, set the rpath in cmake
-    # PENDING, only viable when installing
+    # Only viable when installing with cmake
+    cmake = """
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
+    cmake_minimum_required(VERSION 3.15)
+    project(project CXX)
+
+    set(CMAKE_INSTALL_RPATH "@executable_path")
+
+    find_package(hello)
+    add_executable(test  src/test.cpp )
+    target_link_libraries(test  hello::hello)
+    # Hardcoded installation path to keep the exe in the same place in the tests
+    install(TARGETS test DESTINATION "cmake-build-release")
+    """
+    cf = test_conanfile.replace("cmake.build()", "cmake.build()\n        cmake.install()")
+    client.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
+    client.run("create . -o hello:shared=True")
+    client.run("remove '*' -f")
+    client.run_command(os.path.join(exe_folder, "test"))
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
     # PENDING, only viable when installing
     client.current_folder = old_folder
     rmdir(os.path.join(client.current_folder, exe_folder))
     client.run("create . -o hello:shared=True")
+    client.run("remove '*' -f")
     client.current_folder = os.path.join(client.current_folder, exe_folder)
     client.run_command("DYLD_LIBRARY_PATH=$(pwd) ./test")
     client.run_command("DYLD_LIBRARY_PATH=. ./test")
@@ -121,4 +143,5 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     client.current_folder = old_folder
     rmdir(os.path.join(client.current_folder, exe_folder))
     client.run("create . -o hello:shared=True")
+    client.run("remove '*' -f")
     client.run_command("DYLD_LIBRARY_PATH=@executable_path '{}'".format(os.path.join(client.current_folder, exe_folder, "test")))
