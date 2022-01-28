@@ -185,6 +185,17 @@ class Meson(object):
         else:
             _build()
 
+    def _run_meson_targets(self, args=None, build_dir=None, targets=None):
+        args = args or []
+        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        arg_list = join_arguments([
+            '-C "%s"' % build_dir,
+            args_to_string(args),
+            args_to_string(targets)
+        ])
+        self._run("meson compile %s" % arg_list)
+
     def _run_ninja_targets(self, args=None, build_dir=None, targets=None):
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
@@ -214,7 +225,11 @@ class Meson(object):
         if not self._conanfile.should_build:
             return
         conan_v2_error("build_type setting should be defined.", not self._build_type)
-        self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+        if self.backend == "ninja":
+            self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+        else:
+            self._run_meson_targets(args=args, build_dir=build_dir, targets=targets)
+
 
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
