@@ -8,6 +8,7 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
+from conans.util.files import rmdir
 
 
 def test_shared_cmake_toolchain():
@@ -94,11 +95,30 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     # this time it should fail
     client.run("remove '*' -f")
     client.run_command(os.path.join(exe_folder, "test"), assert_error=True)
+    old_folder = client.current_folder
 
-    # We set DYLD_LIBRARY_PATH=@executable_path, now it works again, because it has the shared
-    # imported into the exe folder
-    client.run_command("DYLD_LIBRARY_PATH=@executable_path "
-                       "./{}".format(os.path.join(exe_folder, "test")))
+    # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
+    client.current_folder = os.path.join(client.current_folder, exe_folder)
+    client.run_command("install_name_tool -add_rpath '.' test")
+    client.run_command("./{}".format("test"))
+
 
     # Alternative 2, set the rpath in cmake
     # PENDING, only viable when installing
+
+    # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
+    # PENDING, only viable when installing
+    client.current_folder = old_folder
+    rmdir(os.path.join(client.current_folder, exe_folder))
+    client.run("create . -o hello:shared=True")
+    client.current_folder = os.path.join(client.current_folder, exe_folder)
+    client.run_command("DYLD_LIBRARY_PATH=$(pwd) ./test")
+    client.run_command("DYLD_LIBRARY_PATH=. ./test")
+    client.run_command("DYLD_LIBRARY_PATH=@executable_path ./test")
+
+    # Alternative 3b, FAILING IN CI, set DYLD_LIBRARY_PATH
+    # PENDING, only viable when installing
+    client.current_folder = old_folder
+    rmdir(os.path.join(client.current_folder, exe_folder))
+    client.run("create . -o hello:shared=True")
+    client.run_command("DYLD_LIBRARY_PATH=@executable_path '{}'".format(os.path.join(client.current_folder, exe_folder, "test")))
