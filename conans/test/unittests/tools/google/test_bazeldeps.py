@@ -3,7 +3,7 @@ from mock import Mock
 import re
 
 from conan.tools.google import BazelDeps
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
@@ -25,7 +25,7 @@ def test_bazeldeps_dependency_buildfiles():
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
@@ -50,7 +50,7 @@ def test_bazeldeps_interface_buildfiles():
     conanfile_dep.folders.set_base_package("")
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/2.0")
 
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
@@ -84,7 +84,7 @@ def test_bazeldeps_main_buildfile():
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
@@ -110,7 +110,7 @@ def test_bazeldeps_build_dependency_buildfiles():
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"), build=True)
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 

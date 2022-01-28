@@ -8,7 +8,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 conanfile_basic = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "basic"

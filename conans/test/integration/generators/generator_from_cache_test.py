@@ -63,7 +63,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
 
         # Set up generator
         test_generator_contents = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.model import Generator
 
             class user_defined(Generator):
@@ -80,7 +80,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
         save(generator_path, test_generator_contents)
 
         conanfile_py = textwrap.dedent("""
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class HelloConan(ConanFile):
                 generators = "user_defined"

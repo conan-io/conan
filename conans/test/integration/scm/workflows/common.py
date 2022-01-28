@@ -16,7 +16,9 @@ class TestWorkflow(object):
 
     conanfile_base = textwrap.dedent("""\
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile
+        from conans import tools
+        from conan.tools.files import load
 
         {extra_header}
 
@@ -31,7 +33,7 @@ class TestWorkflow(object):
 
             def source(self):
                 self.output.info(self.source_folder)
-                content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
+                content = load(self, os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
                 self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version,
                                                                        self.user, self.channel))
                 self.output.info(">>>> content: {{}} ".format(content))

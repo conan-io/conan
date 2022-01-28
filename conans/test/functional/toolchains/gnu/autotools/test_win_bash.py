@@ -29,7 +29,7 @@ def test_autotools_bash_complete():
     configure_ac = gen_configure_ac()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import Autotools
         from conan.tools.env import Environment
 

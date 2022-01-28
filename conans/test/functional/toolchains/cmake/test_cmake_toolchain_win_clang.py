@@ -22,7 +22,7 @@ def client():
         """)
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):

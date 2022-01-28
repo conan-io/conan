@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
 base_conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.files import patch
 from conans.tools import replace_in_file
 import os
@@ -67,7 +67,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_new(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -86,7 +86,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -107,7 +107,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete_no_folder(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -195,7 +195,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         """
 
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             import os
 
@@ -284,7 +284,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
 
     def test_fuzzy_patch(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             import os
 

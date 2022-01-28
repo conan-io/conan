@@ -30,7 +30,7 @@ int main() {
 
 libb_conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class LibBConan(ConanFile):
     name = "libB"
@@ -82,7 +82,7 @@ class PkgConfigTest(unittest.TestCase):
 
         liba_conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
             from shutil import copyfile
 
             class LibAConan(ConanFile):
@@ -110,7 +110,7 @@ class PkgConfigTest(unittest.TestCase):
 
         liba_conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class LibAConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"

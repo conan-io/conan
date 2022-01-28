@@ -5,7 +5,7 @@ import pytest
 from mock import Mock
 
 from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings

@@ -21,7 +21,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
     def test_plain_recipe(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": "myurl", "revision": "myrev",
@@ -58,7 +58,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
     def test_save_special_chars(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": 'weir"d', "revision": 123,
@@ -82,7 +82,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
     def test_auto_is_replaced(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": "auto", "revision": "auto"}
@@ -104,7 +104,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
     def test_existing_field(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": "myurl", "revision": "myrev",
@@ -123,7 +123,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
     def test_empty_conandata(self):
         # https://github.com/conan-io/conan/issues/8209
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": "auto", "revision": "auto"}
@@ -150,7 +150,7 @@ class ParseSCMFromConanDataTestCase(unittest.TestCase):
     def test_parse_data(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 scm = {"type": "git", "url": "auto", "revision": "auto"}
@@ -177,7 +177,7 @@ def test_auto_can_be_automated():
     # https://github.com/conan-io/conan/issues/8881
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             scm = {"type": "git",

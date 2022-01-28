@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture
 def client():
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        class Pkg(ConanFile):
            def generate(self):
                for var in (1, 2):

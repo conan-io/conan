@@ -11,7 +11,7 @@ class SymlinkPackageTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() not in ("Linux", "Darwin"), reason="Requires Symlinks")
     def test_symlink_created(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 import os
 
 class TestlinksConan(ConanFile):
@@ -28,7 +28,7 @@ class TestlinksConan(ConanFile):
     def package(self):
         self.copy("*", src=".", dst=".")
 """
-        test_package = """from conans import ConanFile
+        test_package = """from conan import ConanFile
 from conans.errors import ConanException
 import os
 

@@ -34,7 +34,7 @@ def test_basic(relative_path):
     for name in list(files.keys()):
         assert os.path.exists(os.path.join(reg_path, name))
 
-    expected_sums = {'conanfile.py': '1b7c687fffb8544bd2de497cd7a6eee6',
+    expected_sums = {'conanfile.py': '7fbb7e71f5b665780ff8c407fe0b1f9e',
                      'main.cpp': '76c0a7a9d385266e27d69d3875f6ac19'}
     assert expected_sums == manif.file_sums
 
@@ -62,6 +62,6 @@ def test_path(relative_path):
     for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp']:
         assert os.path.exists(os.path.join(reg_path, name))
 
-    expected_sums = {'conanfile.py': '718d94ef217b17297e10d60f1132ccf5',
+    expected_sums = {'conanfile.py': 'bebe98b13c5a958732a6bbe2a9d068f3',
                      'source/main.cpp': '76c0a7a9d385266e27d69d3875f6ac19'}
     assert expected_sums == manif.file_sums

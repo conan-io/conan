@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 def client():
     openssl = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -27,7 +27,7 @@ def client():
 
     cmake = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -58,7 +58,7 @@ def client():
 def test_build_require_test_package(build_profile, client):
     test_cmake = textwrap.dedent(r"""
         import os, platform, sys
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -93,7 +93,7 @@ def test_both_types(client):
     # When testing same package in both contexts, the 2 profiles approach must be used
     test_cmake = textwrap.dedent(r"""
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -130,7 +130,7 @@ def test_create_build_requires():
     # test that I can create a package passing the build and host context and package will get both
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
 

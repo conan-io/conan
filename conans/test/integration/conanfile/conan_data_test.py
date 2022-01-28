@@ -18,7 +18,7 @@ class ConanDataTest(unittest.TestCase):
     def test_conan_exports_kept(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 exports = "myfile.txt"
             """)
@@ -39,7 +39,7 @@ class ConanDataTest(unittest.TestCase):
 
     def test_conan_data_everywhere(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 
 class Lib(ConanFile):
 
@@ -117,7 +117,7 @@ sources:
 
         client = TestClient()
         conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 from conan.tools.files import get
 
                 class Lib(ConanFile):
@@ -149,7 +149,7 @@ sources:
 
     def test_invalid_yml(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 
 class Lib(ConanFile):
     pass
@@ -165,7 +165,7 @@ class Lib(ConanFile):
     def test_conan_data_development_flow(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 def layout(self):

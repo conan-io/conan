@@ -10,7 +10,7 @@ class InvalidConfigurationTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
-from conans import ConanFile
+from conan import ConanFile
 from conans.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):
@@ -54,7 +54,7 @@ class MyPkg(ConanFile):
     def test_as_requirement(self):
         self.client.run("create . --name=name --version=ver %s" % self.settings_msvc15)
         self.client.save({"other/conanfile.py": """
-from conans import ConanFile
+from conan import ConanFile
 from conans.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):

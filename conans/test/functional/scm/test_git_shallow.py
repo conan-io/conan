@@ -14,7 +14,7 @@ from conans.util.files import load
 def test_shallow_none_string():
     client = TestClient()
     client.save({'conanfile.py': textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             scm = {"type": "git", "url": "https://github.com/repo/library.git",
@@ -31,7 +31,7 @@ def test_shallow_none_string():
                       {"shallow": 'None'}])  # Explicit 'None' written in the recipe
 class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.errors import ConanException
         from io import StringIO
 

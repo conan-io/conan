@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 conanfile_parent = """
-from conans import ConanFile
+from conan import ConanFile
 
 class parentLib(ConanFile):
     name = "parent"
@@ -23,7 +23,7 @@ class parentLib(ConanFile):
 
 conanfile = """
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "lib"
@@ -142,27 +142,28 @@ class TestFoldersAccess(unittest.TestCase):
 
 class RecipeFolderTest(unittest.TestCase):
     recipe_conanfile = textwrap.dedent("""
-        from conans import ConanFile, load
+        from conan import ConanFile
+        from conan.tools.files import load
         import os
         class Pkg(ConanFile):
             exports = "file.txt"
             def init(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("INIT: {}".format(r))
             def set_name(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("SET_NAME: {}".format(r))
             def configure(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("CONFIGURE: {}".format(r))
             def requirements(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("REQUIREMENTS: {}".format(r))
             def package(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("PACKAGE: {}".format(r))
             def package_info(self):
-                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                r = load(self, os.path.join(self.recipe_folder, "file.txt"))
                 self.output.info("PACKAGE_INFO: {}".format(r))
         """)
 

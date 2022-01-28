@@ -12,7 +12,7 @@ class CollectLibsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0")
     def test_collect_libs(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):

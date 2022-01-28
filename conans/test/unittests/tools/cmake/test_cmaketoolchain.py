@@ -5,7 +5,7 @@ from mock import Mock
 
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block
-from conans import ConanFile
+from conan import ConanFile
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf

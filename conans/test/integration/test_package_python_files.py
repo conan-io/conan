@@ -10,7 +10,7 @@ def test_package_python_files():
     client = TestClient(default_server_user=True)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):

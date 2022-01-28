@@ -28,7 +28,7 @@ def test_virtualenv_deactivated(client, default_virtualenv):
                   False: "virtualbuildenv = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     import platform
 
     class ConanFileToolsTest(ConanFile):
@@ -51,7 +51,7 @@ def test_virtualrunenv_not_applied(client):
     """By default the VirtualRunEnv is not added to the list, otherwise when declaring
        generators = "VirtualBuildEnv", "VirtualRunEnv" will be always added"""
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     import platform
 
     class ConanFileToolsTest(ConanFile):
@@ -76,7 +76,7 @@ def test_virtualrunenv_explicit_declare(client, explicit_declare):
     """By default the VirtualRunEnv is not added to the list, otherwise when declaring
        generators = "VirtualBuildEnv", "VirtualRunEnv" will be always added"""
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.env import VirtualRunEnv
     import platform
 

@@ -9,7 +9,7 @@ class CppStdMinimumVersionTests(unittest.TestCase):
 
     CONANFILE = dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import check_min_cppstd, valid_min_cppstd
 
         class Fake(ConanFile):

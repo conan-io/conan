@@ -27,7 +27,7 @@ class ConanLoaderTest(unittest.TestCase):
 class Pkg(BasePackage):
     pass
 """
-        base_recipe = """from conans import ConanFile
+        base_recipe = """from conan import ConanFile
 class BasePackage(ConanFile):
     short_paths = True
 """

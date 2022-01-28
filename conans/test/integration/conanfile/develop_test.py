@@ -4,7 +4,7 @@ from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def configure(self):
         self.output.info("Develop %s configure!" % self.develop)

@@ -245,7 +245,8 @@ class GitToolTest(unittest.TestCase):
     def test_git_to_capture_branch(self):
         conanfile = """
 import re
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 def get_version():
     git = tools.Git()
@@ -283,7 +284,8 @@ class HelloConan(ConanFile):
 
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -303,7 +305,10 @@ class HelloConan(ConanFile):
         # Now clone in a subfolder with later checkout
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
+from conan.tools.files import mkdir
+
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -311,7 +316,7 @@ class HelloConan(ConanFile):
     exports_sources = "other"
 
     def source(self):
-        tools.mkdir("src")
+        mkdir(self, "src")
         git = tools.Git("./src")
         git.clone("%s")
         git.checkout("dev")
@@ -325,7 +330,8 @@ class HelloConan(ConanFile):
         # Base dir, with exports without subfolder and not specifying checkout fails
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conans import tools
 
 class HelloConan(ConanFile):
     name = "hello"

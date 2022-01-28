@@ -14,7 +14,7 @@ class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_name(self):
         dep = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -22,13 +22,13 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.name = "MyCustomGreatName"
                 """)
         intermediate = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
                 """)
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -50,7 +50,7 @@ class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_system_libs(self):
         dep = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -58,7 +58,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.system_libs = ["sysdep1"]
                 """)
         intermediate = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
@@ -67,7 +67,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.system_libs = ["sysdep2", "sysdep3"]
                 """)
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -95,7 +95,7 @@ class TestPackageInfo(unittest.TestCase):
     def test_package_info_components(self):
         dep = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Dep(ConanFile):
 
@@ -109,7 +109,7 @@ class TestPackageInfo(unittest.TestCase):
                 """)
         intermediate = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
@@ -128,7 +128,7 @@ class TestPackageInfo(unittest.TestCase):
                 """)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
@@ -172,7 +172,7 @@ class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_raise_components(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConan(ConanFile):
 
@@ -187,7 +187,7 @@ class TestPackageInfo(unittest.TestCase):
                       "with self.cpp_info global values at the same time", client.out)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConan(ConanFile):
 
@@ -201,7 +201,7 @@ class TestPackageInfo(unittest.TestCase):
                       "with self.cpp_info configs (release/debug/...) at the same time", client.out)
 
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
+                    from conan import ConanFile
 
                     class MyConan(ConanFile):
 
@@ -216,7 +216,7 @@ class TestPackageInfo(unittest.TestCase):
     def test_package_info_components_complete(self):
         dep = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             class Dep(ConanFile):
                 exports_sources = "*"
                 def package(self):
@@ -236,7 +236,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.components["ISS"].requires = ["Starlight", "Launcher"]
         """)
         consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             requires = "dep/1.0@us/ch"
             def build(self):
@@ -436,7 +436,7 @@ class TestPackageInfo(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7854
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Package(ConanFile):
                 def package_info(self):
                     self.cpp_info.names["cmake_find_package"] = "GTest"
@@ -446,7 +446,7 @@ class TestPackageInfo(unittest.TestCase):
         client.run("create . --name=gtest --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Package(ConanFile):
                 settings = "build_type"
                 requires = 'gtest/1.0'

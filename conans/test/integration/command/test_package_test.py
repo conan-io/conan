@@ -130,7 +130,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile()})
         client.run("create . --name=dep --version=1.1")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "dep/1.1"
                 def build(self):
@@ -138,7 +138,7 @@ class TestPackageTest(unittest.TestCase):
                     self.output.info("BUILD Dep VERSION %s" % ref.version)
             """)
         test_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def requirements(self):
                     self.requires(self.tested_reference_str)
@@ -162,7 +162,7 @@ class ConanTestTest(unittest.TestCase):
     def test_partial_reference(self):
         # Create two packages to test with the same test
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -181,7 +181,7 @@ class HelloConan(ConanFile):
 
         # Specify a valid name
         test('''
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloTestConan(ConanFile):
     def test(self):
@@ -192,7 +192,7 @@ class HelloTestConan(ConanFile):
     def test_test_package_env(self):
         client = TestClient()
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -203,7 +203,7 @@ class HelloConan(ConanFile):
         '''
         test_package = '''
 import os, platform
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 
 class HelloTestConan(ConanFile):
@@ -230,7 +230,7 @@ class HelloTestConan(ConanFile):
     def test_fail_test_package(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -241,7 +241,7 @@ class HelloConan(ConanFile):
         self.copy("*")
 """
         test_conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloReuseConan(ConanFile):
     def requirements(self):
@@ -283,7 +283,7 @@ def test_tested_reference_str():
     """
     client = TestClient()
     test_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     import os
 
     class HelloReuseConan(ConanFile):

@@ -21,7 +21,7 @@ def test_transitive_headers_not_public():
     c.run("create .")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
@@ -66,7 +66,7 @@ def test_shared_requires_static():
     c.run("create . -o libb:shared=True")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
@@ -108,7 +108,7 @@ def test_transitive_binary_skipped():
     c.run("remove liba* -p -f")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"

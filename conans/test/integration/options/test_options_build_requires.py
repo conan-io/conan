@@ -45,7 +45,7 @@ def test_different_options_values_profile():
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
@@ -88,7 +88,7 @@ def test_different_options_values_recipe(scope):
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
@@ -97,7 +97,7 @@ def test_different_options_values_recipe(scope):
                 self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
         """)
     consumer_recipe = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             def requirements(self):
                 self.requires("protobuf/1.0", options={{"{scope}shared": {host}}})
@@ -126,7 +126,7 @@ def test_different_options_values_recipe_priority():
     """
     c = TestClient()
     protobuf = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Proto(ConanFile):
             options = {"shared": [1, 2, 3]}
             default_options = {"shared": 1}
@@ -135,7 +135,7 @@ def test_different_options_values_recipe_priority():
                 self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
         """)
     my_pkg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             def requirements(self):
                 self.requires("protobuf/1.0", options={"shared": 2})

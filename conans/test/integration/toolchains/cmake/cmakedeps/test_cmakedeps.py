@@ -52,7 +52,7 @@ def test_test_package():
     client.run("export . --name=pkg --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps"
@@ -71,7 +71,7 @@ def test_components_error():
 
     conan_hello = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         from conan.tools.files import save
         class Pkg(ConanFile):
@@ -91,7 +91,7 @@ def test_components_error():
 def test_cpp_info_component_objects():
     client = TestClient()
     conan_hello = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "arch", "build_type"
             def package_info(self):
@@ -130,7 +130,7 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["say"].includedirs = ["include"]
             """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             requires = "hello/1.0"
@@ -139,7 +139,7 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["chat"].requires = ["hello::say"]
         """)
     test_package = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "VirtualRunEnv", "CMakeDeps"

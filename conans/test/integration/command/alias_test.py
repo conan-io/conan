@@ -22,7 +22,7 @@ class ConanAliasTest(unittest.TestCase):
 
         client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "chat"
                 version = "1.0"
@@ -65,7 +65,7 @@ class ConanAliasTest(unittest.TestCase):
         """
         t = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 description = "{}"
             """)

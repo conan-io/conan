@@ -13,7 +13,7 @@ def client_weird_lib_name():
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):

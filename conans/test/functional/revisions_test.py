@@ -1,5 +1,4 @@
 import copy
-import json
 import os
 import time
 import unittest
@@ -8,13 +7,13 @@ from collections import OrderedDict
 import pytest
 from mock import patch
 
-from conans import load
 from conans.util.env import environment_update
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env import get_env
+from conans.util.files import load
 
 
 @pytest.mark.artifactory_ready

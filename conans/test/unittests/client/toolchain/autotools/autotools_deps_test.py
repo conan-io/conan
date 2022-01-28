@@ -6,7 +6,7 @@ import mock
 from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
@@ -62,7 +62,7 @@ def test_foo():
     # necessary, as the interface doesn't do it now automatically
     dep2.cpp_info.set_relative_base_folder("/path/to/folder_dep2")
 
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req1 = Requirement(RecipeReference.loads("dep1/1.0"))
         req2 = Requirement(RecipeReference.loads("dep2/1.0"))
         deps = OrderedDict()

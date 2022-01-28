@@ -13,7 +13,7 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         # self.cpp_info is not available in 'package_id'
         t = self.get_client()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
 

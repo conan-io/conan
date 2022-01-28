@@ -85,7 +85,7 @@ def test_conditional_os(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent(f"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -141,7 +141,7 @@ def test_conditional_same_package(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -184,7 +184,7 @@ def test_conditional_incompatible_range(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -237,7 +237,7 @@ def test_conditional_compatible_range(requires):
     client = TestClient()
 
     pkg_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
