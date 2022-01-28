@@ -46,12 +46,16 @@ def test_shared_cmake_toolchain_test_package():
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
+    """
+    If we build an executable in Mac and we want it to locate the shared libraries in the same
+    directory, we have different alternatives
+    """
     client = TestClient()
     files = pkg_cmake("hello", "0.1")
     files.update(pkg_cmake_test("hello"))
     test_conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, cmake_layout
 
             class Pkg(ConanFile):
@@ -87,6 +91,7 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     assert "hello: Release!" in client.out
 
     # We can run the exe from the test package directory also, without environment
+    # because there is an internal RPATH in the exe with an abs path to the "hello"
     exe_folder = os.path.join("test_package", "cmake-build-release")
     assert os.path.exists(os.path.join(client.current_folder, exe_folder, "test"))
     client.run_command(os.path.join(exe_folder, "test"))
@@ -128,7 +133,6 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     client.run_command(os.path.join(exe_folder, "test"))
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
-    # PENDING, only viable when installing
     client.current_folder = old_folder
     rmdir(os.path.join(client.current_folder, exe_folder))
     client.run("create . -o hello:shared=True")
@@ -139,7 +143,6 @@ def test_shared_same_dir_without_virtualenv_cmake_toolchain_test_package():
     client.run_command("DYLD_LIBRARY_PATH=@executable_path ./test")
 
     # Alternative 3b, FAILING IN CI, set DYLD_LIBRARY_PATH
-    # PENDING, only viable when installing
     client.current_folder = old_folder
     rmdir(os.path.join(client.current_folder, exe_folder))
     client.run("create . -o hello:shared=True")
