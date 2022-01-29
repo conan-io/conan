@@ -268,6 +268,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("intel", "11", "17"), None)
         self.assertEqual(_make_cppstd_flag("intel", "11", "20"), None)
 
+    @pytest.mark.xfail(reason="Intel-cc compiler c++flags to be defined")
     def test_intel_gcc_cppstd_flag(self):
         self.assertEqual(_make_cppstd_flag("intel", "19.1", "gnu98"), '-std=gnu++98')
         self.assertEqual(_make_cppstd_flag("intel", "19.1", "11"), '-std=c++11')

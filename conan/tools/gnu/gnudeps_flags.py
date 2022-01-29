@@ -67,7 +67,7 @@ class GnuDepsFlags(object):
 
     def _sysroot_flag(self, sysroot):
         # FIXME: Missing support for subsystems
-        if is_msvc(self._conanfile) and sysroot:
+        if not is_msvc(self._conanfile) and sysroot:
             sysroot = self._adjust_path(sysroot)
             return '--sysroot=%s' % sysroot
         return ""
