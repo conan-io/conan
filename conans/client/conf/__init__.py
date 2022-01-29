@@ -66,7 +66,7 @@ compiler:
         threads: [None, posix, win32]  # Windows MinGW
         exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
-    Visual Studio: &visual_studio
+    Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16", "17"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
@@ -88,7 +88,7 @@ compiler:
         libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [None, MD, MT, MTd, MDd]
-    apple-clang: &apple_clang
+    apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
@@ -107,7 +107,7 @@ compiler:
     mcst-lcc:
         version: ["1.19", "1.20", "1.21", "1.22", "1.23", "1.24", "1.25"]
         libcxx: [libstdc++, libstdc++11]
-        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]base:
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 """
