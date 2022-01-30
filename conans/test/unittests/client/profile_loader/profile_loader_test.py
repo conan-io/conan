@@ -467,3 +467,13 @@ def test_profile_buildenv():
     env_vars = env.vars(conanfile)
     assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
     assert env_vars.get("MyPath1") == "/some/path11{}/other path/path12".format(os.pathsep)
+
+
+def test_profile_tool_requires():
+    tmp = temp_folder()
+    txt = textwrap.dedent("""
+        [tool_requires]
+        tool/0.1
+        """)
+    profile, _ = get_profile(tmp, txt)
+    assert profile.build_requires["*"] == [ConanFileReference.loads("tool/0.1")]
