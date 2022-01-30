@@ -78,7 +78,7 @@ executable('example', 'src/example.cpp', dependencies: {name})
 
 _meson_build = """\
 project('{name} ', 'cpp')
-library('{name}', 'src/{name}.cpp', install: true)
+library('{name}', 'src/{name}.cpp', install: true, install_dir: 'lib')
 install_headers('src/{name}.h')
 """
 
