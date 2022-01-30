@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -13,26 +14,27 @@ class BazelDeps(object):
 
     def generate(self):
         local_repositories = []
+        conandeps = os.path.join(self._conanfile.generators_folder, 'conandeps')
 
         for build_dependency in self._conanfile.dependencies.direct_build.values():
             content = self._get_build_dependency_buildfile_content(build_dependency)
-            filename = self._save_dependendy_buildfile(build_dependency, content)
+            filename = self._save_dependency_buildfile(build_dependency, content, conandeps)
 
             local_repository = self._create_new_local_repository(build_dependency, filename)
             local_repositories.append(local_repository)
 
         for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
-            filename = self._save_dependendy_buildfile(dependency, content)
+            filename = self._save_dependency_buildfile(dependency, content, conandeps)
 
             local_repository = self._create_new_local_repository(dependency, filename)
             local_repositories.append(local_repository)
 
         content = self._get_main_buildfile_content(local_repositories)
-        self._save_main_buildfiles(content)
+        self._save_main_buildfiles(content, conandeps)
 
-    def _save_dependendy_buildfile(self, dependency, buildfile_content):
-        filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
+    def _save_dependency_buildfile(self, dependency, buildfile_content, conandeps):
+        filename = '{}/{}/BUILD.bazel'.format(conandeps, dependency.ref.name)
         save(filename, buildfile_content)
         return filename
 
@@ -153,9 +155,9 @@ class BazelDeps(object):
 
         return content
 
-    def _save_main_buildfiles(self, content):
-        # A BUILD file must exist, even if it's empty, in order for bazel
-        # to detect it as a bazel package and allow to load the .bzl files
-        save("conandeps/BUILD", "")
+    def _save_main_buildfiles(self, content, conandeps):
+        # A BUILD.bazel file must exist, even if it's empty, in order for Bazel
+        # to detect it as a Bazel package and to allow to load the .bzl files
+        save("{}/BUILD.bazel".format(conandeps), "")
 
-        save("conandeps/dependencies.bzl", content)
+        save("{}/dependencies.bzl".format(conandeps), content)
