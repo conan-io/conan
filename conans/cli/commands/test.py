@@ -77,7 +77,6 @@ def test(conan_api, parser, *args):
     conanfile_folder = os.path.dirname(path)
     conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd,
                                        reference=ref, create_reference=True,
-                                       install_folder=conanfile_folder,
                                        conanfile_folder=conanfile_folder)
     conanfile = deps_graph.root.conanfile
 
@@ -86,7 +85,6 @@ def test(conan_api, parser, *args):
     conanfile.folders.set_base_source(conanfile_folder)
     conanfile.folders.set_base_package(conanfile_folder)
     conanfile.folders.set_base_generators(conanfile_folder)
-    conanfile.folders.set_base_install(conanfile_folder)
 
     out.highlight("\n-------- Testing the package: Building ----------")
     mkdir(conanfile.build_folder)

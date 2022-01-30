@@ -135,9 +135,6 @@ def install(conan_api, parser, *args):
     common_graph_args(parser)
     parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                         help='Generators to use')
-    parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                        help='Use this directory as the directory where to put the generator'
-                             'files.')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-sf", "--source-folder", help='The root source folder')
@@ -152,7 +149,6 @@ def install(conan_api, parser, *args):
                              "--reference")
 
     cwd = os.getcwd()
-    install_folder = make_abs_path(args.install_folder or "", cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
@@ -167,7 +163,7 @@ def install(conan_api, parser, *args):
                                        remotes=remote, update=args.update)
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
-                                       install_folder=install_folder, generators=args.generator,
+                                       generators=args.generator,
                                        no_imports=args.no_imports, conanfile_folder=conanfile_folder,
                                        source_folder=args.source_folder,
                                        output_folder=args.output_folder
