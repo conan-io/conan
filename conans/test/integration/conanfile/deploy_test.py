@@ -63,7 +63,7 @@ class Pkg(ConanFile):
 
         def test_install_in(folder):
             client.current_folder = temp_folder()
-            client.run("install --reference=pkg/0.1@user/testing --install-folder=%s" % folder)
+            client.run("install --reference=pkg/0.1@user/testing --output-folder=%s" % folder)
 
             self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
                           client.out)
