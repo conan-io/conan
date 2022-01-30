@@ -14,14 +14,14 @@ def test_meson_lib_template():
     client.run("new hello/0.1 --template=meson_lib")
 
     # Local flow works
-    """client.run("install . -if=install")
+    client.run("install . -if=install")
     client.run("build . -if=install")
     client.run("export-pkg . hello/0.1@ -if=install")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
     pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
     package_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
-"""
+
     # Create works
     client.run("create .")
     assert "hello/0.1: Hello World Release!" in client.out

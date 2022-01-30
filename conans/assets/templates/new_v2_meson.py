@@ -127,9 +127,10 @@ class {package_name}Conan(ConanFile):
         meson = Meson(self)
         meson.install()
 """
+
 test_conanfile_exe_v2 = """import os
 from conan import ConanFile
-from conan import tools
+from conans import tools
 
 
 class {package_name}TestConan(ConanFile):
@@ -146,7 +147,7 @@ class {package_name}TestConan(ConanFile):
 
 _meson_build_exe = """\
 project('{name} ', 'cpp')
-executable('{name}', 'src/{name}.cpp', 'src/main.cpp')
+executable('{name}', 'src/{name}.cpp', 'src/main.cpp', install: true)
 """
 
 
