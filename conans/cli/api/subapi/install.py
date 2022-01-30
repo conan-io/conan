@@ -55,5 +55,6 @@ class InstallAPI:
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
+            deploy_conanfile.folders.set_base_imports(output_folder)
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, output_folder)
