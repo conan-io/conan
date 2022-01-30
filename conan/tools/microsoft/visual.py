@@ -182,3 +182,11 @@ def is_msvc(conanfile):
     """
     settings = conanfile.settings
     return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
+
+
+def is_msvc_static_runtime(conanfile):
+    """ Validate when building with Visual Studio or msvc and MT on runtime
+    :param conanfile: ConanFile instance
+    :return: True, if msvc + runtime MT. Otherwise, False
+    """
+    return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
