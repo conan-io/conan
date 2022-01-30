@@ -157,7 +157,7 @@ def install(conan_api, parser, *args):
         source_folder = make_abs_path(args.source_folder, cwd)
     if args.output_folder:
         output_folder = make_abs_path(args.output_folder, cwd)
-    reference = RecipeReference.loads(args.reference) if args.reference else None
+    deploy = True if args.reference else False
 
     remote = get_multiple_remotes(conan_api, args.remote)
 
@@ -171,6 +171,7 @@ def install(conan_api, parser, *args):
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        no_imports=args.no_imports,
+                                       deploy=deploy,
                                        source_folder=source_folder,
                                        output_folder=output_folder
                                        )
