@@ -75,9 +75,9 @@ def test(conan_api, parser, *args):
     out.highlight("\n-------- Testing the package ----------")
 
     conanfile_folder = os.path.dirname(path)
-    conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd,
-                                       reference=ref, create_reference=True,
-                                       conanfile_folder=conanfile_folder)
+    conan_api.install.install_consumer(deps_graph=deps_graph,
+                                       source_folder=conanfile_folder,
+                                       output_folder=conanfile_folder)
     conanfile = deps_graph.root.conanfile
 
     # TODO: This will need to adapt if --build-folder is used

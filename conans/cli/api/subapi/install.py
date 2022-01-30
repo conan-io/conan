@@ -29,9 +29,8 @@ class InstallAPI:
 
     # TODO: Look for a better name
     @staticmethod
-    def install_consumer(deps_graph, base_folder, conanfile_folder,
-                         generators=None, reference=None, no_imports=False, create_reference=None,
-                         test=None, source_folder=None, output_folder=None):
+    def install_consumer(deps_graph, generators=None, no_imports=False, deploy=False,
+                         source_folder=None, output_folder=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer, or calling imports()/deploy() to copy things to user space.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -39,12 +38,9 @@ class InstallAPI:
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
-        if hasattr(conanfile, "layout") and not test:
-            conanfile.folders.set_base_source(source_folder or conanfile_folder)
-            conanfile.folders.set_base_imports(output_folder or conanfile_folder)
-            conanfile.folders.set_base_generators(output_folder or conanfile_folder)
-        else:
-            conanfile.folders.set_base_generators(base_folder)
+        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_imports(output_folder)
+        conanfile.folders.set_base_generators(output_folder)
 
         # Add cli -g generators
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
@@ -55,9 +51,9 @@ class InstallAPI:
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile)
 
-        if not create_reference and reference:
+        if deploy:
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                run_deploy(deploy_conanfile, output_folder or conanfile_folder)
+                run_deploy(deploy_conanfile, output_folder)

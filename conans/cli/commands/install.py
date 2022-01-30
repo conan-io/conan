@@ -6,7 +6,6 @@ from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgu
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile, get_multiple_remotes
 from conans.cli.output import ConanOutput
-from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -149,8 +148,15 @@ def install(conan_api, parser, *args):
                              "--reference")
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
-    conanfile_folder = os.path.dirname(path) if path else None
+    if args.path:
+        path = _get_conanfile_path(args.path, cwd, py=None)
+        source_folder = output_folder = os.path.dirname(path)
+    else:
+        source_folder = output_folder = cwd
+    if args.source_folder:
+        source_folder = make_abs_path(args.source_folder, cwd)
+    if args.output_folder:
+        output_folder = make_abs_path(args.output_folder, cwd)
     reference = RecipeReference.loads(args.reference) if args.reference else None
 
     remote = get_multiple_remotes(conan_api, args.remote)
@@ -162,11 +168,11 @@ def install(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remotes=remote, update=args.update)
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
-    conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
+    conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
-                                       no_imports=args.no_imports, conanfile_folder=conanfile_folder,
-                                       source_folder=args.source_folder,
-                                       output_folder=args.output_folder
+                                       no_imports=args.no_imports,
+                                       source_folder=source_folder,
+                                       output_folder=output_folder
                                        )
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
