@@ -1,12 +1,10 @@
 import os
 import platform
-import sys
 import textwrap
 import time
 import unittest
 
 import pytest
-from parameterized.parameterized import parameterized
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
@@ -112,8 +110,11 @@ class Base(unittest.TestCase):
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="Test failing randomly in macOS")
 class BazelToolchainTest(Base):
-    @parameterized.expand(["Debug",])
-    def test_toolchain(self, build_type):
+
+    def test_toolchain(self):
+        # FIXME: THis is using "Debug" by default, it should be release, but it
+        #  depends completely on the external bazel files, the toolchain does not do it
+        build_type = "Debug"
         self._run_build()
 
         self.assertIn("INFO: Build completed successfully", self.client.out)
@@ -125,11 +126,7 @@ class BazelToolchainTest(Base):
         time.sleep(1)
         self._incremental_build()
         rebuild_info = self.client.load("output.txt")
-
-        if build_type == 'Debug':
-            text_to_find = "'Compiling app/hello.cpp': One of the files has changed."
-        elif build_type == 'Release':
-            text_to_find = "'Compiling app/hello.cpp': Effective client environment has changed"
+        text_to_find = "'Compiling app/hello.cpp': One of the files has changed."
         self.assertIn(text_to_find, rebuild_info)
 
         self._run_app()

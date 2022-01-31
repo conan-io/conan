@@ -25,6 +25,8 @@ class BazelDeps(object):
 
         for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
+            if not content:
+                continue
             filename = self._save_dependency_buildfile(dependency, content, conandeps)
 
             local_repository = self._create_new_local_repository(dependency, filename)
