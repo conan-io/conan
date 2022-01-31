@@ -58,7 +58,8 @@ def test_transitive_multi(client):
 
     with client.chdir("build"):
         for bt in ("Debug", "Release"):
-            client.run("install .. --user=user --channel=channel -s build_type={}".format(bt))
+            # NOTE: -of=. otherwise the output files are located in the parent directory
+            client.run("install .. --user=user --channel=channel -s build_type={} -of=.".format(bt))
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere

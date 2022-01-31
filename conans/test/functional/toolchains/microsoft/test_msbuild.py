@@ -476,7 +476,7 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("build . %s %s -if=conan -pr:h=myprofile " % (settings_h, settings_b))
+        client.run("build . %s %s -pr:h=myprofile " % (settings_h, settings_b))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
@@ -520,7 +520,7 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("build . %s -if=conan" % (settings, ))
+        client.run("build . %s" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
         self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
@@ -568,7 +568,7 @@ class WinTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         for build_type, arch, shared in configs:
             runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
+            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         vs_path = vs_installation_path(self.vs_version)
