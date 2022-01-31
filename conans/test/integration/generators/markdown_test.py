@@ -43,7 +43,6 @@ class MarkDownGeneratorTest(unittest.TestCase):
         self.assertIn("find_package(FooBar)", content)
         self.assertIn("target_link_libraries(<target_name> foobar::foobar)", content)
 
-
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
                     import os
@@ -69,6 +68,24 @@ class MarkDownGeneratorTest(unittest.TestCase):
 
         self.assertIn("* `lib/cmake/bm.cmake`", content)
         self.assertIn("Content of build_module", content)
+
+    def test_no_components(self):
+        conanfile = textwrap.dedent("""
+                    import os
+                    from conans import ConanFile
+
+                    class HelloConan(ConanFile):
+                        def package_info(self):
+                            self.cpp_info.set_property("cmake_target_name", "foobar")
+                    """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . bar/0.1.0@user/testing")
+        client.run("install bar/0.1.0@user/testing -g markdown")
+        content = client.load("bar.md")
+
+        self.assertNotIn("Or link just one of its components", content)
+        self.assertNotIn("Declared components", content)
 
     def test_with_components(self):
         conanfile = textwrap.dedent("""

@@ -66,7 +66,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     # Use the global target
     target_link_libraries(<target_name> {{ cmake_variables.global_target_name }})
 
-    {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
+    {% if requirement.cpp_info.components and requirement.cpp_info.components is iterable and requirement.cpp_info.components|length > 1 %}
     # Or link just one of its components
     {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
@@ -146,7 +146,7 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     #### Generator PkgConfigDeps
     This package provides one *pkg-config* file ``{{ pkgconfig_variables.pkg_name }}.pc`` with
     all the information from the library
-    {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
+    {% if requirement.cpp_info.components and requirement.cpp_info.components is iterable and requirement.cpp_info.components|length > 1 %}
     and, if you want to use the components of the library separately, one `.pc` file per component:
     {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
@@ -209,10 +209,9 @@ requirement_tpl = textwrap.dedent("""
     {% include 'buildsystem_other' %}
 
 
-
+    {% if requirement.cpp_info.components and requirement.cpp_info.components is iterable and requirement.cpp_info.components|length > 1 %}
     ## Declared components
 
-    {%- if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     {%- for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
     * Component ``{{ cmake_variables.component_alias[component_name] }}``:
@@ -220,8 +219,6 @@ requirement_tpl = textwrap.dedent("""
     {{- render_cpp_info(component)|indent(width=2) }}
     {%- endif %}
     {%- endfor %}
-    {%- else %}
-    {{ render_cpp_info(requirement.cpp_info)|indent(width=0) }}
     {%- endif %}
 
 
