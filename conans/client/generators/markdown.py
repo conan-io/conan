@@ -80,7 +80,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {% if cmake_build_modules %}
     This generator will include some _build modules_:
     {% for bm in cmake_build_modules -%}
-    * `{{ relpath(bm, package_folder) }}`
+    * `{{ relpath(bm, package_folder) | replace("\\\\", "/") }}`
       ```
       {{ bm|read_pkg_file|indent(width=2) }}
       ```
