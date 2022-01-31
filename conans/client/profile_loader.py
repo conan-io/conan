@@ -7,13 +7,19 @@ from jinja2 import Environment, FileSystemLoader
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import unquote
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
+
+
+def _unquote(text):
+    text = text.strip()
+    if len(text) > 1 and (text[0] == text[-1]) and text[0] in "'\"":
+        return text[1:-1]
+    return text
 
 
 class ProfileLoader:
@@ -183,7 +189,7 @@ class _ProfileParser(object):
                 name = name.strip()
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
-                value = unquote(value)
+                value = _unquote(value)
                 self.vars[name] = value
 
     def apply_vars(self):
@@ -282,7 +288,7 @@ class _ProfileValueParser(object):
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
-            result_value = unquote(result_value)
+            result_value = _unquote(result_value)
             return packagename, result_name, result_value
 
         package_settings = OrderedDict()
