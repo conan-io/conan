@@ -1,14 +1,23 @@
+import datetime
 import os
 import textwrap
 
 from jinja2 import DictLoader
 from jinja2 import Environment
+
+from conan.tools.cmake.cmakedeps.cmakedeps import CMakeDeps
+from conan.tools.cmake.cmakedeps.templates import (
+    CMakeDepsFileTemplate,
+    get_file_name as cmake_get_file_name)
+from conan.tools.gnu.pkgconfigdeps.pc_info_loader import (
+    _get_component_name as pkgconfig_get_component_name,
+    _get_name_with_namespace as pkgconfig_get_name_with_namespace,
+    _get_package_name as pkgconfig_get_package_name
+)
 from conans.model import Generator
-import datetime
 
 
-
-render_cpp_info = textwrap.dedent("""
+macros = textwrap.dedent("""
     {% macro join_list_sources(items) -%}
     ``{{ "``, ``".join(items) }}``
     {%- endmacro %}
@@ -35,149 +44,184 @@ render_cpp_info = textwrap.dedent("""
     {%- endmacro %}
 """)
 
-generator_cmake_tpl = textwrap.dedent("""
-    ### Generator ``cmake``
+buildsystem_cmake_tpl = textwrap.dedent("""
+    ### CMake
 
-    Add these lines to your *CMakeLists.txt*:
+    #### Generator [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html)
+    `CMakeToolchain` is the toolchain generator for CMake. It will generate a toolchain
+    file that can be used in the command-line invocation of CMake with
+    `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`. This generator translates the current
+    package configuration, settings, and options, into CMake toolchain syntax.
 
-    ```cmake
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup(TARGETS)
+    #### Generator [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html)
+    The `CMakeDeps` helper will generate one `xxxx-config.cmake` file per dependency,
+    together with other necessary `.cmake` files like version, flags, and directory data
+    or configuration.
 
-    target_link_libraries(<library_name> CONAN_PKG::{{ cpp_info.get_name("cmake") }})
+    If you use it together with the `CMakeToolchain`, these `xxx-config.cmake` files will be found when you run a `find_package()` in your `CMakeLists.txt` file:
+
     ```
-
-    {% set build_modules = cpp_info.build_modules.get('cmake', None) %}
-    {% if build_modules %}
-    This generator will include some _build modules_:
-    {% for bm in build_modules -%}
-    * `{{ bm }}`
-      ```
-      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
-      ```
-    {%- endfor -%}
-    {%- endif %}
-""")
-
-generator_cmake_find_package_tpl = textwrap.dedent("""
-    ### Generator ``cmake_find_package``
-    {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
-    {% set cmake_find_package_filename = cpp_info.get_filename("cmake_find_package") %}
-    Generates the file Find{{ cmake_find_package_filename }}.cmake
-
-    Add these lines to your *CMakeLists.txt*:
-
-    ```cmake
-    find_package({{ cmake_find_package_filename }})
+    find_package({{ cmake_variables.file_name }})
 
     # Use the global target
-    target_link_libraries(<library_name> {{ cmake_find_package_name }}::{{ cmake_find_package_name }})
-    {% if cpp_info.components %}
+    target_link_libraries(<target_name> {{ cmake_variables.global_target_name }})
+
+    {% if requirement.cpp_info.has_components %}
     # Or link just one of its components
-    {% for cmp_name, cmp_cpp_info in cpp_info.components.items() -%}
-    target_link_libraries(<library_name> {{ cmake_find_package_name }}::{{ cmp_cpp_info.get_name("cmake_find_package") }})
-    {% endfor %}
+    {% for component_name, component in requirement.cpp_info.components.items() %}
+    {%- if component_name %}
+    target_link_libraries(<target_name> {{ cmake_variables.component_alias[component_name] }})
+    {%- endif %}
+    {%- endfor %}
     {%- endif %}
     ```
 
-    Remember to adjust your build system settings to match the binaries you are linking with. You can
-    use the [CMake build helper](https://docs.conan.io/en/latest/reference/build_helpers/cmake.html) and
-    the ``cmake`` generator from a *conanfile.py* or the new [toolchain paradigm](https://docs.conan.io/en/latest/creating_packages/toolchains.html).
-
-    {% set build_modules = cpp_info.build_modules.get('cmake_find_package', None) %}
-    {% if build_modules %}
+    {% set cmake_build_modules = requirement.cpp_info.get_property('cmake_build_modules') %}
+    {% if cmake_build_modules %}
     This generator will include some _build modules_:
-    {% for bm in build_modules -%}
-    * `{{ bm }}`
+    {% for bm in cmake_build_modules -%}
+    * `{{ relpath(bm, package_folder) | replace("\\\\", "/") }}`
       ```
-      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      {{ bm|read_pkg_file|indent(width=2) }}
       ```
     {%- endfor -%}
     {%- endif %}
 """)
 
-generator_pkg_config_tpl = textwrap.dedent("""
-    ### Generator ``pkg_config``
+buildsystem_vs_tpl = textwrap.dedent("""
+    ### Visual Studio
 
-    This package provides one *pkg-config* file ``{{ cpp_info.get_filename('pkg_config') }}.pc`` with
+    #### Generator [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain)
+    `MSBuildToolchain` is the toolchain generator for MSBuild. It translates the current
+    package configuration, settings, and options, into a MSBuild properties file that
+    you should add to your Visual Sudio solution projects:
+
+    `conantoolchain.props`
+
+    #### Generator [MSBuildDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuilddeps)
+    `MSBuildDeps` is the dependency information generator for Microsoft MSBuild build
+    system. It generate a property file with the dependencies of a package ready to be
+    used by consumers using MSBuild or Visual Studio.
+
+    Just add the `conandeps.props` file to your solution and projects.
+""")
+
+buildsystem_autotools_tpl = textwrap.dedent("""
+    ### Autotools
+
+    #### Generator [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html)
+    `AutotoolsToolchain` is the toolchain generator for Autotools. It will generate
+    shell scripts containing environment variable definitions that the autotools build
+    system can understand.
+
+    `AutotoolsToolchain` will generate the `conanautotoolstoolchain.sh` or
+    `conanautotoolstoolchain.bat` files after a `conan install` command:
+
+    ```
+    $ conan install conanfile.py # default is Release
+    $ source conanautotoolstoolchain.sh
+    # or in Windows
+    $ conanautotoolstoolchain.bat
+    ```
+
+    If your autotools scripts expect to find dependencies using pkg_config, use the
+    `PkgConfigDeps` generator. Otherwise, use `AutotoolsDeps`.
+
+    #### Generator AutotoolsDeps
+    The AutotoolsDeps is the dependencies generator for Autotools. It will generate
+    shell scripts containing environment variable definitions that the autotools
+    build system can understand.
+
+    The AutotoolsDeps will generate after a conan install command the
+    conanautotoolsdeps.sh or conanautotoolsdeps.bat files:
+
+    ```
+    $ conan install conanfile.py # default is Release
+    $ source conanautotoolsdeps.sh
+    # or in Windows
+    $ conanautotoolsdeps.bat
+    ```
+
+
+    #### Generator PkgConfigDeps
+    This package provides one *pkg-config* file ``{{ pkgconfig_variables.pkg_name }}.pc`` with
     all the information from the library
-    {% if cpp_info.components -%}
-    and another file for each of its components:
-    {%- for cmp_name, cmp_cpp_info in cpp_info.components.items() -%}
-    ``{{ cmp_cpp_info.get_filename('pkg_config') }}.pc``{% if not loop.last %},{% endif %}
-    {%- endfor -%}
-    {%- endif -%}.
-    Use your *pkg-config* tool as usual to consume the information provided by the Conan package.
-
-    {% set build_modules = cpp_info.build_modules.get('pkg_config', None) %}
-    {% if build_modules %}
-    This generator will include some _build modules_:
-    {% for bm in build_modules -%}
-    * `{{ bm }}`
-      ```
-      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
-      ```
-    {%- endfor -%}
+    {% if requirement.cpp_info.has_components %}
+    and, if you want to use the components of the library separately, one `.pc` file per component:
+    {% for component_name, component in requirement.cpp_info.components.items() %}
+    {%- if component_name %}
+    ``{{ pkgconfig_variables.component_alias[component_name] }}.pc``{% if not loop.last %},{% endif %}
     {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+
+    Use your *pkg-config* tool as usual to consume the information provided by the Conan package.
+""")
+
+buildsystem_other_tpl = textwrap.dedent("""
+    ### Other build systems
+    Conan includes generators for [several more build systems](https://docs.conan.io/en/latest/integrations/build_system.html),
+    and you can even write [custom integrations](https://docs.conan.io/en/latest/integrations/custom.html)
+    if needed.
 """)
 
 requirement_tpl = textwrap.dedent("""
-    {% from 'render_cpp_info' import render_cpp_info %}
+    {% from 'macros' import render_cpp_info %}
 
-    # {{ cpp_info.name }}/{{ cpp_info.version }}
-
-    ---
-    **Note.-** If this package belongs to ConanCenter, you can find more information [here](https://conan.io/center/{{ cpp_info.name }}/{{ cpp_info.version }}/).
+    # {{ requirement }}
 
     ---
+
+    ## How to use this recipe
+
+    You can use this recipe with different build systems. For each build system, Conan
+    provides different generators that you must list in the `[generators]`section on the
+    `conanfile.txt` file, or in the `generators` property of the `conanfile.py`.
+    Alternatively, you can use the command line argument  `--generator/-g` in the
+    `conan install` command.
+
+    [Here](https://docs.conan.io/en/latest/integrations.html) you can read more about Conan
+    integration with several build systems, compilers, IDEs, etc.
+
 
     {% if requires or required_by %}
-    Graph of dependencies:
+    ## Dependencies
     {% if requires %}
-    * ``{{ cpp_info.name }}`` requires:
-        {% for dep_name, dep_cpp_info in requires -%}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
+    * ``{{ requirement.ref.name }}`` requires:
+        {% for dep_name, dep in requires -%}
+        [{{ dep }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
         {%- endfor -%}
     {%- endif %}
     {%- if required_by %}
-    * ``{{ cpp_info.name }}`` is required by:
-        {%- for dep_name, dep_cpp_info in required_by %}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
+    * ``{{ requirement.ref.name }}`` is required by:
+        {%- for dep_name, dep in required_by %}
+        [{{ dep }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
         {%- endfor %}
     {%- endif %}
     {% endif %}
 
-    Information published by ``{{ cpp_info.name }}`` to consumers:
 
-    {%- if cpp_info.includedirs %}
-    * Headers (see [below](#header-files))
+    ## Build Systems
+
+    {% include 'buildsystem_cmake' %}
+    {% include 'buildsystem_vs' %}
+    {% include 'buildsystem_autotools' %}
+    {% include 'buildsystem_other' %}
+
+
+    {% if requirement.cpp_info.has_components %}
+    ## Declared components
+
+    {%- for component_name, component in requirement.cpp_info.components.items() %}
+    {%- if component_name %}
+    * Component ``{{ cmake_variables.component_alias[component_name] }}``:
+
+    {{- render_cpp_info(component)|indent(width=2) }}
     {%- endif %}
-    {% if cpp_info.components %}
-    {% for cmp_name, cmp_cpp_info in cpp_info.components.items() %}
-    * Component ``{{ cpp_info.name }}::{{ cmp_name }}``:
-    {{ render_cpp_info(cmp_cpp_info)|indent(width=2) }}
     {%- endfor %}
-    {% else %}
-    {{ render_cpp_info(cpp_info)|indent(width=0) }}
-    {% endif %}
+    {%- endif %}
 
 
-    ## Generators
-
-    Read below how to use this package using different
-    [generators](https://docs.conan.io/en/latest/reference/generators.html). In order to use
-    these generators they have to be listed in the _conanfile.py_ file or using the command
-    line argument ``--generator/-g`` in the ``conan install`` command.
-
-    * [``cmake``](#Generator-cmake)
-    * [``cmake_find_package``](#Generator-cmake_find_package)
-    * [``pkg_config``](#Generator-pkg_config)
-
-    {% include 'generator_cmake' %}
-    {% include 'generator_cmake_find_package' %}
-    {% include 'generator_pkg_config_tpl' %}
-
-    ---
     ## Header files
 
     List of header files exposed by this package. Use them in your ``#include`` directives:
@@ -195,21 +239,22 @@ requirement_tpl = textwrap.dedent("""
 
 
 class MarkdownGenerator(Generator):
-
-    def _list_headers(self, cpp_info):
-        rootpath = cpp_info.rootpath
-        for include_dir in cpp_info.includedirs:
-            for root, _, files in os.walk(os.path.join(cpp_info.rootpath, include_dir)):
+    def _list_headers(self, requirement):
+        for include_dir in requirement.cpp_info.includedirs:
+            for root, _, files in os.walk(os.path.join(requirement.package_folder, include_dir)):
                 for f in files:
-                    yield os.path.relpath(os.path.join(root, f), os.path.join(rootpath, include_dir))
+                    yield os.path.relpath(os.path.join(root, f), os.path.join(requirement.package_folder, include_dir))
 
-    def _list_requires(self, cpp_info):
-        return [(it, self.conanfile.deps_cpp_info[it]) for it in cpp_info.public_deps]
+    def _list_requires(self, requirement):
+        return [(dep.ref.name, dep) for dep in requirement.dependencies.host.values()]
 
-    def _list_required_by(self, cpp_info):
-        for other_name, other_cpp_info in self.conanfile.deps_cpp_info.dependencies:
-            if cpp_info.name in other_cpp_info.public_deps:
-                yield other_name, other_cpp_info
+    def _list_required_by(self, requirement):
+        for dep in self.conanfile.dependencies.host.values():
+            name = dep.ref.name
+            deps = [dep.ref.name for dep in dep.dependencies.host.values()]
+
+            if requirement.ref.name in deps:
+                yield name, dep
 
     @property
     def filename(self):
@@ -218,11 +263,12 @@ class MarkdownGenerator(Generator):
     @property
     def content(self):
         dict_loader = DictLoader({
-            'render_cpp_info': render_cpp_info,
+            'macros': macros,
             'package.md': requirement_tpl,
-            'generator_cmake': generator_cmake_tpl,
-            'generator_cmake_find_package': generator_cmake_find_package_tpl,
-            'generator_pkg_config_tpl': generator_pkg_config_tpl,
+            'buildsystem_cmake': buildsystem_cmake_tpl,
+            'buildsystem_vs': buildsystem_vs_tpl,
+            'buildsystem_autotools': buildsystem_autotools_tpl,
+            'buildsystem_other': buildsystem_other_tpl
         })
         env = Environment(loader=dict_loader)
         template = env.get_template('package.md')
@@ -237,13 +283,50 @@ class MarkdownGenerator(Generator):
 
         from conans import __version__ as conan_version
         ret = {}
-        for name, cpp_info in self.conanfile.deps_cpp_info.dependencies:
+        for requirement in self.conanfile.dependencies.host.values():
+            cmake_deps = CMakeDeps(self.conanfile)
+            cmake_deps_template = CMakeDepsFileTemplate(cmake_deps,
+                                                        requirement,
+                                                        self.conanfile,
+                                                        find_module_mode=False)
+
+            name = requirement.ref.name
+
+            cmake_component_alias = {
+                component_name: cmake_deps_template.get_component_alias(requirement, component_name)
+                for component_name, _
+                in requirement.cpp_info.components.items()
+                if component_name
+            }
+            cmake_variables = {
+                'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(name),
+                'component_alias': cmake_component_alias,
+                'file_name': cmake_get_file_name(requirement)
+            }
+
+            pkgconfig_component_alias = {
+                component_name: pkgconfig_get_component_name(requirement, component_name) or
+                                pkgconfig_get_name_with_namespace(pkgconfig_get_package_name(requirement), component_name)
+                for component_name, _
+                in requirement.cpp_info.components.items()
+                if component_name
+            }
+            pkgconfig_variables = {
+                'pkg_name': pkgconfig_get_package_name(requirement),
+                'component_alias': pkgconfig_component_alias
+            }
+
             ret["{}.md".format(name)] = template.render(
-                cpp_info=cpp_info,
-                headers=self._list_headers(cpp_info),
-                requires=list(self._list_requires(cpp_info)),
-                required_by=list(self._list_required_by(cpp_info)),
+                requirement=requirement,
+                headers=self._list_headers(requirement),
+                requires=list(self._list_requires(requirement)),
+                required_by=list(self._list_required_by(requirement)),
+                cmake_variables=cmake_variables,
+                pkgconfig_variables=pkgconfig_variables,
+                package_folder=requirement.package_folder,
+                relpath = os.path.relpath,
                 conan_version=conan_version,
                 now=datetime.datetime.now()
             )
+
         return ret
