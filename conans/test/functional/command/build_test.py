@@ -85,7 +85,7 @@ class AConan(ConanFile):
         with client.chdir("build1"):
             client.run("install ..")
         # Try relative to cwd
-        client.run("build . --build-folder build2 --install-folder build1 "
+        client.run("build . --build-folder build2 "
                    "--package-folder build1/pkg")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build2"),
                       client.out)
