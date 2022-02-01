@@ -5,10 +5,12 @@ import re
 from conan.tools.google import BazelDeps
 from conan import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
+
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
+from conans.test.utils.test_files import temp_folder
 
 
 def test_bazeldeps_dependency_buildfiles():
@@ -47,7 +49,7 @@ def test_bazeldeps_interface_buildfiles():
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
-    conanfile_dep.folders.set_base_package("")
+    conanfile_dep.folders.set_base_package(temp_folder())
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/2.0")
 
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
