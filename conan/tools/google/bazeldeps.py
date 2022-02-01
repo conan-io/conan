@@ -121,10 +121,15 @@ class BazelDeps(object):
             linkopts.append('"-l{}"'.format(linkopt))
         linkopts = ', '.join(linkopts)
 
+
+        lib_dir = 'lib'
+        if len(cpp_info.libdirs) != 0:
+            libd_dir = _relativize_path(lib_dir, package_folder)
+
         context = {
             "name": dependency.ref.name,
             "libs": cpp_info.libs,
-            "libdir": cpp_info.libdirs[0],
+            "libdir": lib_dir,
             "headers": headers,
             "includes": includes,
             "defines": defines,
