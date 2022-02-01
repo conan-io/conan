@@ -44,9 +44,12 @@ def build(conan_api, parser, *args):
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remotes=remote, update=args.update)
+
+    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else cwd
+    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else cwd
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
-    conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=args.source_folder,
-                                       output_folder=args.output_folder)
+    conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
+                                       output_folder=output_folder)
 
     # TODO: Decide API to put this
     app = ConanApp(conan_api.cache_folder)
