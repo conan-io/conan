@@ -60,8 +60,9 @@ install(TARGETS {{name}} DESTINATION "."
 """
 
 source_h = """#pragma once
+
 {% set define_name = name.replace("-", "_").replace("+", "_").replace(".", "_").upper() %}
-#ifdef WIN32
+#ifdef _WIN32
   #define {{define_name}}_EXPORT __declspec(dllexport)
 #else
   #define {{define_name}}_EXPORT
