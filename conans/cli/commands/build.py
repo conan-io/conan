@@ -5,11 +5,13 @@ from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, _get_conanfile_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_multiple_remotes
+from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.model.recipe_ref import RecipeReference
+from conans.client.conanfile.build import run_build_method
+from conans.util.files import mkdir, chdir
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group=COMMAND_GROUPS['creator'])
 def build(conan_api, parser, *args):
     """
     Install + calls the build() method
@@ -34,9 +36,6 @@ def build(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
-    conanfile_folder = os.path.dirname(path) if path else None
-    reference = RecipeReference.loads(args.reference) if args.reference else None
-
     remote = get_multiple_remotes(conan_api, args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api)
@@ -46,12 +45,16 @@ def build(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remotes=remote, update=args.update)
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
-    conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
-                                       install_folder=install_folder, generators=args.generator,
-                                       no_imports=args.no_imports, conanfile_folder=conanfile_folder,
-                                       source_folder=args.source_folder,
-                                       output_folder=args.output_folder
-                                       )
+    conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=args.source_folder,
+                                       output_folder=args.output_folder)
+
+    # TODO: Decide API to put this
+    app = ConanApp(conan_api.cache_folder)
+    conanfile = deps_graph.root.conanfile
+    mkdir(conanfile.build_folder)
+    with chdir(conanfile.build_folder):
+        run_build_method(conanfile, app.hook_manager, conanfile_path=path)
+
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
