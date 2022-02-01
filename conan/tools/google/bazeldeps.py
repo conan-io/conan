@@ -124,7 +124,7 @@ class BazelDeps(object):
 
         lib_dir = 'lib'
         if len(cpp_info.libdirs) != 0:
-            libd_dir = _relativize_path(lib_dir, package_folder)
+            lib_dir = _relativize_path(cpp_info.libdirs[0], package_folder)
 
         context = {
             "name": dependency.ref.name,
