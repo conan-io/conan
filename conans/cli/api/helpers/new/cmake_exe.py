@@ -13,7 +13,7 @@ class {{class_name or name}}Recipe(ConanFile):
     license = "<Put the package license here>"
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of {package_name} here>"
+    description = "<Description of {{ name }} package here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
 
     # Binary configuration
@@ -56,7 +56,7 @@ from conan import ConanFile
 from conan.tools.build import cross_building
 
 
-class {{package_name}}TestConan(ConanFile):
+class {{class_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):

@@ -168,7 +168,7 @@ from conan.tools.layout import cmake_layout
 from conan.tools.build import cross_building
 
 
-class {{package_name}}TestConan(ConanFile):
+class {{class_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeDeps", "CMakeToolchain"
 
