@@ -6,9 +6,9 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
 class MarkDownGeneratorTest(unittest.TestCase):
 
-    @pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
                     from conan import ConanFile
