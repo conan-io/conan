@@ -99,9 +99,9 @@ class BazelDeps(object):
 
         def _relativize_path(p, base_path):
             # TODO: Very fragile, to test more
-            assert os.path.isabs(p), "{} is not absolute".format(p)
-            assert p.startswith(base_path)
-            return p[len(base_path):].replace("\\", "/").lstrip("/")
+            if p.startswith(base_path):
+                return p[len(base_path):].replace("\\", "/").lstrip("/")
+            return p.replace("\\", "/").lstrip("/")
 
         # TODO: This only wokrs for package_folder, but not editable
         package_folder = dependency.package_folder
