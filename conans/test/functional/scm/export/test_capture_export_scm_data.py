@@ -19,7 +19,7 @@ from conans.test.utils.tools import redirect_output
 from conans.util.files import save
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 @mock.patch("conans.client.cmd.export._replace_scm_data_in_recipe", return_value=None)
 class CaptureExportSCMDataTest(unittest.TestCase):
 

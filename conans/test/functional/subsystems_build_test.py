@@ -12,27 +12,27 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystems:
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys2_available(self):
         client = TestClient()
         client.run_command('uname')
         assert "MSYS" in client.out
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin_available(self):
         client = TestClient()
         client.run_command('uname')
         assert "CYGWIN" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32_available(self):
         client = TestClient()
         client.run_command('uname')
         assert "MINGW32_NT" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw64_available(self):
         client = TestClient()
         client.run_command('uname')
@@ -56,7 +56,7 @@ class TestSubsystemsBuild:
         client.run_command("make")
         client.run_command("app")
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys(self):
         """
         native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
@@ -72,8 +72,8 @@ class TestSubsystemsBuild:
         assert "__MINGW64__" not in client.out
         assert "__MSYS__" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -88,8 +88,8 @@ class TestSubsystemsBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -104,7 +104,7 @@ class TestSubsystemsBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self):
         """
         Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)
@@ -148,7 +148,7 @@ class TestSubsystemsAutotoolsBuild:
         client.run_command("make")
         client.run_command("app")
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys(self):
         """
         native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
@@ -164,8 +164,8 @@ class TestSubsystemsAutotoolsBuild:
         assert "__MINGW64__" not in client.out
         assert "__MSYS__" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -180,8 +180,8 @@ class TestSubsystemsAutotoolsBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -196,7 +196,7 @@ class TestSubsystemsAutotoolsBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self):
         """
         Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)
@@ -233,7 +233,7 @@ class TestSubsystemsCMakeBuild:
         client.run_command("cmake --build .")
         client.run_command("app")
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys(self):
         """
         native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
@@ -249,8 +249,8 @@ class TestSubsystemsCMakeBuild:
         assert "__MINGW64__" not in client.out
         assert "__MSYS__" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -265,8 +265,8 @@ class TestSubsystemsCMakeBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -281,7 +281,7 @@ class TestSubsystemsCMakeBuild:
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self):
         """
         Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)

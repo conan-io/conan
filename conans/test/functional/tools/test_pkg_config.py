@@ -25,7 +25,7 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 """
 
 
-@pytest.mark.tool_pkg_config
+@pytest.mark.tool("pkg_config")
 class TestPkgConfig:
     def test_negative(self):
         conanfile = ConanFileMock()

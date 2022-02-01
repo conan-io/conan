@@ -11,7 +11,7 @@ from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
@@ -38,7 +38,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                       self.client.current_folder, repo_type.lower()), self.client.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class ExportCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conan import ConanFile

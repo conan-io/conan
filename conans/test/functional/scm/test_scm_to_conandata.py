@@ -78,7 +78,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                                                            "revision": 123, "subfolder": "weir\"d",
                                                            "submodule": "don't"})
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_auto_is_replaced(self):
         conanfile = textwrap.dedent("""
             import os
@@ -119,7 +119,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         self.assertIn("ERROR: Field '.conan' inside 'conandata.yml' file is"
                       " reserved to Conan usage.", t.out)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_empty_conandata(self):
         # https://github.com/conan-io/conan/issues/8209
         conanfile = textwrap.dedent("""
@@ -172,7 +172,7 @@ class ParseSCMFromConanDataTestCase(unittest.TestCase):
         self.assertDictEqual(conanfile.scm, conan_data['.conan']['scm'])
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 def test_auto_can_be_automated():
     # https://github.com/conan-io/conan/issues/8881
     conanfile = textwrap.dedent("""

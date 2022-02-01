@@ -9,13 +9,12 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.files import touch
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
-@pytest.mark.tool_autotools()
+@pytest.mark.tool("autotools")
 def test_autotools():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
@@ -115,7 +114,7 @@ def build_windows_subsystem(profile, make_program):
     return client.out
 
 
-@pytest.mark.tool_cygwin
+@pytest.mark.tool("cygwin")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_cygwin():
     gcc = textwrap.dedent("""
@@ -134,7 +133,7 @@ def test_autotoolsdeps_cygwin():
     assert "main2 __CYGWIN__1" in out
 
 
-@pytest.mark.tool_mingw64
+@pytest.mark.tool("mingw32")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_mingw_msys():
     gcc = textwrap.dedent("""
@@ -151,7 +150,7 @@ def test_autotoolsdeps_mingw_msys():
     assert "main2 __MINGW64__1" in out
 
 
-@pytest.mark.tool_msys2
+@pytest.mark.tool("msys2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""

@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -99,7 +99,7 @@ class CustomConfigurationTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -190,7 +190,7 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""

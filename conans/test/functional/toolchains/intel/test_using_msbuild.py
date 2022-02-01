@@ -25,9 +25,9 @@ conanfile_py = textwrap.dedent("""
 """)
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_msbuild
-@pytest.mark.tool_icc
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("msbuild")
+@pytest.mark.tool("icc")
 @pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
 class MSBuildIntelTestCase:

@@ -12,7 +12,7 @@ from conans.util.env import get_env, environment_update
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 class VisualStudioToolsTest(unittest.TestCase):
 
     def test_vswhere_path(self):

@@ -300,7 +300,7 @@ def create_xcode_project(client, project_name, source):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake()
+@pytest.mark.tool("cmake")
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
@@ -342,7 +342,7 @@ def test_xcodedeps_build_configurations():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake()
+@pytest.mark.tool("cmake")
 def test_frameworks():
     client = TestClient(path_with_spaces=False)
 

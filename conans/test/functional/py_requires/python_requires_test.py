@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 class PyRequiresExtendTest(unittest.TestCase):
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_reuse_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -41,7 +41,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         assert "pkg/0.1@user/testing: Type: git!!!!" in client.out
         assert "pkg/0.1@user/testing: Commit: True!!!!" in client.out
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_reuse_customize_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -79,7 +79,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         assert "pkg/0.1@user/testing: Type: git!!!!" in client.out
         assert "pkg/0.1@user/testing: Commit: True!!!!" in client.out
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_reuse_scm_multiple_conandata(self):
         # https://github.com/conan-io/conan/issues/7236
         # This only works when using conandata.yml, conanfile.py replace is broken

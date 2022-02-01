@@ -1,9 +1,12 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_virtualenv():
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=0.1")
@@ -64,6 +67,7 @@ def test_cmake_virtualenv():
     assert "consumer/0.1: Created package" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_complete():
     client = TestClient()
     client.run("new cmake_lib -d name=myopenssl -d version=1.0")

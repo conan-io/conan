@@ -120,8 +120,8 @@ def client():
     return c
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_clang(version="12")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("clang", "12")
 def test_clang_cmake_ninja(client):
     client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja -c tools.cmake.cmaketoolchain:toolchain_file=../../toolchain-vxworks.cmake")
     assert 'cmake -G "Ninja"' in client.out

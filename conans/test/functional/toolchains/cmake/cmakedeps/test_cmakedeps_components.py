@@ -161,7 +161,7 @@ def test_wrong_requirement(top_conanfile):
            "components requires but not defined as a recipe requirement" in t.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -218,7 +218,7 @@ def test_components_system_libs():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_exelinkflags():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -272,7 +272,7 @@ def test_components_exelinkflags():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_sharedlinkflags():
     conanfile = textwrap.dedent("""
         from conan import ConanFile

@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
     lib_ref = RecipeReference.loads("lib/version")
     lib_conanfile = textwrap.dedent("""

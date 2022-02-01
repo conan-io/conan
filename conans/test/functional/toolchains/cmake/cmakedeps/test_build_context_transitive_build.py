@@ -48,6 +48,7 @@ def client():
     return c
 
 
+@pytest.mark.tool("cmake")
 def test_zlib_not_included(client):
 
     main = gen_function_cpp(name="main", include="doxygen.h")
