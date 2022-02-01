@@ -45,21 +45,3 @@ def test_recipe_modes():
 
     for package_id_mode, ref, package_id in configs:
         _assert_recipe_mode(ref, package_id)
-
-
-@pytest.mark.xfail(reason="package id computation has changed")
-def test_package_revision_mode():
-    client = TestClient()
-    # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
-    save(client.cache.settings_path, "")
-    save(client.cache.default_profile_path, "")
-    client.save({"liba/conanfile.py": GenConanfile("liba", "0.1.1"),
-                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1.1"),
-                 "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})
-
-    client.run("create liba")
-    client.run("create libb")
-    client.run("create app")
-
-    assert "liba/0.1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
-    assert "libb/0.1:e80084b60ad1238447223d0caf03386b68e2a1ed - Cache" in client.out
