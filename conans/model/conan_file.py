@@ -162,14 +162,8 @@ class ConanFile:
         return self.folders.base_package
 
     @property
-    def install_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.base_install
-
-    @property
     def generators_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.generators_folder if self.folders.generators else self.install_folder
+        return self.folders.generators_folder
 
     @property
     def imports_folder(self):
@@ -214,7 +208,8 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False, shell=True):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False,
+            shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0

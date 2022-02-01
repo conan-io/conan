@@ -855,11 +855,11 @@ def test_private_transitive():
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-    deps_props = client.load("conandeps.props")
+    deps_props = client.load("consumer/conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
 
-    pkg_data_props = client.load("conan_pkg_release_x64.props")
+    pkg_data_props = client.load("consumer/conan_pkg_release_x64.props")
     assert "conan_dep.props" not in pkg_data_props
 
 
@@ -1004,7 +1004,7 @@ def test_build_requires_transitives():
                               .with_build_requires("tool/0.1")})
     c.run("create dep")
     c.run("create tool")
-    c.run("install consumer -g MSBuildDeps")
+    c.run("install consumer -g MSBuildDeps -of=.")
     tool = c.load("conan_tool_build_release_x64.props")
     assert "conan_dep" not in tool
     tool_vars = c.load("conan_tool_build_vars_release_x64.props")

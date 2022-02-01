@@ -13,6 +13,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.conftest import tools_locations
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
+from conans.util.files import rmdir
 
 
 sln_file = r"""
@@ -476,7 +477,7 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("build . %s %s -if=conan -pr:h=myprofile " % (settings_h, settings_b))
+        client.run("build . %s %s -pr:h=myprofile " % (settings_h, settings_b))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
@@ -520,7 +521,7 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("build . %s -if=conan" % (settings, ))
+        client.run("build . %s" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
         self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
@@ -552,8 +553,7 @@ class WinTest(unittest.TestCase):
             # Build the profile according to the settings provided
             # TODO: It is a bit ugly to remove manually
             build_test_folder = os.path.join(client.current_folder, "test_package", "build")
-            if os.path.exists(build_test_folder):
-                shutil.rmtree(build_test_folder)
+            rmdir(build_test_folder)
             runtime = "MT" if build_type == "Release" else "MTd"
             client.run("create . --name=hello --version=0.1 %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
@@ -568,7 +568,7 @@ class WinTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         for build_type, arch, shared in configs:
             runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
+            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         vs_path = vs_installation_path(self.vs_version)
@@ -606,3 +606,21 @@ class WinTest(unittest.TestCase):
             else:
                 self.assertNotIn("hello.dll", client.out)
             self.assertIn("KERNEL32.dll", client.out)
+
+
+def test_msvc_runtime_flag_common_usage():
+    """The msvc_runtime_flag must not break when expecting a string
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.microsoft import msvc_runtime_flag
+       class App(ConanFile):
+           settings = "os", "arch", "compiler", "build_type"
+
+           def validate(self):
+               if "MT" in msvc_runtime_flag(self):
+                   pass
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('graph info .')

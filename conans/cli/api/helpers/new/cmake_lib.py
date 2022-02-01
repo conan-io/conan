@@ -61,7 +61,7 @@ install(TARGETS {{name}} DESTINATION "."
 
 source_h = """#pragma once
 
-#ifdef WIN32
+#ifdef _WIN32
   #define {{name}}_EXPORT __declspec(dllexport)
 #else
   #define {{name}}_EXPORT

@@ -20,8 +20,12 @@ class NewAPI:
         from conans.cli.api.helpers.new.alias_new import alias_file
         from conans.cli.api.helpers.new.cmake_exe import cmake_exe_files
         from conans.cli.api.helpers.new.cmake_lib import cmake_lib_files
+        from conans.cli.api.helpers.new.meson_lib import meson_lib_files
+        from conans.cli.api.helpers.new.meson_exe import meson_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
+                         "meson_lib": meson_lib_files,
+                         "meson_exe": meson_exe_files,
                          "alias": alias_file}
         template_files = new_templates.get(template_name)
         return template_files
