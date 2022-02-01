@@ -214,11 +214,6 @@ def _detect_compiler_version(result):
         return
 
     version = Version(version)
-    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
-    if compiler == "Visual Studio":
-        if version == "17":
-            compiler = "msvc"
-            version = Version("193")
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
