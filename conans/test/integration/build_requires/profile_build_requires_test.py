@@ -10,6 +10,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 tool_conanfile = """
 import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class tool(ConanFile):
     name = "tool"
@@ -17,7 +18,7 @@ class tool(ConanFile):
     exports_sources = "mytool*"
 
     def package(self):
-        self.copy("mytool*")
+        copy(self, "mytool*", self.source_folder, self.package_folder)
 
     def package_info(self):
         self.buildenv_info.append_path("PATH", self.package_folder)

@@ -330,9 +330,8 @@ def exception_message_safe(exc):
 
 
 def merge_directories(src, dst, excluded=None):
-    from conans.client.file_copier import FileCopier
-    copier = FileCopier([src], dst)
-    copier(pattern="*", excludes=excluded)
+    from conan.tools.files import copy
+    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
     return
 
 

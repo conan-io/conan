@@ -73,6 +73,7 @@ def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
 
+@pytest.mark.tool_cmake
 def test_editable_cmake_windows_folders():
     build_folder = temp_folder()
     editable_cmake(generator=None, build_folder=build_folder)

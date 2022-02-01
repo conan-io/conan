@@ -231,6 +231,7 @@ class HelloTestConan(ConanFile):
         client = TestClient()
         conanfile = """
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -238,7 +239,7 @@ class HelloConan(ConanFile):
     exports = "*"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         test_conanfile = """
 from conan import ConanFile

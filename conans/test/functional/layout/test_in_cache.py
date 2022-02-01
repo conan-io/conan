@@ -13,7 +13,8 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 @pytest.fixture
 def conanfile():
-    conan_file = str(GenConanfile().with_import("from conans import tools").with_import("import os").
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                     .with_import("import os").with_import("from conan.tools.files import copy").
                      with_require("base/1.0"))
 
     conan_file += """
@@ -35,8 +36,8 @@ def conanfile():
     def package(self):
         self.output.warning("Package folder: {}".format(self.package_folder))
         tools.save(os.path.join(self.package_folder, "LICENSE"), "bar")
-        self.copy("*.h", dst="include")
-        self.copy("*.lib", dst="lib")
+        copy(self, "*.h", src=self.source_folder, dst="include")
+        copy(self, "*.lib", src=self.build_folder, dst="lib")
 
     def package_info(self):
         # This will be easier when the layout declares also the includedirs etc
@@ -175,7 +176,8 @@ def test_imports():
     """The 'conan imports' follows the layout"""
     client = TestClient()
     # Hello to be reused
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                     .with_import("from conan.tools.files import copy"))
     conan_file += """
     no_copy_source = True
 
@@ -184,8 +186,8 @@ def test_imports():
         tools.save("generated.h", "bar")
 
     def package(self):
-        self.copy("*.h")
-        self.copy("*.dll")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.dll", self.build_folder, self.package_folder)
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=hello --version=1.0")

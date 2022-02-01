@@ -67,15 +67,17 @@ def test_cmake_toolchain_custom_toolchain():
     assert "mytoolchain.cmake" == build_content["cmake_toolchain_file"]
 
 
+@pytest.mark.tool_cmake
 def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.build_folder, self.package_folder)
             def package_info(self):
                 f = os.path.join(self.package_folder, "mytoolchain.cmake")
                 self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
@@ -117,6 +119,7 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
+@pytest.mark.tool_cmake
 def test_cmake_toolchain_multiple_user_toolchain():
     """ A consumer consuming two packages that declare:
             self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
@@ -129,10 +132,11 @@ def test_cmake_toolchain_multiple_user_toolchain():
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
             def package_info(self):
                 f = os.path.join(self.package_folder, "mytoolchain.cmake")
                 self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
