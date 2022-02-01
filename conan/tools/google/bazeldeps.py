@@ -14,7 +14,7 @@ class BazelDeps(object):
 
     def generate(self):
         local_repositories = []
-        conandeps = os.path.join(self._conanfile.generators_folder, 'conandeps')
+        conandeps = self._conanfile.generators_folder
 
         for build_dependency in self._conanfile.dependencies.direct_build.values():
             content = self._get_build_dependency_buildfile_content(build_dependency)
@@ -97,9 +97,17 @@ class BazelDeps(object):
         headers = []
         includes = []
 
+        def _relativize_path(p, base_path):
+            # TODO: Very fragile, to test more
+            assert os.path.isabs(p), "{} is not absolute".format(p)
+            assert p.startswith(base_path)
+            return p[len(base_path):].replace("\\", "/").lstrip("/")
+
+        # TODO: This only wokrs for package_folder, but not editable
+        package_folder = dependency.package_folder
         for path in cpp_info.includedirs:
-            headers.append('"{}/**"'.format(path))
-            includes.append('"{}"'.format(path))
+            headers.append('"{}/**"'.format(_relativize_path(path, package_folder)))
+            includes.append('"{}"'.format(_relativize_path(path, package_folder)))
 
         headers = ', '.join(headers)
         includes = ', '.join(includes)
@@ -135,8 +143,8 @@ class BazelDeps(object):
             )
         """).format(
             dependency.ref.name,
-            dependency.package_folder,
-            dependency_buildfile_name
+            dependency.package_folder.replace("\\", "/"),
+            dependency_buildfile_name.replace("\\", "/")
         )
 
         return snippet
