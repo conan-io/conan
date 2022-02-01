@@ -613,7 +613,7 @@ def test_msvc_runtime_flag_common_usage():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.microsoft import msvc_runtime_flag
        class App(ConanFile):
            settings = "os", "arch", "compiler", "build_type"
@@ -623,4 +623,4 @@ def test_msvc_runtime_flag_common_usage():
                    pass
         """)
     client.save({"conanfile.py": conanfile})
-    client.run('info .')
+    client.run('graph info .')
