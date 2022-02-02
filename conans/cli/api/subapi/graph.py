@@ -2,8 +2,8 @@ from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer
-from conans.errors import ConanException
+from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer, \
+    txt_definer
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -11,6 +11,37 @@ class GraphAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
+
+    @api_method
+    def load_root_consumer_conanfile(self, path, profile_host, profile_build,
+                                     name=None, version=None, user=None, channel=None,
+                                     update=None, remotes=None, require_overrides=None,
+                                     lockfile=None):
+        app = ConanApp(self.conan_api.cache_folder)
+        # necessary for correct resolution and update of remote python_requires
+        app.load_remotes(remotes, update=update)
+
+        if path.endswith(".py"):
+            conanfile = app.loader.load_consumer(path,
+                                                 name=name,
+                                                 version=version,
+                                                 user=user,
+                                                 channel=channel,
+                                                 graph_lock=lockfile,
+                                                 require_overrides=require_overrides)
+            ref = RecipeReference(conanfile.name, conanfile.version,
+                                  conanfile.user, conanfile.channel)
+            initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
+                                         False, ref)
+            if ref.name:
+                profile_host.options.scope(ref.name)
+            root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
+        else:
+            conanfile = app.loader.load_conanfile_txt(path, require_overrides=require_overrides)
+            txt_definer(conanfile, profile_host)
+            root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                             path=path)
+        return root_node
 
     @api_method
     def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
@@ -61,32 +92,6 @@ class GraphAPI:
                                             require_overrides=require_overrides)
         virtual_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        return root_node
-
-    @api_method
-    def load_root_node(self, reference, path, profile_host, profile_build, lockfile, root_ref,
-                       create_reference=None, is_build_require=False,
-                       require_overrides=None, remotes=None, update=None):
-        """ creates the first, root node of the graph, loading or creating a conanfile
-        and initializing it (settings, options) as necessary. Also locking with lockfile
-        information, necessary if it has python_requires to be locked, or override-requires
-        """
-        # TODO: This API is probably not final, but we want it split based on the different things
-        #   curently done inside GraphManager. To discuss
-        if path and reference:
-            raise ConanException("Both path and reference arguments were provided. Please provide "
-                                 "only one of them")
-
-        app = ConanApp(self.conan_api.cache_folder)
-        # necessary for correct resolution and update of remote python_requires
-        app.load_remotes(remotes, update=update)
-
-        graph_manager, cache = app.graph_manager, app.cache
-        reference = reference or path
-        # TODO: Improve this interface, not making it public yet, because better to be splitted
-        root_node = graph_manager._load_root_node(reference, create_reference, profile_build,
-                                                  profile_host, lockfile, root_ref, is_build_require,
-                                                  require_overrides)
         return root_node
 
     @api_method
