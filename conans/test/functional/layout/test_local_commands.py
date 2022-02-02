@@ -107,7 +107,7 @@ def test_local_build():
         tools.save("build_file.dll", "bar")
 """
     client.save({"conanfile.py": conan_file})
-    client.run("build . -bf=my_install")
+    client.run("build . --output-folder=my_install")
     dll = os.path.join(client.current_folder, "my_install", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
@@ -126,7 +126,7 @@ def test_local_build_change_base():
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . --output-folder=common")
-    client.run("build . --build-folder=common")
+    client.run("build . --output-folder=common")
     dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 

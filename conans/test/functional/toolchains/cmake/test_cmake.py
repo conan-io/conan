@@ -127,7 +127,7 @@ class Base(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("build .. %s %s" % (settings, options))
+            self.client.run("build .. %s %s -of=." % (settings, options))
             install_out = self.client.out
         return install_out
 

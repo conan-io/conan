@@ -131,7 +131,7 @@ def test_transitive_binary_skipped():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    c.run("build . -g VirtualRunEnv")
+    c.run("build . ")
     command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out

@@ -36,6 +36,7 @@ def build(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
+    folder = os.path.dirname(path)
     remote = get_multiple_remotes(conan_api, args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api)
@@ -45,8 +46,8 @@ def build(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remotes=remote, update=args.update)
 
-    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else cwd
-    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else cwd
+    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else folder
+    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else folder
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
