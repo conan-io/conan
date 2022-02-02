@@ -12,3 +12,4 @@ pygments>=2.0, <3.0
 tqdm>=4.28.1, <5
 Jinja2>=2.9, <4.0.0
 python-dateutil>=2.7.0, <3
+configparser>=3.5;python_version<='2.7'
