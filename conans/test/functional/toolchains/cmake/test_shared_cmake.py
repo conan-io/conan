@@ -1,9 +1,12 @@
+import pytest
+
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain():
     client = TestClient(default_server_user=True)
 
@@ -28,6 +31,7 @@ def test_shared_cmake_toolchain():
     assert "hello: Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
     client = TestClient()
     files = pkg_cmake("hello", "0.1")

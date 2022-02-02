@@ -52,7 +52,7 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
 """)
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 @pytest.mark.parametrize("arch, os_, os_version, os_sdk", [
@@ -118,7 +118,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     assert "architecture: %s" % to_apple_arch(arch) in t.out
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 # for Linux, build for x86 will require a multilib compiler
 # for macOS, build for x86 is no longer supported by modern Xcode
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
@@ -147,7 +147,7 @@ def test_windows_cross_compiling_x86():
     assert "main _MSVC_LANG2014" in client.out
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 class AndroidMesonToolchainCrossTestCase(unittest.TestCase):
 
     def setUp(self):

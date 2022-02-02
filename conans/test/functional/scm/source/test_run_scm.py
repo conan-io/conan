@@ -16,7 +16,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import redirect_output
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class RunSCMTest(unittest.TestCase):
 
     def setUp(self):

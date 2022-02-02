@@ -67,7 +67,7 @@ class Pkg(ConanFile):
 
 
 @pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class SettingsAndOptionsTest(unittest.TestCase):
 

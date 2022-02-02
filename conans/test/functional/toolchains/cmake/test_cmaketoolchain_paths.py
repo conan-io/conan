@@ -43,7 +43,7 @@ def _cmake_command_toolchain(find_root_path_modes):
     return cmake_command
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("package", ["hello", "zlib"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
 @pytest.mark.parametrize(
@@ -110,7 +110,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) not in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize(
     "settings",
     [
@@ -193,7 +193,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
     assert "Conan: Target declared 'hello::hello'" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("require_type", ["requires", "tool_requires"])
 @pytest.mark.parametrize(
     "settings",
@@ -250,7 +250,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
     assert "MYOWNCMAKE FROM hello!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize(
     "settings",
     [
@@ -305,7 +305,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
     assert "Found path of hello.h" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize(
     "settings",
     [
@@ -371,7 +371,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     assert build_folder_hash not in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize(
     "settings",
     [

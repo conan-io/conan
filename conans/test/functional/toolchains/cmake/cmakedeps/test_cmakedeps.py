@@ -36,7 +36,7 @@ def client():
     return c
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_transitive_multi(client):
     # TODO: Make a full linking example, with correct header transitivity
 
@@ -95,7 +95,7 @@ def test_transitive_multi(client):
                 assert "MYVARlibb: {}".format(bt) in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -162,7 +162,7 @@ def test_system_libs():
         assert "Target libs: %s" % target_libs in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_do_not_mix_cflags_cxxflags():
     # TODO: Verify with components too
     client = TestClient()
@@ -242,6 +242,7 @@ def test_custom_configuration(client):
            open(os.path.join(curdir, data_name_context_host)).read()
 
 
+@pytest.mark.tool("cmake")
 def test_buildirs_working():
     """  If a recipe declares cppinfo.buildirs those dirs will be exposed to be consumer
     to allow a cmake "include" function call after a find_package"""
@@ -275,7 +276,7 @@ def test_buildirs_working():
     assert "MYVAR=>Like a Rolling Stone" in c.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cpp_info_link_objects():
     client = TestClient()
     obj_ext = "obj" if platform.system() == "Windows" else "o"

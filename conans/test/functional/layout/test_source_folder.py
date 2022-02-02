@@ -14,6 +14,7 @@ from conans.test.utils.tools import TestClient, zipdir
 app_name = "Release/my_app.exe" if platform.system() == "Windows" else "my_app"
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
 def test_exports_source_with_src_subfolder(no_copy_source):
     """If we have the sources in a subfolder, specifying it in the self.folders.source will
@@ -72,6 +73,7 @@ def test_exports():
     assert "FOO: 1" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_exports_source_without_subfolder():
     """If we have some sources in the root (like the CMakeLists.txt)
     we don't declare folders.source"""
@@ -99,6 +101,7 @@ def test_exports_source_without_subfolder():
     assert "Created package revision" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_scm_with_source_layout():
     """If we have the sources in git repository"""
     conan_file = GenConanfile() \
@@ -133,6 +136,7 @@ def test_scm_with_source_layout():
     assert "Created package revision" in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
 def test_zip_download_with_subfolder_new_tools(no_copy_source):
     """If we have a zip with the sources in a subfolder, specifying it in the self.folders.source

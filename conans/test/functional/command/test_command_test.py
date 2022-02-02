@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_conan_test(self):
         client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1")

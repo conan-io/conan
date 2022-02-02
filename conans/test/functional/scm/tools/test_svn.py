@@ -35,7 +35,7 @@ class SVNRemoteUrlTest(unittest.TestCase):
 
 
 @pytest.mark.slow
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     @patch('subprocess.Popen')
@@ -308,7 +308,7 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
 
 
 @pytest.mark.slow
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
         try:
@@ -324,7 +324,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
 
 
 @pytest.mark.slow
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -426,7 +426,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn.is_pristine())
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -449,7 +449,7 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, url):
@@ -481,7 +481,7 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -548,7 +548,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
 
 @pytest.mark.slow
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
     conanfile = """

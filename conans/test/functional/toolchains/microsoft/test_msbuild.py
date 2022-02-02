@@ -305,13 +305,13 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-@pytest.mark.tool_visual_studio(version='15')
+@pytest.mark.tool("visual_studio", "15")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2017():
     check_msvc_runtime_flag("15", "191")
 
 
-@pytest.mark.tool_visual_studio(version='17')
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
     check_msvc_runtime_flag("17", "193")
@@ -351,7 +351,7 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 
 @parameterized_class(vs_versions)
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -428,7 +428,7 @@ class WinTest(unittest.TestCase):
                            ("msvc", "191", "static", "17"),
                            ("msvc", "190", "static", "14")]
                           )
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd):
         if self.vs_version != "15":
             pytest.skip("test for Visual Studio 2017")
@@ -497,7 +497,7 @@ class WinTest(unittest.TestCase):
         check_vs_runtime("Release/MyApp.exe", client, self.vs_version, build_type="Release",
                          static_runtime=static_runtime)
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler",  "Visual Studio"),
@@ -537,7 +537,7 @@ class WinTest(unittest.TestCase):
                        "DEFINITIONS_CONFIG_INT": "234"})
         check_vs_runtime("x64/Debug/MyApp.exe", client, self.vs_version, build_type="Debug")
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
 

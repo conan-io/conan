@@ -25,7 +25,7 @@ def test_verify_ssl_none_string():
            "'bool' (found 'str')" in str(client.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 @parameterized_class([{"verify_ssl": True}, {"verify_ssl": False},
                       {"verify_ssl": None},  # No value written in the recipe
                       {"verify_ssl": 'None'}])  # Explicit 'None' written in the recipe

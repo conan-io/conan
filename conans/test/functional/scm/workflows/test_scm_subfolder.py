@@ -21,7 +21,7 @@ class SCMSubfolder(TestWorkflow):
     scm_subfolder = "scm_subfolder"
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 
@@ -93,7 +93,7 @@ class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitConanfileInRepoRootTest(SCMSubfolder, unittest.TestCase):
 
     conanfile = SCMSubfolder.conanfile_base.format(extra_header="",

@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.xfail(reason="NewCppInfo: xfail until it adds default folders for the components")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_file_api():
     """
     simple library providing 3 targets:

@@ -94,7 +94,7 @@ class MesonInstall(TestMesonBase):
         target_link_libraries(${PROJECT_NAME} hello::hello)
         """)
 
-    @pytest.mark.tool_meson
+    @pytest.mark.tool("meson")
     def test_install(self):
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")

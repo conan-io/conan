@@ -8,7 +8,7 @@ from conans.test.utils.scm import SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNTaggedComponentTest(SVNLocalRepoTestCase):
     # Reproducing https://github.com/conan-io/conan/issues/5017
 

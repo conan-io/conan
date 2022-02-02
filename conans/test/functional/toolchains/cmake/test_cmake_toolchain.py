@@ -67,7 +67,7 @@ def test_cmake_toolchain_custom_toolchain():
     assert "mytoolchain.cmake" == build_content["cmake_toolchain_file"]
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -119,7 +119,7 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmake_toolchain_multiple_user_toolchain():
     """ A consumer consuming two packages that declare:
             self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
@@ -183,7 +183,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
     assert "mytoolchain2.cmake !!!running!!!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmaketoolchain_no_warnings():
     """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
     and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail

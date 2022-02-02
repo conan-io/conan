@@ -7,7 +7,7 @@ from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_premake
+@pytest.mark.tool("premake")
 @pytest.mark.skipif(which("premake5") is None, reason="Needs premake5")
 class PremakeGeneratorTest(unittest.TestCase):
 
