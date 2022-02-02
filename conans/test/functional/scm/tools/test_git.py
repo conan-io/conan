@@ -17,7 +17,7 @@ from conans.util.env import environment_update
 from conans.util.files import save
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitRemoteUrlTest(unittest.TestCase):
 
     def test_remove_credentials(self):
@@ -33,7 +33,7 @@ class GitRemoteUrlTest(unittest.TestCase):
         self.assertEqual(git.get_remote_url(remove_credentials=True), expected_url)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitToolTest(unittest.TestCase):
 
     @patch('subprocess.Popen')
@@ -367,7 +367,7 @@ class HelloConan(ConanFile):
         self.assertEqual("first commit", git.get_commit_message())
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitToolsTests(unittest.TestCase):
 
     def setUp(self):

@@ -66,9 +66,8 @@ Cflags: -I${includedir}
 
 """
 
-
-@pytest.mark.tool_pkg_config
-@pytest.mark.tool_mingw32
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("mingw32")
 class PkgConfigTest(unittest.TestCase):
     """
     Test WITHOUT a build helper nor a generator, explicitly defining pkg-config in the

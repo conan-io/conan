@@ -11,6 +11,8 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("autotools")
 def test_ios():
     xcrun = XCRun(None, sdk='iphoneos')
     sdk_path = xcrun.sdk_path

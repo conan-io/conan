@@ -834,7 +834,7 @@ class SCMRevisions(unittest.TestCase):
                       "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
                       client.out)
 
-    @pytest.mark.tool_svn
+    @pytest.mark.tool("svn")
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages

@@ -67,7 +67,7 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_reuse_with_modules_and_config(client):
     cpp = gen_function_cpp(name="main")
 
@@ -115,6 +115,7 @@ def test_reuse_with_modules_and_config(client):
     client.run("build .")
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("find_mode", ["both", "config", "module"])
 def test_transitive_modules_found(find_mode):
     """

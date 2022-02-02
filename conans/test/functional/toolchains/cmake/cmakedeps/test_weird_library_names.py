@@ -55,7 +55,7 @@ def client_weird_lib_name():
     return c
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmakedeps(client_weird_lib_name):
     c = client_weird_lib_name
     c.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)

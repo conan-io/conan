@@ -9,7 +9,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_bazel
+@pytest.mark.tool("bazel")
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""

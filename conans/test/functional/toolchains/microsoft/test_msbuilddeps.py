@@ -405,12 +405,12 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 
 
 @parameterized_class(vs_versions)
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_msbuild_generator(self):
         client = TestClient()
         client.save(pkg_cmake("hello0", "1.0"))
@@ -703,15 +703,15 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert "CAExcludePath" not in depb
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2017():
     check_build_vs_project_with_a("15")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
     check_build_vs_project_with_a("17")
@@ -790,15 +790,15 @@ def check_build_vs_project_with_a(vs_version):
     # assert "main: Release!" in client.out
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2017():
     check_build_vs_project_with_test_requires("15")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
     check_build_vs_project_with_test_requires("17")

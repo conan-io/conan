@@ -17,7 +17,7 @@ class ExportMetadataTest(unittest.TestCase):
 
     summary_hash = "bfe8b4a6a2a74966c0c4e0b34705004a"
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_revision_mode_scm(self):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})

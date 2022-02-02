@@ -27,7 +27,7 @@ class RemoveCredentials(unittest.TestCase):
         self.client.current_folder = self.path
         self.client.run_command("git remote add origin https://url.to.be.sustituted")
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_https(self):
         expected_url = 'https://myrepo.com.git'
         origin_url = 'https://username:password@myrepo.com.git'

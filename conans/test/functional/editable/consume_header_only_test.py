@@ -13,7 +13,7 @@ from conans.test.utils.test_files import temp_folder
 
 
 @pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class HeaderOnlyLibTestClient(TestClient):
     header = textwrap.dedent("""\
         #include <iostream>
@@ -66,7 +66,7 @@ class HeaderOnlyLibTestClient(TestClient):
                                                                      origin='local')})
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class EditableReferenceTest(unittest.TestCase):
 

@@ -314,7 +314,7 @@ def _run_and_get_lib_order(t, generator):
 
 
 @pytest.mark.parametrize("generator", [None, "Xcode"])
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_cmake_deps(client, generator):
     if generator == "Xcode" and platform.system() != "Darwin":
         pytest.skip("Xcode is needed")

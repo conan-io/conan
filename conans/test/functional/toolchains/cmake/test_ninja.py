@@ -56,7 +56,7 @@ def client():
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool_ninja
+@pytest.mark.tool("ninja")
 def test_locally_build_linux(build_type, shared, client):
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}".format(build_type,
                                                                                        shared)
@@ -85,7 +85,7 @@ def test_locally_build_linux(build_type, shared, client):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool_ninja
+@pytest.mark.tool("ninja")
 def test_locally_build_msvc(build_type, shared, client):
     msvc_version = "15"
     settings = "-s build_type={} -o hello:shared={}".format(build_type, shared)
@@ -116,7 +116,7 @@ def test_locally_build_msvc(build_type, shared, client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-@pytest.mark.tool_ninja
+@pytest.mark.tool("ninja")
 def test_locally_build_msvc_toolset(client):
     msvc_version = "15"
     profile = textwrap.dedent("""
@@ -151,8 +151,8 @@ def test_locally_build_msvc_toolset(client):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool_mingw64
-@pytest.mark.tool_ninja
+@pytest.mark.tool("mingw64")
+@pytest.mark.tool("ninja")
 def test_locally_build_gcc(build_type, shared, client):
     # FIXME: Note the gcc version is still incorrect
     gcc = ("-s os=Windows -s compiler=gcc -s compiler.version=4.9 -s compiler.libcxx=libstdc++ "
@@ -175,7 +175,7 @@ def test_locally_build_gcc(build_type, shared, client):
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool_ninja
+@pytest.mark.tool("ninja")
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
@@ -195,7 +195,7 @@ def test_locally_build_macos(build_type, shared, client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 def test_ninja_conf():
     conanfile = GenConanfile().with_generator("CMakeToolchain").with_settings("os", "compiler",
                                                                               "build_type", "arch")

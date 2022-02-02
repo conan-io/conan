@@ -56,7 +56,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
             """)
         })
 
-    @pytest.mark.tool_cmake(version="3.19")
+    @pytest.mark.tool("cmake", "3.19")
     def test_xcode_generator(self):
         """ Simplest approach:
             https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-ios-tvos-or-watchos
