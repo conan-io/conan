@@ -48,7 +48,7 @@ def client():
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.tool("mingw32")
+@pytest.mark.tool("mingw64")
 @pytest.mark.tool("clang", "12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang(client):

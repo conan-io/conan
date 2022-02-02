@@ -35,7 +35,7 @@ class TestToolsCustomVersions:
         client.run_command('cmake --version')
         assert "cmake version 3.19" in client.out
 
-    @pytest.mark.tool("mingw32")
+    @pytest.mark.tool("mingw64")
     @pytest.mark.tool("cmake", "3.16")
     @pytest.mark.skipif(platform.system() != "Windows",
                         reason="Mingw test")
