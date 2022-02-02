@@ -230,7 +230,11 @@ def save_toolchain_args(content, generators_folder=None, namespace=None):
     args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
         else namespace_name
     toolchain_config = configparser.ConfigParser()
-    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+    # FIXME: Python2 compatibility replace this in Conan 2.0 with:
+    #  toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+    toolchain_config.add_section(CONAN_TOOLCHAIN_ARGS_SECTION)
+    for key, values in content_.items():
+        toolchain_config.set(CONAN_TOOLCHAIN_ARGS_SECTION, key, values)
     with open(args_file, "w") as f:
         toolchain_config.write(f)
 
