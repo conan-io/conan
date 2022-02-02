@@ -431,48 +431,48 @@ def test_environment_scripts_generated_envvars(require_run):
 
     client.run("install consumer_pkg --build")
     if platform.system() == "Windows":
-        conanbuildenv = client.load("conanbuildenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
         if require_run:
-            conanrunenv = client.load("conanrunenv.bat")
+            conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
             assert "LD_LIBRARY_PATH" not in conanbuildenv
             assert "LD_LIBRARY_PATH" not in conanrunenv
         else:
-            assert not os.path.exists("conanrunenv.bat")
+            assert not os.path.exists("consumer_pkg/conanrunenv.bat")
     else:
         if require_run:
-            conanbuildenv = client.load("conanbuildenv.sh")
-            conanrunenv = client.load("conanrunenv.sh")
+            conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+            conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
             assert "LD_LIBRARY_PATH" in conanbuildenv
             assert "LD_LIBRARY_PATH" in conanrunenv
         else:
-            assert not os.path.exists("conanrunenv.sh")
+            assert not os.path.exists("consumer_pkg/conanrunenv.sh")
 
     if require_run:
         # Build context LINUX - Host context LINUX
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
-        conanbuildenv = client.load("conanbuildenv.sh")
-        conanrunenv = client.load("conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 
         # Build context WINDOWS - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
-        conanbuildenv = client.load("conanbuildenv.bat")
-        conanrunenv = client.load("conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context LINUX - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
-        conanbuildenv = client.load("conanbuildenv.sh")
-        conanrunenv = client.load("conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context WINDOWS - Host context LINUX
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
-        conanbuildenv = client.load("conanbuildenv.bat")
-        conanrunenv = client.load("conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 

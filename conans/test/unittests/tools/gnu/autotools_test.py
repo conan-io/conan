@@ -14,7 +14,6 @@ def test_source_folder_works():
         "make_args": ""}
     )
     conanfile = ConanFileMock()
-    conanfile.folders.set_base_install(folder)
     sources = "/path/to/sources"
     conanfile.folders.set_base_source(sources)
     autotools = Autotools(conanfile)

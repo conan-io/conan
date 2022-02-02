@@ -81,8 +81,8 @@ class CustomConfigurationTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         with self.client.chdir('build'):
-            self.client.run("install .. %s -o hello:shared=True" % settings)
-            self.client.run("install .. %s -o hello:shared=False" % settings)
+            self.client.run("install .. %s -o hello:shared=True -of=." % settings)
+            self.client.run("install .. %s -o hello:shared=False -of=." % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-releaseshared.cmake")))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
@@ -178,7 +178,7 @@ class CustomSettingsTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("install .. %s %s" % (settings_h, settings_b))
+            self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 

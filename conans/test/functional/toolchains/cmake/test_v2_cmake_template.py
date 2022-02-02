@@ -10,8 +10,7 @@ def test_cmake_lib_template():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
     # Local flow works
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
 
     client.run("export-pkg .")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
@@ -38,8 +37,7 @@ def test_cmake_exe_template():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=greet -d version=0.1")
     # Local flow works
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
 
     # Create works
     client.run("create .")

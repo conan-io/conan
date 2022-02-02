@@ -111,7 +111,6 @@ def run_deploy(conanfile, install_folder):
 
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
-    conanfile.folders.set_base_install(install_folder)
     with no_op():  # TODO: Remove this in a later refactor
         with chdir(install_folder):
             conanfile.deploy()
