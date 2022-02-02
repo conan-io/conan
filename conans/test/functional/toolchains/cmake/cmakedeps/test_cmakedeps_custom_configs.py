@@ -17,10 +17,8 @@ from conans.util.files import save
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        import os
         from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
-        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -35,8 +33,7 @@ class CustomConfigurationTest(unittest.TestCase):
                 config = str(self.settings.build_type)
                 if self.dependencies["hello"].options.shared:
                     config = "ReleaseShared"
-                copy(self, "*.dll", os.path.join(self.source_folder, "bin"),
-                                    os.path.join(self.source_folder, "config"), keep_path=False)
+                self.copy("*.dll", src="bin", dst=config, keep_path=False)
         """)
 
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
