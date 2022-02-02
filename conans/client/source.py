@@ -164,8 +164,6 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         except ConanExceptionInUserConanfileMethod:
             raise
         except Exception as e:
-            import traceback
-            print(traceback.format_exc())
             raise ConanException(e)
 
 
