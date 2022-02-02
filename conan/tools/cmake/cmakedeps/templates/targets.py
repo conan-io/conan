@@ -67,8 +67,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             if(NOT TARGET ${_COMPONENT})
                 add_library(${_COMPONENT} INTERFACE IMPORTED)
                 conan_message(STATUS "Conan: Component target declared '${_COMPONENT}'")
-            else()
-                message(WARNING "Component target name '${_COMPONENT}' already exists.")
             endif()
         endforeach()
 

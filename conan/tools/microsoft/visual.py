@@ -80,6 +80,7 @@ def msvc_runtime_flag(conanfile):
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         return runtime
+    return ""
 
 
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
@@ -172,3 +173,20 @@ def _vcvars_vers(conanfile, compiler, vs_version):
         # The equivalent of compiler 192 is toolset 14.2
         vcvars_ver = "14.{}".format(compiler_version[-1])
     return vcvars_ver
+
+
+def is_msvc(conanfile):
+    """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
+    :param conanfile: ConanFile instance
+    :return: True, if the host compiler is related to Visual Studio, otherwise, False.
+    """
+    settings = conanfile.settings
+    return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
+
+
+def is_msvc_static_runtime(conanfile):
+    """ Validate when building with Visual Studio or msvc and MT on runtime
+    :param conanfile: ConanFile instance
+    :return: True, if msvc + runtime MT. Otherwise, False
+    """
+    return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)

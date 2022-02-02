@@ -1,11 +1,13 @@
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag
+from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
+    build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.microsoft import VCVars, is_msvc
 from conans.tools import args_to_string
 
 
@@ -38,6 +40,7 @@ class AutotoolsToolchain:
         self.arch_flag = architecture_flag(self._conanfile.settings)
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
         self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         # Cross build
         self._host = None
@@ -123,9 +126,16 @@ class AutotoolsToolchain:
             self.cxxflags.extend(self.build_type_flags)
             self.cflags.extend(self.build_type_flags)
 
+        if self.build_type_link_flags:
+            self.ldflags.extend(self.build_type_link_flags)
+
         if self.fpic:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
+
+        if is_msvc(self._conanfile):
+            env.define("CXX", "cl")
+            env.define("CC", "cl")
 
         # FIXME: Previously these flags where checked if already present at env 'CFLAGS', 'CXXFLAGS'
         #        and 'self.cxxflags', 'self.cflags' before adding them
@@ -150,6 +160,7 @@ class AutotoolsToolchain:
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
+        VCVars(self._conanfile).generate(scope=scope)
 
     def generate_args(self):
         configure_args = []

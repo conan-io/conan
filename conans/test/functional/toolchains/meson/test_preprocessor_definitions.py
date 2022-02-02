@@ -7,7 +7,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 class MesonPreprocessorDefinitionsTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -19,6 +19,9 @@ class MesonPreprocessorDefinitionsTest(TestMesonBase):
         def config_options(self):
             if self.settings.os == "Windows":
                 del self.options.fPIC
+
+        def layout(self):
+            self.folders.build = "build"
 
         def generate(self):
             tc = MesonToolchain(self)

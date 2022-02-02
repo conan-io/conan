@@ -447,8 +447,14 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
+                    if node.binary == BINARY_EDITABLE:
+                        self._handle_node_editable(node, profile_host, profile_build, graph_lock)
+                        # Need a temporary package revision for package_revision_mode
+                        # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+                        node.prev = "editable"
+                    else:
+                        _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                        self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
@@ -459,16 +465,24 @@ class BinaryInstaller(object):
         ref = node.ref
         package_layout = self._cache.package_layout(ref)
         base_path = package_layout.base_folder()
+
+        if hasattr(conanfile, "layout"):
+            conanfile.folders.set_base_package(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_source(package_layout.source_folder or base_path)
+            conanfile.folders.set_base_build(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_generators(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_install(base_path)
+            conanfile.folders.set_base_imports(package_layout.output_folder or base_path)
+        else:
+            conanfile.folders.set_base_package(base_path)
+            conanfile.folders.set_base_source(None)
+            conanfile.folders.set_base_build(None)
+            conanfile.folders.set_base_install(None)
+
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(base_path)
-
             output = conanfile.output
             output.info("Rewriting files of editable package "
                         "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
@@ -560,6 +574,10 @@ class BinaryInstaller(object):
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                    % (str(pref), package_folder))
             # Call the info method
+            conanfile.folders.set_base_package(package_folder)
+            conanfile.folders.set_base_source(None)
+            conanfile.folders.set_base_build(None)
+            conanfile.folders.set_base_install(None)
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
@@ -640,11 +658,6 @@ class BinaryInstaller(object):
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
 
-        conanfile.folders.set_base_package(package_folder)
-        conanfile.folders.set_base_source(None)
-        conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_install(None)
-
         conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
@@ -662,6 +675,7 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     if hasattr(conanfile, "layout"):
+                        conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                         # Old cpp info without defaults (the defaults are in the new one)
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
@@ -676,21 +690,15 @@ class BinaryInstaller(object):
                     if hasattr(conanfile, "layout") and is_editable:
                         # Adjust the folders of the layout to consolidate the rootfolder of the
                         # cppinfos inside
-                        conanfile.folders.set_base_build(package_folder)
-                        conanfile.folders.set_base_source(package_folder)
-                        conanfile.folders.set_base_generators(package_folder)
-
                         # convert directory entries to be relative to the declared folders.build
-                        build_cppinfo = conanfile.cpp.build.copy()
-                        build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+                        conanfile.cpp.build.set_relative_base_folder(conanfile.build_folder)
 
                         # convert directory entries to be relative to the declared folders.source
-                        source_cppinfo = conanfile.cpp.source.copy()
-                        source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+                        conanfile.cpp.source.set_relative_base_folder(conanfile.source_folder)
 
                         full_editable_cppinfo = NewCppInfo()
-                        full_editable_cppinfo.merge(source_cppinfo)
-                        full_editable_cppinfo.merge(build_cppinfo)
+                        full_editable_cppinfo.merge(conanfile.cpp.source)
+                        full_editable_cppinfo.merge(conanfile.cpp.build)
                         # Paste the editable cpp_info but prioritizing it, only if a
                         # variable is not declared at build/source, the package will keep the value
                         fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)

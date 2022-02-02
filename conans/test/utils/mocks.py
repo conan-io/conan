@@ -182,7 +182,7 @@ class ConanFileMock(ConanFile):
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
 
-    def run(self, command, win_bash=False, subsystem=None, env=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command

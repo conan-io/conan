@@ -393,6 +393,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         elif template == "cmake_exe":
             from conans.assets.templates.new_v2_cmake import get_cmake_exe_files
             files = get_cmake_exe_files(name, version, package_name)
+        elif template == "meson_lib":
+            from conans.assets.templates.new_v2_meson import get_meson_lib_files
+            files = get_meson_lib_files(name, version, package_name)
+        elif template == "meson_exe":
+            from conans.assets.templates.new_v2_meson import get_meson_exe_files
+            files = get_meson_exe_files(name, version, package_name)
         else:
             if not os.path.isabs(template):
                 template = os.path.join(cache.cache_folder, "templates", "command/new", template)

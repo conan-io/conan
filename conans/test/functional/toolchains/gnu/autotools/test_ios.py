@@ -23,6 +23,7 @@ def test_ios():
         include(default)
         [settings]
         os=iOS
+        os.sdk=iphoneos
         os.version=12.0
         arch=armv8
         [env]

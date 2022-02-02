@@ -226,13 +226,6 @@ def _detect_compiler_version(result, output, profile_path):
         output.info("No compiler was detected (one may not be needed)")
         return
 
-    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
-    if compiler == "Visual Studio":
-        version = Version(version)
-        if version == "17":
-            compiler = "msvc"
-            version = "193"
-
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))
 
@@ -265,6 +258,11 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.base.version", "4.8"))
         else:
             result.append(("compiler.base.version", "4.4"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
 
 def _detect_os_arch(result, output):

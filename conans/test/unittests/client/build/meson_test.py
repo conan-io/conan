@@ -183,6 +183,21 @@ class MesonTest(unittest.TestCase):
         self.assertEqual("meson install -C \"%s\"" % build_expected,
                          conan_file.command)
 
+    def test_other_backend(self):
+        conan_file = ConanFileMock()
+        conan_file.deps_cpp_info = MockDepsCppInfo()
+        conan_file.settings = Settings()
+        conan_file.folders.set_base_package(os.getcwd())
+        meson = Meson(conan_file, backend="vs")
+        meson.configure()
+        self.assertIn("--backend=vs", conan_file.command)
+        meson.build()
+        self.assertIn("meson compile -C", conan_file.command)
+        meson.install()
+        self.assertIn("meson compile -C", conan_file.command)
+        meson.test()
+        self.assertIn("meson compile -C", conan_file.command)
+
     def test_prefix(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()

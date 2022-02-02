@@ -177,3 +177,37 @@ def test_cmake_toolchain_multiple_user_toolchain():
     client.run("create . pkg/0.1@")
     assert "mytoolchain1.cmake !!!running!!!" in client.out
     assert "mytoolchain2.cmake !!!running!!!" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmaketoolchain_no_warnings():
+    """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
+    and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail
+    """
+    # Issue https://github.com/conan-io/conan/issues/10288
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Conan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain", "CMakeDeps"
+            requires = "dep/0.1"
+        """)
+    consumer = textwrap.dedent("""
+       set(CMAKE_CXX_COMPILER_WORKS 1)
+       set(CMAKE_CXX_ABI_COMPILED 1)
+       project(MyHello CXX)
+       cmake_minimum_required(VERSION 3.15)
+
+       find_package(dep CONFIG REQUIRED)
+       """)
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                 "conanfile.py": conanfile,
+                 "CMakeLists.txt": consumer})
+
+    client.run("create dep")
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
+                       "-Werror=dev --warn-uninitialized")
+    assert "Using Conan toolchain" in client.out
+    # The real test is that there are no errors, it returns successfully

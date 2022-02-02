@@ -14,7 +14,6 @@ class AutotoolsDeps:
         ret = NewCppInfo()
         for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.aggregated_components()
-            dep_cppinfo.set_relative_base_folder(dep.package_folder)
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
             ret.merge(dep_cppinfo)

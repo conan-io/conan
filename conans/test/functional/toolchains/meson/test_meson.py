@@ -7,7 +7,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 class MesonToolchainTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -21,15 +21,16 @@ class MesonToolchainTest(TestMesonBase):
                 del self.options.fPIC
 
         def layout(self):
-            self.folders.generators = 'gen_folder'
+            self.folders.generators = 'build/gen_folder'
+            self.folders.build = "build"
 
         def generate(self):
             tc = MesonToolchain(self)
-            tc.definitions["STRING_DEFINITION"] = "Text"
-            tc.definitions["TRUE_DEFINITION"] = True
-            tc.definitions["FALSE_DEFINITION"] = False
-            tc.definitions["INT_DEFINITION"] = 42
-            tc.definitions["ARRAY_DEFINITION"] = ["Text1", "Text2"]
+            tc.project_options["STRING_DEFINITION"] = "Text"
+            tc.project_options["TRUE_DEFINITION"] = True
+            tc.project_options["FALSE_DEFINITION"] = False
+            tc.project_options["INT_DEFINITION"] = 42
+            tc.project_options["ARRAY_DEFINITION"] = ["Text1", "Text2"]
             tc.generate()
 
         def build(self):
@@ -71,7 +72,7 @@ class MesonToolchainTest(TestMesonBase):
 
         self.t.run("install . %s" % self._settings_str)
 
-        content = self.t.load(os.path.join("gen_folder", "conan_meson_native.ini"))
+        content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
 
         self.assertIn("[project options]", content)
         self.assertIn("STRING_DEFINITION = 'Text'", content)

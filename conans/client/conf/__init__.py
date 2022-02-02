@@ -14,7 +14,7 @@ from conans.util.files import load
 
 _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
+    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX, VxWorks]
     arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
 
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
@@ -64,6 +64,8 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
         baremetal:
+        VxWorks:
+            version: ["7"]
     arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
@@ -80,8 +82,8 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "10", "10.1", "10.2", "10.3",
                       "11", "11.1", "11.2"]
             libcxx: [libstdc++, libstdc++11]
-            threads: [None, posix, win32] #  Windows MinGW
-            exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+            threads: [None, posix, win32]  # Windows MinGW
+            exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
@@ -101,7 +103,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10", "11", "12", "13"]
+                      "8", "9", "10", "11", "12", "13", "14"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
             runtime: [None, MD, MT, MTd, MDd]

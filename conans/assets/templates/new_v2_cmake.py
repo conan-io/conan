@@ -1,6 +1,5 @@
 conanfile_sources_v2 = """from conans import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
-from conan.tools.layout import cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
 class {package_name}Conan(ConanFile):
@@ -50,8 +49,7 @@ class {package_name}Conan(ConanFile):
 test_conanfile_v2 = """import os
 
 from conans import ConanFile, tools
-from conan.tools.cmake import CMake
-from conan.tools.layout import cmake_layout
+from conan.tools.cmake import CMake, cmake_layout
 
 
 class {package_name}TestConan(ConanFile):
@@ -103,7 +101,7 @@ install(TARGETS {name} DESTINATION "."
 
 source_h = """#pragma once
 
-#ifdef WIN32
+#ifdef _WIN32
   #define {name}_EXPORT __declspec(dllexport)
 #else
   #define {name}_EXPORT
@@ -226,8 +224,7 @@ def get_cmake_lib_files(name, version, package_name="Pkg"):
 
 
 conanfile_exe = """from conans import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
-from conan.tools.layout import cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
 class {package_name}Conan(ConanFile):

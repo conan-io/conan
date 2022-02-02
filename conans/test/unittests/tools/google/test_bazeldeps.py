@@ -8,6 +8,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import Requirement, ConanFileDependencies
 from conans.model.ref import ConanFileReference
+from conans.test.utils.test_files import temp_folder
 
 
 def test_bazeldeps_dependency_buildfiles():
@@ -46,6 +47,7 @@ def test_bazeldeps_interface_buildfiles():
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
+    conanfile_dep.folders.set_base_package(temp_folder())
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/2.0")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
