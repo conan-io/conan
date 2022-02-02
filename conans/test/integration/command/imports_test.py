@@ -13,6 +13,7 @@ from conans.test.utils.tools import TestClient
 conanfile = """
 from conan import ConanFile
 from conans.util.files import save
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -24,8 +25,8 @@ class HelloConan(ConanFile):
         save("file2.txt", "World")
 
     def package(self):
-        self.copy("file1.txt")
-        self.copy("file2.txt")
+        copy(self, "file1.txt", self.source_folder, self.package_folder)
+        copy(self, "file2.txt", self.source_folder, self.package_folder)
 """
 
 test1 = """[requires]
@@ -38,6 +39,7 @@ hello/0.1@lasote/stable
 test2 = """
 from conan import ConanFile
 from conans.util.files import save
+from conan.tools.files import copy
 
 class HelloReuseConan(ConanFile):
     requires = "hello/0.1@lasote/stable"
@@ -49,6 +51,7 @@ class HelloReuseConan(ConanFile):
 test3 = """
 from conan import ConanFile
 from conans.util.files import save
+from conan.tools.files import copy
 
 class HelloReuseConan(ConanFile):
     requires = "hello/0.1@lasote/stable"
@@ -71,7 +74,9 @@ class ImportsTest(unittest.TestCase):
         """
         dst_global_folder = temp_folder().replace("\\", "/")
         conanfile2 = '''
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class ConanLib(ConanFile):
     name = "say"
@@ -79,7 +84,7 @@ class ConanLib(ConanFile):
     requires = "hello/0.1@lasote/stable"
 
     def imports(self):
-        self.copy("file*.txt", dst="%s")
+        copy(self, "file*.txt", self.source_folder, os.path.join(self.package_folder, "%s"))
 ''' % dst_global_folder
 
         self.client.save({"conanfile.py": conanfile2}, clean_first=True)
@@ -94,6 +99,7 @@ class ConanLib(ConanFile):
     def test_imports_env_var(self):
         conanfile2 = '''
 from conan import ConanFile
+from conan.tools.files import copy
 import os
 
 class ConanLib(ConanFile):
@@ -194,13 +200,18 @@ class SymbolicImportsTest(unittest.TestCase):
     """
     def setUp(self):
         pkg = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
-                    self.copy("*.bin", "mybin")  # USE DIFFERENT FOLDERS
-                    self.copy("*.lib", "mylib")
-                    self.copy("*.a", "myotherlib")
+                    copy(self, "*.bin", self.build_folder,
+                         os.path.join(self.package_folder, "mybin"))  # USE DIFFERENT FOLDERS
+                    copy(self, "*.lib", self.build_folder,
+                         os.path.join(self.package_folder, "mylib"))
+                    copy(self, "*.a", self.build_folder,
+                         os.path.join(self.package_folder, "myotherlib"))
                 def package_info(self):
                     self.cpp_info.bindirs = ["mybin"]
                     self.cpp_info.libdirs = ["mylib", "myotherlib"]
@@ -212,7 +223,7 @@ class SymbolicImportsTest(unittest.TestCase):
                           "myfile.a": "bye moon"})
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.files import load
+            from conan.tools.files import load, copy
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
@@ -235,6 +246,7 @@ class SymbolicImportsTest(unittest.TestCase):
         self.client.run("create . --name=pkg --version=0.1")
         consumer = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def imports(self):
@@ -260,14 +272,17 @@ class SymbolicImportsComponentTest(unittest.TestCase):
     """
     def setUp(self):
         pkg = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
-                    self.copy("*A.bin", "binA")  # USE DIFFERENT FOLDERS
-                    self.copy("*B.bin", "binB")
-                    self.copy("*A.lib", "libA")
-                    self.copy("*B.lib", "libB")
+                    # USE DIFFERENT FOLDERS
+                    copy(self, "*A.bin", self.build_folder, os.path.join(self.package_folder, "binA"))
+                    copy(self, "*B.bin", self.build_folder, os.path.join(self.package_folder, "binB"))
+                    copy(self, "*A.lib", self.build_folder, os.path.join(self.package_folder, "libA"))
+                    copy(self, "*B.lib", self.build_folder, os.path.join(self.package_folder, "libB"))
                 def package_info(self):
                     self.cpp_info.components["A"].bindirs = ["binA"]
                     self.cpp_info.components["A"].libdirs = ["libA"]
@@ -282,7 +297,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
                           "myfileB.lib": "bye moon"})
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.files import load
+            from conan.tools.files import load, copy
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):

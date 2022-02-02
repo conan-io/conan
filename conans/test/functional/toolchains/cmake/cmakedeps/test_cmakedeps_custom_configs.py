@@ -17,8 +17,10 @@ from conans.util.files import save
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -33,7 +35,8 @@ class CustomConfigurationTest(unittest.TestCase):
                 config = str(self.settings.build_type)
                 if self.dependencies["hello"].options.shared:
                     config = "ReleaseShared"
-                self.copy("*.dll", src="bin", dst=config, keep_path=False)
+                copy(self, "*.dll", os.path.join(self.source_folder, "bin"),
+                                    os.path.join(self.source_folder, "config"), keep_path=False)
         """)
 
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
@@ -194,8 +197,10 @@ class CustomSettingsTest(unittest.TestCase):
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
+       import os
        from conan import ConanFile
        from conans.tools import save
+       from conan.tools.files import copy
 
        class Dep(ConanFile):
            settings = "build_type"
@@ -204,7 +209,7 @@ def test_changing_build_type():
                '# include <iostream>\n'
                'void hello(){{std::cout<<"BUILD_TYPE={}!!";}}'.format(self.settings.build_type))
            def package(self):
-               self.copy("*.h", dst="include")
+               copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
            """)
     client.save({"conanfile.py": dep_conanfile})
     client.run("create . --name=dep --version=0.1 -s build_type=Release")

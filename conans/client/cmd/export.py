@@ -48,8 +48,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     mkdir(export_folder)
     mkdir(export_src_folder)
     origin_folder = os.path.dirname(conanfile_path)
-    export_recipe(conanfile, origin_folder, export_folder)
-    export_source(conanfile, origin_folder, export_src_folder)
+    setattr(conanfile, "conanfile_folder", origin_folder)
+    export_recipe(conanfile, export_folder)
+    export_source(conanfile, export_src_folder)
+    delattr(conanfile, "conanfile_folder")
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Calculate the "auto" values and replace in conanfile.py
@@ -235,7 +237,7 @@ def _export_scm(scoped_output, scm_data, origin_folder, scm_sources_folder):
     merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
 
 
-def export_source(conanfile, origin_folder, destination_source_folder):
+def export_source(conanfile, destination_source_folder):
     if callable(conanfile.exports_sources):
         raise ConanException("conanfile 'exports_sources' shouldn't be a method, "
                              "use 'export_sources()' instead")
@@ -246,17 +248,17 @@ def export_source(conanfile, origin_folder, destination_source_folder):
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
     copied = []
     for pattern in included_sources:
-        _tmp = copy(conanfile, pattern, src=origin_folder, dst=destination_source_folder,
-                    excludes=excluded_sources)
+        _tmp = copy(conanfile, pattern, src=conanfile.conanfile_folder,
+                    dst=destination_source_folder, excludes=excluded_sources)
         copied.extend(_tmp)
 
     output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     report_copied_files(copied, package_output)
-    _run_method(conanfile, "export_sources", origin_folder, destination_source_folder)
+    _run_method(conanfile, "export_sources", destination_source_folder)
 
 
-def export_recipe(conanfile, origin_folder, destination_folder):
+def export_recipe(conanfile, destination_folder):
     if callable(conanfile.exports):
         raise ConanException("conanfile 'exports' shouldn't be a method, use 'export()' instead")
     if isinstance(conanfile.exports, str):
@@ -265,7 +267,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     scoped_output = conanfile.output
     package_output = ScopedOutput("%s exports" % scoped_output.scope, scoped_output)
 
-    if os.path.exists(os.path.join(origin_folder, DATA_YML)):
+    if os.path.exists(os.path.join(conanfile.conanfile_folder, DATA_YML)):
         package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
         tmp = [DATA_YML]
         if conanfile.exports:
@@ -276,15 +278,15 @@ def export_recipe(conanfile, origin_folder, destination_folder):
 
     copied = []
     for pattern in included_exports:
-        tmp = copy(conanfile, pattern, src=origin_folder, dst=destination_folder,
+        tmp = copy(conanfile, pattern, conanfile.conanfile_folder, destination_folder,
                    excludes=excluded_exports)
         copied.extend(tmp)
     report_copied_files(copied, package_output)
 
-    _run_method(conanfile, "export", origin_folder, destination_folder)
+    _run_method(conanfile, "export", destination_folder)
 
 
-def _run_method(conanfile, method, origin_folder, destination_folder):
+def _run_method(conanfile, method, destination_folder):
     export_method = getattr(conanfile, method, None)
     if export_method:
         if not callable(export_method):
@@ -298,13 +300,10 @@ def _run_method(conanfile, method, origin_folder, destination_folder):
             # TODO: Poor man attribute control access. Convert to nice decorator
             conanfile.default_options = None
             conanfile.options = None
-            with chdir(origin_folder):
+            with chdir(conanfile.conanfile_folder):
                 with conanfile_exception_formatter(conanfile, method):
                     export_method()
         finally:
             conanfile.default_options = default_options
             conanfile.options = options
             delattr(conanfile, folder_name)
-        export_method_output = ScopedOutput("%s %s() method" % (conanfile.output.scope, method),
-                                            conanfile.output)
-        copier.report(export_method_output)

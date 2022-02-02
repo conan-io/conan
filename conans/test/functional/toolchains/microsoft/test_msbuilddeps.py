@@ -722,8 +722,10 @@ def check_build_vs_project_with_a(vs_version):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=updep.pkg.team --version=0.1")
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             exports = '*'
@@ -736,8 +738,9 @@ def check_build_vs_project_with_a(vs_version):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"),
+                     keep_path=False)
 
             def package_info(self):
                 self.cpp_info.libs = ["hello.a"]
@@ -867,8 +870,10 @@ def test_private_transitive():
 def test_build_requires():
     # https://github.com/conan-io/conan/issues/9545
     client = TestClient()
-    package = "self.copy('*', src=str(self.settings.arch), dst='bin')"
-    dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)
+    package = "copy(self, '*', os.path.join(self.build_folder, str(self.settings.arch))," \
+              " os.path.join(self.package_folder, 'bin'))"
+    dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)\
+        .with_import("import os").with_import("from conan.tools.files import copy")
     consumer = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.microsoft import MSBuild

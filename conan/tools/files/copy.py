@@ -12,6 +12,9 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     file_copier = _FileCopier([src], dst)
     copied = file_copier(pattern, keep_path=keep_path, excludes=excludes,
                          ignore_case=ignore_case, copy_symlink_folders=copy_symlink_folders)
+    # FIXME: Not always passed conanfile
+    if conanfile:
+        report_copied_files(copied, conanfile.output)
     return copied
 
 

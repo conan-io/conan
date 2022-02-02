@@ -12,6 +12,7 @@ def test_build_modules_alias_target(use_components):
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "hello"
@@ -20,7 +21,8 @@ def test_build_modules_alias_target(use_components):
             exports_sources = ["target-alias.cmake"]
 
             def package(self):
-                self.copy("target-alias.cmake", dst="share/cmake")
+                copy(self, "target-alias.cmake", self.source_folder,
+                     os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 module = os.path.join("share", "cmake", "target-alias.cmake")
@@ -86,6 +88,7 @@ def test_build_modules_components_selection_is_not_possible():
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "openssl"
@@ -94,7 +97,7 @@ def test_build_modules_components_selection_is_not_possible():
             exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.cmake", dst="share/cmake")
+                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 ssl_module = os.path.join("share", "cmake", "ssl.cmake")
@@ -177,6 +180,7 @@ def test_build_modules_components_selection_is_not_possible2():
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "openssl"
@@ -185,7 +189,8 @@ def test_build_modules_components_selection_is_not_possible2():
             exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.cmake", dst="share/cmake")
+                copy(self, "*.cmake", self.source_folder,
+                     os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 ssl_module = os.path.join("share", "cmake", "ssl.cmake")

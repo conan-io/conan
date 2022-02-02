@@ -174,7 +174,8 @@ def test_local_source_change_base():
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     client = TestClient()
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                     .with_import("from conan.tools.files import copy"))
     conan_file += """
     no_copy_source = True
     def layout(self):
@@ -189,8 +190,9 @@ def test_export_pkg():
         self.output.warning("Source folder: {}".format(self.source_folder))
         self.output.warning("Build folder: {}".format(self.build_folder))
         self.output.warning("Package folder: {}".format(self.package_folder))
-        self.copy("*.h")
-        self.copy("*.lib")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.h", self.build_folder, self.package_folder)
+        copy(self, "*.lib", self.build_folder, self.package_folder)
     """
 
     client.save({"conanfile.py": conan_file})
@@ -219,7 +221,8 @@ def test_export_pkg():
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     client = TestClient()
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                     .with_import("from conan.tools.files import copy"))
     conan_file += """
     no_copy_source = True
     def layout(self):
@@ -235,8 +238,9 @@ def test_export_pkg_local():
         self.output.warning("Source folder: {}".format(self.source_folder))
         self.output.warning("Build folder: {}".format(self.build_folder))
         self.output.warning("Package folder: {}".format(self.package_folder))
-        self.copy("*.h")
-        self.copy("*.lib")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.h", self.build_folder, self.package_folder)
+        copy(self, "*.lib", self.build_folder, self.package_folder)
     """
 
     client.save({"conanfile.py": conan_file})
@@ -276,15 +280,17 @@ def test_imports():
     """The 'conan imports' follows the layout"""
     client = TestClient()
     # Hello to be reused
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file = str(GenConanfile().with_import("from conans import tools")
+                     .with_import("from conan.tools.files import copy"))
     conan_file += """
     no_copy_source = True
     def build(self):
         tools.save("library.dll", "bar")
         tools.save("generated.h", "bar")
     def package(self):
-        self.copy("*.h")
-        self.copy("*.dll")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.h", self.build_folder, self.package_folder)
+        copy(self, "*.dll", self.build_folder, self.package_folder)
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=hello --version=1.0")

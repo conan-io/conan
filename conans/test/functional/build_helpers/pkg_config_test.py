@@ -31,6 +31,7 @@ int main() {
 libb_conanfile = """
 import os
 from conan import ConanFile, tools
+from conan.tools.files import copy
 
 class LibBConan(ConanFile):
     name = "libB"
@@ -43,8 +44,8 @@ class LibBConan(ConanFile):
         self.run("ar rcs libB.a out.o")
 
     def package(self):
-        self.copy("*.h", dst="include")
-        self.copy("*.a", dst="lib", keep_path=False)
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+        copy(self, "*.a", self.source_folder, os.path.join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
         pc_file = '''
