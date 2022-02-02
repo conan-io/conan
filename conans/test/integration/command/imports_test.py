@@ -74,9 +74,7 @@ class ImportsTest(unittest.TestCase):
         """
         dst_global_folder = temp_folder().replace("\\", "/")
         conanfile2 = '''
-import os
 from conan import ConanFile
-from conan.tools.files import copy
 
 class ConanLib(ConanFile):
     name = "say"
@@ -84,7 +82,7 @@ class ConanLib(ConanFile):
     requires = "hello/0.1@lasote/stable"
 
     def imports(self):
-        copy(self, "file*.txt", self.source_folder, os.path.join(self.package_folder, "%s"))
+        self.copy("file*.txt", dst="%s")
 ''' % dst_global_folder
 
         self.client.save({"conanfile.py": conanfile2}, clean_first=True)
@@ -99,7 +97,6 @@ class ConanLib(ConanFile):
     def test_imports_env_var(self):
         conanfile2 = '''
 from conan import ConanFile
-from conan.tools.files import copy
 import os
 
 class ConanLib(ConanFile):
@@ -223,7 +220,7 @@ class SymbolicImportsTest(unittest.TestCase):
                           "myfile.a": "bye moon"})
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.files import load, copy
+            from conan.tools.files import load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
@@ -246,7 +243,6 @@ class SymbolicImportsTest(unittest.TestCase):
         self.client.run("create . --name=pkg --version=0.1")
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.files import copy
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def imports(self):
@@ -297,7 +293,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
                           "myfileB.lib": "bye moon"})
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.files import load, copy
+            from conan.tools.files import load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
