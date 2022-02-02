@@ -39,8 +39,7 @@ def test_exports_source_with_src_subfolder(no_copy_source):
     client.save({"conanfile.py": conan_file,
                  "my_src/main.cpp": app,
                  "my_src/CMakeLists.txt": cmake})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out
@@ -67,8 +66,7 @@ def test_exports():
     client = TestClient()
     client.save({"conanfile.py": conan_file,
                  "my_tools.py": "FOO=1"})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert "FOO: 1" in client.out
 
     client.run("create . ")
@@ -97,8 +95,7 @@ def test_exports_source_without_subfolder():
     client.save({"conanfile.py": conan_file,
                  "my_src/main.cpp": app,
                  "CMakeLists.txt": cmake})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out
@@ -133,8 +130,7 @@ def test_scm_with_source_layout():
     client.run_command('git remote add origin "%s"' % remote_path.replace("\\", "/"))
     client.run_command('git push origin master')
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "build_Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out

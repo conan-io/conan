@@ -26,13 +26,13 @@ def test_local_static_generators_folder():
         self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
+    client.run("install . -of=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
     assert not os.path.exists(cmake_toolchain_generator_path)
 
-    build_folder = os.path.join(client.current_folder, "build-Release")
+    build_folder = os.path.join(client.current_folder, "my_install", "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
     assert os.path.exists(cmake_toolchain_generator_path)
@@ -55,13 +55,13 @@ def test_local_dynamic_generators_folder():
         self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
+    client.run("install . -of=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
     assert not os.path.exists(cmake_toolchain_generator_path)
 
-    build_folder = os.path.join(client.current_folder, "build-Release")
+    build_folder = os.path.join(client.current_folder, "my_install", "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
     assert os.path.exists(cmake_toolchain_generator_path)
@@ -80,7 +80,7 @@ def test_no_layout_generators_folder():
         tc.generate()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
+    client.run("install . -of=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
@@ -107,10 +107,8 @@ def test_local_build():
         tools.save("build_file.dll", "bar")
 """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
-    # FIXME: This should change to "build ." when "conan build" computes the graph
-    client.run("build . -if=my_install")
-    dll = os.path.join(client.current_folder, "my_build", "build_file.dll")
+    client.run("build . -bf=my_install")
+    dll = os.path.join(client.current_folder, "my_install", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
 
@@ -127,8 +125,8 @@ def test_local_build_change_base():
         tools.save("build_file.dll", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=common --output-folder=common")
-    client.run("build . -if=common --build-folder=common")
+    client.run("install . --output-folder=common")
+    client.run("build . --build-folder=common")
     dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
@@ -146,7 +144,7 @@ def test_local_source():
         tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
+    client.run("install . -of=my_install")
     # FIXME: This should change to "source ." when "conan source" computes the graph
     client.run("source .")
     header = os.path.join(client.current_folder, "my_source", "downloaded.h")
@@ -166,7 +164,7 @@ def test_local_source_change_base():
         tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=common")
+    client.run("install . -of=common")
     client.run("source . -sf=common")
     header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
     assert os.path.exists(header)

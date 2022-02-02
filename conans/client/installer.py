@@ -155,8 +155,6 @@ class _PackageBuilder(object):
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
         # While installing, the infos goes to build folder
-        conanfile.folders.set_base_install(conanfile.folders.base_build)
-
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
@@ -208,7 +206,6 @@ class _PackageBuilder(object):
                     # In local cache, generators folder always in build_folder
                     conanfile.folders.set_base_generators(base_build)
                     # In local cache, install folder always is build_folder
-                    conanfile.folders.set_base_install(base_build)
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
@@ -385,7 +382,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_source(None)
             conanfile.folders.set_base_build(None)
-            conanfile.folders.set_base_install(None)
             self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -404,7 +400,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(output_folder or base_path)
             conanfile.folders.set_base_source(source_folder or base_path)
             conanfile.folders.set_base_build(output_folder or base_path)
-            conanfile.folders.set_base_install(output_folder or base_path)
             conanfile.folders.set_base_imports(output_folder or base_path)
             conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode

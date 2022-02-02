@@ -58,7 +58,8 @@ def test_transitive_multi(client):
 
     with client.chdir("build"):
         for bt in ("Debug", "Release"):
-            client.run("install .. --user=user --channel=channel -s build_type={}".format(bt))
+            # NOTE: -of=. otherwise the output files are located in the parent directory
+            client.run("install .. --user=user --channel=channel -s build_type={} -of=.".format(bt))
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
@@ -338,7 +339,7 @@ def test_private_transitive():
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
-    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=.")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
     assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
