@@ -2,11 +2,10 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_ERROR)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
-from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
 
 
@@ -97,7 +96,6 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_node(self, node, build_mode):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
-        assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
 
         if True:  # legacy removal, to avoid huge diff
@@ -229,19 +227,12 @@ class GraphBinariesAnalyzer(object):
                 conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode):
-
         build_mode = BuildMode(build_mode)
         assert isinstance(build_mode, BuildMode)
 
         for node in deps_graph.ordered_iterate():
             self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            if node.package_id == PACKAGE_ID_UNKNOWN:
-                assert node.binary is None, "Node.binary should be None"
-                node.binary = BINARY_UNKNOWN
-                # annotate pattern, so unused patterns in --build are not displayed as errors
-                build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode)
 
@@ -263,22 +254,3 @@ class GraphBinariesAnalyzer(object):
         for node in graph.nodes:
             if node not in required_nodes:
                 node.binary = BINARY_SKIP
-
-    def reevaluate_node(self, node, build_mode):
-        """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to
-        package_revision_mode
-        """
-        assert node.binary == BINARY_UNKNOWN
-        output = node.conanfile.output
-        node._package_id = None  # Invalidate it, so it can be re-computed
-        output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        self._evaluate_package_id(node)
-        output.info("Updated ID: %s" % node.package_id)
-        if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-            return
-        assert node.package_id != PACKAGE_ID_UNKNOWN
-        node.binary = None  # Necessary to invalidate so it is properly evaluated
-        self._evaluate_node(node, build_mode)
-        output.info("Binary for updated ID from: %s" % node.binary)
-        if node.binary == BINARY_BUILD:
-            output.info("Binary for the updated ID has to be built")
