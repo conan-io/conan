@@ -67,12 +67,13 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             exports = "*"
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*")
+                copy(self, "*", self.source_folder, self.package_folder)
             def package_info(self):
                 self.cpp_info.builddirs.append("cmake")
         """)
@@ -215,13 +216,14 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             exports = "*"
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*")
+                copy(self, "*", self.source_folder, self.package_folder)
             def package_info(self):
                 self.cpp_info.builddirs.append("cmake")
     """)
@@ -269,14 +271,16 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
     client = TestClient()
 
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*"
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*.h", dst="include")
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
     """)
     client.save({"conanfile.py": conanfile, "hello.h": ""})
     client.run("create . --name=hello --version=0.1 {}".format(settings))
@@ -322,14 +326,16 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     client = TurboTestClient()
 
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*"
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*", dst="lib")
+                copy(self, "*", self.source_folder, dst=os.path.join(self.package_folder, "lib"))
     """)
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
     pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
@@ -386,6 +392,8 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     client = TurboTestClient()
 
     conanfile = textwrap.dedent("""
+        import os
+        from conan.tools.files import copy
         from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -393,7 +401,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*", dst="bin")
+                copy(self, "*", self.source_folder, os.path.join(self.package_folder, "bin"))
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
     client.run("create . --name=hello_host --version=0.1 {}".format(settings))
