@@ -10,61 +10,6 @@ from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
-from conans.test.utils.test_files import temp_folder
-
-
-def test_bazeldeps_dependency_buildfiles():
-    conanfile = ConanFile(None)
-
-    cpp_info = CppInfo(set_defaults=True)
-    cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
-    cpp_info.system_libs = ["system_lib1"]
-    cpp_info.libs = ["lib1"]
-
-    conanfile_dep = ConanFile(None)
-    conanfile_dep.cpp_info = cpp_info
-    conanfile_dep._conan_node = Mock()
-    conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
-    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
-
-    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
-        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
-
-        bazeldeps = BazelDeps(conanfile)
-
-        for dependency in bazeldeps._conanfile.dependencies.host.values():
-            dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
-            assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
-            assert 'defines = ["DUMMY_DEFINE=\'string/value\'"],' in dependency_content
-            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert 'deps = [\n    \n    ":lib1_precompiled",' in dependency_content
-
-
-def test_bazeldeps_interface_buildfiles():
-    conanfile = ConanFile(None)
-
-    cpp_info = CppInfo(set_defaults=True)
-
-    conanfile_dep = ConanFile(None)
-    conanfile_dep.cpp_info = cpp_info
-    conanfile_dep._conan_node = Mock()
-    conanfile_dep.folders.set_base_package(temp_folder())
-    conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/2.0")
-
-    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
-        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
-
-        bazeldeps = BazelDeps(conanfile)
-
-        dependency = next(iter(bazeldeps._conanfile.dependencies.host.values()))
-        dependency_content = re.sub(r"\s", "",
-                                    bazeldeps._get_dependency_buildfile_content(dependency))
-        expected = ('load("@rules_cc//cc:defs.bzl","cc_import","cc_library")'
-                    'cc_library(name="OriginalDepName",hdrs=glob(["include/**"])'
-                    ',includes=["include"],visibility=["//visibility:public"],)')
-        assert dependency_content == expected
 
 
 def test_bazeldeps_main_buildfile():
