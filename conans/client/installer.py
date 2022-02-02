@@ -9,15 +9,14 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN
-from conans.client.graph.install_graph import InstallGraph, raise_missing
+    BINARY_UPDATE
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
-from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
@@ -261,7 +260,6 @@ class BinaryInstaller(object):
         self._cache = app.cache
         self._out = ConanOutput()
         self._remote_manager = app.remote_manager
-        self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
         # Load custom generators from the cache, generators are part of the binary
         # build and install. Generators loaded here from the cache will have precedence
@@ -322,30 +320,9 @@ class BinaryInstaller(object):
             self._handle_node_editable(package)
             return
 
-        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN, BINARY_DOWNLOAD,
-                                  BINARY_UPDATE)
+        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_DOWNLOAD, BINARY_UPDATE)
         assert install_reference.ref.revision is not None, "Installer should receive RREV always"
         not_processed = True
-        if package.binary == BINARY_UNKNOWN:
-            assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
-            node = package.nodes[0]
-            self._binaries_analyzer.reevaluate_node(node, build_mode)
-            package.package_id = node.pref.package_id  # Just in case it was recomputed
-            package.prev = node.pref.revision
-            package.binary = node.binary
-            not_processed = install_reference.update_unknown(package)
-            if not_processed:
-                # The new computed package_id has not been processed yet
-                if node.binary == BINARY_MISSING:
-                    raise_missing([package], self._out)
-                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    self._download_pkg(package)
-                elif node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node)
-                    # Need a temporary package revision for package_revision_mode
-                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
-                    node.prev = "editable"
-
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
@@ -422,7 +399,6 @@ class BinaryInstaller(object):
         node = package.nodes[0]
         pref = node.pref
         assert pref.package_id, "Package-ID without value"
-        assert pref.package_id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         assert pkg_layout, "The pkg_layout should be declared here"
         assert node.binary == BINARY_BUILD
 
