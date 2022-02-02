@@ -408,7 +408,7 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
+        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
@@ -424,7 +424,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "59a709644ae98b2ab3f16264e16351d155122697"
+        consumer_id = "c7f29383c7dc6cabeb35d2a59a14b9c400f827c8"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
@@ -441,7 +441,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                          ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "f701bd4dcfc2b6225a3e95cfbcfb3848ca7896f5"
+        consumer_id = "ef31d7d514a68726e35e7bdce2a9b7ae1560e9c9"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
