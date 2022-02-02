@@ -6,7 +6,7 @@ from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import ConanName, InvalidNameException, \
-    check_valid_ref, get_reference_fields
+    check_valid_ref
 
 
 class RefTest(unittest.TestCase):
@@ -181,71 +181,3 @@ class CheckValidRefTest(unittest.TestCase):
         self.assertFalse(check_valid_ref("package/1.0@user"))
         self.assertFalse(check_valid_ref("package/1.0@/channel"))
         self.assertFalse(check_valid_ref("lib@#rev"))
-
-
-class GetReferenceFieldsTest(unittest.TestCase):
-
-    def test_fields_complete(self):
-
-        # No matter if we say we allow partial references for "user/channel", if we
-        # provide this patterns everything is parsed correctly
-        for user_channel_input in [True, False]:
-            tmp = get_reference_fields("lib/1.0@user", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", "1.0", "user", None, None))
-
-            tmp = get_reference_fields("lib/1.0@/channel", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", "1.0", None, "channel", None))
-
-            # FIXME: 2.0 in this case lib is considered the version, weird.
-            tmp = get_reference_fields("lib@#rev", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, "lib", None, None, "rev"))
-
-            # FIXME: 2.0 in this case lib is considered the version, weird.
-            tmp = get_reference_fields("lib@/channel#rev", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, "lib", None, "channel", "rev"))
-
-            tmp = get_reference_fields("/1.0@user/#rev", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, "1.0", "user", None, "rev"))
-
-            tmp = get_reference_fields("/@/#", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, None, None, None, None))
-
-            tmp = get_reference_fields("lib/1.0@/", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", "1.0", None, None, None))
-
-            tmp = get_reference_fields("lib/1.0@", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", "1.0", None, None, None))
-
-            tmp = get_reference_fields("lib/@", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", None, None, None, None))
-
-            tmp = get_reference_fields("/@", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, None, None, None, None))
-
-            tmp = get_reference_fields("@", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, None, None, None, None))
-
-            tmp = get_reference_fields("lib/1.0@user/channel#rev",
-                                       user_channel_input=user_channel_input)
-            self.assertEqual(tmp, ("lib", "1.0", "user", "channel", "rev"))
-
-            # FIXME: 2.0 in this case lib is considered the version, weird.
-            tmp = get_reference_fields("lib@user/channel", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, "lib", "user", "channel", None))
-
-            tmp = get_reference_fields("/@/#", user_channel_input=user_channel_input)
-            self.assertEqual(tmp, (None, None, None, None, None))
-
-    def test_only_user_channel(self):
-        tmp = get_reference_fields("user/channel", user_channel_input=True)
-        self.assertEqual(tmp, (None, None, "user", "channel", None))
-
-        tmp = get_reference_fields("user", user_channel_input=True)
-        self.assertEqual(tmp, (None, None, "user", None, None))
-
-        tmp = get_reference_fields("/channel", user_channel_input=True)
-        self.assertEqual(tmp, (None, None, None, "channel", None))
-
-        ref_pattern = RecipeReference.loads("package/*@user/channel")
-        self.assertFalse(check_valid_ref(ref_pattern, strict_mode=False))
-

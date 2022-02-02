@@ -2,13 +2,12 @@ import os
 import textwrap
 
 import pytest
-from mock import Mock
 
-from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
 from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
 from conans.test.utils.test_files import temp_folder
 from conans.tools import load
 
@@ -80,7 +79,6 @@ def test_msbuild_standard():
     test_folder = temp_folder()
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -111,7 +109,6 @@ def test_resource_compile():
                          "arch": ["x86_64"]})
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -153,7 +150,6 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
                          "arch": ["x86_64"]})
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
@@ -186,3 +182,23 @@ def test_is_msvc(compiler, expected):
     conanfile.settings = settings
     conanfile.settings.compiler = compiler
     assert is_msvc(conanfile) == expected
+
+
+@pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
+    ("Visual Studio", True, "MT", "Release", True),
+    ("msvc", True, "static", "Release", True),
+    ("Visual Studio", False, "MT", "Release", True),
+    ("Visual Studio", True, "MD", "Release", False),
+    ("msvc", True, "static", "Debug", True),
+    ("clang", True, None, "Debug", False),
+])
+def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected):
+    options = MockOptions({"shared": shared})
+    settings = MockSettings({"build_type": build_type,
+                             "arch": "x86_64",
+                             "compiler": compiler,
+                             "compiler.runtime": runtime,
+                             "compiler.version": "17",
+                             "cppstd": "17"})
+    conanfile = MockConanfile(settings, options)
+    assert is_msvc_static_runtime(conanfile) == expected

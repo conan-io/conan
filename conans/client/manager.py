@@ -11,7 +11,7 @@ from conans.model.conan_file import ConanFile
 # FIXME: this is duplicated in the new API until all commands that use this function are migrated
 #  this should be replaced by a call to APIV2.graph.load_graph + APIV2.install.install_binaries
 
-def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
+def deps_install(app, ref_or_path, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,
                  no_imports=False, create_reference=None,
                  is_build_require=False, require_overrides=None,
@@ -19,9 +19,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: RecipeReference or path to user space conanfile
-    @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
-    @param update: Check for updated in the upstream remotes (and update)
     @param generators: List of generators from command line.
     @param no_imports: Install specified packages but avoid running imports
     """
@@ -61,25 +59,22 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     if hasattr(conanfile, "layout") and not test:
         conanfile.folders.set_base_source(source_folder or conanfile_path)
-        conanfile.folders.set_base_install(output_folder or conanfile_path)
         conanfile.folders.set_base_imports(output_folder or conanfile_path)
         conanfile.folders.set_base_generators(output_folder or conanfile_path)
     else:
-        conanfile.folders.set_base_install(install_folder)
-        conanfile.folders.set_base_imports(install_folder)
+        conanfile.folders.set_base_imports(base_folder)
         conanfile.folders.set_base_generators(base_folder)
 
-    if install_folder:
-        # Write generators
-        tmp = list(conanfile.generators)  # Add the command line specified generators
-        generators = set(generators) if generators else set()
-        tmp.extend([g for g in generators if g not in tmp])
-        conanfile.generators = tmp
-        write_generators(conanfile)
+    # Write generators
+    tmp = list(conanfile.generators)  # Add the command line specified generators
+    generators = set(generators) if generators else set()
+    tmp.extend([g for g in generators if g not in tmp])
+    conanfile.generators = tmp
+    write_generators(conanfile)
 
-        if not no_imports:
-            run_imports(conanfile)
-        if type(conanfile).system_requirements != ConanFile.system_requirements:
-            call_system_requirements(conanfile)
+    if not no_imports:
+        run_imports(conanfile)
+    if type(conanfile).system_requirements != ConanFile.system_requirements:
+        call_system_requirements(conanfile)
 
     return deps_graph

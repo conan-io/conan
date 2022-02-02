@@ -1,23 +1,26 @@
 import os
-import re
+import sys
 
-from conans.model.package_ref import PkgReference
+import pytest
+
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
-def test_cmake_lib_template():
+@pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+@pytest.mark.tool_pkg_config
+def test_meson_lib_template():
+    # Identical to def test_cmake_lib_template(), but for Meson
     client = TestClient(path_with_spaces=False)
-    client.run("new cmake_lib -d name=hello -d version=0.1")
-    # Local flow works
-    client.run("build .")
+    client.run("new meson_lib -d name=hello -d version=0.1")
 
-    client.run("export-pkg .")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+    # Local flow works
+    client.run("install .")
+    client.run("build .")
+    client.run("export-pkg . --name=hello --version=0.1")
     ref = RecipeReference.loads("hello/0.1")
-    ref = client.cache.get_latest_recipe_reference(ref)
-    pref = PkgReference(ref, package_id)
-    pref = client.cache.get_latest_package_reference(pref)
+    pref = client.get_latest_package_reference(ref)
     package_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
@@ -33,13 +36,17 @@ def test_cmake_lib_template():
     assert "hello/0.1: Hello World Release!" in client.out
 
 
-def test_cmake_exe_template():
+@pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+def test_meson_exe_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new cmake_exe -d name=greet -d version=0.1")
+    client.run("new meson_exe -d name=greet -d version=0.1")
     # Local flow works
+    client.run("install .")
     client.run("build .")
 
     # Create works
+    print(client.current_folder)
     client.run("create .")
     assert "greet/0.1: Hello World Release!" in client.out
 

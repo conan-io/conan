@@ -2,7 +2,7 @@ conanfile_sources_v2 = '''from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
-class {{class_name or name}}Recipe(ConanFile):
+class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
 
@@ -61,19 +61,20 @@ install(TARGETS {{name}} DESTINATION "."
 
 source_h = """#pragma once
 
-#ifdef WIN32
-  #define {{name}}_EXPORT __declspec(dllexport)
+{% set define_name = name.replace("-", "_").replace("+", "_").replace(".", "_").upper() %}
+#ifdef _WIN32
+  #define {{define_name}}_EXPORT __declspec(dllexport)
 #else
-  #define {{name}}_EXPORT
+  #define {{define_name}}_EXPORT
 #endif
 
-{{name}}_EXPORT void {{name}}();
+{{define_name}}_EXPORT void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
 """
 
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
 
-void {{name}}(){
+void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
     #ifdef NDEBUG
     std::cout << "{{name}}/{{version}}: Hello World Release!\n";
     #else
@@ -168,7 +169,7 @@ from conan.tools.layout import cmake_layout
 from conan.tools.build import cross_building
 
 
-class {{package_name}}TestConan(ConanFile):
+class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeDeps", "CMakeToolchain"
 
@@ -202,7 +203,7 @@ target_link_libraries(example {{name}}::{{name}})
 test_main = """#include "{{name}}.h"
 
 int main() {
-    {{name}}();
+    {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
 }
 """
 

@@ -56,7 +56,6 @@ class ExportAPI:
         conanfile.folders.set_base_build(conanfile_folder)
         conanfile.folders.set_base_source(conanfile_folder)
         conanfile.folders.set_base_package(dest_package_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
         conanfile.folders.set_base_generators(conanfile_folder)
 
         with pkg_layout.set_dirty_context_manager():
