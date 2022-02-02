@@ -279,3 +279,28 @@ def test_conditional_compatible_range(requires):
     assert "dep/0.2#" in client.out
     assert "dep/0.1" not in client.out
     assert "dep/0.3" not in client.out
+
+
+def test_locking_require_override():
+    """
+    conanfile.txt locking it dependencies (with version ranges) and using a ``--require-override``
+    """
+    client = TestClient()
+    client.save({"pkg/conanfile.py": GenConanfile(),
+                 "consumer/conanfile.txt": f"[requires]\npkg/0.1"})
+    client.run("create pkg --name=pkg --version=0.1")
+    client.run("create pkg --name=pkg --version=0.2")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock "
+               "--require-override=pkg/0.2")
+    assert "pkg/0.2" in client.out
+    assert "pkg/0.1" not in client.out
+
+    # FIXME: This fails, as the lockfile contains pkg/0.2, and conanfile pkg/0.1 cannot be
+    #  found in lockfile
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock", assert_error=True)
+    assert "ERROR: Requirement 'pkg/0.1' not in lockfile" in client.out
+
+    # We need to explicitely define the override in order to avoid error
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock --require-override=pkg/0.2")
+    assert "pkg/0.2" in client.out
+    assert "pkg/0.1" not in client.out
