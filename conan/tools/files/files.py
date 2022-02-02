@@ -1,9 +1,10 @@
-import configparser
 import errno
 import os
 import platform
 import subprocess
 from contextlib import contextmanager
+
+from six.moves import configparser
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
