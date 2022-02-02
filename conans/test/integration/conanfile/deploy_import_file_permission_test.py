@@ -8,7 +8,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated, deploy removed")
+@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
 class DeployImportFilePermissionTest(unittest.TestCase):
     # FIXME: CONAN_READ_ONLY to be revisited and reconsidered, depends on "install-folder" idea
 
@@ -25,10 +25,11 @@ class DeployImportFilePermissionTest(unittest.TestCase):
             client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         with client.chdir('recipe'):
             conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     exports_sources = "*.h"
     def package(self):
-        self.copy("*.h")
+        copy(self, "*.h", self.source_folder, self.package_folder)
 
     def deploy(self):
         self.copy("*.h")

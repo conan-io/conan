@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.files.copy import report_copied_files
+from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ScopedOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest

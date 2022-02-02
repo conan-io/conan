@@ -3,7 +3,7 @@ import os
 import stat
 
 from conan.tools.files import copy
-from conan.tools.files.copy import report_copied_files
+from conan.tools.files.copy_pattern import report_copied_files, _FileCopier
 from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.util.env import no_op
@@ -96,6 +96,31 @@ def remove_imports(conanfile, copied_files):
                 os.remove(f)
             except OSError:
                 conanfile.output.warning("Unable to remove imported file from build: %s" % f)
+
+
+def run_deploy(conanfile, install_folder):
+    deploy_output = ScopedOutput("%s deploy()" % conanfile.display_name, conanfile.output)
+    file_importer = _FileImporter(conanfile, install_folder)
+    package_copied = set()
+
+    # This is necessary to capture FileCopier full destination paths
+    # Maybe could be improved in FileCopier
+    def file_copier(*args, **kwargs):
+        # FIXME: What to do with this?
+        file_copy = _FileCopier([conanfile.package_folder], install_folder)
+        copied = file_copy(*args, **kwargs)
+        _make_files_writable(copied)
+        package_copied.update(copied)
+
+    conanfile.copy_deps = file_importer
+    conanfile.copy = file_copier
+    with no_op():  # TODO: Remove this in a later refactor
+        with chdir(install_folder):
+            conanfile.deploy()
+
+    copied_files = file_importer.copied_files
+    copied_files.update(package_copied)
+    _report_save_manifest(copied_files, deploy_output, install_folder, "deploy_manifest.txt")
 
 
 class _FileImporter(object):

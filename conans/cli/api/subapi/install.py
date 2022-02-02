@@ -3,7 +3,7 @@ from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
-from conans.client.importer import run_imports
+from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
 
 
@@ -50,3 +50,11 @@ class InstallAPI:
             run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile)
+
+        if deploy:
+            # The conanfile loaded is a virtual one. The one w deploy is the first level one
+            neighbours = deps_graph.root.neighbors()
+            deploy_conanfile = neighbours[0].conanfile
+            deploy_conanfile.folders.set_base_imports(output_folder)
+            if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                run_deploy(deploy_conanfile, output_folder)

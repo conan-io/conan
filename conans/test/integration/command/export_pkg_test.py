@@ -149,7 +149,7 @@ class TestConan(ConanFile):
         conanfile = """
 import os
 from conan import ConanFile
-from conan.tools.files import save
+from conan.tools.files import save, copy
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
@@ -307,6 +307,7 @@ class TestConan(ConanFile):
         self.folders.build = "Release_x86"
     def package(self):
         copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
         """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.save({"Release_x86/lib/libmycoollib.a": ""})
@@ -434,13 +435,16 @@ class MyConan(ConanFile):
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
-        conanfile = """from conan import ConanFile
+        conanfile = """import os
+from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
 
     def package(self):
-        self.copy("*.h", src="src", dst="include")
+        copy(self, "*.h", os.path.join(self.source_folder, "src"),
+             os.path.join(self.package_folder, "include"))
 """
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
@@ -456,12 +460,15 @@ class TestConan(ConanFile):
 def test_build_policy_never():
     client = TestClient()
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             build_policy = "never"
 
             def package(self):
-                self.copy("*.h", src="src", dst="include")
+                copy(self, "*.h", os.path.join(self.source_folder, "src"),
+                     os.path.join(self.package_folder, "include"))
         """)
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})

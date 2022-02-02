@@ -205,7 +205,7 @@ def test_imports():
 
     def imports(self):
         self.output.warning("Imports folder: {}".format(self.imports_folder))
-        copy(self, "*.dll", self.source_folder, self.package_folder)
+        self.copy("*.dll")
 
     def build(self):
         assert self.build_folder != self.imports_folder

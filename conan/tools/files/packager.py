@@ -1,6 +1,5 @@
 import os
 
-from conan.tools.files import copy
 from conans.errors import ConanException
 
 
@@ -87,7 +86,8 @@ class AutoPackager(object):
                 raise ConanException(err_msg.format(dirs_var_name))
 
             dst_folder = os.path.join(self._conanfile.folders.base_package, destinations[0])
+            from conan.tools.files import copy
             for d in origin_paths:
                 src_folder = os.path.join(base_folder, d)
                 for pattern in patterns:
-                    copy(pattern, src_folder, dst_folder)
+                    copy(self._conanfile, pattern, src_folder, dst_folder)

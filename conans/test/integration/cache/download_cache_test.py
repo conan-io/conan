@@ -151,7 +151,6 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 8", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
-    @pytest.mark.xfail(reason="deploy() is not called anymore")
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""

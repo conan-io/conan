@@ -4,7 +4,7 @@ import shutil
 import yaml
 
 from conan.tools.files import copy
-from conan.tools.files.copy import report_copied_files
+from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ScopedOutput
 from conans.client.tools import chdir
 from conans.errors import ConanException, conanfile_exception_formatter
