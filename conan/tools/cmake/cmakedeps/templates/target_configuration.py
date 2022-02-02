@@ -62,7 +62,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
         set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "") # Will be filled later
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
-                                      "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
+                                      "{{ '${' }}{{ pkg_name }}_BIN_DIRS{{ config_suffix }}}" # package_bindirs
+                                      "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdirs
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
                                       {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
                                       {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
