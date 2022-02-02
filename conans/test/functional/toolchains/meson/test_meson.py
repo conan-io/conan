@@ -21,6 +21,7 @@ class MesonToolchainTest(TestMesonBase):
                 del self.options.fPIC
 
         def layout(self):
+            self.folders.generators = 'build/gen_folder'
             self.folders.build = "build"
 
         def generate(self):
@@ -71,7 +72,7 @@ class MesonToolchainTest(TestMesonBase):
 
         self.t.run("install . %s" % self._settings_str)
 
-        content = self.t.load("conan_meson_native.ini")
+        content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
 
         self.assertIn("[project options]", content)
         self.assertIn("STRING_DEFINITION = 'Text'", content)
