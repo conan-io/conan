@@ -244,39 +244,53 @@ def _get_tool(name, version):
     return cached
 
 
-@pytest.fixture(autouse=True)
-def add_tool(request):
+def pytest_configure(config):
+    # register an additional marker
+    config.addinivalue_line(
+        "markers", "tool(name, version): mark test to require a tool by name"
+    )
+
+
+def pytest_runtest_teardown(item):
+    if hasattr(item, "old_environ"):
+        os.environ.clear()
+        os.environ.update(item.old_environ)
+
+
+def pytest_runtest_setup(item):
     tools_paths = []
     tools_env_vars = dict()
-    for mark in request.node.iter_markers():
-        if mark.name.startswith("tool_"):
-            tool_name = mark.name[5:]
-            tool_version = mark.kwargs.get('version')
-            result = _get_tool(tool_name, tool_version)
-            if result is True:
-                version_msg = "Any" if tool_version is None else tool_version
-                pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
-                                                                                      version_msg))
-            if result is False:
-                version_msg = "Any" if tool_version is None else tool_version
-                pytest.skip("Required '{}' tool version '{}' is not available".format(tool_name,
-                                                                                      version_msg))
 
-            tool_path, tool_env = result
-            if tool_path:
-                tools_paths.append(tool_path)
-            if tool_env:
-                tools_env_vars.update(tool_env)
-            # Fix random failures CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
-            if tool_name == "visual_studio":
-                tools_env_vars['_MSPDBSRV_ENDPOINT_'] = str(uuid.uuid4())
+    tools_params = [mark.args for mark in item.iter_markers(name="tool")]
+    for tool_params in tools_params:
+        if len(tool_params) == 1:
+            tool_name = tool_params[0]
+            tool_version = None
+        elif len(tool_params) == 2:
+            tool_name, tool_version = tool_params
+        else:
+            raise Exception("Invalid arguments for mark.tool: {}".format(tool_params))
+
+        result = _get_tool(tool_name, tool_version)
+        if result is True:
+            version_msg = "Any" if tool_version is None else tool_version
+            pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
+                                                                                  version_msg))
+        if result is False:
+            version_msg = "Any" if tool_version is None else tool_version
+            pytest.skip("Required '{}' tool version '{}' is not available".format(tool_name,
+                                                                                  version_msg))
+
+        tool_path, tool_env = result
+        if tool_path:
+            tools_paths.append(tool_path)
+        if tool_env:
+            tools_env_vars.update(tool_env)
+        # Fix random failures CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
+        if tool_name == "visual_studio":
+            tools_env_vars['_MSPDBSRV_ENDPOINT_'] = str(uuid.uuid4())
 
     if tools_paths or tools_env_vars:
-        old_environ = dict(os.environ)
+        item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
-        yield
-        os.environ.clear()
-        os.environ.update(old_environ)
-    else:
-        yield

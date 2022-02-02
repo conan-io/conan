@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.slow
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.fixture(scope="module")
 def setup_client_with_greetings():
     """
@@ -236,6 +236,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     assert "bye: Debug!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_standard_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -292,6 +293,7 @@ def test_standard_names(setup_client_with_greetings):
             assert "bye: Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_custom_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -338,6 +340,7 @@ def test_custom_names(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
+@pytest.mark.tool("cmake")
 def test_different_namespace(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -382,6 +385,7 @@ def test_different_namespace(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
+@pytest.mark.tool("cmake")
 def test_no_components(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -420,7 +424,7 @@ def test_no_components(setup_client_with_greetings):
 
 
 @pytest.mark.slow
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_same_names():
     client = TestClient()
     conanfile_greetings = textwrap.dedent("""
@@ -506,7 +510,7 @@ def test_same_names():
     assert "hello: Release!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class TestComponentsCMakeGenerators:
 
     def test_component_not_found(self):
@@ -742,6 +746,7 @@ class TestComponentsCMakeGenerators:
         assert 'variant/1.0: Hello World Release!' in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("check_components_exist", [False, True, None])
 def test_targets_declared_in_build_modules(check_components_exist):
     """If a require is declaring the component targets in a build_module, CMakeDeps is
@@ -832,7 +837,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
                                             in client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmakedeps_targets_no_namespace():
     """
     This test is checking that when we add targets with no namespace for the root cpp_info

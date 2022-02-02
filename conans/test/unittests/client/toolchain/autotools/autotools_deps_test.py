@@ -100,7 +100,7 @@ def test_foo():
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
         assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
         folder = temp_folder()
-        consumer.folders.set_base_install(folder)
+        consumer.folders.set_base_generators(folder)
         deps.generate()
         extension = ".bat" if platform.system() == "Windows" else ".sh"
 

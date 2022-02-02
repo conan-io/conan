@@ -34,20 +34,20 @@ def editable_cmake(generator, build_folder=None):
         build_dep()
 
     def build_pkg(msg):
-        c.run("build . -if=install_release")
+        c.run("build . ")
         folder = os.path.join("build", "Release") if multi else "cmake-build-release"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
-        c.run("build . -if=install_debug -s build_type=Debug")
+        c.run("build . -s build_type=Debug")
         folder = os.path.join("build", "Debug") if multi else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
         assert "{}: Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install . -if=install_release")
-        c.run("install . -if=install_debug -s build_type=Debug")
+        c.run("install . ")
+        c.run("install . -s build_type=Debug")
         build_pkg("dep")
 
     # Do a source change in the editable!
@@ -68,11 +68,12 @@ def editable_cmake(generator, build_folder=None):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
-@pytest.mark.tool_mingw64
+@pytest.mark.tool("mingw64")
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
 
+@pytest.mark.tool("cmake")
 def test_editable_cmake_windows_folders():
     build_folder = temp_folder()
     editable_cmake(generator=None, build_folder=build_folder)
@@ -80,14 +81,14 @@ def test_editable_cmake_windows_folders():
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool_cmake(version="3.17")
+@pytest.mark.tool("cmake", "3.17")
 def test_editable_cmake_linux(generator):
     editable_cmake(generator)
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
 
@@ -136,20 +137,20 @@ def editable_cmake_exe(generator):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
-@pytest.mark.tool_mingw64
+@pytest.mark.tool("mingw64")
 def test_editable_cmake_windows_exe(generator):
     editable_cmake_exe(generator)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool_cmake(version="3.17")
+@pytest.mark.tool("cmake", "3.17")
 def test_editable_cmake_linux_exe(generator):
     editable_cmake_exe(generator)
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_editable_cmake_osx_exe(generator):
     editable_cmake_exe(generator)

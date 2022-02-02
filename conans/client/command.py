@@ -207,10 +207,6 @@ class Command(object):
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
 
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use this directory as the directory where to put the generator'
-                                 'files.')
-
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
 
@@ -234,7 +230,6 @@ class Command(object):
                                      source_folder=args.source_folder,
                                      package_folder=args.package_folder,
                                      build_folder=args.build_folder,
-                                     install_folder=args.install_folder,
                                      settings=args.settings_host, options=args.options_host,
                                      env=args.env_host, profile_names=args.profile_host,
                                      profile_build=profile_build,

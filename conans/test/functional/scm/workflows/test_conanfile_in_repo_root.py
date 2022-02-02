@@ -17,7 +17,7 @@ class ConanfileInRepoRoot(TestWorkflow):
     path_from_conanfile_to_root = "."
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 
@@ -78,7 +78,7 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
         self.assertIn("Repo origin deduced by 'auto':", t.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitConanfileInRepoRootTest(ConanfileInRepoRoot, unittest.TestCase):
 
     conanfile = ConanfileInRepoRoot.conanfile_base.format(extra_header="",

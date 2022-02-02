@@ -25,7 +25,7 @@ def test_shallow_none_string():
     assert "ERROR: SCM value for 'shallow' must be of type 'bool' (found 'str')" in str(client.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 @parameterized_class([{"shallow": True}, {"shallow": False},
                       {"shallow": None},  # No value written in the recipe
                       {"shallow": 'None'}])  # Explicit 'None' written in the recipe

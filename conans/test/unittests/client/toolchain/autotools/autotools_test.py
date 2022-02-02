@@ -21,7 +21,6 @@ def test_configure_arguments():
     conanfile = ConanFile()
     conanfile.run = runner
     conanfile.settings = MockSettings({})
-    conanfile.folders.set_base_install(tmp)
     conanfile.folders.set_base_source(tmp)
     conanfile.conf = Conf()
     conanfile.conf["tools.gnu:make_program"] = "my_make"

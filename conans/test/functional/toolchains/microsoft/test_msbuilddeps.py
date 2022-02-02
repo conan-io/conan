@@ -405,12 +405,12 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 
 
 @parameterized_class(vs_versions)
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_msbuild_generator(self):
         client = TestClient()
         client.save(pkg_cmake("hello0", "1.0"))
@@ -703,15 +703,15 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert "CAExcludePath" not in depb
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2017():
     check_build_vs_project_with_a("15")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
     check_build_vs_project_with_a("17")
@@ -790,15 +790,15 @@ def check_build_vs_project_with_a(vs_version):
     # assert "main: Release!" in client.out
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2017():
     check_build_vs_project_with_test_requires("15")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
     check_build_vs_project_with_test_requires("17")
@@ -855,11 +855,11 @@ def test_private_transitive():
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-    deps_props = client.load("conandeps.props")
+    deps_props = client.load("consumer/conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
 
-    pkg_data_props = client.load("conan_pkg_release_x64.props")
+    pkg_data_props = client.load("consumer/conan_pkg_release_x64.props")
     assert "conan_dep.props" not in pkg_data_props
 
 
@@ -1004,7 +1004,7 @@ def test_build_requires_transitives():
                               .with_build_requires("tool/0.1")})
     c.run("create dep")
     c.run("create tool")
-    c.run("install consumer -g MSBuildDeps")
+    c.run("install consumer -g MSBuildDeps -of=.")
     tool = c.load("conan_tool_build_release_x64.props")
     assert "conan_dep" not in tool
     tool_vars = c.load("conan_tool_build_vars_release_x64.props")

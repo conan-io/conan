@@ -56,7 +56,7 @@ def _quoted(item):
     return '"{}"'.format(item)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -596,7 +596,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("Error retrieving git", str(git.version))
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -933,7 +933,7 @@ class ConanLib(ConanFile):
         self.assertIn("Bla? bla2 bla2", self.client.out)
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     def test_propset_own(self):
@@ -956,7 +956,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client.run("export . --user=user --channel=channel")
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class SCMBlockUploadTest(unittest.TestCase):
 
     def test_upload_blocking_auto(self):
@@ -1033,7 +1033,7 @@ class SCMBlockUploadTest(unittest.TestCase):
 
 class SCMUpload(unittest.TestCase):
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_scm_sources(self):
         """ Test conan_sources.tgz is deleted in server when removing 'exports_sources' and using
         'scm'"""

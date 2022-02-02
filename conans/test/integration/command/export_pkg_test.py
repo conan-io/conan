@@ -57,7 +57,6 @@ class PkgA(ConanFile):
         self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
-        client.run("install . -if=build")
         client.run("build . -bf=build")
         client.run("export-pkg . --name=pkga --version=0.1 --user=user --channel=testing "
                    "-pr=default")

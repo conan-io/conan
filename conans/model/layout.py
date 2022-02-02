@@ -62,13 +62,6 @@ class Folders(object):
         self._base_build = folder
 
     @property
-    def base_install(self):
-        return self._base_install
-
-    def set_base_install(self, folder):
-        self._base_install = folder
-
-    @property
     def base_package(self):
         return self._base_package
 

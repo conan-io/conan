@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_transitive_headers_not_public():
     c = TestClient()
 
@@ -56,7 +56,7 @@ def test_transitive_headers_not_public():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_shared_requires_static():
     c = TestClient()
 
@@ -96,7 +96,7 @@ def test_shared_requires_static():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_transitive_binary_skipped():
     c = TestClient()
 

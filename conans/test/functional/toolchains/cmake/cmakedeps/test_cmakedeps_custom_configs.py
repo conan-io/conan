@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -81,8 +81,8 @@ class CustomConfigurationTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         with self.client.chdir('build'):
-            self.client.run("install .. %s -o hello:shared=True" % settings)
-            self.client.run("install .. %s -o hello:shared=False" % settings)
+            self.client.run("install .. %s -o hello:shared=True -of=." % settings)
+            self.client.run("install .. %s -o hello:shared=False -of=." % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-releaseshared.cmake")))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
@@ -99,7 +99,7 @@ class CustomConfigurationTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -178,7 +178,7 @@ class CustomSettingsTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("install .. %s %s" % (settings_h, settings_b))
+            self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 
@@ -190,7 +190,7 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
