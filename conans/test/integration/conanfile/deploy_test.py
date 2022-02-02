@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
@@ -9,6 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
 
+@pytest.mark.xfail(reason="Deploy removed")
 class DeployTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])

@@ -8,7 +8,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
+@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated, deploy removed")
 class DeployImportFilePermissionTest(unittest.TestCase):
     # FIXME: CONAN_READ_ONLY to be revisited and reconsidered, depends on "install-folder" idea
 

@@ -77,17 +77,18 @@ class ExportsMethodTest(unittest.TestCase):
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
 
             class MethodConan(ConanFile):
                 options = {"myopt": ["myval", "other"]}
                 default_options = {"myopt": "myval"}
                 def export(self):
                     if self.default_options["myopt"] == "myval":
-                        self.copy("LICENSE.md")
+                        copy(self, "LICENSE.md", self.conanfile_folder, self.export_folder)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=0.1", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1: Error in export() method, line 8", client.out)
+        self.assertIn("ERROR: pkg/0.1: Error in export() method, line 9", client.out)
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
