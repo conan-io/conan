@@ -11,10 +11,11 @@ def test_package_python_files():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
         """)
     client.save({"conanfile.py": conanfile,
                  "myfile.pyc": "",

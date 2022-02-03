@@ -5,6 +5,7 @@ import unittest
 from collections import Counter
 from threading import Thread
 
+import pytest
 from bottle import static_file, request
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
@@ -20,10 +21,11 @@ class DownloadCacheTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
@@ -153,10 +155,11 @@ class DownloadCacheTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
                 def deploy(self):
                     self.copy("*")
             """)

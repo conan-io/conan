@@ -200,7 +200,7 @@ class ConanFile:
 
     def package(self):
         """ package the needed files from source and build folders.
-        E.g. self.copy("*.h", src="src/includes", dst="includes")
+        E.g. copy(self, "*.h", os.path.join(self.source_folder, "src/includes"), os.path.join(self.package_folder, "includes"))
         """
         self.output.warning("This conanfile has no package step")
 

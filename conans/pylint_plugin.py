@@ -20,8 +20,6 @@ def transform_conanfile(node):
         "ConanInfo")
     build_requires_class = MANAGER.ast_from_module_name(
         "conans.client.graph.graph_manager").lookup("_RecipeBuildRequires")
-    file_copier_class = MANAGER.ast_from_module_name(
-        "conans.client.file_copier").lookup("FileCopier")
     file_importer_class = MANAGER.ast_from_module_name(
         "conans.client.importer").lookup("_FileImporter")
     python_requires_class = MANAGER.ast_from_module_name(
@@ -32,7 +30,6 @@ def transform_conanfile(node):
         "build_requires": build_requires_class,
         "info_build": info_class,
         "info": info_class,
-        "copy": file_copier_class,
         "copy_deps": file_importer_class,
         "python_requires": [str_class, python_requires_class],
     }
