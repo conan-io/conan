@@ -55,8 +55,7 @@ class VCVars:
 
 def vs_ide_version(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
-    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
-                        conanfile.settings.get_safe("compiler.version"))
+    compiler_version = conanfile.settings.get_safe("compiler.version")
     if compiler == "msvc":
         toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
         if toolset_override:

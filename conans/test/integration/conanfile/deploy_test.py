@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
@@ -9,6 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
 
+@pytest.mark.xfail(reason="Deploy removed")
 class DeployTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
@@ -16,6 +18,7 @@ class DeployTest(unittest.TestCase):
         client = TestClient()
         libconanfile = """from conan import ConanFile
 from conans.tools import save
+from conan.tools.files import copy
 
 class Lib(ConanFile):
     exports_sources = "*"
@@ -24,7 +27,8 @@ class Lib(ConanFile):
         save("mylib.dll", "mydll")
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
 
     def deploy(self):
         self.output.info("Lib deploy()")
@@ -42,6 +46,7 @@ class Lib(ConanFile):
             dll_folder = ""
         conanfile = """from conan import ConanFile
 from conans.tools import save
+from conan.tools.files import copy
 
 class Pkg(ConanFile):
     requires = "lib/0.1@user/testing"
@@ -50,7 +55,8 @@ class Pkg(ConanFile):
         save("myapp.exe", "myexe")
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
 
     def deploy(self):
         self.output.info("Pkg deploy()")

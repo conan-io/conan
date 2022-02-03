@@ -44,6 +44,7 @@ class InstallAPI:
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_imports(output_folder)
         conanfile.folders.set_base_generators(output_folder)
+        conanfile.folders.set_base_build(output_folder)
 
         # Add cli -g generators
         conanfile.generators = list(set(conanfile.generators).union(generators or []))

@@ -77,8 +77,10 @@ def test_complete():
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
     mycmake_conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
@@ -93,7 +95,8 @@ def test_complete():
 
             def package(self):
                 src = str(self.settings.build_type) if self.settings.os == "Windows" else ""
-                self.copy("mycmake*", src=src, dst="bin")
+                copy(self, "mycmake*", os.path.join(self.source_folder, src),
+                     os.path.join(self.package_folder, "bin"))
 
             def package_info(self):
                 self.cpp_info.bindirs = ["bin"]

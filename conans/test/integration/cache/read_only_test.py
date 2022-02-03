@@ -23,10 +23,11 @@ class ReadOnlyTest(unittest.TestCase):
                         """)
         self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     exports_sources = "*.h"
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         self.client.save({"conanfile.py": conanfile,
                           "myheader.h": "my header"})

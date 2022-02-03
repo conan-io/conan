@@ -13,7 +13,9 @@ from conans.test.utils.tools import TestClient
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
+        import os
         from conan.tools.google import Bazel
+        from conan.tools.files import copy
         from conan import ConanFile
 
         class App(ConanFile):
@@ -34,7 +36,7 @@ class Base(unittest.TestCase):
                 bazel.build(label="//app:main")
 
             def package(self):
-                self.copy('*', src='bazel-bin')
+                copy(self, '*', os.path.join(self.source_folder, 'bazel-bin'), self.package_folder)
         """)
 
     buildfile = textwrap.dedent("""

@@ -27,6 +27,7 @@ class HeaderOnlyLibTestClient(TestClient):
     conanfile = textwrap.dedent("""\
         import os
         from conan import ConanFile, tools
+        from conan.tools.files import copy
 
         class Pkg(ConanFile):
             name = "MyLib"
@@ -35,8 +36,10 @@ class HeaderOnlyLibTestClient(TestClient):
             exports_sources = "*"
 
             def package(self):
-                self.copy("*.hpp", dst="include-inrepo", src="src/include-inrepo")
-                self.copy("*.hpp", dst="include-cache", src="src/include-cache")
+                copy(self, "*.hpp", os.path.join(self.source_folder, "src/include-inrepo"),
+                                    os.path.join(self.package_folder, "include-inrepo"))
+                copy(self, "*.hpp", os.path.join(self.source_folder, "src/include-cache"),
+                                    os.path.join(self.package_folder, "include-cache"))
 
             def package_info(self):
                 self.cpp_info.libs = ["MyLib", "otra", ]

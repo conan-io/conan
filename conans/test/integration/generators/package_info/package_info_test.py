@@ -217,10 +217,11 @@ class TestPackageInfo(unittest.TestCase):
         dep = textwrap.dedent("""
             import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class Dep(ConanFile):
                 exports_sources = "*"
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
                 def package_info(self):
                     self.cpp_info.name = "Galaxy"
                     self.cpp_info.components["Starlight"].includedirs = [os.path.join("galaxy", "starlight")]
