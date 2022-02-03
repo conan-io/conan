@@ -80,7 +80,7 @@ def graph_compute(args, conan_api, strict_lockfile=True):
     else:
         root_node = conan_api.graph.load_root_virtual_conanfile(reference, profile_host,
                                                                 is_build_require=build_require,
-                                                                require_overrides=req_override)
+                                                                require_overrides=require_override)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
