@@ -53,10 +53,6 @@ class MSBuildToolchain(object):
                         '192': 'v142',
                         "193": 'v143'}
             return toolsets[compiler_version]
-        if compiler == "intel":
-            compiler_version = compiler_version if "." in compiler_version else \
-                "%s.0" % compiler_version
-            return "Intel C++ Compiler " + compiler_version
         if compiler == "intel-cc":
             return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":
