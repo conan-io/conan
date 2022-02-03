@@ -1,4 +1,5 @@
 import fnmatch
+from collections import OrderedDict
 
 from conans.errors import ConanException
 
@@ -47,10 +48,282 @@ def _is_profile_module(module_name):
     return any(module_name.startswith(user_module) for user_module in _user_modules)
 
 
-class Conf(object):
+# class Conf(object):
+#
+#     def __init__(self):
+#         self._values = {}  # property: value
+#
+#     def __getitem__(self, name):
+#         return self._values.get(name)
+#
+#     def __setitem__(self, name, value):
+#         if name != name.lower():
+#             raise ConanException("Conf '{}' must be lowercase".format(name))
+#         self._values[name] = value
+#
+#     def __delitem__(self, name):
+#         del self._values[name]
+#
+#     def __repr__(self):
+#         return "Conf: " + repr(self._values)
+#
+#     def items(self):
+#         return self._values.items()
+#
+#     def filter_user_modules(self):
+#         result = Conf()
+#         for k, v in self._values.items():
+#             if _is_profile_module(k):
+#                 result._values[k] = v
+#         return result
+#
+#     def update(self, other):
+#         """
+#         :param other: has more priority than current one
+#         :type other: Conf
+#         """
+#         self._values.update(other._values)
+#
+#     def compose_conf(self, other):
+#         """
+#         :param other: other has less priority than current one
+#         :type other: Conf
+#         """
+#         for k, v in other._values.items():
+#             if k not in self._values:
+#                 self._values[k] = v
+#
+#     @property
+#     def sha(self):
+#         result = []
+#         for k, v in sorted(self._values.items()):
+#             result.append("{}={}".format(k, v))
+#         return "\n".join(result)
+#
+#
+# class ConfDefinition(object):
+#
+#     actions = (("+=", "append"), ("=+", "prepend"),
+#                ("=!", "unset"), ("=", "define"))
+#
+#     def __init__(self):
+#         self._pattern_confs = {}  # pattern (including None) => Conf
+#
+#     def __bool__(self):
+#         return bool(self._pattern_confs)
+#
+#     def __repr__(self):
+#         return "ConfDefinition: " + repr(self._pattern_confs)
+#
+#     __nonzero__ = __bool__
+#
+#     def __getitem__(self, module_name):
+#         """ if a module name is requested for this, always goes to the None-Global config
+#         """
+#         return self._pattern_confs.get(None, Conf())[module_name]
+#
+#     def __delitem__(self, module_name):
+#         """ if a module name is requested for this, always goes to the None-Global config
+#         """
+#         del self._pattern_confs.get(None, Conf())[module_name]
+#
+#     def get_conanfile_conf(self, ref_str):
+#         result = Conf()
+#         for pattern, conf in self._pattern_confs.items():
+#             if pattern is None or (ref_str is not None and fnmatch.fnmatch(ref_str, pattern)):
+#                 result.update(conf)
+#         return result
+#
+#     def update_conf_definition(self, other):
+#         """
+#         This is used for composition of profiles [conf] section
+#         :type other: ConfDefinition
+#         """
+#         for k, v in other._pattern_confs.items():
+#             existing = self._pattern_confs.get(k)
+#             if existing:
+#                 existing.update(v)
+#             else:
+#                 self._pattern_confs[k] = v
+#
+#     def rebase_conf_definition(self, other):
+#         """
+#         for taking the new global.conf and composing with the profile [conf]
+#         :type other: ConfDefinition
+#         """
+#         for k, v in other._pattern_confs.items():
+#             new_v = v.filter_user_modules()  # Creates a copy, filtered
+#             existing = self._pattern_confs.get(k)
+#             if existing:
+#                 new_v.update(existing)
+#             self._pattern_confs[k] = new_v
+#
+#     def as_list(self):
+#         result = []
+#         # It is necessary to convert the None for sorting
+#         for pattern, conf in sorted(self._pattern_confs.items(),
+#                                     key=lambda x: ("", x[1]) if x[0] is None else x):
+#             for name, value in sorted(conf.items()):
+#                 if pattern:
+#                     result.append(("{}:{}".format(pattern, name), value))
+#                 else:
+#                     result.append((name, value))
+#         return result
+#
+#     def dumps(self):
+#         result = []
+#         for name, value in self.as_list():
+#             result.append("{}={}".format(name, value))
+#         return "\n".join(result)
+#
+#     def loads(self, text, profile=False):
+#         self._pattern_confs = {}
+#
+#         for line in text.splitlines():
+#             line = line.strip()
+#             if not line or line.startswith("#"):
+#                 continue
+#
+#             for op, method in ConfDefinition.actions:
+#                 tokens = line.split(op, 1)
+#                 if len(tokens) != 2:
+#                     continue
+#
+#                 pattern_name, value = tokens
+#                 pattern_name = pattern_name.split(":", 1)
+#                 if len(pattern_name) == 2:
+#                     pattern, name = pattern_name
+#                 else:
+#                     pattern, name = None, pattern_name[0]
+#                 # strip whitespaces before/after =
+#                 # values are not strip() unless they are a path, to preserve potential whitespaces
+#                 name = name.strip()
+#                 # When loading from profile file, latest line has priority
+#                 conf = Conf()
+#                 # Applying operator method
+#                 getattr(conf, method)(name, value)
+#
+#                 conf = self._pattern_confs.setdefault(pattern, Conf())
+#                 conf[name] = value
+#
+#                 existing = self._pattern_confs.get(pattern)
+#                 if existing is None:
+#                     self._pattern_confs[pattern] = conf
+#                 else:
+#                     self._pattern_confs[pattern] = conf.compose_conf(existing)
+#                 break
+#             else:
+#                 raise ConanException("Bad env definition: {}".format(line))
+#
+#     def update(self, key, value, profile=False):
+#         """
+#         Add/update a new/existing Conf line
+#
+#         >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+#         """
+#         if key.count(":") >= 2:
+#             pattern, name = key.split(":", 1)
+#         else:
+#             pattern, name = None, key
+#
+#         if not _is_profile_module(name):
+#             if profile:
+#                 raise ConanException("[conf] '{}' not allowed in profiles".format(key))
+#             if pattern is not None:
+#                 raise ConanException("Conf '{}' cannot have a package pattern".format(key))
+#
+#         conf = self._pattern_confs.setdefault(pattern, Conf())
+#         conf[name] = value
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class _ConfVarPlaceHolder:
+    pass
+
+
+class _ConfValue:
+    def __init__(self, name, value=_ConfVarPlaceHolder, separator=" ", path=False):
+        self._name = name
+        self._values = [] if value is None else value if isinstance(value, list) else [value]
+        self._path = path
+        self._sep = separator
+
+    def dumps(self):
+        result = []
+        path = "(path)" if self._path else ""
+        if not self._values:  # Empty means unset
+            result.append("{}=!".format(self._name))
+        elif _ConfVarPlaceHolder in self._values:
+            index = self._values.index(_ConfVarPlaceHolder)
+            for v in self._values[:index]:
+                result.append("{}=+{}{}".format(self._name, path, v))
+            for v in self._values[index+1:]:
+                result.append("{}+={}{}".format(self._name, path, v))
+        else:
+            append = ""
+            for v in self._values:
+                result.append("{}{}={}{}".format(self._name, append, path, v))
+                append = "+"
+        return "\n".join(result)
+
+    def copy(self):
+        return _ConfValue(self._name, self._values, self._sep, self._path)
+
+    def remove(self, value):
+        self._values.remove(value)
+
+    def append(self, value, separator=None):
+        if separator is not None:
+            self._sep = separator
+        if isinstance(value, list):
+            self._values.extend(value)
+        else:
+            self._values.append(value)
+
+    def prepend(self, value, separator=None):
+        if separator is not None:
+            self._sep = separator
+        if isinstance(value, list):
+            self._values = value + self._values
+        else:
+            self._values.insert(0, value)
+
+    def compose_conf_value(self, other):
+        """
+        :type other: _ConfValue
+        """
+        try:
+            index = self._values.index(_ConfVarPlaceHolder)
+        except ValueError:  # It doesn't have placeholder
+            pass
+        else:
+            new_value = self._values[:]  # do a copy
+            new_value[index:index + 1] = other._values  # replace the placeholder
+            self._values = new_value
+
+
+class Conf:
     def __init__(self):
-        self._values = {}  # property: value
+        # It being ordered allows for Windows case-insensitive composition
+        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+
+    def __bool__(self):
+        return bool(self._values)
+
+    __nonzero__ = __bool__
 
     def __getitem__(self, name):
         return self._values.get(name)
@@ -63,11 +336,60 @@ class Conf(object):
     def __delitem__(self, name):
         del self._values[name]
 
+    def copy(self):
+        e = Conf()
+        e._values = self._values.copy()
+        return e
+
     def __repr__(self):
         return "Conf: " + repr(self._values)
 
-    def items(self):
-        return self._values.items()
+    def dumps(self):
+        """ returns a string with a profile-like original definition, not the full environment
+        values
+        """
+        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+
+    def define(self, name, value, separator=" "):
+        self._values[name] = _ConfValue(name, value, separator, path=False)
+
+    def unset(self, name):
+        """
+        clears the variable, equivalent to a unset or set XXX=
+        """
+        self._values[name] = _ConfValue(name, None)
+
+    def append(self, name, value, separator=None):
+        self._values.setdefault(name, _ConfValue(name)).append(value, separator)
+
+    def prepend(self, name, value, separator=None):
+        self._values.setdefault(name, _ConfValue(name)).prepend(value, separator)
+
+    def remove(self, name, value):
+        self._values[name].remove(value)
+
+    def compose_conf(self, other):
+        """
+        self has precedence, the "other" will add/append if possible and not conflicting, but
+        self mandates what to do. If self has define(), without placeholder, that will remain
+        :type other: Conf
+        """
+        for k, v in other._values.items():
+            existing = self._values.get(k)
+            if existing is None:
+                self._values[k] = v.copy()
+            else:
+                existing.compose_conf_value(v)
+        return self
+
+    def __eq__(self, other):
+        """
+        :type other: Conf
+        """
+        return other._values == self._values
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def filter_user_modules(self):
         result = Conf()
@@ -76,39 +398,17 @@ class Conf(object):
                 result._values[k] = v
         return result
 
-    def update(self, other):
-        """
-        :param other: has more priority than current one
-        :type other: Conf
-        """
-        self._values.update(other._values)
 
-    def compose_conf(self, other):
-        """
-        :param other: other has less priority than current one
-        :type other: Conf
-        """
-        for k, v in other._values.items():
-            if k not in self._values:
-                self._values[k] = v
+class ConfDefinition:
 
-    @property
-    def sha(self):
-        result = []
-        for k, v in sorted(self._values.items()):
-            result.append("{}={}".format(k, v))
-        return "\n".join(result)
-
-
-class ConfDefinition(object):
     def __init__(self):
-        self._pattern_confs = {}  # pattern (including None) => Conf
-
-    def __bool__(self):
-        return bool(self._pattern_confs)
+        self._pattern_confs = OrderedDict()
 
     def __repr__(self):
         return "ConfDefinition: " + repr(self._pattern_confs)
+
+    def __bool__(self):
+        return bool(self._pattern_confs)
 
     __nonzero__ = __bool__
 
@@ -122,36 +422,41 @@ class ConfDefinition(object):
         """
         del self._pattern_confs.get(None, Conf())[module_name]
 
-    def get_conanfile_conf(self, ref_str):
+    def get_conanfile_conf(self, ref):
+        """ computes package-specific Conf
+        it is only called when conanfile.buildenv is called
+        the last one found in the profile file has top priority
+        """
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
-            if pattern is None or (ref_str is not None and fnmatch.fnmatch(ref_str, pattern)):
-                result.update(conf)
+            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+                # Latest declared has priority, copy() necessary to not destroy data
+                result = conf.copy().compose_conf(result)
         return result
 
     def update_conf_definition(self, other):
         """
-        This is used for composition of profiles [conf] section
         :type other: ConfDefinition
+        :param other: The argument profile has priority/precedence over the current one.
         """
-        for k, v in other._pattern_confs.items():
-            existing = self._pattern_confs.get(k)
-            if existing:
-                existing.update(v)
+        for pattern, conf in other._pattern_confs.items():
+            existing = self._pattern_confs.get(pattern)
+            if existing is not None:
+                self._pattern_confs[pattern] = conf.compose_conf(existing)
             else:
-                self._pattern_confs[k] = v
+                self._pattern_confs[pattern] = conf
 
     def rebase_conf_definition(self, other):
         """
         for taking the new global.conf and composing with the profile [conf]
         :type other: ConfDefinition
         """
-        for k, v in other._pattern_confs.items():
-            new_v = v.filter_user_modules()  # Creates a copy, filtered
-            existing = self._pattern_confs.get(k)
+        for pattern, conf in other._pattern_confs.items():
+            conf = conf.filter_user_modules()  # Creates a copy, filtered
+            existing = self._pattern_confs.get(pattern)
             if existing:
-                new_v.update(existing)
-            self._pattern_confs[k] = new_v
+                conf.compose_conf(existing)
+            self._pattern_confs[pattern] = conf
 
     def as_list(self):
         result = []
@@ -167,39 +472,51 @@ class ConfDefinition(object):
 
     def dumps(self):
         result = []
-        for name, value in self.as_list():
-            result.append("{}={}".format(name, value))
+        for pattern, conf in self._pattern_confs.items():
+            if pattern is None:
+                result.append(conf.dumps())
+            else:
+                result.append("\n".join("{}:{}".format(pattern, line) if line else ""
+                                        for line in conf.dumps().splitlines()))
+        if result:
+            result.append("")
         return "\n".join(result)
 
-    def loads(self, text, profile=False):
+    def loads(self, text):
         self._pattern_confs = {}
+
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            try:
-                left, value = line.split("=", 1)
-            except ValueError:
-                raise ConanException("Error while parsing conf value '{}'".format(line))
+            for op, method in (("+=", "append"), ("=+", "prepend"),
+                               ("=!", "unset"), ("=", "define")):
+                tokens = line.split(op, 1)
+                if len(tokens) != 2:
+                    continue
+                pattern_name, value = tokens
+                pattern_name = pattern_name.split(":", 1)
+                if len(pattern_name) == 2:
+                    pattern, name = pattern_name
+                else:
+                    pattern, name = None, pattern_name[0]
+
+                # strip whitespaces before/after =
+                # values are not strip() unless they are a path, to preserve potential whitespaces
+                name = name.strip()
+
+                # When loading from profile file, latest line has priority
+                conf = Conf()
+                if method == "unset":
+                    conf.unset(name)
+                else:
+                    getattr(conf, method)(name, value)
+
+                existing = self._pattern_confs.get(pattern)
+                if existing is None:
+                    self._pattern_confs[pattern] = conf
+                else:
+                    self._pattern_confs[pattern] = conf.compose_conf(existing)
+                break
             else:
-                self.update(left.strip(), value.strip(), profile=profile)
-
-    def update(self, key, value, profile=False):
-        """
-        Add/update a new/existing Conf line
-
-        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
-        """
-        if key.count(":") >= 2:
-            pattern, name = key.split(":", 1)
-        else:
-            pattern, name = None, key
-
-        if not _is_profile_module(name):
-            if profile:
-                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
-            if pattern is not None:
-                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
-
-        conf = self._pattern_confs.setdefault(pattern, Conf())
-        conf[name] = value
+                raise ConanException("Bad conf definition: {}".format(line))
