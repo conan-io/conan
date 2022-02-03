@@ -19,7 +19,7 @@ class ExportsMethodTest(unittest.TestCase):
             class MethodConan(ConanFile):
                 exports = "file.txt"
                 def export(self):
-                    copy(self, "LICENSE.md", self.conanfile_folder, self.export_folder)
+                    copy(self, "LICENSE.md", self.recipe_folder, self.export_folder)
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
@@ -46,7 +46,7 @@ class ExportsMethodTest(unittest.TestCase):
             class MethodConan(ConanFile):
                 def export(self):
                     self.output.info("Executing export() method")
-                    copy(self, "*.txt", os.path.join(self.conanfile_folder, "../subdir"),
+                    copy(self, "*.txt", os.path.join(self.recipe_folder, "../subdir"),
                          self.export_folder)
             """)
         client.save({"conanfile.py": conanfile})
@@ -69,7 +69,7 @@ class ExportsMethodTest(unittest.TestCase):
                 settings = "os"
                 def export(self):
                     if self.settings.os == "Windows":
-                        copy(self, "LICENSE.md", self.conanfile_folder, self.export_folder)
+                        copy(self, "LICENSE.md", self.recipe_folder, self.export_folder)
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license"})
         client.run("export . --name=pkg --version=0.1", assert_error=True)
@@ -84,7 +84,7 @@ class ExportsMethodTest(unittest.TestCase):
                 default_options = {"myopt": "myval"}
                 def export(self):
                     if self.default_options["myopt"] == "myval":
-                        copy(self, "LICENSE.md", self.conanfile_folder, self.export_folder)
+                        copy(self, "LICENSE.md", self.recipe_folder, self.export_folder)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=0.1", assert_error=True)
@@ -166,7 +166,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
             class MethodConan(ConanFile):
                 exports_sources = "file.txt"
                 def export_sources(self):
-                    copy(self, "LICENSE.md", self.conanfile_folder, self.export_sources_folder)
+                    copy(self, "LICENSE.md", self.recipe_folder, self.export_sources_folder)
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
@@ -236,7 +236,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
 
             class MethodConan(ConanFile):
                 def export_sources(self):
-                    copy(self, "*", self.conanfile_folder, self.export_sources_folder)
+                    copy(self, "*", self.recipe_folder, self.export_sources_folder)
                 def build(self):
                     self.output.info("CONTENT: %s" % load(self, "myfile.txt"))
             """)

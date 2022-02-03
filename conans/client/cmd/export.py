@@ -47,11 +47,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
-    origin_folder = os.path.dirname(conanfile_path)
-    setattr(conanfile, "conanfile_folder", origin_folder)
     export_recipe(conanfile, export_folder)
     export_source(conanfile, export_src_folder)
-    delattr(conanfile, "conanfile_folder")
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Calculate the "auto" values and replace in conanfile.py
@@ -248,7 +245,7 @@ def export_source(conanfile, destination_source_folder):
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
     copied = []
     for pattern in included_sources:
-        _tmp = copy(conanfile, pattern, src=conanfile.conanfile_folder,
+        _tmp = copy(conanfile, pattern, src=conanfile.recipe_folder,
                     dst=destination_source_folder, excludes=excluded_sources)
         copied.extend(_tmp)
 
@@ -267,7 +264,7 @@ def export_recipe(conanfile, destination_folder):
     scoped_output = conanfile.output
     package_output = ScopedOutput("%s exports" % scoped_output.scope, scoped_output)
 
-    if os.path.exists(os.path.join(conanfile.conanfile_folder, DATA_YML)):
+    if os.path.exists(os.path.join(conanfile.recipe_folder, DATA_YML)):
         package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
         tmp = [DATA_YML]
         if conanfile.exports:
@@ -278,7 +275,7 @@ def export_recipe(conanfile, destination_folder):
 
     copied = []
     for pattern in included_exports:
-        tmp = copy(conanfile, pattern, conanfile.conanfile_folder, destination_folder,
+        tmp = copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
                    excludes=excluded_exports)
         copied.extend(tmp)
     report_copied_files(copied, package_output)
@@ -300,7 +297,7 @@ def _run_method(conanfile, method, destination_folder):
             # TODO: Poor man attribute control access. Convert to nice decorator
             conanfile.default_options = None
             conanfile.options = None
-            with chdir(conanfile.conanfile_folder):
+            with chdir(conanfile.recipe_folder):
                 with conanfile_exception_formatter(conanfile, method):
                     export_method()
         finally:
