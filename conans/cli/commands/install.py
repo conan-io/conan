@@ -182,7 +182,6 @@ def install(conan_api, parser, *args):
                                            output_folder=output_folder
                                            )
     else:
-        print("DEPLOY CONSMER")
         conan_api.install.deploy_consumer(deps_graph=deps_graph,
                                           generators=args.generator,
                                           source_folder=source_folder,

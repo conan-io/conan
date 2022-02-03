@@ -545,7 +545,6 @@ class TestClient(object):
         with redirect_output(self.out):
             from conans.util.runners import conan_run
             ret = conan_run(command, cwd=cwd or self.current_folder)
-            print(self.out)
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 

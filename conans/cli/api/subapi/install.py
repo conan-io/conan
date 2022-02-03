@@ -82,6 +82,7 @@ class InstallAPI:
         for r, d in conanfile.dependencies.items():
             new_folder = os.path.join(output_folder, d.ref.name)
             shutil.copytree(d.package_folder, new_folder)
+            # FIXME: Ugly definition of package folder
             d._conanfile.cpp_info.deploy_base_folder(d.package_folder, new_folder)
             d._conanfile.folders.set_base_package(new_folder)
 
