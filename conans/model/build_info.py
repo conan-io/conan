@@ -363,6 +363,19 @@ class CppInfo(object):
                             updates[prop_name] = os.path.join(folder, value)
                 component._generator_properties.update(updates)
 
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        for component in self.components.values():
+            for varname in _DIRS_VAR_NAMES:
+                origin = getattr(component, varname)
+                if origin is not None:
+                    new_ = []
+                    for el in origin:
+                        rel_path = os.path.relpath(el, package_folder)
+                        new_.append(os.path.join(deploy_folder, rel_path))
+                    origin[:] = new_
+                # TODO: Missing properties
+
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
         same package (not scoped with ::). First less dependant

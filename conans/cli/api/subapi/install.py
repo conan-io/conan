@@ -1,3 +1,6 @@
+import os
+import shutil
+
 from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
@@ -58,3 +61,29 @@ class InstallAPI:
             deploy_conanfile.folders.set_base_imports(output_folder)
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, output_folder)
+
+    @staticmethod
+    def deploy_consumer(deps_graph, generators=None, source_folder=None, output_folder=None):
+        """ Once a dependency graph has been installed, there are things to be done, like invoking
+        generators for the root consumer, or calling imports()/deploy() to copy things to user space.
+        This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
+        """
+        root_node = deps_graph.root
+        conanfile = root_node.conanfile
+
+        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_imports(output_folder)
+        conanfile.folders.set_base_generators(output_folder)
+
+        if type(conanfile).system_requirements != ConanFile.system_requirements:
+            call_system_requirements(conanfile)
+
+        for r, d in conanfile.dependencies.items():
+            new_folder = os.path.join(output_folder, d.ref.name)
+            shutil.copytree(d.package_folder, new_folder)
+            d._conanfile.cpp_info.deploy_base_folder(d.package_folder, new_folder)
+            d._conanfile.folders.set_base_package(new_folder)
+
+        # Add cli -g generators
+        conanfile.generators = list(set(conanfile.generators).union(generators or []))
+        write_generators(conanfile)
