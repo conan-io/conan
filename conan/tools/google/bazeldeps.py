@@ -59,7 +59,7 @@ class BazelDeps(object):
             {% for lib in libs %}
             cc_import(
                 name = "{{ lib }}_precompiled",
-                static_library = "{{ libdir }}/lib{{ lib }}.a"
+                {{ library_type }} = "{{ libdir }}/lib{{ lib }}.{{extension}}"
             )
             {% endfor %}
 
@@ -126,6 +126,7 @@ class BazelDeps(object):
         if len(cpp_info.libdirs) != 0:
             lib_dir = _relativize_path(cpp_info.libdirs[0], package_folder)
 
+        shared_library = dependency.options.get_safe("shared")
         context = {
             "name": dependency.ref.name,
             "libs": cpp_info.libs,
@@ -133,9 +134,10 @@ class BazelDeps(object):
             "headers": headers,
             "includes": includes,
             "defines": defines,
-            "linkopts": linkopts
+            "linkopts": linkopts,
+            "library_type": "shared_library" if shared_library else "static_library",
+            "extension": "so" if shared_library else "a"
         }
-
         content = Template(template).render(**context)
         return content
 
