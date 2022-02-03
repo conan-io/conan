@@ -52,11 +52,13 @@ class MarkDownGeneratorTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
                     import os
                     from conan import ConanFile
+                    from conan.tools.files import copy
 
                     class HelloConan(ConanFile):
                         exports_sources = 'bm.cmake'
                         def package(self):
-                            self.copy('bm.cmake', dst='lib/cmake')
+                            copy(self, 'bm.cmake', self.source_folder,
+                                 os.path.join(self.package_folder, 'lib/cmake'))
 
                         def package_info(self):
                             self.cpp_info.set_property("cmake_file_name", "FooBar")

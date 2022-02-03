@@ -67,8 +67,8 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
         if conanfile_folder != src_folder:
             _run_local_scm(conanfile, conanfile_folder, src_folder)
             conanfile.output.info("Executing exports to: %s" % src_folder)
-            export_recipe(conanfile, conanfile_folder, src_folder)
-            export_source(conanfile, conanfile_folder, src_folder)
+            export_recipe(conanfile, src_folder)
+            export_source(conanfile, src_folder)
 
     _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
                 get_sources_from_exports=get_sources_from_exports)

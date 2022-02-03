@@ -22,11 +22,10 @@ def editable_cmake(generator, build_folder=None):
            path=os.path.join(c.current_folder, "pkg"))
 
     output_folder = '--output-folder="{}"'.format(build_folder) if build_folder else ""
-    build_folder = '--build-folder="{}"'.format(build_folder) if build_folder else ""
 
     def build_dep():
-        c.run("build . {}".format(build_folder))
-        c.run("build . -s build_type=Debug {}".format(build_folder))
+        c.run("build . {}".format(output_folder))
+        c.run("build . -s build_type=Debug {}".format(output_folder))
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@ {}".format(output_folder))

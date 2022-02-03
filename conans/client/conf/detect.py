@@ -235,16 +235,7 @@ def _detect_compiler_version(result):
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
-        result.append(("compiler.base", "gcc"))  # do the same for Intel?
-        result.append(("compiler.base.libcxx", "libstdc++"))
-        if version >= "1.24":
-            result.append(("compiler.base.version", "7.3"))
-        elif version >= "1.23":
-            result.append(("compiler.base.version", "5.5"))
-        elif version >= "1.21":
-            result.append(("compiler.base.version", "4.8"))
-        else:
-            result.append(("compiler.base.version", "4.4"))
+        result.append(("compiler.libcxx", "libstdc++"))
     elif compiler == "msvc":
         # Add default mandatory fields for MSVC compiler
         result.append(("compiler.cppstd", "14"))

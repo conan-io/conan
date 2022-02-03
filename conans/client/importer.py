@@ -2,9 +2,10 @@ import fnmatch
 import os
 import stat
 
+from conan.tools.files import copy
+from conan.tools.files.copy_pattern import report_copied_files, _FileCopier
 from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
-from conans.client.file_copier import FileCopier, report_copied_files
 from conans.util.env import no_op
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -75,6 +76,7 @@ def run_imports(conanfile):
     if not hasattr(conanfile, "imports"):
         return []
     mkdir(conanfile.imports_folder)
+    # FIXME: This file importer should be removed too, provide a tool to copy from deps?
     file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
     with no_op():  # TODO: Remove this in a later refactor
@@ -104,7 +106,8 @@ def run_deploy(conanfile, install_folder):
     # This is necessary to capture FileCopier full destination paths
     # Maybe could be improved in FileCopier
     def file_copier(*args, **kwargs):
-        file_copy = FileCopier([conanfile.package_folder], install_folder)
+        # FIXME: What to do with this?
+        file_copy = _FileCopier([conanfile.package_folder], install_folder)
         copied = file_copy(*args, **kwargs)
         _make_files_writable(copied)
         package_copied.update(copied)
@@ -163,8 +166,6 @@ class _FileImporter(object):
         src_dirs = [src]  # hardcoded src="bin" origin
         # FIXME: access of cpp_info.rootpath, use package_folder better if possible.
         for pkg_name, package_folder, cpp_info in pkgs:
-            final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
-            file_copier = FileCopier([package_folder], final_dst_path)
             if symbolic_dir_name:  # Syntax for package folder symbolic names instead of hardcoded
                 try:
                     src_dirs = getattr(cpp_info, symbolic_dir_name)
@@ -180,7 +181,10 @@ class _FileImporter(object):
                         if isinstance(src_dirs, list):  # it can return a "config" CppInfo item!
                             src_dirs += src_dir
 
+            final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
             for src_dir in src_dirs:
-                files = file_copier(pattern, src=src_dir, ignore_case=ignore_case,
-                                    excludes=excludes, keep_path=keep_path)
+                src_folder = os.path.join(package_folder, src_dir)
+                files = copy(self._conanfile, pattern, src=src_folder,
+                             dst=final_dst_path, ignore_case=ignore_case,
+                             excludes=excludes, keep_path=keep_path)
                 self.copied_files.update(files)

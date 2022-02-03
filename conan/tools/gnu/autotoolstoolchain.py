@@ -83,7 +83,7 @@ class AutotoolsToolchain:
         if not libcxx:
             return
 
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
+        compiler = settings.get_safe("compiler")
         if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'

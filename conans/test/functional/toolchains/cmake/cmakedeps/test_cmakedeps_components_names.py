@@ -24,8 +24,10 @@ def setup_client_with_greetings():
     bye_cpp = gen_function_cpp(name="bye", includes=["bye"])
 
     conanfile_greetings = textwrap.dedent("""
+        from os.path import join
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class GreetingsConan(ConanFile):
             name = "greetings"
@@ -42,9 +44,12 @@ def setup_client_with_greetings():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 def set_comp_default_dirs():
@@ -143,8 +148,10 @@ def setup_client_with_greetings():
 
 def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     conanfile = textwrap.dedent("""
+        from os.path import join
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Chat(ConanFile):
             name = "chat"
@@ -161,9 +168,12 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 {}
@@ -428,8 +438,10 @@ def test_no_components(setup_client_with_greetings):
 def test_same_names():
     client = TestClient()
     conanfile_greetings = textwrap.dedent("""
+        from os.path import join
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class HelloConan(ConanFile):
             name = "hello"
@@ -444,9 +456,12 @@ def test_same_names():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 self.cpp_info.components["global"].name = "hello"
@@ -610,8 +625,10 @@ class TestComponentsCMakeGenerators:
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
+            from os.path import join
             from conan import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.files import copy
 
             class Conan(ConanFile):
                 name = "{name}"
@@ -626,9 +643,12 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
+                    copy(self, "*.h", src=join(self.source_folder, "src"),
+                                      dst=join(self.package_folder, "include"))
+                    copy(self, "*.lib", src=self.build_folder,
+                                        dst=join(self.package_folder, "lib"), keep_path=False)
+                    copy(self, "*.a", src=self.build_folder,
+                                      dst=join(self.package_folder, "lib"), keep_path=False)
 
                 def package_info(self):
                     self.cpp_info.set_property("cmake_target_name", "nonstd::nonstd" )
@@ -670,8 +690,10 @@ class TestComponentsCMakeGenerators:
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
                                       calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
+            from os.path import join
             from conan import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.files import copy
 
             class Conan(ConanFile):
                 name = "middle"
@@ -687,9 +709,12 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
+                    copy(self, "*.h", src=join(self.source_folder, "src"),
+                                      dst=join(self.package_folder, "include"))
+                    copy(self, "*.lib", src=self.build_folder,
+                                        dst=join(self.package_folder, "lib"), keep_path=False)
+                    copy(self, "*.a", src=self.build_folder,
+                                      dst=join(self.package_folder, "lib"), keep_path=False)
 
                 def package_info(self):
                     self.cpp_info.libs = ["middle"]
@@ -754,11 +779,13 @@ def test_targets_declared_in_build_modules(check_components_exist):
 
     client = TestClient()
     conanfile_hello = str(GenConanfile().with_name("hello").with_version("1.0")
-                          .with_exports_sources("*.cmake", "*.h"))
+                          .with_exports_sources("*.cmake", "*.h")
+                          .with_import("from conan.tools.files import copy")
+                          .with_import("from os.path import join"))
     conanfile_hello += """
     def package(self):
-        self.copy("*.h", dst="include")
-        self.copy("*.cmake", dst="cmake")
+         copy(self, "*.h", src=self.source_folder, dst=join(self.package_folder, "include"))
+         copy(self, "*.cmake", src=self.build_folder, dst=join(self.package_folder, "cmake"))
 
     def package_info(self):
         self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"])

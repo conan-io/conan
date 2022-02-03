@@ -74,10 +74,11 @@ def test_beat_character_long_upload():
     client = TestClient(default_server_user=True)
     slow_conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import copy
         class MyPkg(ConanFile):
             exports = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
         """)
     client.save({"conanfile.py": slow_conanfile,
                  "hello.cpp": ""})

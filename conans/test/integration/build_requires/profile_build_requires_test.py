@@ -10,6 +10,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 tool_conanfile = """
 import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class tool(ConanFile):
     name = "tool"
@@ -17,7 +18,7 @@ class tool(ConanFile):
     exports_sources = "mytool*"
 
     def package(self):
-        self.copy("mytool*")
+        copy(self, "mytool*", self.source_folder, self.package_folder)
 
     def package_info(self):
         self.buildenv_info.append_path("PATH", self.package_folder)
@@ -181,12 +182,12 @@ class mylib(ConanFile):
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o mylib:coverage=True --build missing")
-        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Calling build()", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o coverage=True")
-        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
