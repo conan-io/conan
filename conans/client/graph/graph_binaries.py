@@ -99,8 +99,6 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         if True:  # legacy removal, to avoid huge diff
-            assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
-            assert node.binary is None, "Node.binary should be None if not locked"
             pref = PkgReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
@@ -228,8 +226,6 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode):
         build_mode = BuildMode(build_mode)
-        assert isinstance(build_mode, BuildMode)
-
         for node in deps_graph.ordered_iterate():
             self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
