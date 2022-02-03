@@ -36,8 +36,8 @@ def conanfile():
     def package(self):
         self.output.warning("Package folder: {}".format(self.package_folder))
         tools.save(os.path.join(self.package_folder, "LICENSE"), "bar")
-        copy(self, "*.h", src=self.source_folder, dst="include")
-        copy(self, "*.lib", src=self.build_folder, dst="lib")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+        copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"))
 
     def package_info(self):
         # This will be easier when the layout declares also the includedirs etc
@@ -47,7 +47,7 @@ def conanfile():
     return conan_file
 
 
-def test_create_test_package_no_layout(conanfile):
+def test_create_test_package_no_layout():
     """The test package using the new generators work (having the generated files in the build
     folder)"""
     client = TestClient()
@@ -73,7 +73,7 @@ def test_create_test_package_no_layout(conanfile):
     assert "hey! testing" in client.out
 
 
-def test_create_test_package_with_layout(conanfile):
+def test_create_test_package_with_layout():
     """The test package using the new generators work (having the generated files in the build
     folder)"""
     client = TestClient()
