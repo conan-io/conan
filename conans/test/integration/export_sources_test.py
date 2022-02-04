@@ -19,19 +19,23 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load, rmdir
 
 conanfile_py = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
     version = "0.1"
     exports = "*.h", "*.cpp", "*.lic"
     def package(self):
-        self.copy("*.h", "include")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
 """
 
 
 combined_conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -39,13 +43,15 @@ class HelloConan(ConanFile):
     exports_sources = "*.h", "*.cpp"
     exports = "*.txt", "*.lic"
     def package(self):
-        self.copy("*.h", "include")
-        self.copy("data.txt", "docs")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+        copy(self, "data.txt", self.source_folder, os.path.join(self.package_folder, "docs"))
 """
 
 
 nested_conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -53,13 +59,15 @@ class HelloConan(ConanFile):
     exports_sources = "src/*.h", "src/*.cpp"
     exports = "src/*.txt", "src/*.lic"
     def package(self):
-        self.copy("*.h", "include")
-        self.copy("*data.txt", "docs")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+        copy(self, "*data.txt", self.source_folder, os.path.join(self.package_folder, "docs"))
 """
 
 
 overlap_conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -67,8 +75,8 @@ class HelloConan(ConanFile):
     exports_sources = "src/*.h", "*.txt"
     exports = "src/*.txt", "*.h", "src/*.lic"
     def package(self):
-        self.copy("*.h", "include")
-        self.copy("*data.txt", "docs")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+        copy(self, "*data.txt", self.source_folder, os.path.join(self.package_folder, "docs"))
 """
 
 
@@ -389,7 +397,9 @@ def absolute_existing_folder():
 def test_exports_does_not_follow_symlink():
     linked_abs_folder = absolute_existing_folder()
     client = TurboTestClient(default_server_user=True)
-    conanfile = GenConanfile().with_package('self.copy("*")').with_exports_sources("*")
+    conanfile = GenConanfile().with_package('copy(self, "*", self.source_folder, self.package_folder)')\
+        .with_exports_sources("*")\
+        .with_import("from conan.tools.files import copy")
     client.save({"conanfile.py": conanfile, "foo.txt": "bar"})
     os.symlink(linked_abs_folder, os.path.join(client.current_folder, "linked_folder"))
     pref = client.create(RecipeReference.loads("lib/1.0"), conanfile=False)

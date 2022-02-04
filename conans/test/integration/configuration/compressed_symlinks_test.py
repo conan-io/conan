@@ -77,7 +77,9 @@ def test_package_with_symlinks(package_files):
 
     client = TurboTestClient(default_server_user=True)
     client2 = TurboTestClient(servers=client.servers)
-    client.save({"conanfile.py": GenConanfile().with_package('self.copy("*")')
+    client.save({"conanfile.py": GenConanfile()
+                .with_import("from conan.tools.files import copy")
+                .with_package('copy(self, "*", self.source_folder, self.package_folder)')
                 .with_exports_sources("*")})
 
     for path in package_files["files"]:

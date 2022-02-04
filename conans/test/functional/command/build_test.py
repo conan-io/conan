@@ -73,11 +73,8 @@ class AConan(ConanFile):
     def build(self):
         self.output.warning("Build folder=>%s" % self.build_folder)
         self.output.warning("Src folder=>%s" % self.source_folder)
-        self.output.warning("Package folder=>%s" % self.package_folder)
         assert(os.path.exists(self.build_folder))
         assert(os.path.exists(self.source_folder))
-        # package_folder will be created manually or by the CMake helper when local invocation
-        assert(not os.path.exists(self.package_folder))
 """
 
         client = TestClient()
@@ -85,60 +82,10 @@ class AConan(ConanFile):
         with client.chdir("build1"):
             client.run("install ..")
         # Try relative to cwd
-        client.run("build . --build-folder build2 "
-                   "--package-folder build1/pkg")
+        client.run("build . --output-folder build2")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build2"),
                       client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "build1", "pkg"),
-                      client.out)
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
-
-        # Try default package folder
-        client.run("build conanfile.py --build-folder build1 --package-folder package1")
-        self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
-                      client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "package"),
-                      client.out)
-        self.assertIn("Src folder=>%s" % client.current_folder, client.out)
-
-        # Try absolute package folder
-        client.run("build . --build-folder build1 --package-folder '%s'" %
-                   os.path.join(client.current_folder, "mypackage"))
-        self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
-                      client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "mypackage"),
-                      client.out)
-        self.assertIn("Src folder=>%s" % client.current_folder, client.out)
-
-        # Try absolute build and relative package
-        conanfile_dir = client.current_folder
-        bdir = os.path.join(client.current_folder, "other/mybuild")
-        with client.chdir(bdir):
-            client.run("install '%s'" % conanfile_dir)
-        client.run("build ./conanfile.py --build-folder '%s' --package-folder relpackage" % bdir)
-
-        self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other/mybuild"),
-                      client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "relpackage"),
-                      client.out)
-        self.assertIn("Src folder=>%s" % client.current_folder, client.out)
-
-        # Try different source
-        with client.chdir("other/build"):
-            client.run("install ../..")
-        # src is not created automatically, it makes no sense
-        client.run("build . --source-folder '%s' --build-folder other/build" %
-                   os.path.join(client.current_folder, "mysrc"), assert_error=True)
-
-        mkdir(os.path.join(client.current_folder, "mysrc"))
-
-        client.run("build . --source-folder '%s' --build-folder other/build"
-                   % os.path.join(client.current_folder, "mysrc"))
-        self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other", "build"),
-                      client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "other", "build"),
-                      client.out)
-        self.assertIn("Src folder=>%s" % os.path.join(client.current_folder, "mysrc"), client.out)
 
     @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build_dots_names(self):

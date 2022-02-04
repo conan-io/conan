@@ -25,10 +25,11 @@ class DeployImportFilePermissionTest(unittest.TestCase):
             client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         with client.chdir('recipe'):
             conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     exports_sources = "*.h"
     def package(self):
-        self.copy("*.h")
+        copy(self, "*.h", self.source_folder, self.package_folder)
 
     def deploy(self):
         self.copy("*.h")

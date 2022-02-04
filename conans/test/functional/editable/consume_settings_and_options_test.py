@@ -26,6 +26,7 @@ class HeaderOnlyLibTestClient(TestClient):
     conanfile = """
 import os
 from conan import ConanFile, tools
+from conan.tools.files import copy
 
 class Pkg(ConanFile):
     name = "MyLib"
@@ -38,7 +39,8 @@ class Pkg(ConanFile):
     default_options = {"shared": True, }
 
     def package(self):
-        self.copy("*.hpp", dst="include", src="src/include")
+        copy(self, "*.hpp", os.path.join(self.source_folder, "src/include"),
+                            os.path.join(self.package_folder, "include"))
 
     def package_info(self):
         self.cpp_info.libs = ["MyLib", "otra", ]

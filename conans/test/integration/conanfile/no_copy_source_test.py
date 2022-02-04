@@ -12,6 +12,7 @@ class NoCopySourceTest(unittest.TestCase):
     def test_basic(self):
         conanfile = '''
 from conan import ConanFile
+from conan.tools.files import copy
 from conans.util.files import save, load
 import os
 
@@ -26,7 +27,8 @@ class ConanFileToolsTest(ConanFile):
         save("myartifact.lib", "artifact contents!")
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
 '''
 
         client = TestClient()
@@ -53,6 +55,7 @@ class ConanFileToolsTest(ConanFile):
         conanfile = '''
 from conan import ConanFile
 from conans.util.files import save, load
+from conan.tools.files import copy
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -64,7 +67,7 @@ class ConanFileToolsTest(ConanFile):
         save("header.h", "artifact contents!")
 
     def package(self):
-        self.copy("*.h", dst="include")
+        copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})

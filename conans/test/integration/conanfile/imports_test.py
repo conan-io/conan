@@ -6,13 +6,15 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 
 class TestConan(ConanFile):
     name = "%s"
     version = "0.1"
     exports = "*"
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
 """
 
 conanfile_txt = """
@@ -40,6 +42,7 @@ class ImportTest(unittest.TestCase):
     def test_repackage(self):
         client = self._set_up()
         conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     requires='libc/0.1@lasote/testing'
     keep_imports = True
@@ -47,7 +50,8 @@ class TestConan(ConanFile):
         self.copy("license*", dst="licenses", folder=True, ignore_case=True)
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing --build=missing")
@@ -134,11 +138,13 @@ libc/0.1@lasote/testing
         # https://github.com/conan-io/conan/issues/2293
         client = TestClient()
         pkg_conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):
-                    self.copy("*.dll", dst="bin")
+                    copy(self, "*.dll", self.source_folder, os.path.join(self.package_folder, "bin"))
             """)
         client.save({"conanfile.py": pkg_conanfile,
                      "a.dll": "",

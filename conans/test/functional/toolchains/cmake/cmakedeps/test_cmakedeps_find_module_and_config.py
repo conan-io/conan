@@ -18,6 +18,7 @@ def client():
         import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "mydep"
@@ -32,12 +33,17 @@ def client():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.dll", self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*.dylib*", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.so", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
 

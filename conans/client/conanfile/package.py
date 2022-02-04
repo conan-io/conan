@@ -1,7 +1,7 @@
 import os
 
+from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ScopedOutput
-from conans.client.file_copier import FileCopier, report_copied_files
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
@@ -14,7 +14,6 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
-    - Prepares FileCopier helper for self.copy
     """
 
     if conanfile.package_folder == conanfile.build_folder:
@@ -31,9 +30,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
                          reference=ref, package_id=package_id)
 
     scoped_output.highlight("Calling package()")
-    folders = [conanfile.source_folder, conanfile.build_folder] \
-        if conanfile.source_folder != conanfile.build_folder else [conanfile.build_folder]
-    conanfile.copy = FileCopier(folders, conanfile.package_folder)
+
     with conanfile_exception_formatter(conanfile, "package"):
         with chdir(conanfile.build_folder):
             with conan_v2_property(conanfile, 'info',

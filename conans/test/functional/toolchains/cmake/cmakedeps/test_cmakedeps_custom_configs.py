@@ -194,8 +194,10 @@ class CustomSettingsTest(unittest.TestCase):
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
+       import os
        from conan import ConanFile
        from conans.tools import save
+       from conan.tools.files import copy
 
        class Dep(ConanFile):
            settings = "build_type"
@@ -204,7 +206,7 @@ def test_changing_build_type():
                '# include <iostream>\n'
                'void hello(){{std::cout<<"BUILD_TYPE={}!!";}}'.format(self.settings.build_type))
            def package(self):
-               self.copy("*.h", dst="include")
+               copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
            """)
     client.save({"conanfile.py": dep_conanfile})
     client.run("create . --name=dep --version=0.1 -s build_type=Release")

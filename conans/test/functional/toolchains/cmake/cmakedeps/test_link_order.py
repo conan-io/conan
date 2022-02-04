@@ -16,7 +16,9 @@ Check that the link order of libraries is preserved when using CMake generators
 
 
 conanfile = Template(textwrap.dedent("""
+    import os
     from conan import ConanFile
+    from conan.tools.files import copy
 
     class Recipe(ConanFile):
         name = "{{ref.name}}"
@@ -43,8 +45,8 @@ conanfile = Template(textwrap.dedent("""
             {% endfor %}
 
         def package(self):
-            self.copy("*.a", dst="lib")
-            self.copy("*.lib", dst="lib")
+            copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"))
+            copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"))
 
         def package_info(self):
             self.cpp_info.includedirs = []

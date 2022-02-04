@@ -23,13 +23,14 @@ from conans.util.env import environment_update
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     name = "hello0"
     version = "1.2.1"
     exports_sources = "*"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
 
 
@@ -129,8 +130,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading hello0/1.2.1@user/testing#f390:357a",
-                      client.out)
+        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#a397", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
@@ -146,6 +146,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
             class MyPkg(ConanFile):
                 name = "hello1"
                 version = "1.2.1"
@@ -153,7 +154,7 @@ class UploadTest(unittest.TestCase):
                 settings = "os", "arch"
 
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
             """)
         client.save({"conanfile.py": conanfile_upload_query})
 
@@ -360,7 +361,9 @@ class UploadTest(unittest.TestCase):
 
     def test_upload_no_overwrite_all(self):
         conanfile_new = GenConanfile("hello", "1.0").\
-            with_exports_sources(["*"]).with_package("self.copy('*')")
+            with_import("from conan.tools.files import copy").\
+            with_exports_sources(["*"]).\
+            with_package('copy(self, "*", self.source_folder, self.package_folder)')
 
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,

@@ -3,14 +3,14 @@ from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
-from conans.client.importer import run_deploy, run_imports
+from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.model.conan_file import ConanFile
 from conans.model.recipe_ref import RecipeReference
 
-
 # FIXME: this is duplicated in the new API until all commands that use this function are migrated
 #  this should be replaced by a call to APIV2.graph.load_graph + APIV2.install.install_binaries
+
 
 def deps_install(app, ref_or_path, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,

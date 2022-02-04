@@ -4,3 +4,4 @@ from conan.tools.files.patches import patch, apply_conandata_patches
 from conan.tools.files.cpp_package import CppPackage
 from conan.tools.files.packager import AutoPackager
 from conan.tools.files.symlinks import symlinks
+from conan.tools.files.copy_pattern import copy
