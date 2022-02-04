@@ -192,8 +192,7 @@ class ConanFileLoader:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
         conanfile.name = ref.name
-        # FIXME Conan 2.0, version should be a string not a Version object
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version)
         conanfile.user = ref.user
         conanfile.channel = ref.channel
         return conanfile
