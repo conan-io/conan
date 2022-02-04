@@ -295,9 +295,7 @@ class ConfDefinition:
 
     def as_list(self):
         result = []
-        # It is necessary to convert the None for sorting
-        for pattern, conf in sorted(self._pattern_confs.items(),
-                                    key=lambda x: ("", x[1]) if x[0] is None else x):
+        for pattern, conf in self._pattern_confs.items():
             for name, value in sorted(conf.items()):
                 if pattern:
                     result.append(("{}:{}".format(pattern, name), value))
