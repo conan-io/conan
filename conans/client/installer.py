@@ -267,8 +267,6 @@ class BinaryInstaller(object):
             app.loader.load_generators(generator_path)
 
     def install(self, deps_graph):
-        # build_mode is needed exclusively because the package_revision_mode requiring
-        # re-evaluating binaries
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
         self._out.info("\nInstalling (downloading, building) binaries...")
