@@ -979,7 +979,8 @@ def test_build_requires():
     with client.chdir("consumer"):
         client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
                    " -s arch=x86_64 -s build_type=Release")
-        assert "dep/0.1:6745936d8a913181e35fed8eb321e5aa6cf7500c - Cache" in client.out
+        client.assert_listed_binary({"dep/0.1": ("6745936d8a913181e35fed8eb321e5aa6cf7500c",
+                                                 "Cache")}, build=True)
         deps_props = client.load("conandeps.props")
         assert "conan_dep_build.props" in deps_props
         assert "Invoking 64bit dep_1 build tool" in client.out

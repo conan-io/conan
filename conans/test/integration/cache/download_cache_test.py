@@ -5,7 +5,6 @@ import unittest
 from collections import Counter
 from threading import Thread
 
-import pytest
 from bottle import static_file, request
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader

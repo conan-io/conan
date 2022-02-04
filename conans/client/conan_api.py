@@ -6,10 +6,8 @@ from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
 from conans.client.source import config_source_local
@@ -103,62 +101,6 @@ class ConanAPIV1(object):
             download(app, ref, packages, recipe)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
-
-    @api_method
-    def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
-              source_folder=None, package_folder=None, build_folder=None,
-              cwd=None, settings=None, options=None, env=None,
-              remote_name=None, build=None, profile_names=None,
-              update=False, generators=None,
-              lockfile=None, lockfile_out=None, profile_build=None, conf=None):
-
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-
-        cwd = cwd or os.getcwd()
-        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
-        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
-        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-        build_folder = _make_abs_path(build_folder, cwd)
-        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
-        default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-
-        try:
-            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-            profile_host, profile_build, graph_lock, root_ref = \
-                get_graph_info(profile_host, profile_build, cwd,
-                               app.cache,
-                               name=name, version=version, user=user, channel=channel,
-                               lockfile=lockfile)
-            deps_info = deps_install(app=app,
-                                     ref_or_path=conanfile_path,
-                                     base_folder=cwd,
-                                     source_folder=layout_source_folder,
-                                     output_folder=layout_build_folder,
-                                     profile_host=profile_host,
-                                     profile_build=profile_build,
-                                     graph_lock=graph_lock,
-                                     root_ref=root_ref,
-                                     build_modes=build,
-                                     generators=generators,
-                                     conanfile_path=os.path.dirname(conanfile_path))
-
-            if lockfile_out:
-                lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock.save(lockfile_out)
-
-            conanfile = deps_info.root.conanfile
-            cmd_build(app, conanfile_path, conanfile, base_path=cwd,
-                      source_folder=source_folder, build_folder=build_folder,
-                      package_folder=package_folder,
-                      layout_source_folder=layout_source_folder,
-                      layout_build_folder=layout_build_folder)
-        except ConanException as exc:
-            raise
 
     @api_method
     def source(self, path, source_folder=None, cwd=None):

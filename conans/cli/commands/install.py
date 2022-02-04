@@ -48,7 +48,8 @@ def graph_compute(args, conan_api, strict_lockfile=True):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
-    reference = RecipeReference.loads(args.reference) if args.reference else None
+    reference = RecipeReference.loads(args.reference) \
+        if ("reference" in args and args.reference) else None
     if not path and not reference:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
@@ -68,11 +69,13 @@ def graph_compute(args, conan_api, strict_lockfile=True):
 
     # decoupling the most complex part, which is loading the root_node, this is the point where
     # the difference between "reference", "path", etc
+    build_require = args.build_require if "build_require" in args else None
+    require_override = args.require_override if "require_override" in args else None
     root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
                                                lockfile, root_ref,
                                                create_reference=None,
-                                               is_build_require=args.build_require,
-                                               require_overrides=args.require_override,
+                                               is_build_require=build_require,
+                                               require_overrides=require_override,
                                                remotes=remotes,
                                                update=args.update)
 

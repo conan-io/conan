@@ -586,35 +586,3 @@ class ConanInfo(object):
             return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
-
-    def parent_compatible(self, *_, **kwargs):
-        """If a built package for Intel has to be compatible for a Visual/GCC compiler
-        (consumer). Transform the visual/gcc full_settings into an intel one"""
-
-        if "compiler" not in kwargs:
-            raise ConanException("Specify 'compiler' as a keywork argument. e.g: "
-                                 "'parent_compiler(compiler=\"intel\")' ")
-
-        self.settings.compiler = kwargs["compiler"]
-        # You have to use here a specific version or create more than one version of
-        # compatible packages
-        kwargs.pop("compiler")
-        for setting_name in kwargs:
-            # Won't fail even if the setting is not valid, there is no validation at info
-            setattr(self.settings.compiler, setting_name, kwargs[setting_name])
-        self.settings.compiler.base = self.full_settings.compiler
-        for field in self.full_settings.compiler.fields:
-            value = getattr(self.full_settings.compiler, field)
-            setattr(self.settings.compiler.base, field, value)
-
-    def base_compatible(self):
-        """If a built package for Visual/GCC has to be compatible for an Intel compiler
-          (consumer). Transform the Intel profile into an visual/gcc one"""
-        if not self.full_settings.compiler.base:
-            raise ConanException("The compiler '{}' has "
-                                 "no 'base' sub-setting".format(self.full_settings.compiler))
-
-        self.settings.compiler = self.full_settings.compiler.base
-        for field in self.full_settings.compiler.base.fields:
-            value = getattr(self.full_settings.compiler.base, field)
-            setattr(self.settings.compiler, field, value)
