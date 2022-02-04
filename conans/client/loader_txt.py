@@ -7,7 +7,7 @@ class ConanFileTextLoader(object):
     def __init__(self, input_text):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
-                                                         "tool_requires"],
+                                                         "imports", "tool_requires"],
                                            parse_lines=True)
 
     @property
