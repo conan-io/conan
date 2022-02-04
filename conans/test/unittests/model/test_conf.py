@@ -60,7 +60,6 @@ def test_conf_rebase(conf_definition):
     result = textwrap.dedent("""\
     tools.microsoft.msbuild:verbosity=minimal
     user.company.toolchain:flags=someflags
-
     """)
     assert c.dumps() == result
 

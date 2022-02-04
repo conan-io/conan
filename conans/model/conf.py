@@ -48,178 +48,6 @@ def _is_profile_module(module_name):
     return any(module_name.startswith(user_module) for user_module in _user_modules)
 
 
-# class Conf(object):
-#
-#     def __init__(self):
-#         self._values = {}  # property: value
-#
-#     def __getitem__(self, name):
-#         return self._values.get(name)
-#
-#     def __setitem__(self, name, value):
-#         if name != name.lower():
-#             raise ConanException("Conf '{}' must be lowercase".format(name))
-#         self._values[name] = value
-#
-#     def __delitem__(self, name):
-#         del self._values[name]
-#
-#     def __repr__(self):
-#         return "Conf: " + repr(self._values)
-#
-#     def items(self):
-#         return self._values.items()
-#
-#     def filter_user_modules(self):
-#         result = Conf()
-#         for k, v in self._values.items():
-#             if _is_profile_module(k):
-#                 result._values[k] = v
-#         return result
-#
-#     def update(self, other):
-#         """
-#         :param other: has more priority than current one
-#         :type other: Conf
-#         """
-#         self._values.update(other._values)
-#
-#     def compose_conf(self, other):
-#         """
-#         :param other: other has less priority than current one
-#         :type other: Conf
-#         """
-#         for k, v in other._values.items():
-#             if k not in self._values:
-#                 self._values[k] = v
-#
-#     @property
-#     def sha(self):
-#         result = []
-#         for k, v in sorted(self._values.items()):
-#             result.append("{}={}".format(k, v))
-#         return "\n".join(result)
-#
-#
-# class ConfDefinition(object):
-#     def __init__(self):
-#         self._pattern_confs = {}  # pattern (including None) => Conf
-#
-#     def __bool__(self):
-#         return bool(self._pattern_confs)
-#
-#     def __repr__(self):
-#         return "ConfDefinition: " + repr(self._pattern_confs)
-#
-#     __nonzero__ = __bool__
-#
-#     def __getitem__(self, module_name):
-#         """ if a module name is requested for this, always goes to the None-Global config
-#         """
-#         return self._pattern_confs.get(None, Conf())[module_name]
-#
-#     def __delitem__(self, module_name):
-#         """ if a module name is requested for this, always goes to the None-Global config
-#         """
-#         del self._pattern_confs.get(None, Conf())[module_name]
-#
-#     def get_conanfile_conf(self, ref_str):
-#         result = Conf()
-#         for pattern, conf in self._pattern_confs.items():
-#             if pattern is None or (ref_str is not None and fnmatch.fnmatch(ref_str, pattern)):
-#                 result.update(conf)
-#         return result
-#
-#     def update_conf_definition(self, other):
-#         """
-#         This is used for composition of profiles [conf] section
-#         :type other: ConfDefinition
-#         """
-#         for k, v in other._pattern_confs.items():
-#             existing = self._pattern_confs.get(k)
-#             if existing:
-#                 existing.update(v)
-#             else:
-#                 self._pattern_confs[k] = v
-#
-#     def rebase_conf_definition(self, other):
-#         """
-#         for taking the new global.conf and composing with the profile [conf]
-#         :type other: ConfDefinition
-#         """
-#         for k, v in other._pattern_confs.items():
-#             new_v = v.filter_user_modules()  # Creates a copy, filtered
-#             existing = self._pattern_confs.get(k)
-#             if existing:
-#                 new_v.update(existing)
-#             self._pattern_confs[k] = new_v
-#
-#     def as_list(self):
-#         result = []
-#         # It is necessary to convert the None for sorting
-#         for pattern, conf in sorted(self._pattern_confs.items(),
-#                                     key=lambda x: ("", x[1]) if x[0] is None else x):
-#             for name, value in sorted(conf.items()):
-#                 if pattern:
-#                     result.append(("{}:{}".format(pattern, name), value))
-#                 else:
-#                     result.append((name, value))
-#         return result
-#
-#     def dumps(self):
-#         result = []
-#         for name, value in self.as_list():
-#             result.append("{}={}".format(name, value))
-#         return "\n".join(result)
-#
-#     def loads(self, text, profile=False):
-#         self._pattern_confs = {}
-#         for line in text.splitlines():
-#             line = line.strip()
-#             if not line or line.startswith("#"):
-#                 continue
-#             try:
-#                 left, value = line.split("=", 1)
-#             except ValueError:
-#                 raise ConanException("Error while parsing conf value '{}'".format(line))
-#             else:
-#                 self.update(left.strip(), value.strip(), profile=profile)
-#
-#     def update(self, key, value, profile=False):
-#         """
-#         Add/update a new/existing Conf line
-#
-#         >> update("tools.microsoft.msbuild:verbosity", "Detailed")
-#         """
-#         if key.count(":") >= 2:
-#             pattern, name = key.split(":", 1)
-#         else:
-#             pattern, name = None, key
-#
-#         if not _is_profile_module(name):
-#             if profile:
-#                 raise ConanException("[conf] '{}' not allowed in profiles".format(key))
-#             if pattern is not None:
-#                 raise ConanException("Conf '{}' cannot have a package pattern".format(key))
-#
-#         conf = self._pattern_confs.setdefault(pattern, Conf())
-#         conf[name] = value
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class _ConfVarPlaceHolder:
     pass
 
@@ -230,6 +58,9 @@ class _ConfValue:
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
+
+    def __repr__(self):
+        return "ConfValues: " + repr(self._values)
 
     @property
     def values(self):
@@ -290,6 +121,7 @@ class _ConfValue:
 
 
 class Conf:
+
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
@@ -300,20 +132,41 @@ class Conf:
     __nonzero__ = __bool__
 
     def __getitem__(self, name):
-        values = self._values.get(name).values
         # FIXME: Keeping backward compatibility?
-        if len(values) == 1:
-            return values[0]
-        else:
-            return values
+        conf = self._values.get(name)
+        if conf is not None:
+            values = conf.values
+            # FIXME: Keeping backward compatibility?
+            if len(values) == 1:
+                return values[0]  # single value
+            else:
+                return values  # list of values
 
     def __setitem__(self, name, value):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
-        self.define(name, value)
+        # FIXME: Keeping backward compatibility?
+        self.define(name, value)  # it's like a new definition
 
     def __delitem__(self, name):
+        # FIXME: Keeping backward compatibility?
         del self._values[name]
+
+    @staticmethod
+    def _validate_lower_case(name):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
+
+    # def get(self, conf_name, conf_type=None, conf_default=None):
+    #     v = self._values.get(conf_name)
+    #     if v is not None:
+    #         if conf_type is not None:
+    #             try:
+    #                 v = conf_type(v)
+    #             except Exception:
+    #                 raise ConanException(f"Conf '{conf_name}' value '{v}' "
+    #                                      f"must be '{conf_type.__name__}'")
+    #     else:
+    #         v = conf_default
+    #     return v
 
     def copy(self):
         e = Conf()
@@ -330,6 +183,7 @@ class Conf:
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
+        self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value, separator, path=False)
 
     def unset(self, name):
@@ -339,9 +193,11 @@ class Conf:
         self._values[name] = _ConfValue(name, None)
 
     def append(self, name, value, separator=None):
+        self._validate_lower_case(name)
         self._values.setdefault(name, _ConfValue(name)).append(value, separator)
 
     def prepend(self, name, value, separator=None):
+        self._validate_lower_case(name)
         self._values.setdefault(name, _ConfValue(name)).prepend(value, separator)
 
     def remove(self, name, value):
