@@ -55,8 +55,7 @@ def deps_install(app, ref_or_path, base_folder, profile_host, profile_build,
 
     installer = BinaryInstaller(app)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
-    build_modes = BuildMode(build_modes)
-    installer.install(deps_graph, build_modes)
+    installer.install(deps_graph)
 
     if hasattr(conanfile, "layout") and not test:
         conanfile.folders.set_base_source(source_folder or conanfile_path)

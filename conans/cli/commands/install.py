@@ -57,8 +57,6 @@ def graph_compute(args, conan_api, strict_lockfile=True):
     remotes = get_multiple_remotes(conan_api, args.remote)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=strict_lockfile)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
-    root_ref = RecipeReference(name=args.name, version=args.version,
-                               user=args.user, channel=args.channel)
 
     out = ConanOutput()
     out.highlight("-------- Input profiles ----------")
@@ -67,17 +65,22 @@ def graph_compute(args, conan_api, strict_lockfile=True):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    # decoupling the most complex part, which is loading the root_node, this is the point where
-    # the difference between "reference", "path", etc
     build_require = args.build_require if "build_require" in args else None
     require_override = args.require_override if "require_override" in args else None
-    root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
-                                               lockfile, root_ref,
-                                               create_reference=None,
-                                               is_build_require=build_require,
-                                               require_overrides=require_override,
-                                               remotes=remotes,
-                                               update=args.update)
+    if reference is None:
+        root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
+                                                                 name=args.name,
+                                                                 version=args.version,
+                                                                 user=args.user,
+                                                                 channel=args.channel,
+                                                                 lockfile=lockfile,
+                                                                 require_overrides=require_override,
+                                                                 remotes=remotes,
+                                                                 update=args.update)
+    else:
+        root_node = conan_api.graph.load_root_virtual_conanfile(reference, profile_host,
+                                                                is_build_require=build_require,
+                                                                require_overrides=require_override)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
@@ -168,8 +171,7 @@ def install(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
-    conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
-                                       remotes=remote, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
