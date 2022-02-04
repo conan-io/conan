@@ -138,7 +138,6 @@ class _PackageBuilder(object):
 
 
     def _package(self, conanfile, pref, conanfile_path):
-        # FIXME: Is weak to assign here the recipe_hash
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
         conanfile.output.info("Generated %s" % CONANINFO)
@@ -258,9 +257,7 @@ class BinaryInstaller(object):
         for generator_path in app.cache.generators:
             app.loader.load_generators(generator_path)
 
-    def install(self, deps_graph, build_mode):
-        # build_mode is needed exclusively because the package_revision_mode requiring
-        # re-evaluating binaries
+    def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
         self._out.info("\nInstalling (downloading, building) binaries...")
@@ -274,7 +271,7 @@ class BinaryInstaller(object):
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages:
-                    self._handle_package(package, install_reference, build_mode)
+                    self._handle_package(package, install_reference)
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -306,7 +303,7 @@ class BinaryInstaller(object):
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, build_mode):
+    def _handle_package(self, package, install_reference):
         if package.binary == BINARY_EDITABLE:
             self._handle_node_editable(package)
             return

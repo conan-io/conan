@@ -2,7 +2,7 @@ from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
-from conans.client.graph.build_mode import BuildMode
+
 from conans.client.installer import BinaryInstaller, call_system_requirements
 
 
@@ -12,10 +12,9 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, build_modes=None, remotes=None, update=False):
+    def install_binaries(self, deps_graph, remotes=None, update=False):
         """ Install binaries for dependency graph
         @param deps_graph: Dependency graph to intall packages for
-        @param build_modes:
         @param remotes:
         @param update:
         """
@@ -23,8 +22,7 @@ class InstallAPI:
         app.load_remotes(remotes, update=update)
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
-        build_modes = BuildMode(build_modes)
-        installer.install(deps_graph, build_modes)
+        installer.install(deps_graph)
 
     # TODO: Look for a better name
     @staticmethod
