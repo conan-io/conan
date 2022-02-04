@@ -49,10 +49,9 @@ class ExportCommandTestCase(unittest.TestCase):
                     "revision": "{rev_value}"}}
     """)
 
-    @parameterized.expand([(True, False), (False, True)])
-    def test_non_existing_remote(self, auto_url, auto_rev):
-        url_value = "auto" if auto_url else "http://this.url"
-        rev_value = "auto" if auto_rev else "123"
+    def test_non_existing_remote(self):
+        url_value = "auto"
+        rev_value = "auto"
 
         self.path, _ = create_local_git_repo({"conanfile.py":
                                               self.conanfile.format(repo_type="git",
@@ -61,6 +60,6 @@ class ExportCommandTestCase(unittest.TestCase):
         self.client = TestClient()
         self.client.current_folder = self.path
         self.client.run("export . --name=lib --version=version --user=user --channel=channel")
-        if auto_url:
-            self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
-                          self.client.out)
+
+        self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
+                      self.client.out)
