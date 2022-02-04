@@ -102,10 +102,6 @@ def _is_profile_module(module_name):
 #
 #
 # class ConfDefinition(object):
-#
-#     actions = (("+=", "append"), ("=+", "prepend"),
-#                ("=!", "unset"), ("=", "define"))
-#
 #     def __init__(self):
 #         self._pattern_confs = {}  # pattern (including None) => Conf
 #
@@ -178,42 +174,16 @@ def _is_profile_module(module_name):
 #
 #     def loads(self, text, profile=False):
 #         self._pattern_confs = {}
-#
 #         for line in text.splitlines():
 #             line = line.strip()
 #             if not line or line.startswith("#"):
 #                 continue
-#
-#             for op, method in ConfDefinition.actions:
-#                 tokens = line.split(op, 1)
-#                 if len(tokens) != 2:
-#                     continue
-#
-#                 pattern_name, value = tokens
-#                 pattern_name = pattern_name.split(":", 1)
-#                 if len(pattern_name) == 2:
-#                     pattern, name = pattern_name
-#                 else:
-#                     pattern, name = None, pattern_name[0]
-#                 # strip whitespaces before/after =
-#                 # values are not strip() unless they are a path, to preserve potential whitespaces
-#                 name = name.strip()
-#                 # When loading from profile file, latest line has priority
-#                 conf = Conf()
-#                 # Applying operator method
-#                 getattr(conf, method)(name, value)
-#
-#                 conf = self._pattern_confs.setdefault(pattern, Conf())
-#                 conf[name] = value
-#
-#                 existing = self._pattern_confs.get(pattern)
-#                 if existing is None:
-#                     self._pattern_confs[pattern] = conf
-#                 else:
-#                     self._pattern_confs[pattern] = conf.compose_conf(existing)
-#                 break
+#             try:
+#                 left, value = line.split("=", 1)
+#             except ValueError:
+#                 raise ConanException("Error while parsing conf value '{}'".format(line))
 #             else:
-#                 raise ConanException("Bad env definition: {}".format(line))
+#                 self.update(left.strip(), value.strip(), profile=profile)
 #
 #     def update(self, key, value, profile=False):
 #         """
@@ -260,6 +230,10 @@ class _ConfValue:
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
+
+    @property
+    def values(self):
+        return self._values
 
     def dumps(self):
         result = []
@@ -326,12 +300,17 @@ class Conf:
     __nonzero__ = __bool__
 
     def __getitem__(self, name):
-        return self._values.get(name)
+        values = self._values.get(name).values
+        # FIXME: Keeping backward compatibility?
+        if len(values) == 1:
+            return values[0]
+        else:
+            return values
 
     def __setitem__(self, name, value):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
-        self._values[name] = value
+        self.define(name, value)
 
     def __delitem__(self, name):
         del self._values[name]
@@ -482,7 +461,7 @@ class ConfDefinition:
             result.append("")
         return "\n".join(result)
 
-    def loads(self, text):
+    def loads(self, text, profile=False):
         self._pattern_confs = {}
 
         for line in text.splitlines():
@@ -494,12 +473,18 @@ class ConfDefinition:
                 tokens = line.split(op, 1)
                 if len(tokens) != 2:
                     continue
+
                 pattern_name, value = tokens
-                pattern_name = pattern_name.split(":", 1)
-                if len(pattern_name) == 2:
-                    pattern, name = pattern_name
+                if pattern_name.count(":") >= 2:
+                    pattern, name = pattern_name.split(":", 1)
                 else:
-                    pattern, name = None, pattern_name[0]
+                    pattern, name = None, pattern_name
+
+                if not _is_profile_module(name):
+                    if profile:
+                        raise ConanException("[conf] '{}' not allowed in profiles".format(pattern_name))
+                    if pattern is not None:
+                        raise ConanException("Conf '{}' cannot have a package pattern".format(pattern_name))
 
                 # strip whitespaces before/after =
                 # values are not strip() unless they are a path, to preserve potential whitespaces
@@ -510,7 +495,7 @@ class ConfDefinition:
                 if method == "unset":
                     conf.unset(name)
                 else:
-                    getattr(conf, method)(name, value)
+                    getattr(conf, method)(name, value.strip())
 
                 existing = self._pattern_confs.get(pattern)
                 if existing is None:
