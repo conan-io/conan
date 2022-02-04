@@ -21,6 +21,8 @@ def common_args_export(parser):
                         help="Path to a lockfile file.")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
+    parser.add_argument("--lockfile-strict", action="store_true",
+                        help="Raise an error if some dependency is not found in lockfile")
     parser.add_argument("--ignore-dirty", default=False, action='store_true',
                         help='When using the "scm" feature with "auto" values, capture the'
                              ' revision and url even if there are uncommitted changes')
@@ -36,7 +38,7 @@ def export(conan_api, parser, *args, **kwargs):
 
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     conan_api.export.export(path=path,
