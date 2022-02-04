@@ -26,6 +26,8 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                              'written')
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
+    parser.add_argument("--lockfile-strict", action="store_true",
+                        help="Raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--ignore-dirty", default=False, action='store_true',
