@@ -22,7 +22,6 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 class _FileCopier(object):
     """ main responsible of copying files from place to place:
     package: build folder -> package folder
-    imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
     def __init__(self, source_folders, root_destination_folder):
