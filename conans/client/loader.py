@@ -235,8 +235,6 @@ class ConanFileLoader:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
 
-        # imports method
-        conanfile.imports = parser.imports_method(conanfile)
         return conanfile
 
     def load_virtual(self, references, is_build_require=False, require_overrides=None):

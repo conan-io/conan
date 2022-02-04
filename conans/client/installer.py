@@ -11,7 +11,6 @@ from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_UPDATE
 from conans.client.graph.install_graph import InstallGraph
-from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -122,11 +121,6 @@ class _PackageBuilder(object):
 
         write_generators(conanfile)
 
-        # Build step might need DLLs, binaries as protoc to generate source files
-        # So execute imports() before build, storing the list of copied_files
-
-        copied_files = run_imports(conanfile)
-
         try:
             mkdir(conanfile.build_folder)
             with chdir(conanfile.build_folder):
@@ -141,9 +135,7 @@ class _PackageBuilder(object):
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
             raise ConanException(exc)
-        finally:
-            # Now remove all files that were imported with imports()
-            remove_imports(conanfile, copied_files)
+
 
     def _package(self, conanfile, pref, conanfile_path):
         # FIXME: Is weak to assign here the recipe_hash
@@ -198,7 +190,6 @@ class _PackageBuilder(object):
                     conanfile.folders.set_base_source(base_build)
 
                 conanfile.folders.set_base_build(base_build)
-                conanfile.folders.set_base_imports(base_build)
                 conanfile.folders.set_base_package(base_package)
 
                 if not skip_build:
@@ -377,7 +368,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(output_folder or base_path)
             conanfile.folders.set_base_source(source_folder or base_path)
             conanfile.folders.set_base_build(output_folder or base_path)
-            conanfile.folders.set_base_imports(output_folder or base_path)
             conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
@@ -385,15 +375,13 @@ class BinaryInstaller(object):
 
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
-        # It will only run generation and imports once
+        # It will only run generation
         node = install_node.nodes[0]
         conanfile = node.conanfile
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
         write_generators(conanfile)
-        copied_files = run_imports(conanfile)
-        report_copied_files(copied_files, output)
 
     def _handle_node_build(self, package, pkg_layout):
         node = package.nodes[0]

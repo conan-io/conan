@@ -207,9 +207,6 @@ class Command(object):
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
 
-        parser.add_argument("--no-imports", action='store_true', default=False,
-                            help='Install specified packages but avoid running imports')
-
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
@@ -236,57 +233,11 @@ class Command(object):
                                      remote_name=args.remote,
                                      build=args.build,
                                      update=args.update, generators=args.generator,
-                                     no_imports=args.no_imports,
                                      lockfile=args.lockfile,
                                      lockfile_out=args.lockfile_out, conf=args.conf_host)
         except ConanException as exc:
             info = exc.info
             raise
-
-    def imports(self, *args):
-        """
-        Calls your local conanfile.py or conanfile.txt 'imports' method.
-        """
-
-        parser = argparse.ArgumentParser(description=self.imports.__doc__,
-                                         prog="conan imports",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path",
-                            help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous"
-                            " execution. e.g.: conan imports ./imported_files --undo ")
-        parser.add_argument("-imf", "--import-folder", action=OnceArgument,
-                            help="Directory to copy the artifacts to. By default it will be the"
-                                 " current directory")
-        parser.add_argument("-u", "--undo", default=False, action="store_true",
-                            help="Undo imports. Remove imported files")
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile")
-        _add_profile_arguments(parser)
-
-        args = parser.parse_args(*args)
-
-        if args.undo:
-            return self._conan_api.imports_undo(args.path)
-
-        try:
-            if "@" in args.path and RecipeReference.loads(args.path):
-                raise ArgumentError(None, "Parameter 'path' cannot be a reference. Use a folder "
-                                          "containing a conanfile.py or conanfile.txt file.")
-        except ConanException:
-            pass
-        self._warn_python_version()
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-
-        self._warn_python_version()
-        self._conan_api.imports(args.path,
-                            args.import_folder, settings=args.settings_host,
-                            options=args.options_host, env=args.env_host,
-                            profile_names=args.profile_host, profile_build=profile_build,
-                            lockfile=args.lockfile)
 
     def _commands(self):
         """ Returns a list of available commands.

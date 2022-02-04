@@ -12,13 +12,16 @@ def test_update_binaries():
     client = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save, load
         import os, random
         class Pkg(ConanFile):
             def package(self):
-                save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
-            def deploy(self):
-                self.copy("file.txt")
+                save(self, os.path.join(self.package_folder, "file.txt"), str(random.random()))
+
+            def package_info(self):
+                content = load(self, os.path.join(self.package_folder, "file.txt"))
+                self.output.warning("CONTENT=>{}#".format(content))
+
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
@@ -26,19 +29,24 @@ def test_update_binaries():
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --reference=pkg/0.1@lasote/testing")
-    value = load(os.path.join(client2.current_folder, "file.txt"))
+
+    def get_value_from_output(output):
+        tmp = str(output).split("CONTENT=>")[1]
+        return tmp.split("#")[0]
+
+    value = get_value_from_output(client2.out)
 
     time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
     client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.run("install --reference=pkg/0.1@lasote/testing")
-    new_value = load(os.path.join(client2.current_folder, "file.txt"))
+    new_value = get_value_from_output(client2.out)
     assert value == new_value
 
     client2.run("install --reference=pkg/0.1@lasote/testing --update")
     assert "Current package revision is older than the remote one" in client2.out
-    new_value = load(os.path.join(client2.current_folder, "file.txt"))
+    new_value = get_value_from_output(client2.out)
     assert value != new_value
 
     # Now check newer local modifications are not overwritten
@@ -49,10 +57,10 @@ def test_update_binaries():
     client2.save({"conanfile.py": conanfile})
     client2.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client2.run("install --reference=pkg/0.1@lasote/testing")
-    value2 = load(os.path.join(client2.current_folder, "file.txt"))
+    value2 = get_value_from_output(client2.out)
     client2.run("install --reference=pkg/0.1@lasote/testing --update -r default")
     assert "Current package revision is newer than the remote one" in client2.out
-    new_value = load(os.path.join(client2.current_folder, "file.txt"))
+    new_value = get_value_from_output(client2.out)
     assert value2 == new_value
 
 
