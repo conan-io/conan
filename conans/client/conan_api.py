@@ -20,11 +20,6 @@ from conans.paths import get_conan_user_home
 from conans.util.files import mkdir
 
 
-class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
-    def __bool__(self):
-        return bool(self.profiles or self.settings or self.options or self.env or self.conf)
-
-
 def _make_abs_path(path, cwd=None, default=None):
     """convert 'path' to absolute if necessary (could be already absolute)
     if not defined (empty, or None), will return 'default' one or 'cwd'

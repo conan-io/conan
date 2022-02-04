@@ -7,7 +7,7 @@ from difflib import get_close_matches
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import ConanAPIV1, ProfileData
+from conans.client.conan_api import ConanAPIV1
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference

@@ -6,9 +6,7 @@ from collections import Counter
 from mock import Mock
 
 from conans.client.cache.cache import ClientCache
-from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
@@ -58,7 +56,6 @@ class GraphManagerTest(unittest.TestCase):
         pyreq_loader = PyRequireLoader(app.proxy, app.range_resolver)
         app.loader = ConanFileLoader(pyreq_loader=pyreq_loader)
         app.binaries_analyzer = GraphBinariesAnalyzer(app)
-        app.graph_manager = GraphManager(app)
         app.hook_manager = Mock()
         return app
 
@@ -162,7 +159,7 @@ class GraphManagerTest(unittest.TestCase):
         if install:
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app)
-            
+
             binary_installer.install(deps_graph)
 
         return deps_graph
