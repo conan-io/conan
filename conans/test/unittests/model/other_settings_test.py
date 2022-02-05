@@ -317,7 +317,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
+                                    ['AIX', 'Android', 'Arduino', 'Dos', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
                                      'SunOS', 'VxWorks', 'Windows', 'WindowsCE', 'WindowsStore', 'baremetal', 'iOS', 'tvOS',
                                      'watchOS']),
                       client.out)
