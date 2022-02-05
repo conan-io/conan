@@ -542,6 +542,11 @@ class CMakeCommonMacros:
                        conan_error_compiler_version()
                     endif()
                 endif()
+            elseif(CONAN_COMPILER STREQUAL "watcom")
+                conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
+                if(NOT ${VERSION_MAJOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR})
+                    conan_error_compiler_version()
+                endif()
             else()
                 conan_message(STATUS "WARN: Unknown compiler '${CONAN_COMPILER}', skipping the version check...")
             endif()
@@ -605,7 +610,8 @@ class CMakeCommonMacros:
             elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
                 (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
                 (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
-                (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
+                (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") OR
+                (CONAN_COMPILER STREQUAL "watcom" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Watcom"))
                 message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
             endif()
 

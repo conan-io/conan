@@ -66,6 +66,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         baremetal:
         VxWorks:
             version: ["7"]
+        Dos:
     arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
@@ -142,6 +143,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     <<: *gcc
                     threads: [None]
                     exceptions: [None]
+        watcom:
+            version: ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9",
+                      "2.0"]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
