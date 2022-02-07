@@ -275,11 +275,7 @@ class ConfDefinition:
         :param other: The argument profile has priority/precedence over the current one.
         """
         for pattern, conf in other._pattern_confs.items():
-            existing = self._pattern_confs.get(pattern)
-            if existing is not None:
-                self._pattern_confs[pattern] = conf.compose_conf(existing)
-            else:
-                self._pattern_confs[pattern] = conf
+            self._update_conf(pattern, conf)
 
     def rebase_conf_definition(self, other):
         """
@@ -287,10 +283,16 @@ class ConfDefinition:
         :type other: ConfDefinition
         """
         for pattern, conf in other._pattern_confs.items():
-            conf = conf.filter_user_modules()  # Creates a copy, filtered
+            new_conf = conf.filter_user_modules()  # Creates a copy, filtered
             existing = self._pattern_confs.get(pattern)
             if existing:
-                conf.compose_conf(existing)
+                existing.compose_conf(new_conf)
+
+    def _update_conf(self, pattern, conf):
+        existing = self._pattern_confs.get(pattern)
+        if existing:
+            self._pattern_confs[pattern] = conf.compose_conf(existing)
+        else:
             self._pattern_confs[pattern] = conf
 
     def as_list(self):
@@ -351,11 +353,7 @@ class ConfDefinition:
                 else:
                     getattr(conf, method)(name, value.strip())
 
-                existing = self._pattern_confs.get(pattern)
-                if existing is None:
-                    self._pattern_confs[pattern] = conf
-                else:
-                    self._pattern_confs[pattern] = conf.compose_conf(existing)
+                self._update_conf(pattern, conf)
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
