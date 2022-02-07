@@ -52,7 +52,7 @@ class TestConanToolFiles:
                 def source(self):
                     mkdir(self, "myfolder")
                     save(self, "./myfolder/myfile", "some_content")
-                    assert load(self, "./myfolder/myfile") == "some_content"
+                    assert load(self, "./myfolder/myfile") == b"some_content"
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
