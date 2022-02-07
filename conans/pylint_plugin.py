@@ -35,6 +35,7 @@ def transform_conanfile(node):
         "copy": file_copier_class,
         "copy_deps": file_importer_class,
         "python_requires": [str_class, python_requires_class],
+        "recipe_folder": str_class,
     }
 
     for f, t in dynamic_fields.items():
