@@ -1,3 +1,6 @@
+@pytest
+import pytest
+
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
