@@ -126,8 +126,7 @@ class GraphManager(object):
                 profile_host.options.scope(ref.name)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
-            conanfile = self._loader.load_conanfile_txt(path, ref=ref,
-                                                        require_overrides=require_overrides)
+            conanfile = self._loader.load_conanfile_txt(path, require_overrides=require_overrides)
             txt_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)

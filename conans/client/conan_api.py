@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from collections import namedtuple
 
 from conans import __version__ as client_version
@@ -9,21 +8,16 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.download import download
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.importer import run_imports, undo_imports
-from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
 from conans.client.source import config_source_local
-from conans.errors import (ConanException, RecipeNotFoundException,
-                           NotFoundException)
+from conans.errors import (ConanException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
-from conans.search.search import search_recipes
-from conans.util.files import mkdir, load, discarded_file
+from conans.util.files import mkdir
 
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
@@ -125,51 +119,6 @@ class ConanAPIV1(object):
         conanfile.folders.set_base_package(None)
 
         config_source_local(conanfile, conanfile_path, app.hook_manager)
-
-    @api_method
-    def imports(self, conanfile_path, dest=None, cwd=None, settings=None,
-                options=None, env=None, profile_names=None, profile_build=None, lockfile=None,
-                conf=None):
-        """
-        :param path: Path to the conanfile
-        :param dest: Dir to put the imported files. (Abs path or relative to cwd)
-        :param cwd: Current working directory
-        :return: None
-        """
-        app = ConanApp(self.cache_folder)
-        app.load_remotes(update=False)
-        cwd = cwd or os.getcwd()
-        dest = _make_abs_path(dest, cwd)
-
-        mkdir(dest)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=None)
-
-        try:
-            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-            profile_host, profile_build, graph_lock, root_ref = \
-                get_graph_info(profile_host, profile_build, cwd,
-                               app.cache, lockfile=lockfile)
-
-            deps_info = deps_install(app=app,
-                                     ref_or_path=conanfile_path,
-                                     base_folder=cwd,
-                                     profile_host=profile_host,
-                                     profile_build=profile_build,
-                                     graph_lock=graph_lock,
-                                     root_ref=root_ref)
-            conanfile = deps_info.root.conanfile
-            conanfile.folders.set_base_imports(dest)
-            return run_imports(conanfile)
-        except ConanException as exc:
-            raise
-
-    @api_method
-    def imports_undo(self, manifest_path):
-        cwd = os.getcwd()
-        manifest_path = _make_abs_path(manifest_path, cwd)
-        undo_imports(manifest_path)
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

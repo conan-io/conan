@@ -192,19 +192,18 @@ class ConanFileLoader:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
         conanfile.name = ref.name
-        # FIXME Conan 2.0, version should be a string not a Version object
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version)
         conanfile.user = ref.user
         conanfile.channel = ref.channel
         return conanfile
 
-    def load_conanfile_txt(self, conan_txt_path, ref=None, require_overrides=None):
+    def load_conanfile_txt(self, conan_txt_path, require_overrides=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path, basename = os.path.split(conan_txt_path)
-        display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
+        display_name = basename
         conanfile = self._parse_conan_txt(contents, path, display_name)
 
         if require_overrides is not None:
@@ -235,8 +234,6 @@ class ConanFileLoader:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
 
-        # imports method
-        conanfile.imports = parser.imports_method(conanfile)
         return conanfile
 
     def load_virtual(self, references, is_build_require=False, require_overrides=None):

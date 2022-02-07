@@ -355,8 +355,10 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.microsoft import MSBuildToolchain, MSBuild, MSBuildDeps
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -389,7 +391,6 @@ class WinTest(unittest.TestCase):
                 tc.generate()
                 gen.generate()
 
-            def imports(self):
                 shared_option = self.dependencies["hello"].options.get_safe("shared")
                 if shared_option and self.settings.build_type == "Release":
                     configuration = "ReleaseShared"
@@ -400,7 +401,10 @@ class WinTest(unittest.TestCase):
                 else:
                     configuration = self.settings.build_type
                     dst = "%s/%s" % (self.settings.arch, configuration)
-                self.copy("*.dll", src="bin", dst=dst, keep_path=False)
+
+                src = os.path.join(self.dependencies["hello"].package_folder, "bin")
+                dst = os.path.join(self.build_folder, dst)
+                copy(self, "*.dll", src, dst, keep_path=False)
 
             def build(self):
                 msbuild = MSBuild(self)

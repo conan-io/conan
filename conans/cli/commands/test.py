@@ -64,8 +64,7 @@ def test(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")
-    conan_api.install.install_binaries(deps_graph=deps_graph,
-                                       remotes=remotes, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)

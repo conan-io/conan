@@ -109,8 +109,7 @@ class PyRequireLoader(object):
         path, recipe_status, remote, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, graph_lock)
         conanfile.name = new_ref.name
-        # FIXME Conan 2.0 version should be a string, not a Version object
-        conanfile.version = new_ref.version
+        conanfile.version = str(new_ref.version)
         conanfile.user = new_ref.user
         # TODO: Is tihs really necessary?
         conanfile.channel = new_ref.channel

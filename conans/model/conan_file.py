@@ -165,10 +165,6 @@ class ConanFile:
     def generators_folder(self):
         return self.folders.generators_folder
 
-    @property
-    def imports_folder(self):
-        return self.folders.imports_folder
-
     def source(self):
         pass
 

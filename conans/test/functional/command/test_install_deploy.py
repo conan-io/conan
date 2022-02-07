@@ -1,4 +1,3 @@
-@pytest
 import pytest
 
 from conans.test.assets.cmake import gen_cmakelists
@@ -11,8 +10,7 @@ def test_install_deploy():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=0.1")
     c.run("create .")
-    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"],
-                           find_package=["hello"])
+    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello"])
     c.save({"conanfile.txt": "[requires]\nhello/0.1",
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
