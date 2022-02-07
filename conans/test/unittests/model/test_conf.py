@@ -91,23 +91,26 @@ def test_parse_spaces():
     assert c["core:verbosity"] == "minimal"
 
 
-def test_conf_actions():
+def test_conf_actions(conf_definition):
+    c, _ = conf_definition
     text = textwrap.dedent("""\
-    tools.microsoft.msbuild:verbosity=minimal
-    user.company.toolchain:flags=someflags
-    tools.cmake:njobs=5
-    tools.flags:cc=-first 1 -second 2
-    tools.flags:cc+=-third 3
-    tools.flags:cxx=-first 1
-    tools.cmake:njobs=!
-    tools.flags:cxx=+-second 2
-    tools.flags:cxx=+-third 3
+    tools.microsoft.msbuild:verbosity=+another
+    user.company.toolchain:flags+=moreflags
+    # tools.cmake:njobs=5
+    # tools.flags:cc=-first 1 -second 2
+    # tools.flags:cc+=-third 3
+    # tools.flags:cxx=-first 1
+    # tools.cmake:njobs=!
+    # tools.flags:cxx=+-second 2
+    # tools.flags:cxx=+-third 3
     """)
-    c = ConfDefinition()
-    c.loads(text)
-    c.dumps()
-    # result = textwrap.dedent("""\
-    #     another.something:key=value
-    #     tools.microsoft.msbuild:verbosity=minimal
-    #     user.company.toolchain:flags=newvalue""")
-    # assert c.dumps() == result
+    c2 = ConfDefinition()
+    c2.loads(text)
+    c.update_conf_definition(c2)
+    result = textwrap.dedent("""\
+    tools.microsoft.msbuild:verbosity=another
+    tools.microsoft.msbuild:verbosity+=minimal
+    user.company.toolchain:flags=someflags
+    user.company.toolchain:flags+=moreflags
+    """)
+    assert c.dumps() == result

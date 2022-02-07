@@ -155,19 +155,6 @@ class Conf:
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
 
-    # def get(self, conf_name, conf_type=None, conf_default=None):
-    #     v = self._values.get(conf_name)
-    #     if v is not None:
-    #         if conf_type is not None:
-    #             try:
-    #                 v = conf_type(v)
-    #             except Exception:
-    #                 raise ConanException(f"Conf '{conf_name}' value '{v}' "
-    #                                      f"must be '{conf_type.__name__}'")
-    #     else:
-    #         v = conf_default
-    #     return v
-
     def copy(self):
         e = Conf()
         e._values = self._values.copy()
@@ -275,7 +262,7 @@ class ConfDefinition:
         :param other: The argument profile has priority/precedence over the current one.
         """
         for pattern, conf in other._pattern_confs.items():
-            self._update_conf(pattern, conf)
+            self._update_conf_definition(pattern, conf)
 
     def rebase_conf_definition(self, other):
         """
@@ -288,7 +275,7 @@ class ConfDefinition:
             if existing:
                 existing.compose_conf(new_conf)
 
-    def _update_conf(self, pattern, conf):
+    def _update_conf_definition(self, pattern, conf):
         existing = self._pattern_confs.get(pattern)
         if existing:
             self._pattern_confs[pattern] = conf.compose_conf(existing)
@@ -352,8 +339,8 @@ class ConfDefinition:
                     conf.unset(name)
                 else:
                     getattr(conf, method)(name, value.strip())
-
-                self._update_conf(pattern, conf)
+                # Update
+                self._update_conf_definition(pattern, conf)
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
