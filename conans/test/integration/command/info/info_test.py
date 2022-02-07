@@ -103,7 +103,6 @@ class TestJsonOutput:
 class TestAdvancedCliOutput:
     """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES
     """
-    @pytest.mark.tool("git")
     def test_scm_info(self):
         # https://github.com/conan-io/conan/issues/8377
         conanfile = textwrap.dedent("""
@@ -115,15 +114,9 @@ class TestAdvancedCliOutput:
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        commit = client.init_git_repo()
 
         client.run("graph info .")
         assert "revision: auto" in client.out
-        assert "url: some-url/path" in client.out
-
-        client.run("export . --name=pkg --version=0.1")
-        client.run("graph info --reference=pkg/0.1@")
-        assert f"revision: {commit}" in client.out
         assert "url: some-url/path" in client.out
 
         client.run("graph info . --format=json")
