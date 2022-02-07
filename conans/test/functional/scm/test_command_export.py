@@ -22,11 +22,10 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                     "revision": "{rev_value}"}}
     """)
 
-    @parameterized.expand(itertools.product(["SVN", "git"], [(True, False), (False, True)]))
-    def test_no_repo(self, repo_type, autos):
-        auto_url, auto_rev = autos
-        url_value = "auto" if auto_url else "http://this.url"
-        rev_value = "auto" if auto_rev else "123"
+    @parameterized.expand(itertools.product(["SVN", "git"],))
+    def test_no_repo(self, repo_type):
+        url_value = "auto"
+        rev_value = "auto"
 
         self.client = TestClient()
         self.client.save({"conanfile.py": self.conanfile.format(repo_type=repo_type.lower(),

@@ -362,33 +362,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
-    def test_repeat_clone_changing_subfolder(self):
-        tmp = '''
-from conan import ConanFile
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    scm = {{
-        "type": "svn",
-        "url": "{url}",
-        "revision": "{revision}",
-        "subfolder": "onesubfolder"
-    }}
-'''
-        project_url, rev = self.create_project(files={"myfile": "contents"})
-        conanfile = tmp.format(url=project_url, revision=rev)
-        self.client.save({"conanfile.py": conanfile,
-                          "myfile.txt": "My file is copied"})
-        self.client.run("create . --user=user --channel=channel")
-        conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . --user=user --channel=channel")
-        ref = RecipeReference.loads("lib/0.1@user/channel")
-        folder = self.client.get_latest_ref_layout(ref).source()
-        self.assertIn("othersubfolder", os.listdir(folder))
-        self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
-
     def test_auto_filesystem_remote_svn(self):
         # SVN origin will never be a local path (local repo has at least protocol file:///)
         pass
@@ -407,18 +380,6 @@ class ConanLib(ConanFile):
         self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
                       str(self.client.out).lower())
         self.assertIn("Revision deduced by 'auto'", self.client.out)
-        self.assertIn("SCM: Getting sources from folder: %s" % curdir, self.client.out)
-        self.assertIn("My file is copied", self.client.out)
-
-        # Export again but now with absolute reference, so no pointer file is created nor kept
-        svn = SVN(curdir)
-        self.client.save({"conanfile.py": base_svn.format(url=_quoted(svn.get_remote_url()),
-                                                          revision=svn.get_revision())})
-        self.client.run("create . --user=user --channel=channel")
-        self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)
-        self.assertNotIn("Revision deduced by 'auto'", self.client.out)
-        self.assertIn("SCM: Getting sources from url: '{}'".format(project_url).lower(),
-                      str(self.client.out).lower())
         self.assertIn("My file is copied", self.client.out)
 
     def test_auto_subfolder(self):
@@ -573,44 +534,6 @@ class ConanLib(ConanFile):
     def test_submodule(self):
         # SVN has no submodules, may add something related to svn:external?
         pass
-
-    def test_source_method_export_sources_and_scm_mixed(self):
-        project_url, rev = self.create_project(files={"myfile": "contents"})
-        project_url = project_url.replace(" ", "%20")
-        self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
-                                                                 path=self.client.current_folder))
-
-        conanfile = '''
-import os
-from conan import ConanFile
-from conan.tools.files import save
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    exports_sources = "file.txt"
-    scm = {{
-        "type": "svn",
-        "url": "{url}",
-        "revision": "{rev}",
-        "subfolder": "src"
-    }}
-
-    def source(self):
-        self.output.warning("SOURCE METHOD CALLED")
-        assert(os.path.exists("file.txt"))
-        assert(os.path.exists(os.path.join("src", "myfile")))
-        save(self, "cosa.txt", "contents")
-
-    def build(self):
-        assert(os.path.exists("file.txt"))
-        assert(os.path.exists("cosa.txt"))
-        self.output.warning("BUILD METHOD CALLED")
-'''.format(url=project_url, rev=rev)
-        self.client.save({"conanfile.py": conanfile, "file.txt": "My file is copied"})
-        self.client.run("create . --user=user --channel=channel")
-        self.assertIn("SOURCE METHOD CALLED", self.client.out)
-        self.assertIn("BUILD METHOD CALLED", self.client.out)
 
     def test_non_commited_changes_export(self):
         conanfile = base_git.format(revision="auto", url='"auto"')
