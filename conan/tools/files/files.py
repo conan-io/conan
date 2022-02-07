@@ -15,7 +15,7 @@ from conans.client.tools.files import which
 from conans.errors import ConanException
 
 
-def load(conanfile, path) -> bytes:
+def load(conanfile, path):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
