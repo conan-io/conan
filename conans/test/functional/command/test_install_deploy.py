@@ -3,6 +3,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_install_deploy():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=0.1")
