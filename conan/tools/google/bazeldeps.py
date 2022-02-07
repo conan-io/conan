@@ -59,7 +59,7 @@ class BazelDeps(object):
             {% for lib in libs %}
             cc_import(
                 name = "{{ lib }}_precompiled",
-                static_library = "{{ libdir }}/lib{{ lib }}.a"
+                {{ library_type }} = "{{ libdir }}/lib{{ lib }}.{{extension}}"
             )
             {% endfor %}
 
@@ -99,9 +99,9 @@ class BazelDeps(object):
 
         def _relativize_path(p, base_path):
             # TODO: Very fragile, to test more
-            assert os.path.isabs(p), "{} is not absolute".format(p)
-            assert p.startswith(base_path)
-            return p[len(base_path):].replace("\\", "/").lstrip("/")
+            if p.startswith(base_path):
+                return p[len(base_path):].replace("\\", "/").lstrip("/")
+            return p.replace("\\", "/").lstrip("/")
 
         # TODO: This only wokrs for package_folder, but not editable
         package_folder = dependency.package_folder
@@ -121,16 +121,23 @@ class BazelDeps(object):
             linkopts.append('"-l{}"'.format(linkopt))
         linkopts = ', '.join(linkopts)
 
+
+        lib_dir = 'lib'
+        if len(cpp_info.libdirs) != 0:
+            lib_dir = _relativize_path(cpp_info.libdirs[0], package_folder)
+
+        shared_library = dependency.options.get_safe("shared") if dependency.options else False
         context = {
             "name": dependency.ref.name,
             "libs": cpp_info.libs,
-            "libdir": cpp_info.libdirs[0],
+            "libdir": lib_dir,
             "headers": headers,
             "includes": includes,
             "defines": defines,
-            "linkopts": linkopts
+            "linkopts": linkopts,
+            "library_type": "shared_library" if shared_library else "static_library",
+            "extension": "so" if shared_library else "a"
         }
-
         content = Template(template).render(**context)
         return content
 
