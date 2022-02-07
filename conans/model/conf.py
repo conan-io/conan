@@ -136,7 +136,6 @@ class Conf:
         conf = self._values.get(name)
         if conf is not None:
             values = conf.values
-            # FIXME: Keeping backward compatibility?
             if len(values) == 1:
                 return values[0]  # single value
             else:
@@ -154,6 +153,15 @@ class Conf:
     def _validate_lower_case(name):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
+
+    def items(self):
+        for k, v in self._values.items():
+            # FIXME: Keeping backward compatibility?
+            values = v.values
+            if len(values) == 1:
+                yield k, values[0]  # single value
+            else:
+                yield k, values  # list of values
 
     def copy(self):
         e = Conf()
