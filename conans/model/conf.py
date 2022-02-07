@@ -282,6 +282,8 @@ class ConfDefinition:
             existing = self._pattern_confs.get(pattern)
             if existing:
                 existing.compose_conf(new_conf)
+            else:
+                self._pattern_confs[pattern] = new_conf
 
     def _update_conf_definition(self, pattern, conf):
         existing = self._pattern_confs.get(pattern)
