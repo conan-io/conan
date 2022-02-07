@@ -60,12 +60,6 @@ class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
         files = self.get_files(subfolder='lib1', conanfile=self.conanfile, lib_ref=self.lib1_ref)
         self.url, _ = self.create_project(files=files)
 
-    # Local workflow
-    def test_local_root_folder(self):
-        t = TestClient(path_with_spaces=False)
-        t.run_command("svn co {}/lib1 .".format(self.url))
-        self._run_local_test(t, t.current_folder, self.path_to_conanfile)
-
     def test_remote_monorepo(self):
         t = TestClient(path_with_spaces=False)
         t.run_command("svn co {} .".format(self.url))
