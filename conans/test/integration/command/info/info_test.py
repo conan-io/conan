@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
@@ -101,6 +103,7 @@ class TestJsonOutput:
 class TestAdvancedCliOutput:
     """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES
     """
+    @pytest.mark.tool("git")
     def test_scm_info(self):
         # https://github.com/conan-io/conan/issues/8377
         conanfile = textwrap.dedent("""
