@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
+
+
 import os
 
-import six
-
 import pytest
+import six
 
 from conan.tools.files import replace_in_file, save, load
 from conans.test.utils.mocks import MockConanfile
@@ -63,4 +65,3 @@ def test_replace_in_file():
     replace_in_file(conanfile, file_path, bytes("重", "utf-16LE"), bytes("0", "utf-16LE"))
     contents = load(conanfile, file_path)
     assert contents.decode("utf-16") == "你很0，伙計"
-
