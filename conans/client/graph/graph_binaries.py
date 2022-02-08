@@ -191,7 +191,6 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_in_cache(self, cache_latest_prev, node):
         assert cache_latest_prev.revision
-        pref = node.pref
         if self._app.update:
             output = node.conanfile.output
             try:
@@ -205,7 +204,7 @@ class GraphBinariesAnalyzer(object):
                 # cache_time = self._cache.get_package_timestamp(cache_latest_prev)
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
-                if cache_time < node.pref_timestamp and cache_latest_prev != pref:
+                if cache_time < node.pref_timestamp and cache_latest_prev != node.pref:
                     node.binary = BINARY_UPDATE
                     output.info("Current package revision is older than the remote one")
                 else:
@@ -219,7 +218,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_CACHE
             node.binary_remote = None
             node.prev = cache_latest_prev.revision
-            assert node.prev, "PREV for %s is None" % str(pref)
+            assert node.prev, "PREV for %s is None" % str(node.pref)
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
