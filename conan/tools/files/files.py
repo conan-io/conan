@@ -15,14 +15,14 @@ from conans.client.tools.files import which
 from conans.errors import ConanException
 
 
-def load(conanfile, path):
+def load(conanfile, path, encoding="utf-8"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        return tmp
+        return tmp.decode(encoding)
 
 
-def save(conanfile, path, content, append=False):
+def save(conanfile, path, content, append=False, encoding="utf-8"):
     if append:
         mode = "ab"
         try:
@@ -44,7 +44,7 @@ def save(conanfile, path, content, append=False):
 
     with open(path, mode) as handle:
         if not isinstance(content, bytes):
-            content = bytes(content, encoding="utf-8")
+            content = bytes(content, encoding=encoding)
         handle.write(content)
 
 
@@ -437,22 +437,17 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def replace_in_file(conanfile, file_path, search, replace, strict=True):
+def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
     """
     :param conanfile: Conanfile instance
     :param file_path: Path to the file
-    :param search: Pattern to search, can be a str or a bytes() with a specific encoding
-    :param replace: string to replace the matches, can be a str or a bytes() with a specific encoding
+    :param search: Pattern to search
+    :param replace: string to replace the matches
     :param strict: Raise in case "search" is not found in the file contents
     :return:
     """
-    if isinstance(search, str):
-        search = bytes(search, "utf-8")
-    if isinstance(replace, str):
-        replace = bytes(replace, "utf-8")
-
     output = conanfile.output
-    content = load(conanfile, file_path)
+    content = load(conanfile, file_path, encoding=encoding)
     if -1 == content.find(search):
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
@@ -461,7 +456,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True):
             output.warn(message)
             return False
     content = content.replace(search, replace)
-    save(conanfile, file_path, content)
+    save(conanfile, file_path, content, encoding=encoding)
 
 
 def collect_libs(conanfile, folder=None):
