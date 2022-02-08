@@ -6,7 +6,6 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_ERROR)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
-from conans.model.package_ref import PkgReference
 
 
 class GraphBinariesAnalyzer(object):
@@ -36,21 +35,23 @@ class GraphBinariesAnalyzer(object):
             node.prev = None
             return True
 
-    def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
+    @staticmethod
+    def _evaluate_clean_pkg_folder_dirty(node, package_layout):
         # Check if dirty, to remove it
         with package_layout.package_lock():
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if package_layout.package_is_dirty():
                 node.conanfile.output.warning("Package binary is corrupted, "
-                                              "removing: %s" % pref.package_id)
+                                              "removing: %s" % node.package_id)
                 package_layout.package_remove()
                 return
 
     # check through all the selected remotes:
     # - if not --update: get the first package found
     # - if --update: get the latest remote searching in all of them
-    def _get_package_from_remotes(self, node, pref):
+    def _get_package_from_remotes(self, node):
         results = []
+        pref = node.pref
         for r in self._app.selected_remotes:
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
@@ -66,24 +67,22 @@ class GraphBinariesAnalyzer(object):
         if len(results) > 0:
             remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
             result = remotes_results[0]
-            pref.revision = result.get("pref").revision
-            pref.timestamp = result.get("pref").timestamp
+            node.prev = result.get("pref").revision
+            node.pref_timestamp = result.get("pref").timestamp
             return result.get('remote')
         else:
             raise PackageNotFoundException(pref)
 
-    def _evaluate_is_cached(self, node, pref):
+    def _evaluate_is_cached(self, node):
+        """ Each pref has to be evaluated just once, and the action for all of them should be
+        exactly the same
+        """
+        pref = node.pref
         previous_nodes = self._evaluated.get(pref)
         if previous_nodes:
             previous_nodes.append(node)
             previous_node = previous_nodes[0]
-            # The previous node might have been skipped, but current one not necessarily
-            # keep the original node.binary value (before being skipped), and if it will be
-            # defined as SKIP again by self._handle_private(node) if it is really private
-            if previous_node.binary == BINARY_SKIP:
-                node.binary = previous_node.binary_non_skip
-            else:
-                node.binary = previous_node.binary
+            node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
 
@@ -93,58 +92,58 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
+    def _process_compatible_packages(self, node):
+        compatible_build_mode = BuildMode(None)
+        original_info = node.conanfile.info
+        original_binary = node.binary
+        original_package_id = node.package_id
+        for compatible_package in node.conanfile.compatible_packages:
+            node.conanfile.info = compatible_package  # Redefine current
+            package_id = compatible_package.package_id()
+            if package_id == original_package_id:
+                node.conanfile.output.info("Compatible package ID %s equal to the "
+                                           "default package ID" % package_id)
+                continue
+            node._package_id = package_id  # Modifying package id under the hood, FIXME
+            node.binary = None  # Invalidate it
+            # NO Build mode
+            self._process_node(node, compatible_build_mode)
+            assert node.binary is not None
+            if node.binary != BINARY_MISSING:
+                node.conanfile.output.info("Main binary package '%s' missing. Using "
+                                           "compatible package '%s'"
+                                           % (original_package_id, package_id))
+
+                # So they are available in package_info() method
+                node.conanfile.settings.values = compatible_package.settings
+                # TODO: Conan 2.0 clean this ugly
+                node.conanfile.options._package_options = compatible_package.options._package_options
+                break
+        else:  # If no compatible is found, restore original state
+            node.binary = original_binary
+            node.conanfile.info = original_info
+            node._package_id = original_package_id
+
     def _evaluate_node(self, node, build_mode):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.prev is None, "Node.prev should be None"
 
-        if True:  # legacy removal, to avoid huge diff
-            pref = PkgReference(node.ref, node.package_id)
-            self._process_node(node, pref, build_mode)
-            if node.binary in (BINARY_MISSING, BINARY_INVALID):
-                if node.conanfile.compatible_packages:
-                    compatible_build_mode = BuildMode(None)
-                    original_info = node.conanfile.info
-                    original_binary = node.binary
-                    for compatible_package in node.conanfile.compatible_packages:
-                        node.conanfile.info = compatible_package  # Redefine current
-                        package_id = compatible_package.package_id()
-                        if package_id == node.package_id:
-                            node.conanfile.output.info("Compatible package ID %s equal to the "
-                                                       "default package ID" % package_id)
-                            continue
-                        pref = PkgReference(node.ref, package_id)
-                        node.binary = None  # Invalidate it
-                        # NO Build mode
-                        self._process_node(node, pref, compatible_build_mode)
-                        assert node.binary is not None
-                        if node.binary not in (BINARY_MISSING, ):
-                            node.conanfile.output.info("Main binary package '%s' missing. Using "
-                                                       "compatible package '%s'"
-                                                       % (node.package_id, package_id))
+        self._process_node(node, build_mode)
+        if node.binary in (BINARY_MISSING, BINARY_INVALID) and node.conanfile.compatible_packages:
+            self._process_compatible_packages(node)
 
-                            # Modifying package id under the hood, FIXME
-                            node._package_id = package_id
-                            # So they are available in package_info() method
-                            node.conanfile.settings.values = compatible_package.settings
-                            # TODO: Conan 2.0 clean this ugly
-                            node.conanfile.options._package_options = compatible_package.options._package_options
-                            break
-                    else:  # If no compatible is found, restore original state
-                        node.binary = original_binary
-                        node.conanfile.info = original_info
-
-                if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                    node.binary = BINARY_BUILD
+        if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+            node.binary = BINARY_BUILD
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
             # BINARY_BUILD IS NOT A VIABLE fallback for invalid
             node.binary = BINARY_INVALID
 
-    def _process_node(self, node, pref, build_mode):
+    def _process_node(self, node, build_mode):
         # Check that this same reference hasn't already been checked
-        if self._evaluate_is_cached(node, pref):
+        if self._evaluate_is_cached(node):
             return
 
         if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
@@ -160,58 +159,65 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
 
-        cache_latest_prev = self._cache.get_latest_package_reference(pref)
+        cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
 
-        if not cache_latest_prev:  # This binary does NOT exist in the cache
-            try:
-                remote = self._get_package_from_remotes(node, pref)
-            except NotFoundException:
-                node.binary = BINARY_MISSING
-                node.prev = None
-                node.binary_remote = None
-            else:
-                node.binary = BINARY_DOWNLOAD
-                node.prev = pref.revision
-                node.pref_timestamp = pref.timestamp
-                node.binary_remote = remote
-        else:  # This binary already exists in the cache
-            package_layout = self._cache.pkg_layout(cache_latest_prev)
-            self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
-            if self._app.update:
-                output = node.conanfile.output
-                try:
-                    remote = self._get_package_from_remotes(node, pref)
-                except NotFoundException:
-                    output.warning("Can't update, no package in remote")
-                except NoRemoteAvailable:
-                    output.warning("Can't update, there are no remotes configured or enabled")
-                else:
-                    cache_time = self._cache.get_package_timestamp(cache_latest_prev)
-                    # TODO: cache 2.0 should we update the date if the prev is the same?
-                    if cache_time < pref.timestamp and cache_latest_prev != pref:
-                        node.binary = BINARY_UPDATE
-                        node.prev = pref.revision
-                        node.pref_timestamp = pref.timestamp
-                        node.binary_remote = remote
-                        output.info("Current package revision is older than the remote one")
-                    else:
-                        node.binary = BINARY_CACHE
-                        node.binary_remote = None
-                        node.prev = cache_latest_prev.revision
-                        node.pref_timestamp = pref.timestamp
-                        output.info("Current package revision is newer than the remote one")
-
-            if not node.binary:
-                node.binary = BINARY_CACHE
-                node.binary_remote = None
-                node.prev = cache_latest_prev.revision
-                assert node.prev, "PREV for %s is None" % str(pref)
+        if cache_latest_prev is None:  # This binary does NOT exist in the cache
+            self._evaluate_download(node)
+        else:  # This binary already exists in the cache, maybe can be updated
+            self._evaluate_in_cache(cache_latest_prev, node)
 
         # The INVALID should only prevail if a compatible package, due to removal of
         # settings in package_id() was not found
         if node.binary in (BINARY_MISSING, BINARY_BUILD):
             if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
                 node.binary = BINARY_INVALID
+
+    def _evaluate_download(self, node):
+        try:
+            remote = self._get_package_from_remotes(node)
+        except NotFoundException:
+            node.binary = BINARY_MISSING
+            node.prev = None
+            node.binary_remote = None
+        else:
+            node.binary = BINARY_DOWNLOAD
+            node.binary_remote = remote
+
+    def _evaluate_in_cache(self, cache_latest_prev, node):
+        assert cache_latest_prev.revision
+        pref = node.pref
+        package_layout = self._cache.pkg_layout(cache_latest_prev)
+        self._evaluate_clean_pkg_folder_dirty(node, package_layout)
+        if self._app.update:
+            output = node.conanfile.output
+            try:
+                remote = self._get_package_from_remotes(node)
+            except NotFoundException:
+                output.warning("Can't update, no package in remote")
+            except NoRemoteAvailable:
+                output.warning("Can't update, there are no remotes configured or enabled")
+            else:
+                # TODO: Most likely get_packag_timestamp is no longer necessary
+                # cache_time = self._cache.get_package_timestamp(cache_latest_prev)
+                cache_time = cache_latest_prev.timestamp
+                # TODO: cache 2.0 should we update the date if the prev is the same?
+                if cache_time < pref.timestamp and cache_latest_prev != pref:
+                    node.binary = BINARY_UPDATE
+                    node.prev = pref.revision
+                    node.pref_timestamp = pref.timestamp
+                    node.binary_remote = remote
+                    output.info("Current package revision is older than the remote one")
+                else:
+                    node.binary = BINARY_CACHE
+                    node.binary_remote = None
+                    node.prev = cache_latest_prev.revision
+                    node.pref_timestamp = pref.timestamp
+                    output.info("Current package revision is newer than the remote one")
+        if not node.binary:
+            node.binary = BINARY_CACHE
+            node.binary_remote = None
+            node.prev = cache_latest_prev.revision
+            assert node.prev, "PREV for %s is None" % str(pref)
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()

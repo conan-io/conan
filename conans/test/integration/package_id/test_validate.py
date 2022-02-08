@@ -68,7 +68,6 @@ class TestValidate(unittest.TestCase):
 
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
-        print(client.out)
         client.assert_listed_binary({"pkg/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb",
                                                  "Invalid")})
         client.run("graph info --reference=pkg/0.1@ -s os=Windows")
