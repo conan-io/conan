@@ -1,12 +1,12 @@
-import os
-import shutil
-
 from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
 
 from conans.client.installer import BinaryInstaller, call_system_requirements
+from conans.client.loader import load_python_file
+from conans.errors import ConanException, conanfile_exception_formatter
+from conans.util.files import chdir, mkdir
 
 
 class InstallAPI:
@@ -29,7 +29,8 @@ class InstallAPI:
 
     # TODO: Look for a better name
     @staticmethod
-    def install_consumer(deps_graph, generators=None, source_folder=None, output_folder=None):
+    def install_consumer(deps_graph, generators=None, source_folder=None, output_folder=None,
+                         deploy=False):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -41,35 +42,13 @@ class InstallAPI:
         conanfile.folders.set_base_generators(output_folder)
         conanfile.folders.set_base_build(output_folder)
 
+        if deploy:
+            mod, _ = load_python_file(deploy)
+            mod.deploy(conanfile, output_folder)
+
         # Add cli -g generators
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         write_generators(conanfile)
 
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile)
-
-    @staticmethod
-    def deploy_consumer(deps_graph, generators=None, source_folder=None, output_folder=None):
-        """ POC: Call the deployment of the consumer, at the moment doing a raw copy of everything
-        and then hijacking the cpp_info/folders of the depedencies to point to the deployed
-        location
-        """
-        root_node = deps_graph.root
-        conanfile = root_node.conanfile
-
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_generators(output_folder)
-
-        if type(conanfile).system_requirements != ConanFile.system_requirements:
-            call_system_requirements(conanfile)
-
-        for r, d in conanfile.dependencies.items():
-            new_folder = os.path.join(output_folder, d.ref.name)
-            shutil.copytree(d.package_folder, new_folder)
-            # FIXME: Ugly definition of package folder
-            d._conanfile.cpp_info.deploy_base_folder(d.package_folder, new_folder)
-            d._conanfile.folders.set_base_package(new_folder)
-
-        # Add cli -g generators
-        conanfile.generators = list(set(conanfile.generators).union(generators or []))
-        write_generators(conanfile)

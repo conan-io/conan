@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 
 from conans.test.assets.cmake import gen_cmakelists
@@ -11,11 +13,21 @@ def test_install_deploy():
     c.run("new cmake_lib -d name=hello -d version=0.1")
     c.run("create .")
     cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello"])
+    deploy = textwrap.dedent("""
+        import os, shutil
+
+        def deploy(conanfile, output_folder):
+            for r, d in conanfile.dependencies.items():
+                new_folder = os.path.join(output_folder, d.ref.name)
+                shutil.copytree(d.package_folder, new_folder)
+                d.set_deploy_folder(new_folder)
+        """)
     c.save({"conanfile.txt": "[requires]\nhello/0.1",
+            "deploy.py": deploy,
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
            clean_first=True)
-    c.run("install . --deploy -of=mydeploy -g CMakeToolchain -g CMakeDeps")
+    c.run("install . --deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
     c.run("remove * -f")  # Make sure the cache is clean, no deps there
     cwd = c.current_folder.replace("\\", "/")
     deps = c.load("mydeploy/hello-release-x86_64-data.cmake")

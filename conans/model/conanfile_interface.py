@@ -85,3 +85,7 @@ class ConanFileInterface:
     @property
     def package_type(self):
         return self._conanfile.package_type
+
+    def set_deploy_folder(self, deploy_folder):
+        self._conanfile.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self._conanfile.folders.set_base_package(deploy_folder)
