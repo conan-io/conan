@@ -4,7 +4,7 @@ from conan.tools.files import check_md5, check_sha1, check_sha256, collect_libs
 from conans.model.build_info import CppInfo
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.tools import save
+from conans.util.files import save
 
 
 def test_collect_libs():

@@ -2,7 +2,7 @@ import os
 
 from conan.tools.files import check_md5, check_sha1, check_sha256
 from conans.test.utils.test_files import temp_folder
-from conans.tools import save
+from conans.util.files import save
 
 
 def test_checksums():

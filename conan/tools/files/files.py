@@ -8,10 +8,10 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
+from shutil import which
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
-from conans.client.tools.files import which
 from conans.errors import ConanException
 
 

@@ -7,7 +7,7 @@ import pytest
 from conan.tools.files import unzip
 from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.tools import save
+from conans.util.files import save
 
 
 def test_impossible_to_import_untargz():
