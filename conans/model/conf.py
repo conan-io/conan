@@ -132,14 +132,11 @@ class Conf:
     __nonzero__ = __bool__
 
     def __getitem__(self, name):
-        # FIXME: Keeping backward compatibility
-        conf = self._values.get(name)
-        if conf is not None:
-            values = conf.values
-            if len(values) == 1:
-                return values[0]  # single value
-            else:
-                return values  # list of values
+        values = self._values.get(name)
+        if values is not None:
+            # FIXME: Keeping backward compatibility
+            values = values.values[0] if len(values.values) == 1 else values.values
+        return values
 
     def __setitem__(self, name, value):
         # FIXME: Keeping backward compatibility
@@ -157,11 +154,8 @@ class Conf:
     def items(self):
         for k, v in self._values.items():
             # FIXME: Keeping backward compatibility
-            values = v.values
-            if len(values) == 1:
-                yield k, values[0]  # single value
-            else:
-                yield k, values  # list of values
+            values = v.values[0] if len(v.values) == 1 else v.values
+            yield k, values
 
     def copy(self):
         e = Conf()
@@ -230,10 +224,8 @@ class Conf:
 
     @property
     def sha(self):
-        result = []
-        for k, v in sorted(self._values.items()):
-            result.append("{}={}".format(k, v))
-        return "\n".join(result)
+        # FIXME: Keeping backward compatibility
+        return self.dumps()
 
 
 class ConfDefinition:
