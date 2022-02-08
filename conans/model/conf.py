@@ -60,11 +60,7 @@ class _ConfValue:
         self._sep = separator
 
     def __repr__(self):
-        return "ConfValues: " + repr(self._values)
-
-    @property
-    def values(self):
-        return self._values
+        return self.get_str()
 
     def dumps(self):
         result = []
@@ -119,6 +115,9 @@ class _ConfValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
+    def get_str(self):
+        return self._sep.join(self._values)
+
 
 class Conf:
 
@@ -131,11 +130,23 @@ class Conf:
 
     __nonzero__ = __bool__
 
+    def __repr__(self):
+        return "Conf: " + repr(self._values)
+
+    def __eq__(self, other):
+        """
+        :type other: Conf
+        """
+        return other._values == self._values
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __getitem__(self, name):
+        # FIXME: Keeping backward compatibility
         values = self._values.get(name)
         if values is not None:
-            # FIXME: Keeping backward compatibility
-            values = values.values[0] if len(values.values) == 1 else values.values
+            values = values.get_str()
         return values
 
     def __setitem__(self, name, value):
@@ -146,24 +157,25 @@ class Conf:
         # FIXME: Keeping backward compatibility
         del self._values[name]
 
+    def items(self):
+        # FIXME: Keeping backward compatibility
+        for k, v in self._values.items():
+            yield k, v.get_str()
+
+    @property
+    def sha(self):
+        # FIXME: Keeping backward compatibility
+        return self.dumps()
+
     @staticmethod
     def _validate_lower_case(name):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
 
-    def items(self):
-        for k, v in self._values.items():
-            # FIXME: Keeping backward compatibility
-            values = v.values[0] if len(v.values) == 1 else v.values
-            yield k, values
-
     def copy(self):
-        e = Conf()
-        e._values = self._values.copy()
-        return e
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
+        c = Conf()
+        c._values = self._values.copy()
+        return c
 
     def dumps(self):
         """ returns a string with a profile-like original definition, not the full environment
@@ -206,26 +218,12 @@ class Conf:
                 existing.compose_conf_value(v)
         return self
 
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def filter_user_modules(self):
         result = Conf()
         for k, v in self._values.items():
             if _is_profile_module(k):
                 result._values[k] = v
         return result
-
-    @property
-    def sha(self):
-        # FIXME: Keeping backward compatibility
-        return self.dumps()
 
 
 class ConfDefinition:
