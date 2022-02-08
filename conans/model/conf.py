@@ -132,7 +132,7 @@ class Conf:
     __nonzero__ = __bool__
 
     def __getitem__(self, name):
-        # FIXME: Keeping backward compatibility?
+        # FIXME: Keeping backward compatibility
         conf = self._values.get(name)
         if conf is not None:
             values = conf.values
@@ -142,11 +142,11 @@ class Conf:
                 return values  # list of values
 
     def __setitem__(self, name, value):
-        # FIXME: Keeping backward compatibility?
+        # FIXME: Keeping backward compatibility
         self.define(name, value)  # it's like a new definition
 
     def __delitem__(self, name):
-        # FIXME: Keeping backward compatibility?
+        # FIXME: Keeping backward compatibility
         del self._values[name]
 
     @staticmethod
@@ -156,7 +156,7 @@ class Conf:
 
     def items(self):
         for k, v in self._values.items():
-            # FIXME: Keeping backward compatibility?
+            # FIXME: Keeping backward compatibility
             values = v.values
             if len(values) == 1:
                 yield k, values[0]  # single value
@@ -228,8 +228,18 @@ class Conf:
                 result._values[k] = v
         return result
 
+    @property
+    def sha(self):
+        result = []
+        for k, v in sorted(self._values.items()):
+            result.append("{}={}".format(k, v))
+        return "\n".join(result)
+
 
 class ConfDefinition:
+
+    actions = (("+=", "append"), ("=+", "prepend"),
+               ("=!", "unset"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = OrderedDict()
@@ -272,6 +282,13 @@ class ConfDefinition:
         for pattern, conf in other._pattern_confs.items():
             self._update_conf_definition(pattern, conf)
 
+    def _update_conf_definition(self, pattern, conf):
+        existing = self._pattern_confs.get(pattern)
+        if existing:
+            self._pattern_confs[pattern] = conf.compose_conf(existing)
+        else:
+            self._pattern_confs[pattern] = conf
+
     def rebase_conf_definition(self, other):
         """
         for taking the new global.conf and composing with the profile [conf]
@@ -285,12 +302,34 @@ class ConfDefinition:
             else:
                 self._pattern_confs[pattern] = new_conf
 
-    def _update_conf_definition(self, pattern, conf):
-        existing = self._pattern_confs.get(pattern)
-        if existing:
-            self._pattern_confs[pattern] = conf.compose_conf(existing)
+    def update(self, key, value, profile=False, method="define"):
+        """
+        Define/append/prepend/unset any Conf line
+        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        """
+        if key.count(":") >= 2:
+            pattern, name = key.split(":", 1)
         else:
-            self._pattern_confs[pattern] = conf
+            pattern, name = None, key
+
+        if not _is_profile_module(name):
+            if profile:
+                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
+            if pattern is not None:
+                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
+
+        # strip whitespaces before/after =
+        # values are not strip() unless they are a path, to preserve potential whitespaces
+        name = name.strip()
+
+        # When loading from profile file, latest line has priority
+        conf = Conf()
+        if method == "unset":
+            conf.unset(name)
+        else:
+            getattr(conf, method)(name, value.strip())
+        # Update
+        self._update_conf_definition(pattern, conf)
 
     def as_list(self):
         result = []
@@ -321,36 +360,13 @@ class ConfDefinition:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            for op, method in (("+=", "append"), ("=+", "prepend"),
-                               ("=!", "unset"), ("=", "define")):
+            for op, method in ConfDefinition.actions:
                 tokens = line.split(op, 1)
                 if len(tokens) != 2:
                     continue
 
                 pattern_name, value = tokens
-                if pattern_name.count(":") >= 2:
-                    pattern, name = pattern_name.split(":", 1)
-                else:
-                    pattern, name = None, pattern_name
-
-                if not _is_profile_module(name):
-                    if profile:
-                        raise ConanException("[conf] '{}' not allowed in profiles".format(pattern_name))
-                    if pattern is not None:
-                        raise ConanException("Conf '{}' cannot have a package pattern".format(pattern_name))
-
-                # strip whitespaces before/after =
-                # values are not strip() unless they are a path, to preserve potential whitespaces
-                name = name.strip()
-
-                # When loading from profile file, latest line has priority
-                conf = Conf()
-                if method == "unset":
-                    conf.unset(name)
-                else:
-                    getattr(conf, method)(name, value.strip())
-                # Update
-                self._update_conf_definition(pattern, conf)
+                self.update(pattern_name, value, profile=profile, method=method)
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
