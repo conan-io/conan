@@ -8,7 +8,6 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
-from shutil import which
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
@@ -174,7 +173,7 @@ def rename(conanfile, src, dst):
     # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
     if os.path.exists(dst):
         raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
-
+    from shutil import which
     if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
         # /move Moves files and directories, and deletes them from the source after they are copied.
         # /e Copies subdirectories. Note that this option includes empty directories.

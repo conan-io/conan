@@ -12,7 +12,7 @@ from conan.tools.apple.apple import is_apple_os
 from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.cross_building import cross_building
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version, is_msvc
