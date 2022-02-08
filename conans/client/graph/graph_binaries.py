@@ -44,7 +44,7 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.warning("Package binary is corrupted, "
                                               "removing: %s" % node.package_id)
                 package_layout.package_remove()
-                return
+                return True
 
     # check through all the selected remotes:
     # - if not --update: get the first package found
@@ -69,8 +69,10 @@ class GraphBinariesAnalyzer(object):
             result = remotes_results[0]
             node.prev = result.get("pref").revision
             node.pref_timestamp = result.get("pref").timestamp
-            return result.get('remote')
+            node.binary_remote = result.get('remote')
         else:
+            node.binary_remote = None
+            node.prev = None
             raise PackageNotFoundException(pref)
 
     def _evaluate_is_cached(self, node):
@@ -159,7 +161,14 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
 
-        cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
+        # Obtain the cache_latest valid one, cleaning things if dirty
+        while True:
+            cache_latest_prev = self._cache.get_latest_package_reference(node.pref)
+            if cache_latest_prev is None:
+                break
+            package_layout = self._cache.pkg_layout(cache_latest_prev)
+            if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
+                break
 
         if cache_latest_prev is None:  # This binary does NOT exist in the cache
             self._evaluate_download(node)
@@ -174,24 +183,19 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_download(self, node):
         try:
-            remote = self._get_package_from_remotes(node)
+            self._get_package_from_remotes(node)
         except NotFoundException:
             node.binary = BINARY_MISSING
-            node.prev = None
-            node.binary_remote = None
         else:
             node.binary = BINARY_DOWNLOAD
-            node.binary_remote = remote
 
     def _evaluate_in_cache(self, cache_latest_prev, node):
         assert cache_latest_prev.revision
         pref = node.pref
-        package_layout = self._cache.pkg_layout(cache_latest_prev)
-        self._evaluate_clean_pkg_folder_dirty(node, package_layout)
         if self._app.update:
             output = node.conanfile.output
             try:
-                remote = self._get_package_from_remotes(node)
+                self._get_package_from_remotes(node)
             except NotFoundException:
                 output.warning("Can't update, no package in remote")
             except NoRemoteAvailable:
@@ -201,17 +205,15 @@ class GraphBinariesAnalyzer(object):
                 # cache_time = self._cache.get_package_timestamp(cache_latest_prev)
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
-                if cache_time < pref.timestamp and cache_latest_prev != pref:
+                if cache_time < node.pref_timestamp and cache_latest_prev != pref:
                     node.binary = BINARY_UPDATE
-                    node.prev = pref.revision
-                    node.pref_timestamp = pref.timestamp
-                    node.binary_remote = remote
                     output.info("Current package revision is older than the remote one")
                 else:
                     node.binary = BINARY_CACHE
+                    # The final data is the cache one, not the server one
                     node.binary_remote = None
                     node.prev = cache_latest_prev.revision
-                    node.pref_timestamp = pref.timestamp
+                    node.pref_timestamp = cache_time
                     output.info("Current package revision is newer than the remote one")
         if not node.binary:
             node.binary = BINARY_CACHE
