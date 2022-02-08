@@ -48,6 +48,8 @@ def _is_profile_module(module_name):
     return any(module_name.startswith(user_module) for user_module in _user_modules)
 
 
+# FIXME: Refactor all the next classes because they are mostly the same as
+#        conan.tools.env.environment ones
 class _ConfVarPlaceHolder:
     pass
 
