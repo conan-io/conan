@@ -2,7 +2,7 @@ import os
 
 from mock import Mock
 
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conans import ConanFile
 from conans.model.conf import Conf
