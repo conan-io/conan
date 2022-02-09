@@ -1,7 +1,7 @@
 import os
 
 
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conan import ConanFile
 from conans.model.conf import Conf

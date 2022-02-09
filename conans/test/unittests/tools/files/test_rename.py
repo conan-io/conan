@@ -1,12 +1,14 @@
 import os
 import platform
 import pytest
+import six
 
 from conan.tools.files import rename
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import temp_folder, save_files
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_rename_file():
     conanfile = ConanFileMock()
     tmp = temp_folder()
@@ -18,6 +20,7 @@ def test_rename_file():
     assert os.path.exists(new_path)
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Robocopy only exists in Windows")
 def test_rename_folder_robocopy():
     conanfile = ConanFileMock()
