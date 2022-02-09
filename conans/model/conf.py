@@ -62,7 +62,7 @@ class _ConfValue:
         self._sep = separator
 
     def __repr__(self):
-        return self.get_str()
+        return "ConfValues: " + self.get_str()
 
     def dumps(self):
         result = []
@@ -118,7 +118,7 @@ class _ConfValue:
             self._values = new_value
 
     def get_str(self):
-        return self._sep.join(self._values)
+        return self._sep.join(str(v) for v in self._values)
 
 
 class Conf:
@@ -148,7 +148,7 @@ class Conf:
         # FIXME: Keeping backward compatibility
         values = self._values.get(name)
         if values is not None:
-            values = values.get_str()
+            values = values._values[0] if len(values._values) == 1 else values._values
         return values
 
     def __setitem__(self, name, value):
@@ -162,7 +162,8 @@ class Conf:
     def items(self):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
-            yield k, v.get_str()
+            values = v._values[0] if len(v._values) == 1 else v._values
+            yield k, values
 
     @property
     def sha(self):
