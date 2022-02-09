@@ -1,8 +1,7 @@
 import os
 import platform
 
-from conan.tools import args_to_string
-from conan.tools.build import build_jobs
+from conan.tools.build import build_jobs, args_to_string
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import load_toolchain_args, chdir, mkdir
 
