@@ -143,7 +143,7 @@ def install(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("-sf", "--source-folder", help='The root source folder')
-    parser.add_argument("--deploy", action=OnceArgument,
+    parser.add_argument("--deploy", action=Extender,
                         help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
@@ -170,13 +170,13 @@ def install(conan_api, parser, *args):
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
+
     out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
-    deploy = make_abs_path(args.deploy, cwd)
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        source_folder=source_folder,
                                        output_folder=output_folder,
-                                       deploy=deploy
+                                       deploy=args.deploy
                                        )
 
     if args.lockfile_out:
