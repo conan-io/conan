@@ -450,7 +450,7 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
         if strict:
             raise ConanException(message)
         else:
-            output.warn(message)
+            output.warning(message)
             return False
     content = content.replace(search, replace)
     save(conanfile, file_path, content, encoding=encoding)
@@ -467,8 +467,8 @@ def collect_libs(conanfile, folder=None):
     result = []
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
-            conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
-                                  "{0}".format(lib_folder))
+            conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
+                                     "{0}".format(lib_folder))
             continue
         files = os.listdir(lib_folder)
         for f in files:
@@ -477,9 +477,9 @@ def collect_libs(conanfile, folder=None):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
-                    conanfile.output.warn("Library '%s' was either already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder or appears several "
-                                          "times with a different file extension" % name)
+                    conanfile.output.warning("Library '%s' was either already found in a previous "
+                                             "'conanfile.cpp_info.libdirs' folder or appears several "
+                                             "times with a different file extension" % name)
                 else:
                     result.append(name)
     result.sort()
