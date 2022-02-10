@@ -2,11 +2,10 @@ import os
 import platform
 import textwrap
 import uuid
+from shutil import which
 
 import pytest
 
-
-from conans.client.tools import which
 
 """
 To override these locations with your own in your dev machine:

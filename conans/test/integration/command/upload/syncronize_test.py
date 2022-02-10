@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.tools.files import untargz
+from conan.tools.files.files import untargz  # FIXME: DO not import from tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_TGZ_NAME

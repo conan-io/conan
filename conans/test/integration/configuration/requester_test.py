@@ -9,9 +9,9 @@ from mock import Mock, MagicMock
 from conans import __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.tools.files import save
 from conans.model.conf import ConfDefinition
 from conans.test.utils.tools import temp_folder
+from conans.util.files import save
 
 
 class MockRequesterGet(Mock):

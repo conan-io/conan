@@ -7,11 +7,10 @@ from subprocess import CalledProcessError
 from urllib.parse import quote_plus, unquote, urlparse
 
 from conans.cli.output import ConanOutput
-from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 
-from conans.util.files import decode_text, to_file_bytes, mkdir
+from conans.util.files import decode_text, to_file_bytes, mkdir, chdir
 from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
     pyinstaller_bundle_env_cleaned
 
