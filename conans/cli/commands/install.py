@@ -171,7 +171,7 @@ def install(conan_api, parser, *args):
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
-    out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
+    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        source_folder=source_folder,

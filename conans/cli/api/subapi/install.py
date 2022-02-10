@@ -76,13 +76,15 @@ def _do_deploys(conan_api, conanfile, deploy, output_folder):
             mod, _ = load_python_file(full_path)
             deployer = mod.deploy
 
-        deployer(conanfile, output_folder)
+        # IMPORTANT: Use always kwargs to not break if it changes in the future
+        deployer(conanfile=conanfile, output_folder=output_folder)
 
 
 def conan_full_deploy(conanfile, output_folder):
     """
     Deploys to output_folder + host/dep/0.1/Release/x86_64 subfolder
     """
+    # TODO: Maybe we should receive the full graph instead? Receive the full conan_api too?
     # TODO: This deployer needs to be put somewhere else
     import os
     import shutil
@@ -97,5 +99,7 @@ def conan_full_deploy(conanfile, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
+        # TODO: This deployer doesn't work with editable (and it would be difficult)
+        #  we could raise an error if editable, but not easy to know it, not in ConanFileInterface
         shutil.copytree(d.package_folder, new_folder)
         d.set_deploy_folder(new_folder)

@@ -18,7 +18,8 @@ def test_install_deploy():
     deploy = textwrap.dedent("""
         import os, shutil
 
-        def deploy(conanfile, output_folder):
+        # USE **KWARGS to be robust against changes
+        def deploy(conanfile, output_folder, **kwargs):
             for r, d in conanfile.dependencies.items():
                 new_folder = os.path.join(output_folder, d.ref.name)
                 shutil.copytree(d.package_folder, new_folder)
