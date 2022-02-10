@@ -13,30 +13,30 @@ def client():
     openssl = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             package_type = "shared-library"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
-                    save("bin/myopenssl.bat", echo)
-                    save("bin/myopenssl.sh", echo)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
             """)
 
     cmake = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             requires = "openssl/1.0"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
-                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
-                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    save(self, "mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save(self, "mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
@@ -59,7 +59,6 @@ def test_build_require_test_package(build_profile, client):
     test_cmake = textwrap.dedent(r"""
         import os, platform, sys
         from conan import ConanFile
-        from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
 
@@ -94,7 +93,7 @@ def test_both_types(client):
     test_cmake = textwrap.dedent(r"""
         import os, platform
         from conan import ConanFile
-        from conans.tools import save, chdir
+
         class Pkg(ConanFile):
             settings = "os"
 

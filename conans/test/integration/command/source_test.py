@@ -53,14 +53,14 @@ class TestexportConan(ConanFile):
         # and local flow
         client = TestClient()
         conanfile = """from conan import ConanFile
-from conans.tools import load
+from conan.tools.files import load
 import os
 class Pkg(ConanFile):
     exports_sources = "*"
     def source(self):
         if self.develop:
             patch = os.path.join(self.source_folder, "mypatch")
-            self.output.info("PATCH: %s" % load(patch))
+            self.output.info("PATCH: %s" % load(self, patch))
 """
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})
