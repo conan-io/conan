@@ -119,7 +119,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dir
     captured = scm_data.capture_origin or scm_data.capture_revision
 
     if not captured:
-        # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
+        
         _add_scmdata_to_conandata_yml(recipe_layout, scm_data)
         return scm_data, None
 
