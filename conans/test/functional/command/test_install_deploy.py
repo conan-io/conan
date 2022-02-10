@@ -4,6 +4,7 @@ import textwrap
 import pytest
 
 from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -113,3 +114,16 @@ def test_builtin_deploy():
     cmake_debug = c.load("output/dep-debug-x86-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_DEBUG "${dep_PACKAGE_FOLDER_DEBUG}/include")' in cmake_debug
     assert "output/host/dep/0.1/Debug/x86" in cmake_debug
+
+
+def test_deploy_reference():
+    """ check that we can also deploy a reference
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi")})
+    c.run("create .")
+
+    c.run("install  --reference=pkg/1.0 --deploy=conan_full_deploy --output-folder=output")
+    # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
+    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    assert "hi" in header
