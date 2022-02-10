@@ -210,37 +210,6 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertEqual(scan_folder(export_src_folder or self.export_sources_folder),
                          sorted(expected_src_exports))
 
-    def _check_manifest(self, mode):
-        manifest = load(os.path.join(self.client.current_folder,
-                                     ".conan_manifests/hello/0.1/lasote/testing/export/"
-                                     "conanmanifest.txt"))
-
-        if mode == "exports_sources":
-            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
-                          manifest.splitlines())
-        elif mode == "exports":
-            self.assertIn("hello.h: 5d41402abc4b2a76b9719d911017c592",
-                          manifest.splitlines())
-        elif mode == "both":
-            self.assertIn("data.txt: 8d777f385d3dfec8815d20f7496026dc", manifest.splitlines())
-            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
-                          manifest.splitlines())
-        elif mode == "nested":
-            self.assertIn("src/data.txt: 8d777f385d3dfec8815d20f7496026dc",
-                          manifest.splitlines())
-            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
-                          manifest.splitlines())
-        else:
-            assert mode == "overlap"
-            self.assertIn("src/data.txt: 8d777f385d3dfec8815d20f7496026dc",
-                          manifest.splitlines())
-            self.assertIn("src/hello.h: 5d41402abc4b2a76b9719d911017c592",
-                          manifest.splitlines())
-            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
-                          manifest.splitlines())
-            self.assertIn("%s/src/data.txt: 8d777f385d3dfec8815d20f7496026dc" % EXPORT_SRC_FOLDER,
-                          manifest.splitlines())
-
     def _create_code(self, mode):
         if mode == "exports":
             conanfile = conanfile_py
