@@ -20,8 +20,8 @@ def test_install_deploy():
         import os, shutil
 
         # USE **KWARGS to be robust against changes
-        def deploy(conanfile, output_folder, **kwargs):
-            for r, d in conanfile.dependencies.items():
+        def deploy(graph, output_folder, **kwargs):
+            for r, d in graph.root.conanfile.dependencies.items():
                 new_folder = os.path.join(output_folder, d.ref.name)
                 shutil.copytree(d.package_folder, new_folder)
                 d.set_deploy_folder(new_folder)
@@ -52,16 +52,16 @@ def test_multi_deploy():
     """
     c = TestClient()
     deploy1 = textwrap.dedent("""
-        def deploy(conanfile, output_folder):
-            conanfile.output.info("deploy1!!")
+        def deploy(graph, output_folder):
+            graph.root.conanfile.output.info("deploy1!!")
         """)
     deploy2 = textwrap.dedent("""
-        def deploy(conanfile, output_folder):
-            conanfile.output.info("sub/deploy2!!")
+        def deploy(graph, output_folder):
+            graph.root.conanfile.output.info("sub/deploy2!!")
         """)
     deploy_cache = textwrap.dedent("""
-        def deploy(conanfile, output_folder):
-            conanfile.output.info("deploy cache!!")
+        def deploy(graph, output_folder):
+            graph.root.conanfile.output.info("deploy cache!!")
         """)
     save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
     # This should never be called in this test, always the local is found first
@@ -100,9 +100,9 @@ def test_builtin_deploy():
     c.run("create . --name=dep --version=0.1")
     c.run("create . --name=dep --version=0.1 -s build_type=Debug -s arch=x86")
     c.save({"conanfile.txt": "[requires]\ndep/0.1"}, clean_first=True)
-    c.run("install . --deploy=conan_full_deploy -of=output -g CMakeDeps")
+    c.run("install . --deploy=full_deploy -of=output -g CMakeDeps")
     assert "Conan built-in full deployer" in c.out
-    c.run("install . --deploy=conan_full_deploy -of=output -g CMakeDeps "
+    c.run("install . --deploy=full_deploy -of=output -g CMakeDeps "
           "-s build_type=Debug -s arch=x86")
     release = c.load("output/host/dep/0.1/Release/x86_64/include/hello.h")
     assert "Release-x86_64" in release
@@ -123,7 +123,33 @@ def test_deploy_reference():
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi")})
     c.run("create .")
 
-    c.run("install  --reference=pkg/1.0 --deploy=conan_full_deploy --output-folder=output")
+    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
     header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
     assert "hi" in header
+
+    # Testing that we can deploy to the current folder too
+    c.save({}, clean_first=True)
+    c.run("install  --reference=pkg/1.0 --deploy=full_deploy")
+    # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
+    header = c.load("host/pkg/1.0/None/None/include/hi.h")
+    assert "hi" in header
+
+
+def test_deploy_overwrite():
+    """ calling several times the install --deploy doesn't crash if files already exist
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi")})
+    c.run("create .")
+
+    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    assert "hi" in header
+
+    # modify the package
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "bye")})
+    c.run("create .")
+    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    assert "bye" in header
