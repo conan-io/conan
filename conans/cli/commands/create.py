@@ -100,7 +100,10 @@ def create(conan_api, parser, *args):
 
     if test_conanfile_path:
         out.highlight("\n-------- Testing the package ----------")
-
+        if len(deps_graph.nodes) == 1:
+            raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
+                                 "use `self.tested_reference_str` to require the "
+                                 "package being created.".format(test_conanfile_path))
         conanfile_folder = os.path.dirname(test_conanfile_path)
         conan_api.install.install_consumer(deps_graph=deps_graph,
                                            source_folder=conanfile_folder,
