@@ -142,12 +142,11 @@ def test_conf_other_patterns_and_access(conf_definition):
     c2 = ConfDefinition()
     c2.loads(text)
     c.update_conf_definition(c2)
-    c_str = "ConfDefinition: {" \
-            "None: Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oneflag secondflag)," \
-            " ('tools.microsoft.msbuild:verbosity', ConfValues: )]), " \
-            "'zlib': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: z1flag z2flag)]), " \
-            "'openssl': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oflag)])}"
-    assert repr(c) == c_str
+    c_str = repr(c)
+    assert "None: Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oneflag secondflag), " \
+           "('tools.microsoft.msbuild:verbosity', ConfValues: )])" in c_str
+    assert "'zlib': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: z1flag z2flag)])" in c_str
+    assert "'openssl': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oflag)])" in c_str
     assert c["tools.microsoft.msbuild:verbosity"] is None
     assert c["user.company.toolchain:flags"] == ["oneflag", "secondflag"]
     assert c["zlib:user.company.toolchain:flags"] == ["z1flag", "z2flag"]
