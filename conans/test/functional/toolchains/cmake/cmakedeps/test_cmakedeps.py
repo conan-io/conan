@@ -16,13 +16,13 @@ def client():
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
         class Pkg(ConanFile):
             settings = "build_type", "os", "arch", "compiler"
             {}
             def package(self):
-                save(os.path.join(self.package_folder, "include", "%s.h" % self.name),
+                save(self, os.path.join(self.package_folder, "include", "%s.h" % self.name),
                      '#define MYVAR%s "%s"' % (self.name, self.settings.build_type))
         """)
 
@@ -98,7 +98,7 @@ def test_transitive_multi(client):
 def test_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class Test(ConanFile):
@@ -106,8 +106,8 @@ def test_system_libs():
             version = "0.1"
             settings = "build_type"
             def package(self):
-                save(os.path.join(self.package_folder, "lib/lib1.lib"), "")
-                save(os.path.join(self.package_folder, "lib/liblib1.a"), "")
+                save(self, os.path.join(self.package_folder, "lib/lib1.lib"), "")
+                save(self, os.path.join(self.package_folder, "lib/liblib1.a"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["lib1"]
@@ -247,10 +247,10 @@ def test_buildirs_working():
     to allow a cmake "include" function call after a find_package"""
     c = TestClient()
     conanfile = str(GenConanfile().with_name("my_lib").with_version("1.0")
-                                  .with_import("import os").with_import("from conans import tools"))
+                                  .with_import("import os").with_import("from conan.tools.files import save"))
     conanfile += """
     def package(self):
-        tools.save(os.path.join(self.package_folder, "my_build_dir", "my_cmake_script.cmake"),
+        save(self, os.path.join(self.package_folder, "my_build_dir", "my_cmake_script.cmake"),
                    'set(MYVAR "Like a Rolling Stone")')
 
     def package_info(self):

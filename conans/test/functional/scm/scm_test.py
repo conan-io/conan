@@ -18,6 +18,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 base = '''
 import os
+from conans import tools
 from conan import ConanFile
 from conan.tools.files import load
 

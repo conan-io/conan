@@ -32,7 +32,7 @@ def client():
 
     doxygen_conanfile = textwrap.dedent('''
     from conan import ConanFile
-    from conans.tools import save, chdir
+    from conan.tools.files import save, chdir
     import os
 
     class Doxygen(ConanFile):
@@ -40,8 +40,8 @@ def client():
         requires = "zlib/1.2.11"
 
         def package(self):
-            with chdir(self.package_folder):
-                save("include/doxygen.h", "int foo=1;")
+            with chdir(self, self.package_folder):
+                save(self, "include/doxygen.h", "int foo=1;")
     ''')
     c.save({"conanfile.py": doxygen_conanfile})
     c.run("create . --name=doxygen --version=1.0")
