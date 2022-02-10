@@ -10,7 +10,7 @@ from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, load
+from conans.util.files import mkdir, rmdir, remove, load, unzip
 
 
 def _hide_password(resource):
