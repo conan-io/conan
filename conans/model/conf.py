@@ -145,6 +145,13 @@ class Conf:
         return not self.__eq__(other)
 
     def __getitem__(self, name):
+        """
+        To keep the backward compatibility:
+
+        * if `values == []` returning `None`
+        * if `values == ["one"]` returning `"one"`
+        * if `values == ["one", "two"]` returning `["one", "two"]`
+        """
         # FIXME: Keeping backward compatibility
         values = self._values.get(name)
         if values is not None:
@@ -160,6 +167,13 @@ class Conf:
         del self._values[name]
 
     def items(self):
+        """
+        To keep the backward compatibility:
+
+        * if `values == []` yielding `None`
+        * if `values == ["one"]` yielding `"one"`
+        * if `values == ["one", "two"]` yielding `["one", "two"]`
+        """
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
             values = v._values[0] if len(v._values) == 1 else v._values
