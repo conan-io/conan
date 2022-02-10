@@ -93,11 +93,10 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no packages
-        """)
+          ERROR: There are no recipes matching the expression 'whatever/0.1#""")
 
         self.client.run(f"list packages {self._get_fake_recipe_refence('whatever/0.1')}")
-        assert expected_output == self.client.out
+        assert expected_output in self.client.out
 
     def test_search_no_matching_recipes(self):
         self._add_remote("remote1")
