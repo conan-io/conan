@@ -91,7 +91,7 @@ def test_parse_spaces():
     assert c["core:verbosity"] == "minimal"
 
 
-@pytest.mark.parametrize("text,expected,values", [
+@pytest.mark.parametrize("text,expected", [
     (
         """\
         # Prepend
@@ -104,8 +104,7 @@ def test_parse_spaces():
         tools.microsoft.msbuild:verbosity+=minimal
         user.company.toolchain:flags=someflags
         user.company.toolchain:flags+=moreflags
-        """,
-        (["another", "minimal"], ["someflags", "moreflags"])
+        """
      ),
     (
         """\
@@ -117,12 +116,10 @@ def test_parse_spaces():
         """\
         tools.microsoft.msbuild:verbosity=!
         user.company.toolchain:flags=moreflags
-        """,
-        ([], "moreflags")
-    ),
-
+        """
+    )
 ])
-def test_conf_actions(conf_definition, text, expected, values):
+def test_conf_actions(conf_definition, text, expected):
     c, _ = conf_definition
     text = textwrap.dedent(text)
     c2 = ConfDefinition()
@@ -130,5 +127,28 @@ def test_conf_actions(conf_definition, text, expected, values):
     c.update_conf_definition(c2)
     result = textwrap.dedent(expected)
     assert c.dumps() == result
-    assert c["tools.microsoft.msbuild:verbosity"] == values[0]
-    assert c["user.company.toolchain:flags"] == values[1]
+
+
+def test_conf_other_patterns_and_access(conf_definition):
+    c, _ = conf_definition
+    text = textwrap.dedent("""\
+        tools.microsoft.msbuild:verbosity=+another
+        tools.microsoft.msbuild:verbosity=!
+        user.company.toolchain:flags=oneflag
+        user.company.toolchain:flags+=secondflag
+        zlib:user.company.toolchain:flags=z1flag
+        zlib:user.company.toolchain:flags+=z2flag
+        openssl:user.company.toolchain:flags=oflag""")
+    c2 = ConfDefinition()
+    c2.loads(text)
+    c.update_conf_definition(c2)
+    c_str = "ConfDefinition: {" \
+            "None: Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oneflag secondflag)," \
+            " ('tools.microsoft.msbuild:verbosity', ConfValues: )]), " \
+            "'zlib': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: z1flag z2flag)]), " \
+            "'openssl': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oflag)])}"
+    assert repr(c) == c_str
+    assert c["tools.microsoft.msbuild:verbosity"] is None
+    assert c["user.company.toolchain:flags"] == ["oneflag", "secondflag"]
+    assert c["zlib:user.company.toolchain:flags"] == ["z1flag", "z2flag"]
+    assert c["openssl:user.company.toolchain:flags"] == "oflag"  # FIXME: Backward compatibility

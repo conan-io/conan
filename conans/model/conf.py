@@ -149,7 +149,7 @@ class Conf:
         values = self._values.get(name)
         if values is not None:
             values = values._values[0] if len(values._values) == 1 else values._values
-        return values
+        return values or None
 
     def __setitem__(self, name, value):
         # FIXME: Keeping backward compatibility
@@ -163,7 +163,7 @@ class Conf:
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
             values = v._values[0] if len(v._values) == 1 else v._values
-            yield k, values
+            yield k, values or None
 
     @property
     def sha(self):
@@ -246,14 +246,24 @@ class ConfDefinition:
     __nonzero__ = __bool__
 
     def __getitem__(self, module_name):
-        """ if a module name is requested for this, always goes to the None-Global config
+        """ if a module name is requested for this, it goes to the None-Global config by default
         """
-        return self._pattern_confs.get(None, Conf())[module_name]
+        pattern, name = self._split_pattern_name(module_name)
+        return self._pattern_confs.get(pattern, Conf())[name]
 
     def __delitem__(self, module_name):
-        """ if a module name is requested for this, always goes to the None-Global config
+        """ if a module name is requested for this, it goes to the None-Global config by default
         """
-        del self._pattern_confs.get(None, Conf())[module_name]
+        pattern, name = self._split_pattern_name(module_name)
+        del self._pattern_confs.get(pattern, Conf())[name]
+
+    @staticmethod
+    def _split_pattern_name(pattern_name):
+        if pattern_name.count(":") >= 2:
+            pattern, name = pattern_name.split(":", 1)
+        else:
+            pattern, name = None, pattern_name
+        return pattern, name
 
     def get_conanfile_conf(self, ref):
         """ computes package-specific Conf
@@ -300,10 +310,7 @@ class ConfDefinition:
         Define/append/prepend/unset any Conf line
         >> update("tools.microsoft.msbuild:verbosity", "Detailed")
         """
-        if key.count(":") >= 2:
-            pattern, name = key.split(":", 1)
-        else:
-            pattern, name = None, key
+        pattern, name = self._split_pattern_name(key)
 
         if not _is_profile_module(name):
             if profile:
