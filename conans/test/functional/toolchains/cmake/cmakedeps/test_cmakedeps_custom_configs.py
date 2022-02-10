@@ -199,13 +199,12 @@ def test_changing_build_type():
     dep_conanfile = textwrap.dedent(r"""
        import os
        from conan import ConanFile
-       from conans.tools import save
-       from conan.tools.files import copy
+       from conan.tools.files import copy, save
 
        class Dep(ConanFile):
            settings = "build_type"
            def build(self):
-               save("hello.h",
+               save(self, "hello.h",
                '# include <iostream>\n'
                'void hello(){{std::cout<<"BUILD_TYPE={}!!";}}'.format(self.settings.build_type))
            def package(self):

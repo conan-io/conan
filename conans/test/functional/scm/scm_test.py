@@ -19,7 +19,7 @@ from conans.test.utils.tools import TestClient, TestServer
 base = '''
 import os
 from conan import ConanFile
-from conans import tools
+from conan.tools.files import load
 
 def get_svn_remote(path_from_conanfile):
     from conans.errors import ConanException
@@ -45,7 +45,7 @@ class ConanLib(ConanFile):
     def build(self):
         sf = self.scm.get("subfolder")
         path = os.path.join(sf, "myfile.txt") if sf else "myfile.txt"
-        self.output.warning(tools.load(path))
+        self.output.warning(load(self, path))
 '''
 
 base_git = base % "git"
@@ -911,12 +911,12 @@ class ConanLib(ConanFile):
         self.client = TestClient(default_server_user=True)
         conanfile = str(GenConanfile().
                         with_scm({"type": "git", "revision": "auto", "url": "auto"}).
-                        with_import("import os").with_import("from conans import tools").
+                        with_import("import os").with_import("from conan.tools.files import load").
                         with_name("lib").
                         with_version("1.0"))
         conanfile += """
     def build(self):
-        contents = tools.load("bla.sh")
+        contents = load(self, "bla.sh")
         self.output.warning("Bla? {}".format(contents))
         """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})

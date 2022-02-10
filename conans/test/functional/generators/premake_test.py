@@ -3,12 +3,11 @@ import unittest
 
 import pytest
 
-from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("premake")
-@pytest.mark.skipif(which("premake5") is None, reason="Needs premake5")
+@pytest.mark.xfail(reason="premake legacy")
 class PremakeGeneratorTest(unittest.TestCase):
 
     def setUp(self):

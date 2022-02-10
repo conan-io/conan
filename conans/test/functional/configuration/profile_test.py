@@ -202,9 +202,6 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
-        tools.replace_in_file(self.client.cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False)
-
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install . --build missing -pr vs_12_86")

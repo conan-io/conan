@@ -10,7 +10,7 @@ def client():
     c = TestClient()
     conanfile = textwrap.dedent('''
     from conan import ConanFile
-    from conans.tools import save, chdir
+    from conan.tools.files import save, chdir
     import os
 
     class Protobuf(ConanFile):
@@ -23,11 +23,11 @@ def client():
                   endfunction()
             """
 
-            with chdir(self.package_folder):
-                save("include_build/protobuf.h", "int protubuff_stuff(){ return 1; }")
-                save("include_host/protobuf.h", "int protubuff_stuff(){ return 2; }")
-                save("build/my_tools_build.cmake", my_cmake_module % "1")
-                save("build/my_tools_host.cmake", my_cmake_module % "2")
+            with chdir(self, self.package_folder):
+                save(self, "include_build/protobuf.h", "int protubuff_stuff(){ return 1; }")
+                save(self, "include_host/protobuf.h", "int protubuff_stuff(){ return 2; }")
+                save(self, "build/my_tools_build.cmake", my_cmake_module % "1")
+                save(self, "build/my_tools_host.cmake", my_cmake_module % "2")
 
         def package_info(self):
             # This info depends on self.context !!
