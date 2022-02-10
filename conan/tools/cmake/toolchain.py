@@ -9,7 +9,7 @@ from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_na
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build import build_jobs, use_win_mingw, cross_building
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version, is_msvc
