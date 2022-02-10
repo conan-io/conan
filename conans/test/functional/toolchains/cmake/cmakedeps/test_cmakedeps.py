@@ -36,7 +36,8 @@ def client():
 
 
 @pytest.mark.tool("cmake")
-def test_transitive_multi(client):
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
+def test_transitive_multi_windows(client):
     # TODO: Make a full linking example, with correct header transitivity
 
     # Save conanfile and example
@@ -65,33 +66,19 @@ def test_transitive_multi(client):
         assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" \
                in client.load("libb-config.cmake")
 
-        if platform.system() == "Windows":
-            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
-            client.run_command('cmake --build . --config Debug')
-            client.run_command('cmake --build . --config Release')
+        client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+        client.run_command('cmake --build . --config Debug')
+        client.run_command('cmake --build . --config Release')
 
-            client.run_command('Debug\\example.exe')
-            assert "main: Debug!" in client.out
-            assert "MYVARliba: Debug" in client.out
-            assert "MYVARlibb: Debug" in client.out
+        client.run_command('Debug\\example.exe')
+        assert "main: Debug!" in client.out
+        assert "MYVARliba: Debug" in client.out
+        assert "MYVARlibb: Debug" in client.out
 
-            client.run_command('Release\\example.exe')
-            assert "main: Release!" in client.out
-            assert "MYVARliba: Release" in client.out
-            assert "MYVARlibb: Release" in client.out
-        else:
-            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            # replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
-            #                "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
-            for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
-                client.run_command('cmake --build . --clean-first')
-
-                client.run_command('./example')
-                assert "main: {}!".format(bt) in client.out
-                assert "MYVARliba: {}".format(bt) in client.out
-                assert "MYVARlibb: {}".format(bt) in client.out
+        client.run_command('Release\\example.exe')
+        assert "main: Release!" in client.out
+        assert "MYVARliba: Release" in client.out
+        assert "MYVARlibb: Release" in client.out
 
 
 @pytest.mark.tool("cmake")
