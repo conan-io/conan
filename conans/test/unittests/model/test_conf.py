@@ -91,26 +91,44 @@ def test_parse_spaces():
     assert c["core:verbosity"] == "minimal"
 
 
-def test_conf_actions(conf_definition):
+@pytest.mark.parametrize("text,expected,values", [
+    (
+        """\
+        # Prepend
+        tools.microsoft.msbuild:verbosity=+another
+        # Append
+        user.company.toolchain:flags+=moreflags
+        """,
+        """\
+        tools.microsoft.msbuild:verbosity=another
+        tools.microsoft.msbuild:verbosity+=minimal
+        user.company.toolchain:flags=someflags
+        user.company.toolchain:flags+=moreflags
+        """,
+        (["another", "minimal"], ["someflags", "moreflags"])
+     ),
+    (
+        """\
+        # Unset
+        tools.microsoft.msbuild:verbosity=!
+        # Define
+        user.company.toolchain:flags=moreflags
+        """,
+        """\
+        tools.microsoft.msbuild:verbosity=!
+        user.company.toolchain:flags=moreflags
+        """,
+        ([], "moreflags")
+    ),
+
+])
+def test_conf_actions(conf_definition, text, expected, values):
     c, _ = conf_definition
-    text = textwrap.dedent("""\
-    tools.microsoft.msbuild:verbosity=+another
-    user.company.toolchain:flags+=moreflags
-    # tools.cmake:njobs=5
-    # tools.flags:cc=-first 1 -second 2
-    # tools.flags:cc+=-third 3
-    # tools.flags:cxx=-first 1
-    # tools.cmake:njobs=!
-    # tools.flags:cxx=+-second 2
-    # tools.flags:cxx=+-third 3
-    """)
+    text = textwrap.dedent(text)
     c2 = ConfDefinition()
     c2.loads(text)
     c.update_conf_definition(c2)
-    result = textwrap.dedent("""\
-    tools.microsoft.msbuild:verbosity=another
-    tools.microsoft.msbuild:verbosity+=minimal
-    user.company.toolchain:flags=someflags
-    user.company.toolchain:flags+=moreflags
-    """)
+    result = textwrap.dedent(expected)
     assert c.dumps() == result
+    assert c["tools.microsoft.msbuild:verbosity"] == values[0]
+    assert c["user.company.toolchain:flags"] == values[1]
