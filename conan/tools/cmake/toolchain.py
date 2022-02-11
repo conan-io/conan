@@ -795,9 +795,7 @@ class CMakeToolchain(object):
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
 
-        if(CMAKE_TOOLCHAIN_FILE)
-            message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
-        endif()
+        message(STATUS "Using Conan toolchain: ${CMAKE_CURRENT_LIST_FILE}")
 
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
