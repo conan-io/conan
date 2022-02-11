@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -77,12 +75,6 @@ class AConan(ConanFile):
 
         assert(self.source_folder is None)
         assert(self.build_folder is None)
-
-    def imports(self):
-        assert(self.imports_folder == os.getcwd())
-
-    def deploy(self):
-        assert(self.imports_folder == os.getcwd())
 """
 
 
@@ -189,7 +181,6 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_editable(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
@@ -199,8 +190,8 @@ class RecipeFolderTest(unittest.TestCase):
         client.run("editable add pkg pkg/0.1@user/stable")
 
         client.run("install consumer")
+        client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})
         self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable from user folder - Editable", client.out)
         self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)
