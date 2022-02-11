@@ -2,11 +2,9 @@ import os
 from collections import namedtuple
 
 from conans import __version__ as client_version
-from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.cmd.download import download
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
@@ -14,7 +12,6 @@ from conans.client.source import config_source_local
 from conans.errors import (ConanException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.util.files import mkdir
@@ -81,26 +78,6 @@ class ConanAPIV1(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-
-    @api_method
-    def download(self, reference, remote_name=None, packages=None, recipe=False):
-        app = ConanApp(self.cache_folder)
-        if packages and recipe:
-            raise ConanException("recipe parameter cannot be used together with packages")
-        # Install packages without settings (fixed ids or all)
-        if check_valid_ref(reference):
-            ref = RecipeReference.loads(reference)
-            if packages and ref.revision is None:
-                for package_id in packages:
-                    if "#" in package_id:
-                        raise ConanException("It is needed to specify the recipe revision if you "
-                                             "specify a package revision")
-            # FIXME: remote_name should be remote
-            remotes = [Remote(remote_name, None)] if remote_name else None
-            app.load_remotes(remotes)
-            download(app, ref, packages, recipe)
-        else:
-            raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
     def source(self, path, source_folder=None, cwd=None):

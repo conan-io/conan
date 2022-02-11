@@ -7,10 +7,9 @@ from difflib import get_close_matches
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import ConanAPIV1, ProfileData
+from conans.client.conan_api import ConanAPIV1
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -93,59 +92,6 @@ class Command(object):
         assert isinstance(conan_api, ConanAPIV1)
         self._conan_api = conan_api
         self._out = ConanOutput()
-
-    def download(self, *args):
-        """
-        Downloads recipe and binaries to the local cache, without using settings.
-
-        It works specifying the recipe reference and package ID to be
-        installed. Not transitive, requirements of the specified reference will
-        NOT be retrieved. Only if a reference is specified, it will download all
-        packages from the specified remote. If no remote is specified, it will use the default remote.
-        """
-
-        parser = argparse.ArgumentParser(description=self.download.__doc__,
-                                         prog="conan download",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("reference",
-                            help='pkg/version@user/channel')
-        parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='Force install specified package ID (ignore settings/options)'
-                                 ' [DEPRECATED: use full reference instead]')
-        parser.add_argument("-r", "--remote", help='look in the specified remote server',
-                            action=OnceArgument)
-        parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
-                            action="store_true")
-
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PkgReference.loads(args.reference)
-        except ConanException:
-            reference = args.reference
-            packages_list = args.package
-
-            if packages_list:
-                self._out.warning("Usage of `--package` argument is deprecated."
-                                  " Use a full reference instead: "
-                                  "`conan download [...] {}:{}`".format(reference, packages_list[0]))
-        else:
-            reference = repr(pref.ref)
-            if pref.ref.user is None:
-                if pref.ref.revision:
-                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
-                else:
-                    reference += "@"
-            pkgref = "{}#{}".format(pref.package_id, pref.revision) \
-                if pref.revision else pref.package_id
-            packages_list = [pkgref]
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
-
-        self._warn_python_version()
-        return self._conan_api.download(reference=reference, packages=packages_list,
-                                        remote_name=args.remote, recipe=args.recipe)
 
     def source(self, *args):
         """
