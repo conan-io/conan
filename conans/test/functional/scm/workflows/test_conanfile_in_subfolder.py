@@ -51,11 +51,6 @@ class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
         t.run_command("svn co {}/lib1 .".format(self.url))
         self._run_local_test(t, t.current_folder, self.path_to_conanfile)
 
-    def test_local_monorepo(self):
-        t = TestClient(path_with_spaces=False)
-        t.run_command("svn co {} .".format(self.url))
-        self._run_local_test(t, t.current_folder, os.path.join("lib1", self.path_to_conanfile))
-
     def test_local_monorepo_chdir(self):
         t = TestClient(path_with_spaces=False)
         t.run_command("svn co {} .".format(self.url))

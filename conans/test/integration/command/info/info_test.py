@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
@@ -108,18 +110,13 @@ class TestAdvancedCliOutput:
             class pkg(ConanFile):
                 scm = {"type": "git",
                        "url": "some-url/path",
-                       "revision": "some commit hash"}
+                       "revision": "auto"}
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
 
         client.run("graph info .")
-        assert "revision: some commit hash" in client.out
-        assert "url: some-url/path" in client.out
-
-        client.run("export . --name=pkg --version=0.1")
-        client.run("graph info --reference=pkg/0.1@")
-        assert "revision: some commit hash" in client.out
+        assert "revision: auto" in client.out
         assert "url: some-url/path" in client.out
 
         client.run("graph info . --format=json")

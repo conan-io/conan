@@ -119,8 +119,8 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dir
     captured = scm_data.capture_origin or scm_data.capture_revision
 
     if not captured:
-        # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_recipe(recipe_layout, scm_data)
+        
+        _add_scmdata_to_conandata_yml(recipe_layout, scm_data)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -153,15 +153,16 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dir
         conanfile.output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_recipe(recipe_layout, scm_data)
+    _add_scmdata_to_conandata_yml(recipe_layout, scm_data)
 
     return scm_data, local_src_path
 
 
-def _replace_scm_data_in_recipe(recipe_layout, scm_data):
+def _add_scmdata_to_conandata_yml(recipe_layout, scm_data):
     conandata_path = os.path.join(recipe_layout.export(), DATA_YML)
     conandata_yml = {}
     if os.path.exists(conandata_path):
+
         conandata_yml = yaml.safe_load(load(conandata_path))
         conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
         if '.conan' in conandata_yml:
