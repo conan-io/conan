@@ -47,7 +47,7 @@ def build(conan_api, parser, *args):
 
     source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else folder
-    out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
+    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
 

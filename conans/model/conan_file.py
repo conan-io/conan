@@ -237,3 +237,7 @@ class ConanFile:
 
     def __repr__(self):
         return self.display_name
+
+    def set_deploy_folder(self, deploy_folder):
+        self.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.folders.set_base_package(deploy_folder)
