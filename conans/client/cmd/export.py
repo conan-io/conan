@@ -1,5 +1,6 @@
 import os
 import shutil
+from io import StringIO
 
 import yaml
 
@@ -15,6 +16,7 @@ from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
+from conans.util.runners import conan_run
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,
@@ -119,7 +121,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dir
     captured = scm_data.capture_origin or scm_data.capture_revision
 
     if not captured:
-        
+
         _add_scmdata_to_conandata_yml(recipe_layout, scm_data)
         return scm_data, None
 
@@ -175,21 +177,9 @@ def _add_scmdata_to_conandata_yml(recipe_layout, scm_data):
     save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
 
 
-def _detect_scm_revision(path):
-    if not path:
-        raise ConanException("Not path supplied")
-
-    repo_type = SCM.detect_scm(path)
-    if not repo_type:
-        raise ConanException("'{}' repository not detected".format(repo_type))
-
-    repo_obj = SCM.availables.get(repo_type)(path)
-    return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
-
-
 def calc_revision(scoped_output, path, manifest, revision_mode):
-    if revision_mode not in ["scm", "hash"]:
-        raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
+    if revision_mode not in ["git-commit", "hash"]:
+        raise ConanException("Revision mode should be one of 'hash' (default) or 'git-commit'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
@@ -197,18 +187,15 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
         scoped_output.info("Using the exported files summary hash as the recipe"
                            " revision: {} ".format(revision))
     else:
-        try:
-            rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
-        except Exception as exc:
+        assert revision_mode == "git-commit"
+        out, err = StringIO(), StringIO()
+        code = conan_run("git rev-parse HEAD --verify", cwd=path, stdout=out, stderr=err)
+        if code != 0:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
-            raise ConanException("{}: {}".format(error_msg, exc))
-
-        revision = rev_detected
-
-        scoped_output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
-        if not is_pristine:
-            scoped_output.warning("Repo status is not pristine: there might be modified files")
+            raise ConanException("{}: {}".format(error_msg, err.getvalue()))
+        revision = out.getvalue().strip()
+        scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
     return revision
 

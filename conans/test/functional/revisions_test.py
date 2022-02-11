@@ -812,7 +812,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = RecipeReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
+        conanfile = GenConanfile().with_revision_mode("git-commit")
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
         self.assertEqual(client.recipe_revision(ref), commit)
@@ -827,14 +827,13 @@ class SCMRevisions(unittest.TestCase):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
         client = TurboTestClient()
         client.run_command('git init .')
-        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
-        client.run("create .", assert_error=True)
+        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("git-commit")})
+        client.run("export .", assert_error=True)
         # It error, because the revision_mode is explicitly set to scm
-        self.assertIn("Cannot detect revision using 'scm' mode from repository at "
-                      "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
-                      client.out)
+        self.assertIn("Cannot detect revision", client.out)
 
     @pytest.mark.tool("svn")
+    @pytest.mark.xfail(reason="SVN not implemented")
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages

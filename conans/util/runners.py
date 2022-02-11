@@ -68,12 +68,6 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
             return proc.returncode
 
 
-def version_runner(cmd, shell=False):
-    # Used by build subapi like CMake and Meson and MSBuild to get the version
-    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=shell).communicate()
-    return out
-
-
 def muted_runner(cmd, folder=None):
     # Used by tools/scm check_repo only (see if repo ok with status)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=folder)

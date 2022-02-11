@@ -93,16 +93,6 @@ class SCM(object):
         # Finally instance a repo
         self.repo = self._get_repo()
 
-    @classmethod
-    def detect_scm(cls, folder):
-        for name, candidate in cls.availables.items():
-            try:
-                candidate(folder).check_repo()
-                return name
-            except ConanException:
-                pass
-        return None
-
     def _get_repo(self):
         repo_class = self.availables.get(self._data.type)
         if not repo_class:

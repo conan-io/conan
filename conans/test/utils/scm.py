@@ -12,7 +12,7 @@ from urllib.parse import quote
 from conans.client.tools import chdir
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save_files, mkdir
-from conans.util.runners import check_output_runner
+from conans.util.runners import check_output_runner, muted_runner, detect_runner
 
 
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
@@ -20,31 +20,33 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
     tmp = folder or temp_folder()
     if files:
         save_files(tmp, files)
-    git = Git(tmp)
-    git.run("init .")
-    git.run('config user.email "you@example.com"')
-    git.run('config user.name "Your Name"')
+    with chdir(tmp):
+        muted_runner("git init .")
+        muted_runner('git config user.email "you@example.com"')
+        muted_runner('git config user.name "Your Name"')
 
-    if branch:
-        git.run("checkout -b %s" % branch)
+        if branch:
+            muted_runner("git checkout -b %s" % branch)
 
-    git.run("add .")
-    for i in range(0, commits):
-        git.run('commit --allow-empty -m "commiting"')
+        muted_runner("git add .")
+        for i in range(0, commits):
+            muted_runner('git commit --allow-empty -m "commiting"')
 
-    tags = tags or []
-    for tag in tags:
-        git.run("tag %s" % tag)
+        tags = tags or []
+        for tag in tags:
+            muted_runner("git tag %s" % tag)
 
-    if submodules:
-        for submodule in submodules:
-            git.run('submodule add "%s"' % submodule)
-        git.run('commit -m "add submodules"')
+        if submodules:
+            for submodule in submodules:
+                muted_runner('git submodule add "%s"' % submodule)
+            muted_runner('git commit -m "add submodules"')
 
-    if origin_url:
-        git.run('remote add origin {}'.format(origin_url))
+        if origin_url:
+            muted_runner('git remote add origin {}'.format(origin_url))
 
-    return tmp.replace("\\", "/"), git.get_revision()
+        _, commit = detect_runner("git rev-parse HEAD")
+        commit = commit.strip()
+        return tmp.replace("\\", "/"), commit
 
 
 def create_local_svn_checkout(files, repo_url, rel_project_path=None,
