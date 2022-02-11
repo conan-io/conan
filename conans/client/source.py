@@ -65,7 +65,6 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
     def get_sources_from_exports():
         src_folder = conanfile.source_folder
         if conanfile_folder != src_folder:
-            _run_local_scm(conanfile, conanfile_folder, src_folder)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             export_recipe(conanfile, src_folder)
             export_source(conanfile, src_folder)
@@ -207,35 +206,3 @@ def _run_cache_scm(conanfile, scm_sources_folder):
         # Maybe check conan 2.0
         # TODO: Why removing in the cache? There is no danger.
         _clean_source_folder(dest_dir)
-
-
-def _run_local_scm(conanfile, conanfile_folder, src_folder):
-    """
-    Only called when 'conan source' in user space
-    :param conanfile: recipe
-    :param src_folder: specified src_folder
-    :param conanfile_folder: Folder containing the local conanfile
-    :param output: Output
-    :return:
-    """
-
-    scm_data = get_scm_data(conanfile)
-    if not scm_data:
-        return
-    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
-    # In user space, if revision="auto", then copy
-    if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
-        scm = SCM(scm_data, conanfile_folder, conanfile.output)
-        scm_url = scm_data.url if scm_data.url != "auto" else \
-            scm.get_qualified_remote_url(remove_credentials=True)
-
-        src_path = scm.get_local_path_to_url(url=scm_url)
-        if src_path and src_path != dest_dir:
-            excluded = SCM(scm_data, src_path, conanfile.output).excluded_files
-            conanfile.output.info("SCM: Getting sources from folder: %s" % src_path)
-            merge_directories(src_path, dest_dir, excluded=excluded)
-            return
-
-    conanfile.output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-    scm = SCM(scm_data, dest_dir, conanfile.output)
-    scm.checkout()

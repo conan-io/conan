@@ -20,7 +20,7 @@ from conans.util.files import save
 
 
 @pytest.mark.tool("git")
-@mock.patch("conans.client.cmd.export._replace_scm_data_in_recipe", return_value=None)
+@mock.patch("conans.client.cmd.export._add_scmdata_to_conandata_yml", return_value=None)
 class CaptureExportSCMDataTest(unittest.TestCase):
 
     def setUp(self):
