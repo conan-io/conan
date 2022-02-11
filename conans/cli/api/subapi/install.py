@@ -4,8 +4,6 @@ from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
-from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_VIRTUAL, RECIPE_CONSUMER, BINARY_SKIP
-
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
@@ -88,35 +86,24 @@ def _do_deploys(conan_api, graph, deploy, output_folder):
     for d in deploy or []:
         deployer = _find_deployer(d, cache_deploy_folder)
         # IMPORTANT: Use always kwargs to not break if it changes in the future
-        deployer(graph=graph, output_folder=output_folder)
+        conanfile = graph.root.conanfile
+        deployer(conanfile=conanfile, output_folder=output_folder)
 
 
-def full_deploy(graph, output_folder):
+def full_deploy(conanfile, output_folder):
     """
     Deploys to output_folder + host/dep/0.1/Release/x86_64 subfolder
     """
-    # TODO: Maybe we should receive the full graph instead? Receive the full conan_api too?
     # TODO: This deployer needs to be put somewhere else
+    # TODO: Document that this will NOT work with editables
     import os
     import shutil
 
-    root_node = graph.root
-    root_conanfile = root_node.conanfile
-
-    root_conanfile.output.info(f"Conan built-in full deployer to {output_folder}")
-    for node in graph.nodes:
-        # TODO: We need to simplify, stabilize and document the "node" and "graph" structures
-        #  making more elegant this access
-        if node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER):
-            continue
-        if node.binary == BINARY_SKIP:
-            continue
-        if node.recipe == RECIPE_EDITABLE:
-            raise ConanException("Cannot deploy a package in editable: {node.conanfile}")
-        conanfile = node.conanfile
-        folder_name = os.path.join(node.context, node.ref.name, str(node.ref.version))
-        build_type = str(conanfile.info.settings.build_type)
-        arch = str(conanfile.info.settings.arch)
+    conanfile.output.info(f"Conan built-in full deployer to {output_folder}")
+    for dep in conanfile.dependencies.values():
+        folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
+        build_type = str(dep.info.settings.build_type)
+        arch = str(dep.info.settings.arch)
         if build_type:
             folder_name = os.path.join(folder_name, build_type)
         if arch:
@@ -124,5 +111,5 @@ def full_deploy(graph, output_folder):
         new_folder = os.path.join(output_folder, folder_name)
         if os.path.isdir(new_folder):
             rmdir(new_folder)
-        shutil.copytree(conanfile.package_folder, new_folder)
-        conanfile.set_deploy_folder(new_folder)
+        shutil.copytree(dep.package_folder, new_folder)
+        dep.set_deploy_folder(new_folder)

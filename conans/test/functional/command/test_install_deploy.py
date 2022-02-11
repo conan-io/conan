@@ -20,8 +20,8 @@ def test_install_deploy():
         import os, shutil
 
         # USE **KWARGS to be robust against changes
-        def deploy(graph, output_folder, **kwargs):
-            for r, d in graph.root.conanfile.dependencies.items():
+        def deploy(conanfile, output_folder, **kwargs):
+            for r, d in conanfile.dependencies.items():
                 new_folder = os.path.join(output_folder, d.ref.name)
                 shutil.copytree(d.package_folder, new_folder)
                 d.set_deploy_folder(new_folder)
@@ -52,16 +52,16 @@ def test_multi_deploy():
     """
     c = TestClient()
     deploy1 = textwrap.dedent("""
-        def deploy(graph, output_folder):
-            graph.root.conanfile.output.info("deploy1!!")
+        def deploy(conanfile, output_folder, **kwargs):
+            conanfile.output.info("deploy1!!")
         """)
     deploy2 = textwrap.dedent("""
-        def deploy(graph, output_folder):
-            graph.root.conanfile.output.info("sub/deploy2!!")
+        def deploy(conanfile, output_folder, **kwargs):
+            conanfile.output.info("sub/deploy2!!")
         """)
     deploy_cache = textwrap.dedent("""
-        def deploy(graph, output_folder):
-            graph.root.conanfile.output.info("deploy cache!!")
+        def deploy(conanfile, output_folder, **kwargs):
+            conanfile.output.info("deploy cache!!")
         """)
     save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
     # This should never be called in this test, always the local is found first
@@ -153,3 +153,18 @@ def test_deploy_overwrite():
     c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
     header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
     assert "bye" in header
+
+
+def test_deploy_editable():
+    """ when deploying something that is editable, with the full_deploy built-in, it will copy the
+    editable files as-is, but it doesn't fail at this moment
+    """
+
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+            "src/include/hi.h": "hi"})
+    c.run("editable add . pkg/1.0")
+
+    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    header = c.load("output/host/pkg/1.0/None/None/src/include/hi.h")
+    assert "hi" in header
