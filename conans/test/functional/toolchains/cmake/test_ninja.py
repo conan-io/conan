@@ -111,8 +111,8 @@ def test_locally_build_msvc(build_type, shared, client):
     client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
-    client.run("install --reference=hello/1.0@ -g=deploy -of=mydeploy {}".format(settings))
-    client.run_command(r"mydeploy\hello\myapp.exe")
+    client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
+    client.run_command(fr"mydeploy\host\hello\1.0\{build_type}\x86_64\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 
