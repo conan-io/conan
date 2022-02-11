@@ -168,3 +168,22 @@ def test_deploy_editable():
     c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
     header = c.load("output/host/pkg/1.0/None/None/src/include/hi.h")
     assert "hi" in header
+
+
+def test_deploy_single_package():
+    """ Lets try a deploy that executes on a single package reference
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi"),
+            "consumer/conanfile.txt": "[requires]\npkg/1.0"})
+    c.run("create .")
+
+    # if we deploy one --reference, we get that package
+    c.run("install  --reference=pkg/1.0 --deploy=direct_deploy --output-folder=output")
+    header = c.load("output/pkg/include/hi.h")
+    assert "hi" in header
+
+    # If we deploy a local conanfile.txt, we get deployed its direct dependencies
+    c.run("install consumer/conanfile.txt --deploy=direct_deploy --output-folder=output2")
+    header = c.load("output2/pkg/include/hi.h")
+    assert "hi" in header

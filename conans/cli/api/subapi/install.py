@@ -75,8 +75,10 @@ def _find_deployer(d, cache_deploy_folder):
     cache_path = os.path.join(cache_deploy_folder, d)
     if os.path.isfile(cache_path):
         return _load(cache_path)
-    if d == "full_deploy.py":
-        return full_deploy
+    builtin_deploy = {"full_deploy.py": full_deploy,
+                      "direct_deploy.py": direct_deploy}.get(d)
+    if builtin_deploy is not None:
+        return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
@@ -109,6 +111,27 @@ def full_deploy(conanfile, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
+        if os.path.isdir(new_folder):
+            rmdir(new_folder)
+        shutil.copytree(dep.package_folder, new_folder)
+        dep.set_deploy_folder(new_folder)
+
+
+def direct_deploy(conanfile, output_folder):
+    """
+    Deploys to output_folder a single package,
+    """
+    # TODO: This deployer needs to be put somewhere else
+    # TODO: Document that this will NOT work with editables
+    import os
+    import shutil
+
+    conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
+    # If the argument is --reference, the current conanfile is a virtual one with 1 single
+    # dependency, the "reference" package. If the argument is a local path, then all direct
+    # dependencies
+    for dep in conanfile.dependencies.filter({"direct": True}).values():
+        new_folder = os.path.join(output_folder, dep.ref.name)
         if os.path.isdir(new_folder):
             rmdir(new_folder)
         shutil.copytree(dep.package_folder, new_folder)
