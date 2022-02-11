@@ -13,7 +13,6 @@
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files
 
-from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
 # Tools form conans.util
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch

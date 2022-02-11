@@ -9,7 +9,7 @@ import uuid
 
 from urllib.parse import quote
 
-from conans.client.tools import Git, chdir, SVN
+from conans.client.tools import chdir
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save_files, mkdir
 from conans.util.runners import check_output_runner

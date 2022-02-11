@@ -1,7 +1,6 @@
 import os
 import subprocess
 
-from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
 from conans.util.files import rmdir
 
@@ -85,7 +84,7 @@ class SCMData(object):
 
 
 class SCM(object):
-    availables = {'git': Git, 'svn': SVN}
+    availables = {} # {'git': Git, 'svn': SVN}
 
     def __init__(self, data, repo_folder, scoped_output):
         self._data = data

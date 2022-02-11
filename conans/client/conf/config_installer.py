@@ -9,10 +9,10 @@ from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, load
+from conans.util.runners import conan_run
 
 
 def _hide_password(resource):
@@ -52,8 +52,8 @@ def _process_git_repo(config, cache):
         with tools.chdir(tmp_folder):
             try:
                 args = config.args or ""
-                git = Git(verify_ssl=config.verify_ssl)
-                git.clone(config.uri, args=args)
+                uri = config.uri.replace("\\", "/") if os.path.exists(config.uri) else config.uri
+                conan_run(f'git clone "{uri}" . {args}')
                 output.info("Repo cloned!")
             except Exception as e:
                 raise ConanException("Can't clone repo: %s" % str(e))
