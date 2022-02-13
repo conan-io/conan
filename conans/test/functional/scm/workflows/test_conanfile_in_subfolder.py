@@ -19,6 +19,7 @@ class ConanfileInSubfolder(TestWorkflow):
 
 
 @pytest.mark.tool("svn")
+@pytest.mark.xfail(reason="SVN coverage not upgraded yet")
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\

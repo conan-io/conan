@@ -22,6 +22,7 @@ class SCMSubfolder(TestWorkflow):
 
 
 @pytest.mark.tool("svn")
+@pytest.mark.xfail(reason="SVN coverage not upgraded yet")
 class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 
