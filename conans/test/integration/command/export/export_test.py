@@ -418,7 +418,7 @@ class ExportMetadataTest(unittest.TestCase):
         t = TestClient()
         t.save({'conanfile.py': conanfile})
         t.run("export . --name=name --version=version", assert_error=True)
-        self.assertIn("ERROR: Revision mode should be one of 'hash' (default) or 'scm'", t.out)
+        self.assertIn("ERROR: Revision mode should be one of 'hash' (default) or 'git-commit'", t.out)
 
     def test_export_no_params(self):
         client = TestClient()
