@@ -78,7 +78,6 @@ def search_recipes(cache, pattern=None, ignorecase=True):
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     refs = cache.all_refs()
-    refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         _refs = []
         for r in refs:
