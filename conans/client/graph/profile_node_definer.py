@@ -53,7 +53,7 @@ def _initialize_conanfile(conanfile, profile, ref):
         # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
         pkg_settings = package_settings_values.get(conanfile.name)
 
-        if conanfile._conan_is_root and "&" in package_settings_values:
+        if conanfile._conan_is_consumer and "&" in package_settings_values:
             # "&" overrides the "name" scoped settings.
             pkg_settings = package_settings_values.get("&")
 

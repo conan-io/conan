@@ -47,7 +47,7 @@ class ConanFile:
     # Run in windows bash
     win_bash = None
 
-    _conan_is_root = False
+    _conan_is_consumer = False
 
     def __init__(self, display_name=""):
         self.display_name = display_name

@@ -200,7 +200,6 @@ class DepsGraphBuilder(object):
             # if not cached, then resolve
             try:
                 result = self._proxy.get_recipe(alias)
-                result = self._proxy.get_recipe(alias)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
                 raise GraphError.missing(node, require, str(e))
@@ -240,9 +239,9 @@ class DepsGraphBuilder(object):
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
         # If the node is virtual or a test package, the require is also "root"
-        if node.conanfile._conan_is_root and (node.recipe == RECIPE_VIRTUAL or
-                                              getattr(node.conanfile, "tested_reference_str", False)):
-            dep_conanfile._conan_is_root = True
+        is_test_package = getattr(node.conanfile, "tested_reference_str", False)
+        if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
+            dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref)
 

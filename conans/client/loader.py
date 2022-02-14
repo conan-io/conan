@@ -181,7 +181,7 @@ class ConanFileLoader:
                     req_override = RecipeReference.loads(req_override)
                     conanfile.requires.override(req_override)
 
-            conanfile._conan_is_root = True
+            conanfile._conan_is_consumer = True
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -215,7 +215,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
-        conanfile._conan_is_root = True
+        conanfile._conan_is_consumer = True
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name):
@@ -258,7 +258,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
-        conanfile._conan_is_root = True
+        conanfile._conan_is_consumer = True
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 
