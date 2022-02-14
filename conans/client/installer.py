@@ -337,6 +337,9 @@ class BinaryInstaller(object):
         write_generators(conanfile)
         call_system_requirements(conanfile)
 
+        if node.binary == BINARY_EDITABLE_BUILD:
+
+
         for node in install_node.nodes:
             # Get source of information
             conanfile = node.conanfile
