@@ -114,10 +114,8 @@ class _PackageBuilder(object):
         write_generators(conanfile)
 
         try:
-            mkdir(conanfile.build_folder)
-            with chdir(conanfile.build_folder):
-                run_build_method(conanfile, self._hook_manager, reference=pref.ref,
-                                 package_id=pref.package_id)
+            run_build_method(conanfile, self._hook_manager, reference=pref.ref,
+                             package_id=pref.package_id)
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
