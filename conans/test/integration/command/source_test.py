@@ -58,9 +58,8 @@ import os
 class Pkg(ConanFile):
     exports_sources = "*"
     def source(self):
-        if self.develop:
-            patch = os.path.join(self.source_folder, "mypatch")
-            self.output.info("PATCH: %s" % load(patch))
+        patch = os.path.join(self.source_folder, "mypatch")
+        self.output.info("PATCH: %s" % load(patch))
 """
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})

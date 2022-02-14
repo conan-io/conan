@@ -200,6 +200,7 @@ class DepsGraphBuilder(object):
             # if not cached, then resolve
             try:
                 result = self._proxy.get_recipe(alias)
+                result = self._proxy.get_recipe(alias)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
                 raise GraphError.missing(node, require, str(e))
@@ -221,8 +222,6 @@ class DepsGraphBuilder(object):
         conanfile_path, recipe_status, remote, new_ref = result
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
 
-        if recipe_status == RECIPE_EDITABLE:
-            dep_conanfile.develop = True
 
         return new_ref, dep_conanfile, recipe_status, remote
 
@@ -240,7 +239,10 @@ class DepsGraphBuilder(object):
             raise GraphError.missing(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
-
+        # FIXME: Virtual comparison
+        if node.conanfile._conan_is_root and (node.recipe == "Virtual" or
+                                              getattr(node.conanfile, "tested_reference_str", False)):
+            dep_conanfile._conan_is_root = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref)
 
