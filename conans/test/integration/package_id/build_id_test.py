@@ -51,8 +51,6 @@ class MyTest(ConanFile):
     def build_id(self):
         self.info_build.settings.build_type = "Any"
         self.info_build.requires.clear()
-    def imports(self):
-        self.copy("*")
 """
 
 package_id_windows_release = "e3ae2a66a27043e92d6c3a54fca88b876036e4cf"
