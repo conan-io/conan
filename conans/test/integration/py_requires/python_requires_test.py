@@ -969,3 +969,51 @@ def test_transitive_diamond_python_requires():
            client.out
     assert "consumer/1.0@user/channel: Calling package()\nconsumer/1.0@user/channel: 222, 234" in \
            client.out
+
+
+def test_transitive_extend():
+    # https://github.com/conan-io/conan/issues/10511
+    # https://github.com/conan-io/conan/issues/10565
+    client = TestClient()
+    company = textwrap.dedent("""
+        from conan import ConanFile
+        class CompanyConanFile(ConanFile):
+            name = "company"
+            version = "1.0"
+
+            def msg1(self):
+                return "company"
+            def msg2(self):
+                return "company"
+        """)
+    project = textwrap.dedent("""
+        from conan import ConanFile
+        class ProjectBaseConanFile(ConanFile):
+            name = "project"
+            version = "1.0"
+
+            python_requires = "company/1.0"
+            python_requires_extend = "company.CompanyConanFile"
+
+            def msg1(self):
+                return "project"
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Base(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            python_requires = "project/1.0"
+            python_requires_extend = "project.ProjectBaseConanFile"
+            def generate(self):
+                self.output.info("Msg1:{}!!!".format(self.msg1()))
+                self.output.info("Msg2:{}!!!".format(self.msg2()))
+            """)
+    client.save({"company/conanfile.py": company,
+                 "project/conanfile.py": project,
+                 "consumer/conanfile.py": consumer})
+    client.run("export company")
+    client.run("export project")
+    client.run("install consumer")
+    assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
+    assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
