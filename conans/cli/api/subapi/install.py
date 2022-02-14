@@ -1,6 +1,5 @@
 import os
 
-from conan import ConanFile
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.generators import write_generators
@@ -47,9 +46,7 @@ class InstallAPI:
         # Add cli -g generators
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         write_generators(conanfile)
-
-        if type(conanfile).system_requirements != ConanFile.system_requirements:
-            call_system_requirements(conanfile)
+        call_system_requirements(conanfile)
 
 
 # TODO: Look for a better location for the deployers code
