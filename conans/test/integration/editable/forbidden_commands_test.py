@@ -100,5 +100,8 @@ class TestOtherCommands:
                 "consumer/conanfile.txt": "[requires]\nlib/0.1"})
         t.run('editable add . lib/0.1')
 
+        t.run("create .")
+        print(t.out)
+
         t.run("install consumer --build")
         print(t.out)

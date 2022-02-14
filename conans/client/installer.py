@@ -350,17 +350,29 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
+        # It will only run generation
+        node = install_node.nodes[0]
+        conanfile = node.conanfile
+        ref = node.ref
+        editable = self._cache.editable_packages.get(ref)
+        conanfile_path = editable["path"]
+        output_folder = editable.get("output_folder")
+        source_folder = editable.get("source_folder")
+        # TODO: Check, this assumes the folder is always the conanfile one
+        base_path = os.path.dirname(conanfile_path)
+        conanfile.folders.set_base_package(output_folder or base_path)
+        conanfile.folders.set_base_source(source_folder or base_path)
+        conanfile.folders.set_base_build(output_folder or base_path)
+        conanfile.folders.set_base_generators(output_folder or base_path)
+
+        output = conanfile.output
+        output.info("Rewriting files of editable package "
+                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+        write_generators(conanfile)
+
         for node in install_node.nodes:
             # Get source of information
             conanfile = node.conanfile
-            ref = node.ref
-            editable = self._cache.editable_packages.get(ref)
-            conanfile_path = editable["path"]
-            output_folder = editable.get("output_folder")
-            source_folder = editable.get("source_folder")
-            # TODO: Check, this assumes the folder is always the conanfile one
-            base_path = os.path.dirname(conanfile_path)
-
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or base_path)
             conanfile.folders.set_base_source(source_folder or base_path)
@@ -371,14 +383,6 @@ class BinaryInstaller(object):
             node.prev = "editable"
 
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
-
-        # It will only run generation
-        node = install_node.nodes[0]
-        conanfile = node.conanfile
-        output = conanfile.output
-        output.info("Rewriting files of editable package "
-                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile)
 
     def _handle_node_build(self, package, pkg_layout):
         node = package.nodes[0]

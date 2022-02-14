@@ -152,13 +152,16 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_ERROR
             return
 
+        if node.recipe == RECIPE_EDITABLE:
+            if self._evaluate_build(node, build_mode):
+                node.binary = BINARY_EDITABLE_BUILD
+            else:
+                node.binary = BINARY_EDITABLE  # TODO: PREV?
+            return
+
         # If the CLI says this package needs to be built, it doesn't make sense to mark
         # it as invalid
         if self._evaluate_build(node, build_mode):
-            return
-
-        if node.recipe == RECIPE_EDITABLE:
-            node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
 
         # Obtain the cache_latest valid one, cleaning things if dirty
