@@ -335,6 +335,7 @@ class BinaryInstaller(object):
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
         write_generators(conanfile)
+        call_system_requirements(conanfile)
 
         for node in install_node.nodes:
             # Get source of information
