@@ -231,7 +231,7 @@ def create_xcode_project(client, project_name, source):
                         CLANG_WARN_UNREACHABLE_CODE = YES;
                         CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
                         COPY_PHASE_STRIP = NO;
-        				DEBUG_INFORMATION_FORMAT = dwarf;
+                        DEBUG_INFORMATION_FORMAT = dwarf;
                         ENABLE_NS_ASSERTIONS = NO;
                         ENABLE_STRICT_OBJC_MSGSEND = YES;
                         GCC_C_LANGUAGE_STANDARD = gnu11;
