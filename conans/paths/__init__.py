@@ -36,7 +36,6 @@ ARTIFACTS_PROPERTIES_PUT_PREFIX = "artifact_property_"
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
-RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 DATA_YML = "conandata.yml"
 
