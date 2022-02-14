@@ -17,7 +17,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, RUN_LOG_NAME
+from conans.paths import CONANINFO
 from conans.util.env import get_env
 from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
     chdir
@@ -188,9 +188,7 @@ class _PackageBuilder(object):
                 prev = self._package(conanfile, pref, conanfile_path)
                 assert prev
                 node.prev = prev
-                log_file = os.path.join(base_build, RUN_LOG_NAME)
-                log_file = log_file if os.path.exists(log_file) else None
-                log_package_built(pref, time.time() - t1, log_file)
+                log_package_built(pref, time.time() - t1)
             except ConanException as exc:
                 raise exc
 
@@ -208,11 +206,8 @@ def _remove_folder_raising(folder):
 def call_system_requirements(conanfile):
     if type(conanfile).system_requirements == ConanFile.system_requirements:
         return
-    try:
-        return conanfile.system_requirements()
-    except Exception as e:
-        conanfile.output.error("while executing system_requirements(): %s" % str(e))
-        raise ConanException("Error in system requirements")
+    with conanfile_exception_formatter(conanfile, "system_requirements"):
+        conanfile.system_requirements()
 
 
 class BinaryInstaller(object):

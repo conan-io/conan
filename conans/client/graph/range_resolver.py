@@ -19,7 +19,7 @@ class RangeResolver(object):
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})
         results = pattern_cached.get(remote.name)
         if results is None:
-            results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+            results = self._remote_manager.search_recipes(remote, pattern)
             pattern_cached.update({remote.name: results})
         return results
 
