@@ -1,36 +1,20 @@
+import os
+
 from conan.tools.apple.apple import to_apple_arch
-from conans.errors import ConanException
 
 
 class XcodeBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.build_type = conanfile.settings.get_safe("build_type")
-        arch = conanfile.settings.get_safe("arch")
-        xcode_arch = to_apple_arch(arch)
-        if conanfile.settings.get_safe("os") == "WindowsCE":
-            xcode_arch = conanfile.settings.get_safe("os.platform")
-        self.platform = xcode_arch
+        self.arch = to_apple_arch(conanfile.settings.get_safe("arch"))
 
-    def command(self, sln):
-        cmd = ('xcodebuild "%s" /p:Configuration=%s /p:Platform=%s'
-               % (sln, self.build_type, self.platform))
-
-        verbosity = xcodebuild_verbosity_cmd_line_arg(self._conanfile)
-        if verbosity:
-            cmd += " {}".format(verbosity)
-
-        maxcpucount = self._conanfile.conf["tools.microsoft.xcodebuild:max_cpu_count"]
-        if maxcpucount:
-            cmd += " /m:{}".format(maxcpucount)
-
-        return cmd
-
-    def build(self, sln):
-        cmd = self.command(sln)
+    def build(self, xcodeproj, use_xcconfig=True):
+        # TODO: check if we want to pass conandeps.xcconfig or the xcodeproj is suposed to have
+        #  it embedded inside
+        xcconfig = " -xcconfig {}".format(
+            os.path.join(self._conanfile.folders.generators, "conandeps.xcconfig")) if use_xcconfig else ""
+        cmd = "xcodebuild -project {}{} -configuration {} -arch {}".format(xcodeproj, xcconfig,
+                                                                           self.build_type,
+                                                                           self.arch)
         self._conanfile.run(cmd)
-
-    @staticmethod
-    def get_version(_):
-        return NotImplementedError("get_version() method is not supported in xcodebuild "
-                                   "toolchain helper")
