@@ -62,7 +62,32 @@ class _ConfValue:
         self._sep = separator
 
     def __repr__(self):
-        return "ConfValues: " + self.get_str()
+        return "ConfValues: " + self.get(conf_type=str)
+
+    @property
+    def values(self):
+        return self._values
+
+    def get(self, conf_type=None):
+        """
+        Smart method to get all the values transformed. We can get automatically a
+        list (it's already a list) or a string object, else you can pass your own `conf_type`
+        if it's callable.
+
+        :param conf_type: `type` to be used to transform the current self._values. You can pass
+                          any callable object as well. By default, conf_type = None => list
+        """
+        if conf_type is None or conf_type is list:  # list == None == default type
+            v = self._values
+        elif conf_type is str:
+            v = self._sep.join(str(v) for v in self._values)
+        else:
+            try:
+                v = conf_type(self._values)
+            except Exception:
+                raise ConanException(f"ConfValues '{self._values}' could not be transformed "
+                                     f"to '{conf_type}'")
+        return v
 
     def dumps(self):
         result = []
@@ -117,9 +142,6 @@ class _ConfValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self):
-        return self._sep.join(str(v) for v in self._values)
-
 
 class Conf:
 
@@ -146,43 +168,57 @@ class Conf:
 
     def __getitem__(self, name):
         """
-        To keep the backward compatibility:
-
-        * if `values == []` returning `None`
-        * if `values == ["one"]` returning `"one"`
-        * if `values == ["one", "two"]` returning `["one", "two"]`
+        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
         """
         # FIXME: Keeping backward compatibility
-        values = self._values.get(name)
-        if values is not None:
-            values = values._values[0] if len(values._values) == 1 else values._values
-        return values or None
+        return self.get(name)
 
     def __setitem__(self, name, value):
+        """
+        DEPRECATED: it's going to disappear in Conan 2.0.
+        """
         # FIXME: Keeping backward compatibility
         self.define(name, value)  # it's like a new definition
 
     def __delitem__(self, name):
+        """
+        DEPRECATED: it's going to disappear in Conan 2.0.
+        """
         # FIXME: Keeping backward compatibility
-        del self._values[name]
+        self.pop(name)
 
-    def items(self):
-        """
-        To keep the backward compatibility:
-
-        * if `values == []` yielding `None`
-        * if `values == ["one"]` yielding `"one"`
-        * if `values == ["one", "two"]` yielding `["one", "two"]`
-        """
+    def items(self, conf_type=str):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
-            values = v._values[0] if len(v._values) == 1 else v._values
-            yield k, values or None
+            yield k, v.get(conf_type=conf_type)
 
     @property
     def sha(self):
         # FIXME: Keeping backward compatibility
         return self.dumps()
+
+    def get(self, conf_name, conf_type=str, default=None):
+        """
+        Get all the values belonging to the passed conf name. By default, those values
+        will be returned as a str-like object.
+        """
+        v = self._values.get(conf_name)
+        if v is not None:
+            v = v.get(conf_type=conf_type)
+        else:
+            v = default
+        return v
+
+    def pop(self, conf_name, conf_type=str, default=None):
+        """
+        Remove any key-value given the conf name
+        """
+        # Let's try to get the transformed value at first
+        # Otherwise the final value will be the default one
+        v = self.get(conf_name, conf_type=conf_type, default=default)
+        # Now, we can remove it
+        self._values.pop(conf_name, None)
+        return v
 
     @staticmethod
     def _validate_lower_case(name):
@@ -260,16 +296,34 @@ class ConfDefinition:
     __nonzero__ = __bool__
 
     def __getitem__(self, module_name):
-        """ if a module name is requested for this, it goes to the None-Global config by default
+        """
+        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
+        if a module name is requested for this, it goes to the None-Global config by default
         """
         pattern, name = self._split_pattern_name(module_name)
-        return self._pattern_confs.get(pattern, Conf())[name]
+        return self._pattern_confs.get(pattern, Conf()).get(name)
 
     def __delitem__(self, module_name):
-        """ if a module name is requested for this, it goes to the None-Global config by default
+        """
+        DEPRECATED: it's going to disappear in Conan 2.0.  Use self.pop() instead.
+        if a module name is requested for this, it goes to the None-Global config by default
         """
         pattern, name = self._split_pattern_name(module_name)
-        del self._pattern_confs.get(pattern, Conf())[name]
+        self._pattern_confs.get(pattern, Conf()).pop(name)
+
+    def get(self, conf_name, conf_type=str, default=None):
+        """
+        Get the value of the  conf name requested and convert it to the [type]-like passed.
+        """
+        pattern, name = self._split_pattern_name(conf_name)
+        return self._pattern_confs.get(pattern, Conf()).get(name, conf_type=conf_type, default=default)
+
+    def pop(self, conf_name, conf_type=str, default=None):
+        """
+        Remove the conf name passed.
+        """
+        pattern, name = self._split_pattern_name(conf_name)
+        return self._pattern_confs.get(pattern, Conf()).pop(name, conf_type=conf_type, default=default)
 
     @staticmethod
     def _split_pattern_name(pattern_name):

@@ -147,7 +147,40 @@ def test_conf_other_patterns_and_access(conf_definition):
            "('tools.microsoft.msbuild:verbosity', ConfValues: )])" in c_str
     assert "'zlib': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: z1flag z2flag)])" in c_str
     assert "'openssl': Conf: OrderedDict([('user.company.toolchain:flags', ConfValues: oflag)])" in c_str
-    assert c["tools.microsoft.msbuild:verbosity"] is None
-    assert c["user.company.toolchain:flags"] == ["oneflag", "secondflag"]
-    assert c["zlib:user.company.toolchain:flags"] == ["z1flag", "z2flag"]
-    assert c["openssl:user.company.toolchain:flags"] == "oflag"  # FIXME: Backward compatibility
+    # Legacy way
+    assert c["tools.microsoft.msbuild:verbosity"] == ""  # unset == ""
+    assert c["user.company.toolchain:flags"] == "oneflag secondflag"
+    assert c["zlib:user.company.toolchain:flags"] == "z1flag z2flag"
+    assert c["openssl:user.company.toolchain:flags"] == "oflag"
+
+
+def test_conf_get(conf_definition):
+    c, _ = conf_definition
+    text = textwrap.dedent("""\
+        tools.microsoft.msbuild:verbosity=+another
+        tools.microsoft.msbuild:verbosity=!
+        user.company.toolchain:flags=oneflag
+        user.company.toolchain:flags+=secondflag
+        zlib:user.company.toolchain:flags=z1flag
+        zlib:user.company.toolchain:flags+=z2flag
+        openssl:user.company.toolchain:flags=oflag""")
+    c2 = ConfDefinition()
+    c2.loads(text)
+    c.update_conf_definition(c2)
+    assert c.get("tools.microsoft.msbuild:verbosity") == ""  # unset == ""
+    assert c.get("tools.microsoft.msbuild:verbosity", conf_type=list) == []
+    assert c.get("tools.microsoft.msbuild:missing", default="fake") == "fake"
+    assert c.get("user.company.toolchain:flags") == "oneflag secondflag"
+    assert c.get("zlib:user.company.toolchain:flags") == "z1flag z2flag"
+    assert c.get("openssl:user.company.toolchain:flags") == "oflag"
+    assert c.get("openssl:user.company.toolchain:flags", conf_type=list) == ["oflag"]
+    assert c.get("openssl:user.company.toolchain:flags", conf_type=None) == ["oflag"]
+
+
+def test_conf_pop(conf_definition):
+    c, _ = conf_definition
+    assert c.pop("tools.microsoft.msbuild:missing") is None
+    assert c.pop("tools.microsoft.msbuild:missing", default="fake") == "fake"
+    assert c.pop("tools.microsoft.msbuild:verbosity") == "minimal"
+    assert c.pop("tools.microsoft.msbuild:verbosity") is None
+    assert c.pop("user.company.toolchain:flags", conf_type=list) == ["someflags"]
