@@ -29,7 +29,6 @@ def get_conan_user_home():
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
-BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
 ARTIFACTS_PROPERTIES_FILE = "artifacts.properties"
 ARTIFACTS_PROPERTIES_PUT_PREFIX = "artifact_property_"
@@ -38,4 +37,3 @@ EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 DEFAULT_PROFILE_NAME = "default"
 DATA_YML = "conandata.yml"
-
