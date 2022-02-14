@@ -50,7 +50,6 @@ def test_cmake_find_package_multi_links_flags():
     gen = CMakeFindPackageMultiGenerator(conanfile)
     files = gen.content
     d = files["mypkgTarget-release.cmake"]
-
     assert '"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-OPT:NOICF;-s FULL_ES3=1>"' in d
     assert '"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-NODEFAULTLIB;-OTHERFLAG>"' in d
     assert '"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-NODEFAULTLIB;-OTHERFLAG>"' in d
