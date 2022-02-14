@@ -4,7 +4,7 @@ from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement
+    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement, RECIPE_VIRTUAL
 from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
@@ -239,8 +239,8 @@ class DepsGraphBuilder(object):
             raise GraphError.missing(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
-        # FIXME: Virtual comparison
-        if node.conanfile._conan_is_root and (node.recipe == "Virtual" or
+        # If the node is virtual or a test package, the require is also "root"
+        if node.conanfile._conan_is_root and (node.recipe == RECIPE_VIRTUAL or
                                               getattr(node.conanfile, "tested_reference_str", False)):
             dep_conanfile._conan_is_root = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
