@@ -670,7 +670,8 @@ class TestClient(object):
             package_ids = self.cache.get_package_references(latest_rrev)
             # Let's check if there are several packages because we don't want random behaviours
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
-                                          f"provide a single package_id instead"
+                                          f"provide a single package_id instead" \
+                                          if len(package_ids) > 0 else "No binary packages found"
             pref = package_ids[0]
         return self.cache.get_latest_package_reference(pref)
 

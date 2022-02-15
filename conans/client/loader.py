@@ -49,18 +49,23 @@ class ConanFileLoader:
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
 
-            # If the scm is inherited, create my own instance
-            if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
-                assert isinstance(conanfile.scm, dict), "'scm' attribute must be a dictionary"
-                conanfile.scm = conanfile.scm.copy()
-
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
-            if conan_data and '.conan' in conan_data:
-                scm_data = conan_data['.conan'].get('scm')
-                if scm_data:
-                    conanfile.scm.update(scm_data)
+
+            if hasattr(conanfile, "scm"):
+                if "scm" not in conanfile.__class__.__dict__:
+                    # If the scm is inherited, create my own instance
+                    conanfile.scm = conanfile.scm.copy()
+
+                if conanfile.scm.get("revision", "auto") != "auto":
+                    raise ConanException("'scm' can only be used for 'auto'. For fixed revisions use"
+                                         " the 'source()' method (and maybe conandata.yml file)")
+
+                if conan_data and '.conan' in conan_data:
+                    scm_data = conan_data['.conan'].get('scm')
+                    if scm_data:
+                        conanfile.scm.update(scm_data)
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, module)
             result = conanfile(display)
