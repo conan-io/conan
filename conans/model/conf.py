@@ -55,92 +55,106 @@ class _ConfVarPlaceHolder:
 
 
 class _ConfValue:
-    def __init__(self, name, value=_ConfVarPlaceHolder, separator=" ", path=False):
+
+    def __init__(self, name, value):
         self._name = name
-        self._values = [] if value is None else value if isinstance(value, list) else [value]
-        self._path = path
-        self._sep = separator
+        self._value = value
 
     def __repr__(self):
-        return "ConfValues: " + self.get(conf_type=str)
+        return repr(self._value)
 
-    @property
-    def values(self):
-        return self._values
+    def dumps(self):
+        raise NotImplementedError
 
-    def get(self, conf_type=None):
-        """
-        Smart method to get all the values transformed. We can get automatically a
-        list (it's already a list) or a string object, else you can pass your own `conf_type`
-        if it's callable.
+    def remove(self, value):
+        raise NotImplementedError
 
-        :param conf_type: `type` to be used to transform the current self._values. You can pass
-                          any callable object as well. By default, conf_type = None => list
-        """
-        if conf_type is None or conf_type is list:  # list == None == default type
-            v = self._values
-        elif conf_type is str:
-            v = self._sep.join(str(v) for v in self._values)
-        else:
-            try:
-                v = conf_type(self._values)
-            except Exception:
-                raise ConanException(f"ConfValues '{self._values}' could not be transformed "
-                                     f"to '{conf_type}'")
-        return v
+    def append(self, value):
+        raise NotImplementedError
+
+    def prepend(self, value):
+        raise NotImplementedError
+
+    def compose_conf_value(self, other):
+        raise NotImplementedError
+
+
+class _ConfStrValue(_ConfValue):
+
+    def __init__(self, name, value):
+        value = str(value)
+        super(_ConfStrValue, self).__init__(name, value)
+
+    def dumps(self):
+        return "{}={}".format(self._name, self._value)
+
+    def remove(self, value):
+        self._value = ""
+
+    def append(self, value):
+        raise ConanException("str values cannot append other values.")
+
+    def prepend(self, value):
+        raise ConanException("str values cannot prepend other values.")
+
+    def compose_conf_value(self, other):
+        pass
+
+
+class _ConfListValue(_ConfValue):
+
+    def __init__(self, name, value):
+        value = [] if value is None else value if isinstance(value, list) else [value]
+        value = [str(v) for v in value]  # Ensure it's full of strings
+        super(_ConfListValue, self).__init__(name, value)
 
     def dumps(self):
         result = []
-        path = "(path)" if self._path else ""
-        if not self._values:  # Empty means unset
+        if not self._value:  # Empty means unset
             result.append("{}=!".format(self._name))
-        elif _ConfVarPlaceHolder in self._values:
-            index = self._values.index(_ConfVarPlaceHolder)
-            for v in self._values[:index]:
-                result.append("{}=+{}{}".format(self._name, path, v))
-            for v in self._values[index+1:]:
-                result.append("{}+={}{}".format(self._name, path, v))
+        elif _ConfVarPlaceHolder in self._value:
+            index = self._value.index(_ConfVarPlaceHolder)
+            for v in self._value[:index]:
+                result.append("{}=+{}".format(self._name, v))
+            for v in self._value[index+1:]:
+                result.append("{}+={}".format(self._name, v))
         else:
             append = ""
-            for v in self._values:
-                result.append("{}{}={}{}".format(self._name, append, path, v))
+            for v in self._value:
+                result.append("{}{}={}".format(self._name, append, v))
                 append = "+"
         return "\n".join(result)
 
     def copy(self):
-        return _ConfValue(self._name, self._values, self._sep, self._path)
+        return _ConfListValue(self._name, self._value)
 
     def remove(self, value):
-        self._values.remove(value)
+        self._value.remove(value)
 
-    def append(self, value, separator=None):
-        if separator is not None:
-            self._sep = separator
+    def append(self, value):
         if isinstance(value, list):
-            self._values.extend(value)
+            self._value.extend(value)
         else:
-            self._values.append(value)
+            self._value.append(value)
 
-    def prepend(self, value, separator=None):
-        if separator is not None:
-            self._sep = separator
+    def prepend(self, value):
         if isinstance(value, list):
-            self._values = value + self._values
+            self._value = value + self._value
         else:
-            self._values.insert(0, value)
+            self._value.insert(0, value)
 
     def compose_conf_value(self, other):
         """
         :type other: _ConfValue
         """
         try:
-            index = self._values.index(_ConfVarPlaceHolder)
+            index = self._value.index(_ConfVarPlaceHolder)
         except ValueError:  # It doesn't have placeholder
             pass
         else:
-            new_value = self._values[:]  # do a copy
-            new_value[index:index + 1] = other._values  # replace the placeholder
-            self._values = new_value
+            new_value = self._value[:]  # do a copy
+            new_value[index:index + 1] = other._value  # replace the placeholder
+            self._value = new_value
 
 
 class Conf:
@@ -187,38 +201,35 @@ class Conf:
         # FIXME: Keeping backward compatibility
         self.pop(name)
 
-    def items(self, conf_type=str):
+    def items(self):
         # FIXME: Keeping backward compatibility
-        for k, v in self._values.items():
-            yield k, v.get(conf_type=conf_type)
+        return self._values.items()
 
     @property
     def sha(self):
         # FIXME: Keeping backward compatibility
         return self.dumps()
 
-    def get(self, conf_name, conf_type=str, default=None):
+    def get(self, conf_name, default=None):
         """
         Get all the values belonging to the passed conf name. By default, those values
         will be returned as a str-like object.
         """
-        v = self._values.get(conf_name)
-        if v is not None:
-            v = v.get(conf_type=conf_type)
-        else:
-            v = default
-        return v
+        return self._values.get(conf_name, default)
 
-    def pop(self, conf_name, conf_type=str, default=None):
+    def pop(self, conf_name, default=None):
         """
         Remove any key-value given the conf name
         """
-        # Let's try to get the transformed value at first
-        # Otherwise the final value will be the default one
-        v = self.get(conf_name, conf_type=conf_type, default=default)
-        # Now, we can remove it
-        self._values.pop(conf_name, None)
-        return v
+        return self._values.pop(conf_name, default)
+
+    @staticmethod
+    def _get_conf_value(name, value):
+        type_ = DEFAULT_CONFIGURATION.get(name, [None])[0]
+        if type_ is list or isinstance(value, list):
+            return _ConfListValue(name, value)
+        else:
+            return _ConfStrValue(name, value)
 
     @staticmethod
     def _validate_lower_case(name):
@@ -236,23 +247,23 @@ class Conf:
         """
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
-    def define(self, name, value, separator=" "):
+    def define(self, name, value):
         self._validate_lower_case(name)
-        self._values[name] = _ConfValue(name, value, separator, path=False)
+        self._values[name] = self._get_conf_value(name, value)
 
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
         """
-        self._values[name] = _ConfValue(name, None)
+        self._values[name] = self._get_conf_value(name, None)
 
-    def append(self, name, value, separator=None):
+    def append(self, name, value):
         self._validate_lower_case(name)
-        self._values.setdefault(name, _ConfValue(name)).append(value, separator)
+        self._values.setdefault(name, self._get_conf_value(name, _ConfVarPlaceHolder)).append(value)
 
-    def prepend(self, name, value, separator=None):
+    def prepend(self, name, value):
         self._validate_lower_case(name)
-        self._values.setdefault(name, _ConfValue(name)).prepend(value, separator)
+        self._values.setdefault(name, self._get_conf_value(name, _ConfVarPlaceHolder)).prepend(value)
 
     def remove(self, name, value):
         self._values[name].remove(value)
@@ -311,19 +322,19 @@ class ConfDefinition:
         pattern, name = self._split_pattern_name(module_name)
         self._pattern_confs.get(pattern, Conf()).pop(name)
 
-    def get(self, conf_name, conf_type=str, default=None):
+    def get(self, conf_name, default=None):
         """
         Get the value of the  conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).get(name, conf_type=conf_type, default=default)
+        return self._pattern_confs.get(pattern, Conf()).get(name, default=default)
 
-    def pop(self, conf_name, conf_type=str, default=None):
+    def pop(self, conf_name, default=None):
         """
         Remove the conf name passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).pop(name, conf_type=conf_type, default=default)
+        return self._pattern_confs.get(pattern, Conf()).pop(name, default=default)
 
     @staticmethod
     def _split_pattern_name(pattern_name):
@@ -395,7 +406,7 @@ class ConfDefinition:
         if method == "unset":
             conf.unset(name)
         else:
-            getattr(conf, method)(name, value.strip())
+            getattr(conf, method)(name, value)
         # Update
         self._update_conf_definition(pattern, conf)
 
@@ -434,7 +445,15 @@ class ConfDefinition:
                     continue
 
                 pattern_name, value = tokens
-                self.update(pattern_name, value, profile=profile, method=method)
+                try:
+                    parsed_value = eval(value)
+                except:
+                    raise ConanException("Bad conf definition: {}".format(line))
+
+                if isinstance(parsed_value, dict):
+                    raise ConanException("Bad conf value: {}. It cannot "
+                                         "be a dict-like object.".format(value))
+                self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
