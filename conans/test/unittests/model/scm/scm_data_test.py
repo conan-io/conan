@@ -46,7 +46,7 @@ class GetDictValueTestCase(unittest.TestCase):
 
 class SCMDataToStringTestCase(unittest.TestCase):
     data = {"url": "http://my.url",
-            "revision": 123,
+            "revision": "123",
             "shallow": False,
             "username": 'weir"d',
             "type": "weir\"d",

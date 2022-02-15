@@ -14,9 +14,7 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.env import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
-    rmdir
+from conans.util.files import mkdir, tar_extract, touch_folder, md5sum, sha1sum, rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -175,8 +173,6 @@ class RemoteManager(object):
                 shutil.move(file_path, os.path.join(package_folder, file_name))
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(package_folder)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
 
             scoped_output.success('Package installed %s' % pref.package_id)
             scoped_output.info("Downloaded package revision %s" % pref.revision)

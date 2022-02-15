@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import textwrap
 import unittest
 
@@ -15,7 +16,13 @@ from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
-from conans.util.files import load, mkdir, save, save_files, make_file_read_only
+from conans.util.files import load, mkdir, save, save_files
+
+
+def make_file_read_only(file_path):
+    mode = os.stat(file_path).st_mode
+    os.chmod(file_path, mode & ~ stat.S_IWRITE)
+
 
 win_profile = """[settings]
     os: Windows

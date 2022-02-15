@@ -71,18 +71,6 @@ class PkgA(ConanFile):
         self.assertIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
                       client.out)
 
-    def test_develop(self):
-        # https://github.com/conan-io/conan/issues/2513
-        conanfile = """from conan import ConanFile
-class helloPythonConan(ConanFile):
-    def package(self):
-        self.output.info("DEVELOP IS: %s!" % self.develop)
-"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable ")
-        self.assertIn("hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
-
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242

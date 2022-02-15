@@ -275,58 +275,6 @@ def test_export_pkg_local():
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
 
-@pytest.mark.xfail(reason="Update to cache2.0")
-def test_imports():
-    """The 'conan imports' follows the layout"""
-    client = TestClient()
-    # Hello to be reused
-    conan_file = str(GenConanfile().with_import("from conans import tools")
-                     .with_import("from conan.tools.files import copy"))
-    conan_file += """
-    no_copy_source = True
-    def build(self):
-        tools.save("library.dll", "bar")
-        tools.save("generated.h", "bar")
-    def package(self):
-        copy(self, "*.h", self.source_folder, self.package_folder)
-        copy(self, "*.h", self.build_folder, self.package_folder)
-        copy(self, "*.dll", self.build_folder, self.package_folder)
-    """
-    client.save({"conanfile.py": conan_file})
-    client.run("create . --name=hello --version=1.0")
-
-    # Consumer of the hello importing the shared
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
-    conan_file += """
-    no_copy_source = True
-    requires = "hello/1.0"
-    def layout(self):
-        self.folders.imports = "my_imports"
-    def imports(self):
-        self.output.warning("Imports folder: {}".format(self.imports_folder))
-        self.copy("*.dll")
-    """
-
-    client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install")
-    client.run("imports .")
-
-    imports_folder = os.path.join(client.current_folder, "my_imports")
-    dll_path = os.path.join(imports_folder, "library.dll")
-
-    assert "WARN: Imports folder: {}".format(imports_folder) in client.out
-    assert os.path.exists(dll_path)
-
-    # If we do a conan create, the imports folder is used also in the cache
-    client.run("create . --name=foo --version=1.0")
-    package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("foo/1.0@")
-    pref = PkgReference(ref, package_id)
-    bfolder = client.get_latest_pkg_layout(pref).build()
-    imports_folder = os.path.join(bfolder, "my_imports")
-    assert "WARN: Imports folder: {}".format(imports_folder) in client.out
-
-
 def test_start_dir_failure():
     c = TestClient()
     c.save(pkg_cmake("dep", "0.1"))
@@ -338,3 +286,29 @@ def test_start_dir_failure():
     with c.chdir("build"):
         c.run("install ..")
     assert os.path.exists(expected_path)
+
+
+def test_local_folders_without_layout():
+    """ Test that the "conan install" can report the local source and build folder
+    """
+    # https://github.com/conan-io/conan/issues/10566
+    client = TestClient()
+    conan_file = textwrap.dedent("""
+        from conan import ConanFile
+        class Test(ConanFile):
+            version = "1.2.3"
+            name = "test"
+
+            def layout(self):
+                self.folders.source = "."
+                self.folders.build = "build"
+
+            def generate(self):
+                self.output.info("generate sf: {}".format(self.source_folder))
+                self.output.info("generate bf: {}".format(self.build_folder))
+        """)
+
+    client.save({"conanfile.py": conan_file})
+    client.run("install .")
+    assert "conanfile.py (test/1.2.3): generate sf: {}".format(client.current_folder) in client.out
+    assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out

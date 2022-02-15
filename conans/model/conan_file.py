@@ -47,6 +47,8 @@ class ConanFile:
     # Run in windows bash
     win_bash = None
 
+    _conan_is_consumer = False
+
     def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
@@ -237,3 +239,7 @@ class ConanFile:
 
     def __repr__(self):
         return self.display_name
+
+    def set_deploy_folder(self, deploy_folder):
+        self.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.folders.set_base_package(deploy_folder)

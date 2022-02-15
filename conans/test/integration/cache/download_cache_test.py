@@ -157,7 +157,7 @@ class DownloadCacheTest(unittest.TestCase):
             from conan import ConanFile
             from conan.tools.files import copy, load
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def package(self):
                     copy(self, "*", self.source_folder, self.package_folder)
                 def package_info(self):
