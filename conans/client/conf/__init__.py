@@ -37,6 +37,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Macos:
             version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
             sdk: [None, "macosx"]
+            sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1"]
             subsystem: [None, catalyst]
         Android:
             api_level: ANY
