@@ -65,10 +65,10 @@ def test_package_manager_distro(distro, tool):
 
 
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
-    (True, True, "sudo -A "),
-    (True, False, "sudo "),
-    (False, True, ""),
-    (False, False, ""),
+    ("True", "True", "sudo -A "),
+    ("True", "False", "sudo "),
+    ("False", "True", ""),
+    ("False", "False", ""),
 ])
 def test_sudo_str(sudo, sudo_askpass, expected_str):
     conanfile = ConanFileMock()
