@@ -160,185 +160,6 @@ class CompatibleIDsTest(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
-    def test_visual_package_compatible_with_intel(self):
-        client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
-        conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Conan(ConanFile):
-            settings = "compiler"
-
-            def package_id(self):
-                if self.settings.compiler == "intel":
-                    p = self.info.clone()
-                    p.base_compatible()
-                    self.compatible_packages.append(p)
-            """)
-        visual_profile = textwrap.dedent("""
-            [settings]
-            compiler = Visual Studio
-            compiler.version = 8
-            compiler.runtime = MD
-            """)
-        intel_profile = textwrap.dedent("""
-            [settings]
-            compiler = intel
-            compiler.version = 16
-            compiler.update = 311
-            compiler.base = Visual Studio
-            compiler.base.version = 8
-            compiler.base.runtime = MD
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "intel_profile": intel_profile,
-                     "visual_profile": visual_profile})
-        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
-                   "--profile visual_profile")
-        package_id = client.created_package_id("bye/0.1@us/ch")
-        client.run("install --reference=%s -pr intel_profile" % repr(ref))
-        missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
-        self.assertIn(f"bye/0.1@us/ch: Main binary package '{missing_id}'"
-                      " missing. Using compatible package "
-                      f"'{package_id}'", client.out)
-        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
-
-    def test_wrong_base_compatible(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Conan(ConanFile):
-            settings = "compiler"
-
-            def package_id(self):
-                p = self.info.clone()
-                p.base_compatible()
-                self.compatible_packages.append(p)
-            """)
-        visual_profile = textwrap.dedent("""
-            [settings]
-            compiler = Visual Studio
-            compiler.version = 8
-            compiler.runtime = MD
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "visual_profile": visual_profile})
-        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
-                   "--profile visual_profile", assert_error=True)
-        self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
-
-    def test_intel_package_compatible_with_base(self):
-        client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
-        conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Conan(ConanFile):
-            settings = "compiler"
-
-            def package_id(self):
-               if self.settings.compiler == "Visual Studio":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.parent_compatible(compiler="intel", version=16)
-                   self.compatible_packages.append(compatible_pkg)
-
-            """)
-        visual_profile = textwrap.dedent("""
-            [settings]
-            compiler = Visual Studio
-            compiler.version = 8
-            compiler.runtime = MD
-            """)
-        intel_profile = textwrap.dedent("""
-            [settings]
-            compiler = intel
-            compiler.version = 16
-            compiler.base = Visual Studio
-            compiler.base.version = 8
-            compiler.base.runtime = MD
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "intel_profile": intel_profile,
-                     "visual_profile": visual_profile})
-        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
-                   "--profile intel_profile")
-        package_id = client.created_package_id("bye/0.1@us/ch")
-        client.run("install --reference=%s -pr visual_profile" % repr(ref))
-        missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
-        self.assertIn("bye/0.1@us/ch: Main binary package "
-                      f"'{missing_id}' missing. Using compatible "
-                      f"package '{package_id}'",
-                      client.out)
-        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
-
-    def test_no_valid_compiler_keyword_base(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Conan(ConanFile):
-            settings = "compiler"
-
-            def package_id(self):
-               if self.settings.compiler == "Visual Studio":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.parent_compatible("intel")
-                   self.compatible_packages.append(compatible_pkg)
-
-            """)
-        visual_profile = textwrap.dedent("""
-            [settings]
-            compiler = Visual Studio
-            compiler.version = 8
-            compiler.runtime = MD
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "visual_profile": visual_profile})
-        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
-                   "--profile visual_profile", assert_error=True)
-        self.assertIn("Specify 'compiler' as a keywork "
-                      "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
-
-    def test_intel_package_invalid_subsetting(self):
-        """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
-        file the available package_id"""
-        client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-
-            class Conan(ConanFile):
-                settings = "compiler"
-
-                def package_id(self):
-                   if self.settings.compiler == "Visual Studio":
-                       compatible_pkg = self.info.clone()
-                       compatible_pkg.parent_compatible(compiler="intel", version=16, FOO="BAR")
-                       self.compatible_packages.append(compatible_pkg)
-            """)
-        visual_profile = textwrap.dedent("""
-            [settings]
-            compiler = Visual Studio
-            compiler.version = 8
-            compiler.runtime = MD
-            """)
-        intel_profile = textwrap.dedent("""
-            [settings]
-            compiler = intel
-            compiler.version = 16
-            compiler.base = Visual Studio
-            compiler.base.version = 8
-            compiler.base.runtime = MD
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "intel_profile": intel_profile,
-                     "visual_profile": visual_profile})
-        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
-                   "--profile intel_profile")
-        client.run("install --reference=%s -pr visual_profile" % repr(ref), assert_error=True)
-        self.assertIn("Missing prebuilt package for 'bye/0.1@us/ch'", client.out)
-
     def test_additional_id_mode(self):
         c1 = GenConanfile().with_name("aa").with_version("1.0")
         c2 = GenConanfile().with_name("bb").with_version("1.0").with_require("aa/1.0")
@@ -408,7 +229,7 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
+        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
@@ -424,7 +245,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "59a709644ae98b2ab3f16264e16351d155122697"
+        consumer_id = "c7f29383c7dc6cabeb35d2a59a14b9c400f827c8"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
@@ -441,7 +262,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                          ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "f701bd4dcfc2b6225a3e95cfbcfb3848ca7896f5"
+        consumer_id = "ef31d7d514a68726e35e7bdce2a9b7ae1560e9c9"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 

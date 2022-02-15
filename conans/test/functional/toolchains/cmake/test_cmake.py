@@ -15,7 +15,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -127,7 +127,7 @@ class Base(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("build .. %s %s" % (settings, options))
+            self.client.run("build .. %s %s -of=." % (settings, options))
             install_out = self.client.out
         return install_out
 
@@ -273,8 +273,8 @@ class WinTest(Base):
 
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
-    @pytest.mark.tool_mingw64
-    @pytest.mark.tool_cmake(version="3.15")
+    @pytest.mark.tool("mingw64")
+    @pytest.mark.tool("cmake", "3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -488,7 +488,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
@@ -543,7 +543,7 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeOverrideCacheTest(unittest.TestCase):
 
     def test_cmake_cache_variables(self):
@@ -576,7 +576,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class TestCMakeFindPackagePreferConfig:
 
     def test_prefer_config(self):

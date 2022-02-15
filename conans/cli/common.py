@@ -1,7 +1,6 @@
 import os
 
 from conans.cli.command import Extender, OnceArgument
-from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -133,5 +132,6 @@ def get_lockfile(lockfile, strict=False):
 def get_multiple_remotes(conan_api, remote_names=None):
     if remote_names:
         return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
-    elif remote_names is None:  # if we don't pass any remotes we want to retrieve only the enabled ones
+    elif remote_names is None:
+        # if we don't pass any remotes we want to retrieve only the enabled ones
         return conan_api.remotes.list(only_active=True)

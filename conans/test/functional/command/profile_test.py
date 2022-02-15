@@ -95,7 +95,7 @@ class DetectCompilersTest(unittest.TestCase):
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
 
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool("gcc")
     @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
     def test_detect_default_in_mac_os_using_gcc_as_default(self):
         """

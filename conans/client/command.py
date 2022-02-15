@@ -7,10 +7,9 @@ from difflib import get_close_matches
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import ConanAPIV1, ProfileData
+from conans.client.conan_api import ConanAPIV1
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -94,59 +93,6 @@ class Command(object):
         self._conan_api = conan_api
         self._out = ConanOutput()
 
-    def download(self, *args):
-        """
-        Downloads recipe and binaries to the local cache, without using settings.
-
-        It works specifying the recipe reference and package ID to be
-        installed. Not transitive, requirements of the specified reference will
-        NOT be retrieved. Only if a reference is specified, it will download all
-        packages from the specified remote. If no remote is specified, it will use the default remote.
-        """
-
-        parser = argparse.ArgumentParser(description=self.download.__doc__,
-                                         prog="conan download",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("reference",
-                            help='pkg/version@user/channel')
-        parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='Force install specified package ID (ignore settings/options)'
-                                 ' [DEPRECATED: use full reference instead]')
-        parser.add_argument("-r", "--remote", help='look in the specified remote server',
-                            action=OnceArgument)
-        parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
-                            action="store_true")
-
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PkgReference.loads(args.reference)
-        except ConanException:
-            reference = args.reference
-            packages_list = args.package
-
-            if packages_list:
-                self._out.warning("Usage of `--package` argument is deprecated."
-                                  " Use a full reference instead: "
-                                  "`conan download [...] {}:{}`".format(reference, packages_list[0]))
-        else:
-            reference = repr(pref.ref)
-            if pref.ref.user is None:
-                if pref.ref.revision:
-                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
-                else:
-                    reference += "@"
-            pkgref = "{}#{}".format(pref.package_id, pref.revision) \
-                if pref.revision else pref.package_id
-            packages_list = [pkgref]
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
-
-        self._warn_python_version()
-        return self._conan_api.download(reference=reference, packages=packages_list,
-                                        remote_name=args.remote, recipe=args.recipe)
-
     def source(self, *args):
         """
         Calls your local conanfile.py 'source()' method.
@@ -175,123 +121,6 @@ class Command(object):
 
         self._warn_python_version()
         return self._conan_api.source(args.path, args.source_folder)
-
-    def build(self, *args):
-        """
-        Calls your local conanfile.py 'build()' method.
-
-        The recipe will be built in the local directory specified by
-        --build-folder, reading the sources from --source-folder. If you are
-        using a build helper, like CMake(), the --package-folder will be
-        configured as the destination folder for the install step.
-        """
-
-        parser = argparse.ArgumentParser(description=self.build.__doc__,
-                                         prog="conan build",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
-                                                                'if not specified in conanfile')
-        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
-                                                                   'if not specified in conanfile')
-        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
-        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
-        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="Directory to install the package (when the build system or "
-                                 "build() method does it). Defaulted to the '{build_folder}/package' "
-                                 "folder. A relative path can be specified, relative to the current "
-                                 "folder. Also an absolute path is allowed.")
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-
-        parser.add_argument("-g", "--generator", nargs=1, action=Extender,
-                            help='Generators to use')
-
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use this directory as the directory where to put the generator'
-                                 'files.')
-
-        parser.add_argument("--no-imports", action='store_true', default=False,
-                            help='Install specified packages but avoid running imports')
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-
-        args = parser.parse_args(*args)
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-
-        self._warn_python_version()
-
-        info = None
-        try:
-            info = self._conan_api.build(conanfile_path=args.path,
-                                     name=args.name,
-                                     version=args.version,
-                                     user=args.user,
-                                     channel=args.channel,
-                                     source_folder=args.source_folder,
-                                     package_folder=args.package_folder,
-                                     build_folder=args.build_folder,
-                                     install_folder=args.install_folder,
-                                     settings=args.settings_host, options=args.options_host,
-                                     env=args.env_host, profile_names=args.profile_host,
-                                     profile_build=profile_build,
-                                     remote_name=args.remote,
-                                     build=args.build,
-                                     update=args.update, generators=args.generator,
-                                     no_imports=args.no_imports,
-                                     lockfile=args.lockfile,
-                                     lockfile_out=args.lockfile_out, conf=args.conf_host)
-        except ConanException as exc:
-            info = exc.info
-            raise
-
-    def imports(self, *args):
-        """
-        Calls your local conanfile.py or conanfile.txt 'imports' method.
-        """
-
-        parser = argparse.ArgumentParser(description=self.imports.__doc__,
-                                         prog="conan imports",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path",
-                            help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous"
-                            " execution. e.g.: conan imports ./imported_files --undo ")
-        parser.add_argument("-imf", "--import-folder", action=OnceArgument,
-                            help="Directory to copy the artifacts to. By default it will be the"
-                                 " current directory")
-        parser.add_argument("-u", "--undo", default=False, action="store_true",
-                            help="Undo imports. Remove imported files")
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile")
-        _add_profile_arguments(parser)
-
-        args = parser.parse_args(*args)
-
-        if args.undo:
-            return self._conan_api.imports_undo(args.path)
-
-        try:
-            if "@" in args.path and RecipeReference.loads(args.path):
-                raise ArgumentError(None, "Parameter 'path' cannot be a reference. Use a folder "
-                                          "containing a conanfile.py or conanfile.txt file.")
-        except ConanException:
-            pass
-        self._warn_python_version()
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-
-        self._warn_python_version()
-        self._conan_api.imports(args.path,
-                            args.import_folder, settings=args.settings_host,
-                            options=args.options_host, env=args.env_host,
-                            profile_names=args.profile_host, profile_build=profile_build,
-                            lockfile=args.lockfile)
 
     def _commands(self):
         """ Returns a list of available commands.

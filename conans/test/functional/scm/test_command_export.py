@@ -11,7 +11,7 @@ from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
@@ -22,11 +22,10 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                     "revision": "{rev_value}"}}
     """)
 
-    @parameterized.expand(itertools.product(["SVN", "git"], [(True, False), (False, True)]))
-    def test_no_repo(self, repo_type, autos):
-        auto_url, auto_rev = autos
-        url_value = "auto" if auto_url else "http://this.url"
-        rev_value = "auto" if auto_rev else "123"
+    @parameterized.expand(itertools.product(["SVN", "git"],))
+    def test_no_repo(self, repo_type):
+        url_value = "auto"
+        rev_value = "auto"
 
         self.client = TestClient()
         self.client.save({"conanfile.py": self.conanfile.format(repo_type=repo_type.lower(),
@@ -38,7 +37,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                       self.client.current_folder, repo_type.lower()), self.client.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class ExportCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
@@ -49,10 +48,9 @@ class ExportCommandTestCase(unittest.TestCase):
                     "revision": "{rev_value}"}}
     """)
 
-    @parameterized.expand([(True, False), (False, True)])
-    def test_non_existing_remote(self, auto_url, auto_rev):
-        url_value = "auto" if auto_url else "http://this.url"
-        rev_value = "auto" if auto_rev else "123"
+    def test_non_existing_remote(self):
+        url_value = "auto"
+        rev_value = "auto"
 
         self.path, _ = create_local_git_repo({"conanfile.py":
                                               self.conanfile.format(repo_type="git",
@@ -61,6 +59,6 @@ class ExportCommandTestCase(unittest.TestCase):
         self.client = TestClient()
         self.client.current_folder = self.path
         self.client.run("export . --name=lib --version=version --user=user --channel=channel")
-        if auto_url:
-            self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
-                          self.client.out)
+
+        self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
+                      self.client.out)

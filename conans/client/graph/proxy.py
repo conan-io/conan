@@ -1,5 +1,3 @@
-from requests.exceptions import RequestException
-
 from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,

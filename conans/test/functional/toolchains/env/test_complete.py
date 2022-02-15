@@ -1,9 +1,12 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_virtualenv():
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=0.1")
@@ -64,6 +67,7 @@ def test_cmake_virtualenv():
     assert "consumer/0.1: Created package" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_complete():
     client = TestClient()
     client.run("new cmake_lib -d name=myopenssl -d version=1.0")
@@ -73,14 +77,16 @@ def test_complete():
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
     mycmake_conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            exports = "*"
+            exports_sources = "*"
 
             def build(self):
                 cmake = CMake(self)
@@ -89,7 +95,8 @@ def test_complete():
 
             def package(self):
                 src = str(self.settings.build_type) if self.settings.os == "Windows" else ""
-                self.copy("mycmake*", src=src, dst="bin")
+                copy(self, "mycmake*", os.path.join(self.source_folder, src),
+                     os.path.join(self.package_folder, "bin"))
 
             def package_info(self):
                 self.cpp_info.bindirs = ["bin"]

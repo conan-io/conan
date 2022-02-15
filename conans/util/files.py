@@ -16,18 +16,6 @@ from contextlib import contextmanager
 from conans.util.log import logger
 
 
-def make_read_only(folder_path):
-    for root, _, files in os.walk(folder_path):
-        for f in files:
-            full_path = os.path.join(root, f)
-            make_file_read_only(full_path)
-
-
-def make_file_read_only(file_path):
-    mode = os.stat(file_path).st_mode
-    os.chmod(file_path, mode & ~ stat.S_IWRITE)
-
-
 _DIRTY_FOLDER = ".dirty"
 
 
@@ -330,9 +318,8 @@ def exception_message_safe(exc):
 
 
 def merge_directories(src, dst, excluded=None):
-    from conans.client.file_copier import FileCopier
-    copier = FileCopier([src], dst)
-    copier(pattern="*", excludes=excluded)
+    from conan.tools.files import copy
+    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
     return
 
 

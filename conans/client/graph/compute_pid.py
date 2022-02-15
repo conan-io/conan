@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
-from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanErrorConfiguration, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo

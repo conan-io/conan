@@ -2,7 +2,7 @@ from os import chdir
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -17,7 +17,6 @@ def test_modify_environment():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
-    conanfile.folders.set_base_install(f)
     be = AutotoolsToolchain(conanfile)
     env = be.environment()
     env.define("foo", "var")

@@ -19,7 +19,7 @@ def test_install():
     client.save({"conanfile.py": GenConanfile("pkga", "0.2").with_package_file("file.h", "0.2")})
     client.run("create . --user=user --channel=channel")
 
-    client.run("lock install lock1.lock -g deploy")
+    client.run("lock install lock1.lock")
     assert "pkga/0.1@user/channel from local cache" in client.out
     file_h = client.load("pkga/file.h")
     assert file_h == "0.1"

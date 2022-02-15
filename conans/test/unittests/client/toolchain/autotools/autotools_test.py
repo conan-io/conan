@@ -1,7 +1,7 @@
 import os
 
 
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conan import ConanFile
 from conans.model.conf import Conf
@@ -21,7 +21,6 @@ def test_configure_arguments():
     conanfile = ConanFile()
     conanfile.run = runner
     conanfile.settings = MockSettings({})
-    conanfile.folders.set_base_install(tmp)
     conanfile.folders.set_base_source(tmp)
     conanfile.conf = Conf()
     conanfile.conf["tools.gnu:make_program"] = "my_make"

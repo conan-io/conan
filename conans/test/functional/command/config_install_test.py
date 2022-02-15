@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import textwrap
 import unittest
 
@@ -15,7 +16,13 @@ from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
-from conans.util.files import load, mkdir, save, save_files, make_file_read_only
+from conans.util.files import load, mkdir, save, save_files
+
+
+def make_file_read_only(file_path):
+    mode = os.stat(file_path).st_mode
+    os.chmod(file_path, mode & ~ stat.S_IWRITE)
+
 
 win_profile = """[settings]
     os: Windows
@@ -322,7 +329,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_repo(self):
         """ should install from a git repo
         """
@@ -339,7 +346,7 @@ class ConfigInstallTest(unittest.TestCase):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_repo_relative(self):
         relative_folder = "./config"
         absolute_folder = os.path.join(self.client.current_folder, "config")
@@ -355,7 +362,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_custom_args(self):
         """ should install from a git repo
         """
@@ -462,7 +469,7 @@ class ConfigInstallTest(unittest.TestCase):
         with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
         with self.client.chdir(folder):
@@ -547,7 +554,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('config install "%s"' % self.folder)
         self.assertIn("Copying file global.conf", self.client.out)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_config_install_remove_git_repo(self):
         """ config_install_interval must break when remote git has been removed
         """

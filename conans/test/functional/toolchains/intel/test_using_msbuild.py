@@ -25,9 +25,9 @@ conanfile_py = textwrap.dedent("""
 """)
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_msbuild
-@pytest.mark.tool_icc
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("msbuild")
+@pytest.mark.tool("icc")
 @pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
 class MSBuildIntelTestCase:
@@ -47,12 +47,12 @@ class MSBuildIntelTestCase:
                     clean_first=True)
 
         # Build in the cache
-        self.t.run("install . -pr:h=profile -if=conan")
+        self.t.run("install . -pr:h=profile -of=conan")
 
         self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_x64.props",
                       self.t.out)
 
-        self.t.run("build . -if=conan")
+        self.t.run("build . -bf=conan")
         self.assertIn("Visual Studio 2017", self.t.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", self.t.out)
 

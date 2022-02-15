@@ -10,6 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain():
     client = TestClient(default_server_user=True)
 
@@ -34,6 +35,7 @@ def test_shared_cmake_toolchain():
     assert "hello: Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
     client = TestClient()
     files = pkg_cmake("hello", "0.1")

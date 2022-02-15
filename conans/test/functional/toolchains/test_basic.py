@@ -47,7 +47,7 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_meson_native.ini")
         self.assertIn("[project options]", toolchain)
 
-    @pytest.mark.tool_visual_studio
+    @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_declarative_msbuildtoolchain(self):
         conanfile = textwrap.dedent("""
@@ -108,7 +108,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
-    @pytest.mark.tool_visual_studio
+    @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_toolchain_windows(self):
         client = TestClient()

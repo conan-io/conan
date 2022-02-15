@@ -56,6 +56,8 @@ class ListAPI:
             refs = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
             results = []
             for ref in refs:
+                # TODO: Why another call, and why get_package_revisions_references doesn't return
+                #  already the timestamps?
                 timestamp = app.cache.get_package_timestamp(ref)
                 ref.timestamp = timestamp
                 results.append(ref)

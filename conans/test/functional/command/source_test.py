@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 class SourceTest(unittest.TestCase):
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_conanfile_removed(self):
         # https://github.com/conan-io/conan/issues/4013
         conanfile = """from conan import ConanFile

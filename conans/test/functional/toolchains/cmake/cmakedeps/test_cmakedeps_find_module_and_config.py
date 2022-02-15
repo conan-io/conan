@@ -18,6 +18,7 @@ def client():
         import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "mydep"
@@ -32,12 +33,17 @@ def client():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.dll", self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*.dylib*", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.so", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
 
@@ -67,7 +73,7 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_reuse_with_modules_and_config(client):
     cpp = gen_function_cpp(name="main")
 
@@ -101,8 +107,8 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_config)})
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     # test modules
     conanfile = GenConanfile().with_name("myapp")\
@@ -111,10 +117,11 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("find_mode", ["both", "config", "module"])
 def test_transitive_modules_found(find_mode):
     """

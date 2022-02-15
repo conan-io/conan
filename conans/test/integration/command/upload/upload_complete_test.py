@@ -237,13 +237,14 @@ class UploadTest(unittest.TestCase):
     def test_upload_json(self):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
 
             class TestConan(ConanFile):
                 name = "test"
                 version = "0.1"
 
                 def package(self):
-                    self.copy("mylib.so", dst="lib")
+                    copy(self, "mylib.so", self.build_folder, os.path.join(self.package_folder, "lib"))
             """)
 
         client = self._get_client()

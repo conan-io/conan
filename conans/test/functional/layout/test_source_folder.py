@@ -14,6 +14,7 @@ from conans.test.utils.tools import TestClient, zipdir
 app_name = "Release/my_app.exe" if platform.system() == "Windows" else "my_app"
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
 def test_exports_source_with_src_subfolder(no_copy_source):
     """If we have the sources in a subfolder, specifying it in the self.folders.source will
@@ -38,8 +39,7 @@ def test_exports_source_with_src_subfolder(no_copy_source):
     client.save({"conanfile.py": conan_file,
                  "my_src/main.cpp": app,
                  "my_src/CMakeLists.txt": cmake})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out
@@ -66,14 +66,14 @@ def test_exports():
     client = TestClient()
     client.save({"conanfile.py": conan_file,
                  "my_tools.py": "FOO=1"})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert "FOO: 1" in client.out
 
     client.run("create . ")
     assert "FOO: 1" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_exports_source_without_subfolder():
     """If we have some sources in the root (like the CMakeLists.txt)
     we don't declare folders.source"""
@@ -95,13 +95,13 @@ def test_exports_source_without_subfolder():
     client.save({"conanfile.py": conan_file,
                  "my_src/main.cpp": app,
                  "CMakeLists.txt": cmake})
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_scm_with_source_layout():
     """If we have the sources in git repository"""
     conan_file = GenConanfile() \
@@ -130,13 +130,13 @@ def test_scm_with_source_layout():
     client.run_command('git remote add origin "%s"' % remote_path.replace("\\", "/"))
     client.run_command('git push origin master')
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
     assert os.path.exists(os.path.join(client.current_folder, "build_Release", app_name))
     client.run("create . ")
     assert "Created package revision" in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
 def test_zip_download_with_subfolder_new_tools(no_copy_source):
     """If we have a zip with the sources in a subfolder, specifying it in the self.folders.source
