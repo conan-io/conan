@@ -247,11 +247,6 @@ class BinaryInstaller(object):
         self._out = ConanOutput()
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
-        # Load custom generators from the cache, generators are part of the binary
-        # build and install. Generators loaded here from the cache will have precedence
-        # and overwrite possible generators loaded from packages (requires)
-        for generator_path in app.cache.generators:
-            app.loader.load_generators(generator_path)
 
     def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)

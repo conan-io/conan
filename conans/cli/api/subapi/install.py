@@ -44,7 +44,6 @@ class InstallAPI:
 
         _do_deploys(self.conan_api, deps_graph, deploy, output_folder)
 
-        # Add cli -g generators
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         write_generators(conanfile)
 
