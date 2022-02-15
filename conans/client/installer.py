@@ -19,9 +19,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
-from conans.util.env import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
-    chdir
+from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -148,8 +146,6 @@ class _PackageBuilder(object):
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
-        if get_env("CONAN_READ_ONLY_CACHE", False):
-            make_read_only(conanfile.folders.base_package)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
