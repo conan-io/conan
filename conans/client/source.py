@@ -2,7 +2,7 @@ import os
 import shutil
 
 from conans.client import tools
-from conans.client.cmd.export import export_recipe, export_source
+from conans.client.cmd.export import export_source
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter, NotFoundException
 from conans.model.scm import SCM, get_scm_data
@@ -66,7 +66,6 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
         src_folder = conanfile.source_folder
         if conanfile_folder != src_folder:
             conanfile.output.info("Executing exports to: %s" % src_folder)
-            export_recipe(conanfile, src_folder)
             export_source(conanfile, src_folder)
 
     _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
@@ -109,8 +108,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder)
-                # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 

@@ -230,7 +230,7 @@ def test_git_clone_with_source_layout():
            import os
            from conan import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"
