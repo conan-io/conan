@@ -24,17 +24,6 @@ def test_verbosity(mode):
             excinfo.value)
 
 
-def test_use_xcconfig():
-    conanfile = ConanFileMock()
-    conanfile.conf = ConfDefinition()
-    conanfile.settings = MockSettings({})
-    xcodebuild = XcodeBuild(conanfile)
-    xcodebuild.build("app.xcodeproj", use_xcconfig=False)
-    assert "-xcconfig" not in conanfile.command
-    xcodebuild.build("app.xcodeproj")
-    assert "-xcconfig" in conanfile.command
-
-
 def test_sdk_path():
     conanfile = ConanFileMock()
     conf = ConfDefinition()
@@ -43,7 +32,7 @@ def test_sdk_path():
     conanfile.settings = MockSettings({})
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
-    assert "-sdk=mypath " in conanfile.command
+    assert "SDKROOT=mypath " in conanfile.command
 
 
 def test_sdk():
@@ -56,19 +45,19 @@ def test_sdk():
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
     # sdk_path takes preference
-    assert "-sdk=mypath " in conanfile.command
+    assert "SDKROOT=mypath " in conanfile.command
     conf = ConfDefinition()
     conanfile.conf = conf
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
-    assert "-sdk=macosx " in conanfile.command
+    assert "SDKROOT=macosx " in conanfile.command
     conanfile.settings = MockSettings({"os": "Macos",
                                        "os.sdk": "macosx",
                                        "os.sdk_version": "12.1"})
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
-    assert "-sdk=macosx12.1 " in conanfile.command
+    assert "SDKROOT=macosx12.1 " in conanfile.command
     conanfile.settings = MockSettings({})
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
-    assert "-sdk" not in conanfile.command
+    assert "SDKROOT" not in conanfile.command
