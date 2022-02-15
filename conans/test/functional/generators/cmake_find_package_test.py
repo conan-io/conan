@@ -731,3 +731,56 @@ message("Target libs: ${tmp}")
         t.run("create . --build missing")
 
         self.assertIn("component libs: system_lib_component;", t.out)
+
+    def test_exelinkflags(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Requirement(ConanFile):
+                name = "requirement"
+                version = "system"
+
+                settings = "os", "arch", "compiler", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.components["component"].exelinkflags = ["-z now", "-z relro"]
+        """)
+        t = TestClient()
+        t.save({"conanfile.py": conanfile})
+        t.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools, CMake
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "0.1"
+                requires = "requirement/system"
+                generators = "cmake_find_package_multi"
+                exports_sources = "CMakeLists.txt", "main.cpp"
+                settings = "os", "arch", "compiler", "build_type"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+        """)
+
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(consumer CXX)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(requirement)
+            add_executable(executable main.cpp)
+            target_link_libraries(executable requirement::requirement)
+        """)
+
+        main = textwrap.dedent("""
+            int main() { return 0; }
+        """)
+
+        t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists, "main.cpp": main})
+        t.run("create . --build missing")
+
+        self.assertIn("component libs: system_lib_component;", t.out)
+
