@@ -103,7 +103,7 @@ class BazelDeps(object):
                 return p[len(base_path):].replace("\\", "/").lstrip("/")
             return p.replace("\\", "/").lstrip("/")
 
-        # TODO: This only wokrs for package_folder, but not editable
+        # TODO: This only works for package_folder, but not editable
         package_folder = dependency.package_folder
         for path in cpp_info.includedirs:
             headers.append('"{}/**"'.format(_relativize_path(path, package_folder)))
@@ -112,7 +112,7 @@ class BazelDeps(object):
         headers = ', '.join(headers)
         includes = ', '.join(includes)
 
-        defines = ('"{}"'.format(define.replace('"', "'"))
+        defines = ('"{}"'.format(define.replace('"', '\\' * 3 + '"'))
                    for define in cpp_info.defines)
         defines = ', '.join(defines)
 
