@@ -9,6 +9,8 @@ class XcodeBuild(object):
         self._conanfile = conanfile
         self.build_type = conanfile.settings.get_safe("build_type")
         self.arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        self._sdk = conanfile.settings.get_safe("os.sdk") or ""
+        self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
 
     @property
     def verbosity(self):
@@ -20,14 +22,24 @@ class XcodeBuild(object):
         else:
             raise ConanException("Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(verbosity))
 
+    @property
+    def sdk(self):
+        # TODO: probably move to tools if other build systems use the same argument
+        # User's sdk_path has priority, then if specified try to compose sdk argument
+        # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
+        # chosen by the build system
+        sdk = self._conanfile.conf["tools.apple:sdk_path"]
+        if not sdk and self._sdk:
+            sdk = "{}{}".format(self._sdk, self._sdk_version)
+        return "-sdk={}".format(sdk) if sdk else ""
+
     def build(self, xcodeproj, use_xcconfig=True):
-        # TODO: check if we want to pass conandeps.xcconfig or the xcodeproj is suposed to have
-        #  it embedded inside
-        xcconfig = " -xcconfig {}".format(
-            os.path.join(self._conanfile.folders.generators,
-                         "conandeps.xcconfig")) if use_xcconfig else ""
-        cmd = "xcodebuild -project {}{} -configuration {} -arch {} {}".format(xcodeproj, xcconfig,
-                                                                              self.build_type,
-                                                                              self.arch,
-                                                                              self.verbosity)
+        xcconfig = " -xcconfig {}".format(os.path.join(self._conanfile.folders.generators,
+                                                       "conandeps.xcconfig")) if use_xcconfig else ""
+        cmd = "xcodebuild -project {}{} {} -configuration {} -arch {} {}".format(xcodeproj,
+                                                                                 xcconfig,
+                                                                                 self.sdk,
+                                                                                 self.build_type,
+                                                                                 self.arch,
+                                                                                 self.verbosity)
         self._conanfile.run(cmd)
