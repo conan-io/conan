@@ -187,6 +187,6 @@ class AConan(ConanFile):
         client.run("create . --name=dep --version=0.1 --user=user --channel=testing -s build_type=Release")
         client.save({CONANFILE: conanfile.format(name="mypkg",
                                                  requires="requires = 'dep/0.1@user/testing'")})
-        client.run("build . -s mypkg:build_type=Debug -s build_type=Release")
+        client.run("build . -s mypkg/*:build_type=Debug -s build_type=Release")
         self.assertIn("dep/0.1@user/testing: PACKAGE_INFO: dep BuildType=Release!", client.out)
         self.assertIn("conanfile.py (mypkg/None): BUILD: mypkg BuildType=Debug!", client.out)

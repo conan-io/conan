@@ -44,7 +44,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         # Building b with the new recipe revision of liba works
-        clientc.run("install . --user=user --channel=testing --build=libb")
+        clientc.run("install . --user=user --channel=testing --build=libb*")
 
         # Now change only the package revision of liba
         clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")

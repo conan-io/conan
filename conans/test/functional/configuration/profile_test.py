@@ -679,7 +679,7 @@ def test_consumer_specific_settings():
     dep += configure
     client.save({"conanfile.py": dep})
     client.run("create . --name=dep --version=1.0")
-    client.run("create . --name=dep --version=1.0 -s build_type=Debug -o dep:shared=True")
+    client.run("create . --name=dep --version=1.0 -s build_type=Debug -o dep*:shared=True")
 
     consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0")
                    .with_option("shared", [True, False]).with_default_option("shared", False))
@@ -694,7 +694,7 @@ def test_consumer_specific_settings():
     assert "I'm None and my shared is False" in client.out
 
     # Now the dependency by name
-    client.run("install . -s dep:build_type=Debug -o dep:shared=True")
+    client.run("install . -s dep/*:build_type=Debug -o dep*:shared=True")
     assert "I'm dep and my build type is Debug" in client.out
     assert "I'm None and my build type is Release" in client.out
     assert "I'm dep and my shared is True" in client.out
@@ -718,7 +718,7 @@ def test_consumer_specific_settings():
     assert "I'm dep and my build type is Release" in client.out
 
     # Now the dependency by name
-    client.run("install . -s dep:build_type=Debug -o dep:shared=True")
+    client.run("install . -s dep*:build_type=Debug -o dep*:shared=True")
     assert "I'm dep and my build type is Debug" in client.out
     assert "I'm dep and my shared is True" in client.out
 
@@ -743,14 +743,14 @@ def test_create_and_priority_of_consumer_specific_setting():
     """
     conanfile += configure
     client.save({"conanfile.py": conanfile})
-    client.run("create . -s foo:build_type=Debug")
+    client.run("create . -s foo*:build_type=Debug")
     assert "I'm foo and my build type is Debug" in client.out
 
-    client.run("create . -s foo:build_type=Debug -s &:build_type=Release")
+    client.run("create . -s foo*:build_type=Debug -s &:build_type=Release")
     assert "I'm foo and my build type is Release" in client.out
 
     # The order doesn't matter
-    client.run("create . -s &:build_type=Release -s foo:build_type=Debug ")
+    client.run("create . -s &:build_type=Release -s foo*:build_type=Debug ")
     assert "I'm foo and my build type is Release" in client.out
 
     # With test_package also works

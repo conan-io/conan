@@ -68,27 +68,27 @@ class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=1")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=1")
         client.run("upload pkg* -r=server1 --confirm")
         client.run("remove * -p -f")
-        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=2")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=2")
         package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
         client.run("upload pkg* -r=server2 --confirm")
         client.run("remove * -p -f")
 
         # recipe is cached, takes binary from server2
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2")
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2")
         client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
         self.assertIn(f"pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2 -u")
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2 -u")
         client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Cache")})
 
         # Build missing
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3 -r=server2", assert_error=True)
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg/*:opt=3 -r=server2", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
 
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3", assert_error=True)
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg/*:opt=3", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)

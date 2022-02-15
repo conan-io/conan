@@ -42,7 +42,7 @@ def test_common_build_force(conanfile):
     output = RedirectedTestOutput()
     with redirect_output(output):
         reference = RecipeReference.loads("hello/0.1@user/testing")
-        build_mode = BuildMode(["hello"])
+        build_mode = BuildMode(["hello/*"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
         assert output.getvalue() == ""
@@ -112,7 +112,7 @@ def test_multiple_builds(conanfile):
     output = RedirectedTestOutput()
     with redirect_output(output):
         reference = RecipeReference.loads("bar/0.1@user/stable")
-        build_mode = BuildMode(["bar", "Foo"])
+        build_mode = BuildMode(["bar/*", "Foo/*"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
         assert "ERROR: No package matching" in output.getvalue()
@@ -131,7 +131,7 @@ def test_casing(conanfile):
     with redirect_output(output):
         reference = RecipeReference.loads("boost/1.69.0@user/stable")
 
-        build_mode = BuildMode(["boost"])
+        build_mode = BuildMode(["boost*"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode = BuildMode(["bo*"])
         assert build_mode.forced(conanfile, reference) is True
@@ -139,7 +139,7 @@ def test_casing(conanfile):
         assert "" == output.getvalue()
 
         output.clear()
-        build_mode = BuildMode(["Boost"])
+        build_mode = BuildMode(["Boost*"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode = BuildMode(["Bo*"])
         assert build_mode.forced(conanfile, reference) is False
@@ -182,7 +182,7 @@ def test_pattern_matching(conanfile):
         reference = RecipeReference.loads("foo/1.0.0@NewUser/stable")
         assert build_mode.forced(conanfile, reference) is False
 
-        build_mode = BuildMode(["*tool"])
+        build_mode = BuildMode(["*tool*"])
         reference = RecipeReference.loads("tool/0.1@lasote/stable")
         assert build_mode.forced(conanfile, reference) is True
         reference = RecipeReference.loads("pythontool/0.1@lasote/stable")

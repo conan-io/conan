@@ -255,7 +255,7 @@ class DepsGraphBuilder(object):
             # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
             down_options = Options(options_values=require.options)
-            down_options.scope(new_ref.name)
+            down_options.scope(new_ref.repr_notime())
             # At the moment, the behavior is the most restrictive one: default_options and
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is

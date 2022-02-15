@@ -24,7 +24,7 @@ def test_options():
         from conan import ConanFile
         class Meta(ConanFile):
             requires = "ffmpeg/1.0"
-            default_options = {"ffmpeg:variation": "nano"}
+            default_options = {"ffmpeg/1.0:variation": "nano"}
         """)
 
     client.save({"ffmepg/conanfile.py": ffmpeg,

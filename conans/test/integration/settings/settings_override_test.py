@@ -29,8 +29,8 @@ def client():
 def test_override(client):
     client.run("install --reference=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                "-s compiler.version=14 -s compiler.runtime=MD "
-               "-s mingw:compiler='gcc' -s mingw:compiler.libcxx='libstdc++' "
-               "-s mingw:compiler.version=4.8")
+               "-s mingw*:compiler='gcc' -s mingw*:compiler.libcxx='libstdc++' "
+               "-s mingw*:compiler.version=4.8")
 
     assert "COMPILER=> mingw gcc" in client.out
     assert "COMPILER=> visual Visual Studio" in client.out
@@ -58,7 +58,7 @@ def test_override(client):
 def test_non_existing_setting(client):
     client.run("install --reference=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                "-s compiler.version=14 -s compiler.runtime=MD "
-               "-s mingw:missingsetting='gcc' ", assert_error=True)
+               "-s mingw/*:missingsetting='gcc' ", assert_error=True)
     assert "settings.missingsetting' doesn't exist" in client.out
 
 

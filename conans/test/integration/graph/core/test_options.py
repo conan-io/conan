@@ -11,7 +11,7 @@ class TestOptions(GraphManagerTest):
         # By default if packages do not specify anything link=True is propagated run=None (unknown)
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_conanfile("libb/0.1", GenConanfile().with_requires("liba/0.1").
-                              with_default_option("liba:shared", True))
+                              with_default_option("liba/*:shared", True))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
         deps_graph = self.build_consumer(consumer)
@@ -35,9 +35,9 @@ class TestOptions(GraphManagerTest):
         # By default if packages do not specify anything link=True is propagated run=None (unknown)
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_conanfile("libb/0.1", GenConanfile().with_requires("liba/0.1").
-                              with_default_option("liba:shared", True))
+                              with_default_option("liba/*:shared", True))
         consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_requires("libb/0.1").
-                                           with_default_option("liba:shared", False))
+                                           with_default_option("liba/*:shared", False))
 
         deps_graph = self.build_consumer(consumer)
 
@@ -80,7 +80,7 @@ class TestBuildRequireOptions(GraphManagerTest):
         self._cache_recipe("lib/0.1", GenConanfile().with_requires("protobuf/0.1").
                            with_tool_requires("protobuf/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
-                                      options_build={"zlib:shared": False})
+                                      options_build={"zlib*:shared": False})
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root

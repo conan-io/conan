@@ -43,26 +43,21 @@ def _initialize_conanfile(conanfile, profile, ref):
     # Mixing the global settings with the specified for that name if exist
     tmp_settings = profile.processed_settings.copy()
     package_settings_values = profile.package_settings_values
-    if conanfile.user is not None:
-        ref_str = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
-                                   conanfile.user, conanfile.channel)
-    else:
-        ref_str = "%s/%s" % (conanfile.name, conanfile.version)
-    if package_settings_values:
-        # First, try to get a match directly by name (without needing *)
-        # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
-        pkg_settings = package_settings_values.get(conanfile.name)
 
+    if package_settings_values:
+        pkg_settings = None
         if conanfile._conan_is_consumer and "&" in package_settings_values:
             # "&" overrides the "name" scoped settings.
             pkg_settings = package_settings_values.get("&")
 
-        if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
+        if pkg_settings is None:  # If there is no exact match by package name, do fnmatch
             for pattern, settings in package_settings_values.items():
-                if fnmatch.fnmatchcase(ref_str, pattern):
-                    pkg_settings = settings
-                    # TODO: Conan 2.0 won't stop at first match
-                    break
+                if ref.matches(pattern):
+                    if pkg_settings is None:
+                        pkg_settings = settings
+                    else:
+                        pkg_settings.update_values(settings)
+
         if pkg_settings:
             tmp_settings.update_values(pkg_settings)
             # if the global settings are composed with per-package settings, need to preprocess
@@ -75,7 +70,7 @@ def _initialize_conanfile(conanfile, profile, ref):
             conanfile.display_name, str(e)))
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile.buildenv
-    conanfile.conf = profile.conf.get_conanfile_conf(ref_str)  # Maybe this can be done lazy too
+    conanfile.conf = profile.conf.get_conanfile_conf(str(ref))  # Maybe this can be done lazy too
 
 
 def txt_definer(conanfile, profile_host):

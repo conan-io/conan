@@ -33,14 +33,14 @@ class OnlySourceTest(unittest.TestCase):
         assert "Use 'conan search hello0/0.0@lasote/stable --table=table.html" in client.out
 
         # We generate the package for hello0/0.0
-        client.run("install --reference=hello0/0.0@lasote/stable --build hello0")
+        client.run("install --reference=hello0/0.0@lasote/stable --build hello0*")
 
         # Still missing hello1/1.1
         client.run("create . --user=lasote --channel=stable", assert_error=True)
         self.assertIn("Or try to build locally from sources with '--build=hello1'", client.out)
 
         # We generate the package for hello1/1.1
-        client.run("install --reference=hello1/1.1@lasote/stable --build hello1")
+        client.run("install --reference=hello1/1.1@lasote/stable --build hello1*")
 
         # Now Hello2 should be built and not fail
         client.run("create . --user=lasote --channel=stable")

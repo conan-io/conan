@@ -93,7 +93,7 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=Pythontool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
-        client.run("install . --profile ./profile.txt --build=*tool")
+        client.run("install . --profile ./profile.txt --build=tool/0.1*")
         self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
         # now remove packages, ensure --build=missing also creates them
@@ -181,7 +181,7 @@ class mylib(ConanFile):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("build . -o mylib:coverage=True --build missing")
+        client.run("build . -o mylib*:coverage=True --build missing")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Calling build()", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)

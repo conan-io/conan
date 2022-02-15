@@ -14,7 +14,7 @@ def test_info_options():
     assert "shared: False" in client.out
     client.run("graph info . -o shared=True")
     assert "shared: True" in client.out
-    client.run("graph info . -o my-package:shared=True")
+    client.run("graph info . -o my-package*:shared=True")
     assert "shared: True" in client.out
 
     # in cache
@@ -23,6 +23,6 @@ def test_info_options():
     assert "shared: False" in client.out
     client.run("graph info --reference=my-package/1.3 -o shared=True")
     assert "shared: True" in client.out
-    client.run("graph info --reference=my-package/1.3 -o my-package:shared=True")
+    client.run("graph info --reference=my-package/1.3 -o my-package*:shared=True")
     assert "shared: True" in client.out
 

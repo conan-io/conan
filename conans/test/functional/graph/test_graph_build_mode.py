@@ -42,7 +42,7 @@ def check_if_build_from_sources(refs_modes, output):
 def test_install_build_single(build_all):
     """ When only --build=<ref> is passed, only <ref> must be built
     """
-    build_all.run("install --reference=foobar/1.0@user/testing --build=foo")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=foo/*")
 
     build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, "Cache"),
                                     "foo/1.0@user/testing": (foo_id, "Build"),
@@ -57,7 +57,7 @@ def test_install_build_single(build_all):
 def test_install_build_double(build_all):
     """ When both --build=<ref1> and --build=<ref2> are passed, only both should be built
     """
-    build_all.run("install --reference=foobar/1.0@user/testing --build=foo --build=bar")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=foo/* --build=bar/*")
     build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, "Build"),
                                     "foo/1.0@user/testing": (foo_id, "Build"),
                                     "foobar/1.0@user/testing": (foobar_id, "Cache"),
@@ -103,7 +103,7 @@ def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
         When --build= is passed with another package, only the package must be built from sources.
         When --build=* is passed with another package, all packages must be built from sources.
     """
-    build_all.run("install --reference=foobar/1.0@user/testing --build=foo {}".format(build_arg))
+    build_all.run("install --reference=foobar/1.0@user/testing --build=foo/* {}".format(build_arg))
     build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, bar),
                                     "foo/1.0@user/testing": (foo_id, foo),
                                     "foobar/1.0@user/testing": (foobar_id, foobar),
@@ -120,8 +120,8 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
         When --build=* is passed with another package, not all packages must be built from sources.
         The arguments order matter, that's why we need to run twice.
     """
-    for argument in ["--build=!foo {}".format(build_arg),
-                     "{} --build=!foo".format(build_arg)]:
+    for argument in ["--build=!foo/* {}".format(build_arg),
+                     "{} --build=!foo/*".format(build_arg)]:
         build_all.run("install --reference=foobar/1.0@user/testing {}".format(argument))
         build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, bar),
                                         "foo/1.0@user/testing": (foo_id, foo),
@@ -139,8 +139,8 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
         When --build=* is passed with another package, not all packages must be built from sources.
         The arguments order matter, that's why we need to run twice.
     """
-    for argument in ["--build=!foo --build=!bar {}".format(build_arg),
-                     "{} --build=!foo --build=!bar".format(build_arg)]:
+    for argument in ["--build=!foo/* --build=!bar/* {}".format(build_arg),
+                     "{} --build=!foo/* --build=!bar/*".format(build_arg)]:
         build_all.run("install --reference=foobar/1.0@user/testing {}".format(argument))
 
         build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, bar),
@@ -152,20 +152,20 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
 def test_report_matches(build_all):
     """ When a wrong reference is passed to be build, an error message should be shown
     """
-    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=baz")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=baz/*")
     build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
     # FIXME assert "No package matching 'baz' pattern found." in build_all.out
 
-    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz/*")
     # FIXME assert "No package matching 'baz' pattern found." in build_all.out
     build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
 
-    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz --build=blah")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz/* --build=blah")
     # FIXME assert "No package matching 'blah' pattern found." in build_all.out
     # FIXME assert "No package matching 'baz' pattern found." in build_all.out
     build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
 
-    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz --build=!blah")
+    build_all.run("install --reference=foobar/1.0@user/testing --build=* --build=!baz/* --build=!blah")
     # FIXME  assert "No package matching 'blah' pattern found." in build_all.out
     # FIXME assert "No package matching 'baz' pattern found." in build_all.out
     build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})

@@ -29,7 +29,7 @@ class OptionsTest(unittest.TestCase):
                      "test_package/conanfile.py": test})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg:shared=2")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg*:shared=2")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
@@ -64,20 +64,20 @@ class OptionsTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o shared=2 -o p*:other=4")
         self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
         # Consumer has priority over pattern, even if the pattern specifies the package name
-        client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg:shared=2 -o shared=3 -o p*:other=4")
+        client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/*:shared=2 -o shared=3 -o p*:other=4")
         self.assertIn("pkg/0.1: BUILD SHARED: 3 OTHER: 4", client.out)
-        client.run("create . --name=pkg --version=0.1 -o pkg:shared=2 -o p*:other=4 -o pk*:other=5")
+        client.run("create . --name=pkg --version=0.1 -o pkg/0.1:shared=2 -o p*:other=4 -o pk*:other=5")
         self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 5", client.out)
 
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         # Sorted (longest, alphabetical) patterns, have priority
-        client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg:shared=2 -o other=4")
+        client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/0.1:shared=2 -o other=4")
         self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
-        client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg:other=5")
+        client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5")
         self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 5", client.out)
-        client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg:other=5 -o *g:other=6")
+        client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5 -o *g*:other=6")
         self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 6", client.out)
 
     def test_parsing(self):
@@ -99,7 +99,7 @@ class EqualerrorConan(ConanFile):
 [requires]
 equal/1.0.0@user/testing
 [options]
-equal:opt=a=b
+equal/1.0.0@user/testing:opt=a=b
 '''
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
@@ -286,6 +286,6 @@ equal:opt=a=b
         c.run("create . --name=pkg --version=0.1")
         assert "pkg/0.1: without_stacktrace: True" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace success deleted!" in c.out
-        c.run("create . --name=pkg --version=0.1 -o pkg:without_stacktrace=False")
+        c.run("create . --name=pkg --version=0.1 -o pkg*:without_stacktrace=False")
         assert "pkg/0.1: without_stacktrace: False" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out

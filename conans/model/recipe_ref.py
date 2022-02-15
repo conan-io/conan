@@ -1,3 +1,4 @@
+import fnmatch
 from functools import total_ordering
 
 from conans.model.version import Version
@@ -109,3 +110,7 @@ class RecipeReference:
             raise ConanException(
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")
+
+    def matches(self, pattern):
+        return (fnmatch.fnmatchcase(str(self), pattern) or
+                fnmatch.fnmatchcase(self.repr_notime(), pattern))

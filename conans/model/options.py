@@ -328,10 +328,9 @@ class Options:
                 # If the current package has a name, there should be a match, either exact name
                 # match, or a fnmatch approximate one
                 for pattern, options in defined_options._deps_package_options.items():
-                    if pattern == own_ref.name:  # exact match
-                        self._package_options.update_options(options)
-                    elif fnmatch.fnmatch(own_ref.name, pattern):  # approx match
-                        self._package_options.update_options(options, is_pattern=True)
+                    if own_ref.matches(pattern):
+                        self._package_options.update_options(options, is_pattern="*" in pattern)
+
         self._package_options.freeze()
 
     def get_upstream_options(self, down_options, own_ref):
@@ -351,7 +350,7 @@ class Options:
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            if pattern == own_ref.name:
+            if own_ref.matches(pattern):
                 # Remove the exact match to this package, don't further propagate up
                 continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
