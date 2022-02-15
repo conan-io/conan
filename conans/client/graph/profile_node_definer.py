@@ -41,9 +41,6 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
 def _initialize_conanfile(conanfile, profile, ref):
     # Prepare the settings for the loaded conanfile
     # Mixing the global settings with the specified for that name if exist
-    if profile.dev_reference and profile.dev_reference == ref:
-        conanfile.develop = True
-
     tmp_settings = profile.processed_settings.copy()
     package_settings_values = profile.package_settings_values
     if conanfile.user is not None:
@@ -56,7 +53,7 @@ def _initialize_conanfile(conanfile, profile, ref):
         # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
         pkg_settings = package_settings_values.get(conanfile.name)
 
-        if conanfile.develop and "&" in package_settings_values:
+        if conanfile._conan_is_consumer and "&" in package_settings_values:
             # "&" overrides the "name" scoped settings.
             pkg_settings = package_settings_values.get("&")
 
