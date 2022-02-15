@@ -86,7 +86,7 @@ def test_complete():
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            exports = "*"
+            exports_sources = "*"
 
             def build(self):
                 cmake = CMake(self)
