@@ -188,7 +188,7 @@ class GenConanfile(object):
         self._package_files_link = self._package_files_link or {}
         self._package_files_env = self._package_files_env or {}
         self.with_import("import os")
-        self.with_import("from conans import tools")
+        self.with_import("from conan.tools.files import save, chdir")
         if contents:
             self._package_files[file_name] = contents
         if link:
@@ -366,16 +366,16 @@ class GenConanfile(object):
         if self._package_lines:
             lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
-            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
+            lines = ['        save(self, os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
                      for key, value in self._package_files.items()]
 
         if self._package_files_env:
-            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
+            lines.extend(['        save(self, os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
         if self._package_files_link:
-            lines.extend(['        with tools.chdir(os.path.dirname('
+            lines.extend(['        with chdir(self, os.path.dirname('
                           'os.path.join(self.package_folder, "{}"))):\n'
                           '            os.symlink(os.path.basename("{}"), '
                           'os.path.join(self.package_folder, "{}"))'.format(key, key, value)

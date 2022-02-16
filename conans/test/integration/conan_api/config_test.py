@@ -6,8 +6,8 @@ from conans.client.cache.cache import CONAN_CONF
 from conans.client.conf import get_default_client_conf
 from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.utils.test_files import temp_folder
-from conans.tools import save
 from conans.util.env import environment_update
+from conans.util.files import save
 
 
 class ConfigTest(unittest.TestCase):

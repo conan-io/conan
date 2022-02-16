@@ -51,7 +51,7 @@ class ExportAPI:
         pkg_layout = cache.create_build_pkg_layout(pref)
 
         dest_package_folder = pkg_layout.package()
-        conanfile.develop = True
+
         conanfile_folder = os.path.dirname(path)
         conanfile.folders.set_base_build(conanfile_folder)
         conanfile.folders.set_base_source(conanfile_folder)

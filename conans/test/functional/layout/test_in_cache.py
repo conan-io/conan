@@ -59,6 +59,10 @@ def test_create_test_package_no_layout():
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 assert os.path.exists("conan_toolchain.cmake")
                 self.output.warning("hey! building")
@@ -85,6 +89,9 @@ def test_create_test_package_with_layout():
 
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def generate(self):
                 deps = CMakeDeps(self)
@@ -230,7 +237,7 @@ def test_git_clone_with_source_layout():
            import os
            from conan import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"

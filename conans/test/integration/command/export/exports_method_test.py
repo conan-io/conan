@@ -111,13 +111,13 @@ class ExportsMethodTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.tools import save, load
+           from conan.tools.files import save, load
            import os
 
            class MethodConan(ConanFile):
                def export(self):
-                   content = load(os.path.join(os.getcwd(), "data.txt"))
-                   save(os.path.join(self.export_folder, "myfile.txt"), content)
+                   content = load(self, os.path.join(os.getcwd(), "data.txt"))
+                   save(self, os.path.join(self.export_folder, "myfile.txt"), content)
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
         client.run("export recipe --name=pkg --version=0.1")
@@ -184,13 +184,13 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.tools import save, load
+           from conan.tools.files import save, load
            import os
 
            class MethodConan(ConanFile):
                def export_sources(self):
-                   content = load(os.path.join(os.getcwd(), "data.txt"))
-                   save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
+                   content = load(self, os.path.join(os.getcwd(), "data.txt"))
+                   save(self, os.path.join(self.export_sources_folder, "myfile.txt"), content)
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
         client.run("export recipe --name=pkg --version=0.1")

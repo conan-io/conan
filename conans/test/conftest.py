@@ -2,11 +2,10 @@ import os
 import platform
 import textwrap
 import uuid
+from shutil import which
 
 import pytest
 
-
-from conans.client.tools import which
 
 """
 To override these locations with your own in your dev machine:
@@ -112,7 +111,7 @@ tools_locations = {
                             "Darwin": '/Users/jenkins/bin'}},
     },
     'premake': {},
-    'apt_get': { "exe": "apt-get"},
+    'apt_get': {"exe": "apt-get"},
     'brew': {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {

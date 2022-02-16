@@ -8,13 +8,12 @@ import yaml
 
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
-from conans.util.files import load
+from conans.util.files import load, chdir
 
 
 class ConanFileLoader:
@@ -176,13 +175,12 @@ class ConanFileLoader:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
         try:
-            conanfile.develop = True
-
             if require_overrides is not None:
                 for req_override in require_overrides:
                     req_override = RecipeReference.loads(req_override)
                     conanfile.requires.override(req_override)
 
+            conanfile._conan_is_consumer = True
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -216,6 +214,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
+        conanfile._conan_is_consumer = True
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name):
@@ -258,6 +257,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
+        conanfile._conan_is_consumer = True
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 
