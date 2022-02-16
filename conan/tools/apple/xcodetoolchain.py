@@ -1,8 +1,9 @@
+import os
 import textwrap
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.apple.apple import to_apple_arch
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 class XcodeToolchain(object):
@@ -19,13 +20,14 @@ class XcodeToolchain(object):
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeToolchain generated file
         // Includes all installed configurations
+
         """)
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
         arch = conanfile.settings.get_safe("arch")
         self.architecture = to_apple_arch(arch) or arch
-        self.build_type = conanfile.settings.build_type
+        self.configuration = conanfile.settings.build_type
         self.sdk = conanfile.settings.get_safe("os.sdk")
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
@@ -43,7 +45,7 @@ class XcodeToolchain(object):
 
     @property
     def _var_condition(self):
-        return "[config={}][arch={}][sdk={}]".format(self.build_type, self.architecture,
+        return "[config={}][arch={}][sdk={}]".format(self.configuration, self.architecture,
                                                      self._sdk_condition)
 
     @property
@@ -60,27 +62,8 @@ class XcodeToolchain(object):
         return "CLANG_CXX_LANGUAGE_STANDARD{}={}".format(self._var_condition, self.cppstd) if self.cppstd else ""
 
     @property
-    def sdkroot(self):
-        # TODO: check if we want move this logic to tools
-        # User's sdk_path has priority, then if specified try to compose sdk argument
-        # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
-        # chosen by the build system
-        sdk = self._conanfile.conf["tools.apple:sdk_path"]
-        if not sdk and self.sdk:
-            sdk = "{}{}".format(self.sdk, self.sdk_version or "")
-        return "SDKROOT={}".format(sdk) if sdk else ""
-
-    @property
-    def archs(self):
-        return "ARCHS={}".format(self.architecture)
-
-    @property
-    def configuration(self):
-        return "CONFIGURATION={}".format(self.build_type)
-
-    @property
     def _vars_xconfig_filename(self):
-        props = [("configuration", self.build_type),
+        props = [("configuration", self.configuration),
                  ("architecture", self.architecture),
                  ("sdk name", self.sdk),
                  ("sdk version", self.sdk_version)]
@@ -94,17 +77,22 @@ class XcodeToolchain(object):
 
     @property
     def _vars_xconfig_content(self):
-        ret = self._vars_xconfig.format(sdkroot=self.sdkroot,
-                                        archs=self.archs,
-                                        configuration=self.configuration,
-                                        macosx_deployment_target=self.macosx_deployment_target,
+        ret = self._vars_xconfig.format(macosx_deployment_target=self.macosx_deployment_target,
                                         clang_cxx_library=self.clang_cxx_library,
                                         clang_cxx_language_standard=self.clang_cxx_language_standard)
         return ret
 
     @property
     def _all_xconfig_content(self):
-        return ""
+        if os.path.isfile(self._all_xconfig_filename):
+            content = load(self._all_xconfig_filename)
+        else:
+            content = self._all_xconfig
+
+        if self._vars_xconfig_filename not in content:
+            content = content + '#include "{}"'.format(self._vars_xconfig_filename) + "\n"
+
+        return content
 
     def generate(self):
         save(self._all_xconfig_filename, self._all_xconfig_content)
