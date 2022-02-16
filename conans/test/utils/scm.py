@@ -65,8 +65,8 @@ def git_change_and_commit(files, folder, msg="fix"):
     try:
         os.chdir(folder)
         # Make sure user and email exist, otherwise it can error
-        check_output_runner('config user.name "Your Name"')
-        check_output_runner('config user.email "you@example.com"')
+        check_output_runner('git config user.name "Your Name"')
+        check_output_runner('git config user.email "you@example.com"')
         check_output_runner('git add . && git commit -m "{}"'.format(msg))
         return check_output_runner("git rev-parse HEAD").strip()
     finally:
