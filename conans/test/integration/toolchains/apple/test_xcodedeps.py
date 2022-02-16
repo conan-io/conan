@@ -17,18 +17,18 @@ _expected_dep_xconfig = [
 ]
 
 _expected_vars_xconfig = [
-    "CONAN_{name}_BINARY_DIRECTORIES[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_C_COMPILER_FLAGS[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_CXX_COMPILER_FLAGS[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_LINKER_FLAGS[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_PREPROCESSOR_DEFINITIONS[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_INCLUDE_DIRECTORIES[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_RESOURCE_DIRECTORIES[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_LIBRARY_DIRECTORIES[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_LIBRARIES[config={configuration}][arch={architecture}] = -l{name}",
-    "CONAN_{name}_SYSTEM_LIBS[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_FRAMEWORKS_DIRECTORIES[config={configuration}][arch={architecture}] =",
-    "CONAN_{name}_FRAMEWORKS[config={configuration}][arch={architecture}] = -framework framework_{name}"
+    "CONAN_{name}_BINARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_C_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_CXX_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_LINKER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_PREPROCESSOR_DEFINITIONS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_INCLUDE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_RESOURCE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_LIBRARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_LIBRARIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -l{name}",
+    "CONAN_{name}_SYSTEM_LIBS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_FRAMEWORKS_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
+    "CONAN_{name}_FRAMEWORKS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -framework framework_{name}"
 ]
 
 _expected_conf_xconfig = [
@@ -43,16 +43,19 @@ _expected_conf_xconfig = [
 ]
 
 
-def get_name(configuration, architecture):
+def get_name(configuration, architecture, sdk, sdk_version):
     props = [("configuration", configuration),
-             ("architecture", architecture)]
-    name = "".join("_{}".format(v) for _, v in props if v is not None)
+             ("architecture", architecture),
+             ("sdk name", sdk),
+             ("sdk version", sdk_version)]
+    name = "".join("_{}".format(v) for _, v in props if v is not None and v)
+    name = name.replace(".", "_").replace("-", "_")
     return name.lower()
 
 
-def expected_files(current_folder, configuration, architecture):
+def expected_files(current_folder, configuration, architecture, sdk, sdk_version):
     files = []
-    name = get_name(configuration, architecture)
+    name = get_name(configuration, architecture, sdk, sdk_version)
     deps = ["hello", "goodbye"]
     files.extend(
         [os.path.join(current_folder, "conan_{}{}.xcconfig".format(dep, name)) for dep in deps])
@@ -62,11 +65,11 @@ def expected_files(current_folder, configuration, architecture):
     return files
 
 
-def check_contents(client, deps, configuration, architecture):
+def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{}.xcconfig".format(dep_name))
         conf_name = "conan_{}{}.xcconfig".format(dep_name,
-                                                 get_name(configuration, architecture))
+                                                 get_name(configuration, architecture, sdk, sdk_version))
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -74,10 +77,11 @@ def check_contents(client, deps, configuration, architecture):
             assert line in dep_xconfig
 
         vars_name = "conan_{}_vars{}.xcconfig".format(dep_name,
-                                                      get_name(configuration, architecture))
+                                                      get_name(configuration, architecture, sdk, sdk_version))
         conan_vars = client.load(vars_name)
         for var in _expected_vars_xconfig:
-            line = var.format(name=dep_name, configuration=configuration, architecture=architecture)
+            line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
+                              sdk=sdk, sdk_version=sdk_version)
             assert line in conan_vars
 
         conan_conf = client.load(conf_name)
@@ -102,13 +106,13 @@ def test_generator_files():
 
     for build_type in ["Release", "Debug"]:
 
-        client.run("install . -g XcodeDeps -s build_type={} -s arch=x86_64 --build missing".format(build_type))
+        client.run("install . -g XcodeDeps -s build_type={} -s arch=x86_64 -s os.sdk=macosx -s os.sdk_version=12.1 --build missing".format(build_type))
 
-        for config_file in expected_files(client.current_folder, build_type, "x86_64"):
+        for config_file in expected_files(client.current_folder, build_type, "x86_64", "macosx", "12.1"):
             assert os.path.isfile(config_file)
 
         conandeps = client.load("conandeps.xcconfig")
         assert '#include "conan_hello.xcconfig"' in conandeps
         assert '#include "conan_goodbye.xcconfig"' in conandeps
 
-        check_contents(client, ["hello", "goodbye"], build_type, "x86_64")
+        check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "macosx", "12.1")
