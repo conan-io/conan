@@ -1,10 +1,14 @@
 import textwrap
 
+import pytest
+import six
+
 from conans.test.utils.scm import create_local_git_repo, git_change_and_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestBasicCaptureExportGit:
     """ base Git capture operations. They do not raise (unless errors)
     """
@@ -81,6 +85,7 @@ class TestBasicCaptureExportGit:
             assert "pkg/0.1: DIRTY: False" in c.out
 
 
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestCaptureExportGitSCM:
     """ test the get_url_commit() high level method intended for SCM capturing into conandata.yaml
     """

@@ -34,8 +34,8 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
         save_files(tmp, files)
     git = Git(tmp)
     git.run("init .")
-    git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
+    git.run('config user.email "you@example.com"')
 
     if branch:
         git.run("checkout -b %s" % branch)
