@@ -3,7 +3,6 @@ import textwrap
 
 import pytest
 
-from conans.test.functional.toolchains.apple.test_xcodedeps_build_configs import create_xcode_project
 from conans.test.utils.tools import TestClient
 
 pbxproj = textwrap.dedent("""
@@ -307,6 +306,30 @@ pbxproj = textwrap.dedent("""
     }
     """)
 
+main = textwrap.dedent("""
+    #include <iostream>
+    #include "hello.h"
+    int main(int argc, char *argv[]) {
+        hello();
+        #ifndef DEBUG
+        std::cout << "App Release!" << std::endl;
+        #else
+        std::cout << "App Debug!" << std::endl;
+        #endif
+    }
+    """)
+
+test = textwrap.dedent("""
+    import os
+    from conans import ConanFile, tools
+    class TestApp(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "VirtualRunEnv"
+        def test(self):
+            if not tools.cross_building(self):
+                self.run("app", env="conanrun")
+    """)
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_xcodebuild
@@ -315,19 +338,6 @@ def test_project_xcodebuild():
 
     client.run("new hello/0.1 -m=cmake_lib")
     client.run("export .")
-
-    main = textwrap.dedent("""
-        #include <iostream>
-        #include "hello.h"
-        int main(int argc, char *argv[]) {
-            hello();
-            #ifndef DEBUG
-            std::cout << "App Release!" << std::endl;
-            #else
-            std::cout << "App Debug!" << std::endl;
-            #endif
-        }
-        """)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -350,17 +360,6 @@ def test_project_xcodebuild():
                 self.cpp_info.bindirs = ["bin"]
         """)
 
-    test = textwrap.dedent("""
-        import os
-        from conans import ConanFile, tools
-        class TestApp(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
-            generators = "VirtualRunEnv"
-            def test(self):
-                if not tools.cross_building(self):
-                    self.run("app", env="conanrun")
-        """)
-
     client.save({"conanfile.py": conanfile,
                  "test_package/conanfile.py": test,
                  "app/main.cpp": main,
@@ -371,3 +370,70 @@ def test_project_xcodebuild():
     client.run("create . -s build_type=Debug --build=missing")
     assert "hello/0.1: Hello World Debug!" in client.out
     assert "App Debug!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_xcodebuild
+@pytest.mark.skip(reason="Different sdks not installed in CI")
+def test_xcodebuild_test_different_sdk():
+    client = TestClient(path_with_spaces=False)
+
+    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("export .")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XcodeBuild
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            requires = "hello/0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeDeps"
+            exports_sources = "app.xcodeproj/*", "app/*"
+            def build(self):
+                xcode = XcodeBuild(self)
+                xcode.build("app.xcodeproj")
+                self.run("otool -l build/Release/app")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "app/main.cpp": main,
+                 "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
+    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=10.15 "
+               "-c tools.apple:sdk_path='/Applications/Xcode11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk'")
+    assert "sdk 10.15.6" in client.out
+    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
+               "-c tools.apple:sdk_path='/Applications/Xcode12.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk'")
+    assert "sdk 11.3" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_xcodebuild
+def test_missing_sdk():
+    client = TestClient(path_with_spaces=False)
+
+    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("export .")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XcodeBuild
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            requires = "hello/0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeDeps"
+            exports_sources = "app.xcodeproj/*", "app/*"
+            def build(self):
+                xcode = XcodeBuild(self)
+                xcode.build("app.xcodeproj")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "app/main.cpp": main,
+                 "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
+    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
+               "-c tools.apple:sdk_path='notexistingsdk'", assert_error=True)
+    assert "unable to find sdk 'notexistingsdk'" in client.out
