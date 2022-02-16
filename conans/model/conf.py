@@ -88,11 +88,14 @@ class _ConfValue:
 class _ConfStrValue(_ConfValue):
 
     def __init__(self, name, value):
-        value = str(value).strip()
+        value = None if value is None else str(value).strip()
         super(_ConfStrValue, self).__init__(name, value)
 
     def dumps(self):
-        return "{}={}".format(self._name, self._value or "")
+        if self._value is None:
+            return "{}=!".format(self._name)  # unset
+        else:
+            return "{}={}".format(self._name, self._value)
 
     def remove(self, value):
         self._value = ""
@@ -147,6 +150,8 @@ class _ConfListValue(_ConfValue):
 
     def compose_conf_value(self, other):
         """
+        self has precedence, the "other" will add/append if possible and not conflicting, but
+        self mandates what to do. If self has define(), without placeholder, that will remain.
         :type other: _ConfValue
         """
         try:
@@ -205,7 +210,8 @@ class Conf:
 
     def items(self):
         # FIXME: Keeping backward compatibility
-        return self._values.items()
+        for k, v in self._values.items():
+            yield k, v.value
 
     @property
     def sha(self):
@@ -285,8 +291,7 @@ class Conf:
 
     def compose_conf(self, other):
         """
-        self has precedence, the "other" will add/append if possible and not conflicting, but
-        self mandates what to do. If self has define(), without placeholder, that will remain
+        :param other: other has less priority than current one
         :type other: Conf
         """
         for k, v in other._values.items():
