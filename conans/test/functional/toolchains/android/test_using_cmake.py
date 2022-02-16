@@ -1,23 +1,18 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conan.tools.cmake import CMakeToolchain
-from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
 
+@pytest.mark.xfail(reason="Needs AndroidNDK")
 class AndroidToolchainTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'AndroidNDK' are available in the system
     #
     # Guidelines: https://developer.android.com/ndk/guides/cmake#command-line
-
-    @classmethod
-    def setUpClass(cls):
-        if not which('cmake'):
-            raise unittest.SkipTest("CMake expected in PATH")
-        if not which('ndk-build'):
-            raise unittest.SkipTest("ANDROID_NDK (ndk-build) expected in PATH")
 
     def setUp(self):
         self.t = TestClient()

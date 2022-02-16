@@ -585,15 +585,15 @@ class PyRequiresExtendTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.tools import load
+            from conan.tools.files import load
             import os
 
             class Source(object):
                 def set_name(self):
-                    self.name = load("name.txt")
+                    self.name = load(self, "name.txt")
 
                 def set_version(self):
-                    self.version = load("version.txt")
+                    self.version = load(self, "version.txt")
 
             class MyConanfileBase(ConanFile):
                 pass

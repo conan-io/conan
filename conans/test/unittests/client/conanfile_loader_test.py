@@ -4,16 +4,14 @@ import textwrap
 import unittest
 
 import pytest
-from mock import Mock, call
 from parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
-from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import Options
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_profile
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 class ConanLoaderTest(unittest.TestCase):

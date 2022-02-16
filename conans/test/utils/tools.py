@@ -32,7 +32,6 @@ from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.util.env import environment_update
-from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference

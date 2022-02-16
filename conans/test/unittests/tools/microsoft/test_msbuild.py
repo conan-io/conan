@@ -9,7 +9,7 @@ from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
 from conans.test.utils.test_files import temp_folder
-from conans.tools import load
+from conans.util.files import load
 
 
 def test_msbuild_cpu_count():

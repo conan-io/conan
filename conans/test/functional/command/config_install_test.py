@@ -513,7 +513,6 @@ class ConfigInstallTest(unittest.TestCase):
 
         http_server.run_server()
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
-        self.assertIn("Unzipping", self.client.out)
         http_server.stop()
 
     def test_overwrite_read_only_file(self):

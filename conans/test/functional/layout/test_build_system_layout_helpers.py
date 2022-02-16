@@ -12,18 +12,18 @@ from conans.util.files import save
 
 @pytest.fixture
 def conanfile():
-    conanfile = str(GenConanfile().with_import("from conans import tools")
+    conanfile = str(GenConanfile()
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
                     .with_import("from conan.tools.layout import {ly}")
-                    .with_import("from conan.tools.files import AutoPackager"))
+                    .with_import("from conan.tools.files import AutoPackager, save"))
 
     conanfile += """
     def source(self):
-        tools.save("myheader.h", "")
+        save(self, "myheader.h", "")
 
     def build(self):
-        tools.save("mylib.lib", "")
+        save(self, "mylib.lib", "")
 
     def layout(self):
         {ly}(self)

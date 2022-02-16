@@ -15,6 +15,7 @@ from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
+from conans.util.sha import check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -397,41 +398,15 @@ def _human_size(size_bytes):
 
 
 def check_sha1(conanfile, file_path, signature):
-    _check_with_algorithm_sum("sha1", file_path, signature)
+    check_with_algorithm_sum("sha1", file_path, signature)
 
 
 def check_md5(conanfile, file_path, signature):
-    _check_with_algorithm_sum("md5", file_path, signature)
+    check_with_algorithm_sum("md5", file_path, signature)
 
 
 def check_sha256(conanfile, file_path, signature):
-    _check_with_algorithm_sum("sha256", file_path, signature)
-
-
-def _check_with_algorithm_sum(algorithm_name, file_path, signature):
-    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature.lower():
-        raise ConanException("%s signature failed for '%s' file. \n"
-                             " Provided signature: %s  \n"
-                             " Computed signature: %s" % (algorithm_name,
-                                                          os.path.basename(file_path),
-                                                          signature,
-                                                          real_signature))
-
-
-def _generic_algorithm_sum(file_path, algorithm_name):
-
-    with open(file_path, 'rb') as fh:
-        try:
-            m = hashlib.new(algorithm_name)
-        except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
-            m = hashlib.new(algorithm_name, usedforsecurity=False)
-        while True:
-            data = fh.read(8192)
-            if not data:
-                break
-            m.update(data)
-        return m.hexdigest()
+    check_with_algorithm_sum("sha256", file_path, signature)
 
 
 def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):

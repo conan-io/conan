@@ -11,8 +11,7 @@ from conans.util.files import save, load
 
 base_conanfile = '''
 from conan import ConanFile
-from conan.tools.files import patch
-from conans.tools import replace_in_file
+from conan.tools.files import patch, replace_in_file
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -129,8 +128,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
     def build(self):
-        from conans.tools import load, save
-        save("oldfile", "legacy code")
+        from conan.tools.files import load, save
+        save(self, "oldfile", "legacy code")
         assert(os.path.exists("oldfile"))
         patch_content = """--- /dev/null
 +++ b/newfile
@@ -144,7 +143,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 -legacy code
 """
         patch(self, patch_string=patch_content)
-        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("NEW FILE=%s" % load(self, "newfile"))
         self.output.info("OLD FILE=%s" % os.path.exists("oldfile"))
 '''
         client = TestClient()
@@ -157,7 +156,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
     def test_patch_new_strip(self):
         conanfile = base_conanfile + '''
     def build(self):
-        from conans.tools import load, save
+        from conan.tools.files import load, save
         patch_content = """--- /dev/null
 +++ b/newfile
 @@ -0,0 +0,3 @@
@@ -166,7 +165,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 +New file!
 """
         patch(self, patch_string=patch_content, strip=1)
-        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("NEW FILE=%s" % load(self, "newfile"))
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -187,7 +186,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("build .", assert_error=True)
         self.assertIn("patch_ng: error: no patch data found!", client.out)
         self.assertIn("ERROR: conanfile.py (test/1.9.10): "
-                      "Error in build() method, line 13", client.out)
+                      "Error in build() method, line 12", client.out)
         self.assertIn("Failed to parse patch: string", client.out)
 
     def test_add_new_file(self):
