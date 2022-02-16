@@ -1,7 +1,9 @@
 
 import fnmatch
 
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 
 _falsey_options = ["false", "none", "0", "off", ""]
 
@@ -199,6 +201,12 @@ class Options:
                     tokens = k.split(":", 1)
                     if len(tokens) == 2:
                         package, option = tokens
+                        if "/" not in package:
+                            new_package = "{}/*".format(package)
+                            ConanOutput().warning("The usage of package names without a version: "
+                                                  "`{}` in 'default_options' is deprecated, use "
+                                                  "`{}` instead".format(package, new_package))
+                            package = new_package
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
                         self._package_options[k] = v
@@ -270,16 +278,23 @@ class Options:
     def __delattr__(self, field):
         self._package_options.__delattr__(field)
 
-    def __getitem__(self, item):
+    def __getitem__(self, ref):
         # To access dependencies options like ``options["mydep"]``. This will no longer be
         # a read case, only for defining values. Read access will be via self.dependencies["dep"]
-        return self._deps_package_options.setdefault(item, _PackageOptions())
+        if isinstance(ref, str):
+            if "/" not in ref: # This to keep 1.X compatibility
+                ref += "/*"
+            ref = RecipeReference.loads(ref)
+        for pattern, options in self._deps_package_options.items():
+            if ref.matches(pattern):
+                return options
+        return self._deps_package_options.setdefault(ref.repr_notime(), _PackageOptions())
 
-    def scope(self, name):
+    def scope(self, ref):
         """ when there are free options like "shared=True", they apply to the "consumer" package
         Once we know the name of such consumer package, it can be defined in the data, so it will
         be later correctly apply when processing options """
-        package_options = self._deps_package_options.setdefault(name, _PackageOptions())
+        package_options = self._deps_package_options.setdefault(ref.repr_notime(), _PackageOptions())
         package_options.update_options(self._package_options)
         self._package_options = _PackageOptions()
 
@@ -322,7 +337,7 @@ class Options:
                 # Get the non-scoped options, plus the "all-matching=*" pattern
                 self._package_options.update_options(defined_options._package_options)
                 for pattern, options in defined_options._deps_package_options.items():
-                    if pattern == "*":
+                    if RecipeReference.loads("*/*").matches(pattern):
                         self._package_options.update_options(options, is_pattern=True)
             else:
                 # If the current package has a name, there should be a match, either exact name

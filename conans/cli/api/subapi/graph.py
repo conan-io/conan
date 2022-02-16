@@ -34,7 +34,7 @@ class GraphAPI:
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          False, ref)
             if ref.name:
-                profile_host.options.scope(ref.repr_notime())
+                profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = app.loader.load_conanfile_txt(path, require_overrides=require_overrides)
@@ -64,7 +64,7 @@ class GraphAPI:
         app.load_remotes(remotes, update=update)
 
         loader = app.loader
-        profile_host.options.scope(tested_reference.repr_notime())
+        profile_host.options.scope(tested_reference)
 
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
@@ -85,7 +85,7 @@ class GraphAPI:
     def load_root_virtual_conanfile(self, ref, profile_host, is_build_require=False,
                                     require_overrides=None):
         app = ConanApp(self.conan_api.cache_folder)
-        profile_host.options.scope(ref.repr_notime())
+        profile_host.options.scope(ref)
 
         conanfile = app.loader.load_virtual([ref],  is_build_require=is_build_require,
                                             require_overrides=require_overrides)

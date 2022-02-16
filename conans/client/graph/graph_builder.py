@@ -135,7 +135,7 @@ class DepsGraphBuilder(object):
     def _conflicting_options(require, node, prev_node, prev_require, base_previous):
         # Even if the version matches, there still can be a configuration conflict
         # Only the propagated options can conflict, because profile would have already been asigned
-        upstream_options = node.conanfile.up_options[require.ref.name]
+        upstream_options = node.conanfile.up_options[require.ref]
         for k, v in upstream_options.items():
             prev_option = prev_node.conanfile.options.get_safe(k)
             if prev_option is not None:
@@ -255,7 +255,7 @@ class DepsGraphBuilder(object):
             # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
             down_options = Options(options_values=require.options)
-            down_options.scope(new_ref.repr_notime())
+            down_options.scope(new_ref)
             # At the moment, the behavior is the most restrictive one: default_options and
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is

@@ -132,7 +132,9 @@ class TestOptionsLoad:
         assert sut.static == "True"
         assert sut.static != "whatever"  # Non validating
         assert sut["zlib"].option == 8
-        assert sut["zlib"].option != "whatever"  # Non validating
+        assert sut["zlib/1.2.11"].option == 8
+        assert sut["zlib/*"].option != "whatever"  # Non validating
+        assert sut["*/*"].common == "value"
         assert sut["*"].common == "value"
         assert sut["*"].common != "whatever"  # Non validating
 

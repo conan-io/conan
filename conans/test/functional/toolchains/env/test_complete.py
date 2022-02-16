@@ -84,7 +84,7 @@ def test_complete():
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
-            default_options = {"myopenssl/*:shared": True}
+            default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
             exports_sources = "*"
 
@@ -115,6 +115,8 @@ def test_complete():
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
     client.run("create . --name=mycmake --version=1.0")
+    assert "WARN: The usage of package names without a version: `myopenssl:shared` " \
+           "in 'default_options' is deprecated, use `myopenssl/*:shared` instead" in client.out
 
     mylib = textwrap.dedent(r"""
         from conan import ConanFile
