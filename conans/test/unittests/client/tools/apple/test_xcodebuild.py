@@ -73,5 +73,4 @@ def test_deployment_target():
                                        "os.sdk_version": "12.1"})
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
-    # sdk_path takes preference
     assert "MACOSX_DEPLOYMENT_TARGET=12.2.1" in conanfile.command
