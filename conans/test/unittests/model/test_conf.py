@@ -124,7 +124,7 @@ def test_conf_other_patterns_and_access():
         zlib:user.company.toolchain:flags+=zflag
     """)
     assert c.dumps() == expected
-    assert c["tools.microsoft.msbuild:verbosity"] == "Quiet"  # unset == ""
+    assert c["tools.microsoft.msbuild:verbosity"] == "Quiet"
     assert c["user.company.toolchain:flags"] == ["zeroflag", "oneflag", "secondflag", "thirdflag"]
     assert c["openssl:user.company.toolchain:flags"] is None
     assert c["tools.cmake.cmaketoolchain:generator"] is None
@@ -133,23 +133,19 @@ def test_conf_other_patterns_and_access():
 def test_conf_get(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=+another
         tools.microsoft.msbuild:verbosity=!
         user.company.toolchain:flags=oneflag
-        user.company.toolchain:flags+=secondflag
-        zlib:user.company.toolchain:flags=z1flag
+        zlib:user.company.toolchain:flags=["z1flag"]
         zlib:user.company.toolchain:flags+=z2flag
         openssl:user.company.toolchain:flags=oflag""")
     c2 = ConfDefinition()
     c2.loads(text)
     c.update_conf_definition(c2)
-    assert c.get("tools.microsoft.msbuild:verbosity") == ""  # unset == ""
-    assert c.get("tools.microsoft.msbuild:verbosity") == []
+    assert c.get("tools.microsoft.msbuild:verbosity") is None  # unset == ""
     assert c.get("tools.microsoft.msbuild:missing", default="fake") == "fake"
-    assert c.get("user.company.toolchain:flags") == "oneflag secondflag"
-    assert c.get("zlib:user.company.toolchain:flags") == "z1flag z2flag"
+    assert c.get("user.company.toolchain:flags") == "oneflag"
+    assert c.get("zlib:user.company.toolchain:flags") == ["z1flag", "z2flag"]
     assert c.get("openssl:user.company.toolchain:flags") == "oflag"
-    assert c.get("openssl:user.company.toolchain:flags") == ["oflag"]
 
 
 def test_conf_pop(conf_definition):

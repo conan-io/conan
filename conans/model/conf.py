@@ -242,9 +242,8 @@ class Conf:
         Get a valid _ConfValue object based on the built-in Conf type declared
         or the value-like object. For now, we only manage lists or strings.
         """
-        type_ = BUILT_IN_CONFS.get(name, [None])[0]
-        if type_ is list or isinstance(value, list) \
-           or isinstance(self._values.get(name), _ConfListValue):
+        if (name in self._values and isinstance(self._values[name], _ConfListValue)) \
+           or BUILT_IN_CONFS.get(name, [None])[0] is list or isinstance(value, list):
             return _ConfListValue(name, value)
         else:
             # Any other value will be converted to string by default
