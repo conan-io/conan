@@ -226,7 +226,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler"] = "gcc"
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
-        package_settings = {"hello0": tmp_settings}
+        package_settings = {"hello0/*": tmp_settings}
         create_profile(self.client.cache.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
@@ -243,13 +243,13 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
 
         # Mix command line package settings with profile
-        package_settings = {"hello0": tmp_settings}
+        package_settings = {"hello0/*": tmp_settings}
         create_profile(self.client.cache.profiles_path, "vs_12_86_hello0_gcc",
                        settings=profile_settings, package_settings=package_settings)
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_hello0_gcc"
-                        " -s compiler.version=14 -s hello0:compiler.libcxx=libstdc++")
+                        " -s compiler.version=14 -s hello0/*:compiler.libcxx=libstdc++")
         info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)

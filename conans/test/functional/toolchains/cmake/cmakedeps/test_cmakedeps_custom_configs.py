@@ -64,7 +64,7 @@ class CustomConfigurationTest(unittest.TestCase):
         self.client = TestClient(path_with_spaces=False)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
         self.client.run("create . -s compiler.version=15 "
-                        "-s build_type=Release -o hello:shared=True -tf=None")
+                        "-s build_type=Release -o hello/*:shared=True -tf=None")
         self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 "
                         "-s build_type=Release -tf=None")
 
@@ -84,8 +84,8 @@ class CustomConfigurationTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         with self.client.chdir('build'):
-            self.client.run("install .. %s -o hello:shared=True -of=." % settings)
-            self.client.run("install .. %s -o hello:shared=False -of=." % settings)
+            self.client.run("install .. %s -o hello/*:shared=True -of=." % settings)
+            self.client.run("install .. %s -o hello/*:shared=False -of=." % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-releaseshared.cmake")))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
@@ -234,7 +234,7 @@ def test_changing_build_type():
                  "CMakeLists.txt": cmakelists,
                  "app.cpp": app}, clean_first=True)
 
-    # in MSVC multi-config -s pkg:build_type=Debug is not really necesary, toolchain do nothing
+    # in MSVC multi-config -s pkg/*:build_type=Debug is not really necesary, toolchain do nothing
     # TODO: Challenge how to define consumer build_type for conanfile.txt
     client.run("install . -s pkg*:build_type=Debug -s build_type=Release")
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")

@@ -102,8 +102,8 @@ def editable_cmake_exe(generator):
     c.save(pkg_cmake("dep", "0.1", exe=True), path=os.path.join(c.current_folder, "dep"))
 
     def build_dep():
-        c.run("build . -o dep:shared=True")
-        c.run("build . -s build_type=Debug -o dep:shared=True")
+        c.run("build . -o dep/*:shared=True")
+        c.run("build . -s build_type=Debug -o dep/*:shared=True")
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@")
@@ -121,8 +121,8 @@ def editable_cmake_exe(generator):
         assert "{}: Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install --reference=dep/0.1@ -o dep:shared=True -g VirtualRunEnv")
-        c.run("install --reference=dep/0.1@ -o dep:shared=True -s build_type=Debug -g VirtualRunEnv")
+        c.run("install --reference=dep/0.1@ -o dep/*:shared=True -g VirtualRunEnv")
+        c.run("install --reference=dep/0.1@ -o dep/*:shared=True -s build_type=Debug -g VirtualRunEnv")
         run_pkg("dep")
 
     # Do a source change in the editable!

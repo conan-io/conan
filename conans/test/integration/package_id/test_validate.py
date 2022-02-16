@@ -207,7 +207,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])
                                                    .with_default_option("myoption", 1)})
         client.run("create . --name=dep --version=0.1")
-        client.run("create . --name=dep --version=0.1 -o dep:myoption=2")
+        client.run("create . --name=dep --version=0.1 -o dep/*:myoption=2")
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            from conans.errors import ConanErrorConfiguration
@@ -220,7 +220,7 @@ class TestValidate(unittest.TestCase):
            """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg1 --version=0.1 -o dep:myoption=1")
+        client.run("create . --name=pkg1 --version=0.1 -o dep/*:myoption=1")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")
                                                    .with_default_option("dep:myoption", 2)})

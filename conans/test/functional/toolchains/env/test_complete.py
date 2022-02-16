@@ -71,8 +71,8 @@ def test_cmake_virtualenv():
 def test_complete():
     client = TestClient()
     client.run("new cmake_lib -d name=myopenssl -d version=1.0")
-    client.run("create . -o myopenssl:shared=True")
-    client.run("create . -o myopenssl:shared=True -s build_type=Debug")
+    client.run("create . -o myopenssl/*:shared=True")
+    client.run("create . -o myopenssl/*:shared=True -s build_type=Debug")
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
@@ -84,7 +84,7 @@ def test_complete():
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
-            default_options = {"myopenssl:shared": True}
+            default_options = {"myopenssl/*:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
             exports_sources = "*"
 
@@ -124,7 +124,7 @@ def test_complete():
             settings = "os", "compiler", "build_type", "arch"
             build_requires = "mycmake/1.0"
             requires = "myopenssl/1.0"
-            default_options = {"myopenssl:shared": True}
+            default_options = {"myopenssl/*:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
             generators = "CMakeDeps", "CMakeToolchain"
 

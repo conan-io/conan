@@ -225,22 +225,22 @@ def test_install_argument_order(client):
     client.save({"conanfile.py": conanfile,
                  "conanfile_boost.py": conanfile_boost})
     client.run("create conanfile_boost.py conan/stable")
-    client.run("install . -o boost:shared=True --build=missing")
+    client.run("install . -o boost/*:shared=True --build=missing")
     output_0 = "%s" % client.out
-    client.run("install . -o boost:shared=True --build missing")
+    client.run("install . -o boost/*:shared=True --build missing")
     output_1 = "%s" % client.out
-    client.run("install -o boost:shared=True . --build missing")
+    client.run("install -o boost/*:shared=True . --build missing")
     output_2 = "%s" % client.out
-    client.run("install -o boost:shared=True --build missing .")
+    client.run("install -o boost/*:shared=True --build missing .")
     output_3 = "%s" % client.out
     assert "ERROR" not in output_3
     assert output_0 == output_1
     assert output_1 == output_2
     assert output_2 == output_3
 
-    client.run("install -o boost:shared=True --build boost . --build missing")
+    client.run("install -o boost/*:shared=True --build boost . --build missing")
     output_4 = "%s" % client.out
-    client.run("install -o boost:shared=True --build missing --build boost .")
+    client.run("install -o boost/*:shared=True --build missing --build boost .")
     output_5 = "%s" % client.out
     assert output_4 == output_5
 

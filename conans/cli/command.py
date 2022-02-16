@@ -14,7 +14,7 @@ COMMAND_GROUPS = {
 class Extender(argparse.Action):
     """Allows using the same flag several times in command and creates a list with the values.
     For example:
-        conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
+        conan install MyPackage/1.2@user/channel -o qt/*:value -o mode/*:2 -s cucumber/*:true
       It creates:
           options = ['qt:value', 'mode:2']
           settings = ['cucumber:true']
