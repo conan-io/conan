@@ -74,7 +74,7 @@ class XcodeDeps(object):
         self.architecture = to_apple_arch(arch) or arch
         self.os_version = conanfile.settings.get_safe("os.version")
         self._sdk = conanfile.settings.get_safe("os.sdk") or ""
-        self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
+        self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or "*"
         check_using_build_profile(self._conanfile)
 
     @property
