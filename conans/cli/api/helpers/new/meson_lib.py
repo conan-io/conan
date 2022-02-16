@@ -1,8 +1,9 @@
 from conans.cli.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
 
-conanfile_sources_v2 = """from conan import ConanFile
+conanfile_sources_v2 = """import os
+from conan import ConanFile
 from conan.tools.meson import MesonToolchain, Meson, meson_layout
-
+from conan.tools.files import copy
 
 class {{class_name or name}}Conan(ConanFile):
     name = "{{name}}"
@@ -35,6 +36,11 @@ class {{class_name or name}}Conan(ConanFile):
     def package(self):
         meson = Meson(self)
         meson.install()
+        # Meson cannot install dll/so in "bin" and .a/.lib in "lib"
+        lib = os.path.join(self.package_folder, "lib")
+        bin = os.path.join(self.package_folder, "bin")
+        copy(self, "*.so", lib, bin)
+        copy(self, "*.dll", lib, bin)
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]
