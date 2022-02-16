@@ -53,7 +53,7 @@ class _ConfVarPlaceHolder:
     pass
 
 
-class _ConfValue:
+class _ConfValue(object):
 
     def __init__(self, name, value):
         self._name = name

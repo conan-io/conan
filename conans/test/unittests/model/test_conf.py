@@ -1,3 +1,4 @@
+import sys
 import textwrap
 
 import pytest
@@ -123,6 +124,20 @@ def test_conf_other_patterns_and_access():
         zlib:user.company.toolchain:flags=z2flag
         zlib:user.company.toolchain:flags+=zflag
     """)
+    if sys.version_info.major == 2:
+        # FIXME: Python 2.x different order and sorted does not work with None keys
+        #        in Python 3.x
+        expected = textwrap.dedent("""\
+            tools.microsoft.msbuild:verbosity=Quiet
+            user.company.toolchain:flags=zeroflag
+            user.company.toolchain:flags+=oneflag
+            user.company.toolchain:flags+=secondflag
+            user.company.toolchain:flags+=thirdflag
+            tools.cmake.cmaketoolchain:generator=!
+            zlib:user.company.toolchain:flags=z2flag
+            zlib:user.company.toolchain:flags+=zflag
+            openssl:user.company.toolchain:flags=!
+        """)
     assert c.dumps() == expected
     assert c["tools.microsoft.msbuild:verbosity"] == "Quiet"
     assert c["user.company.toolchain:flags"] == ["zeroflag", "oneflag", "secondflag", "thirdflag"]
