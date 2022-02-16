@@ -437,3 +437,37 @@ def test_missing_sdk():
     client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
                "-c tools.apple:sdk_path='notexistingsdk'", assert_error=True)
     assert "unable to find sdk 'notexistingsdk'" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_xcodebuild
+def test_deployment_target():
+    client = TestClient(path_with_spaces=False)
+
+    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("export .")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XcodeBuild
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            requires = "hello/0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeDeps"
+            exports_sources = "app.xcodeproj/*", "app/*"
+            def build(self):
+                xcode = XcodeBuild(self)
+                xcode.build("app.xcodeproj")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "app/main.cpp": main,
+                 "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
+    client.run("create . --build=missing -s os.version=12.0")
+    # TODO: check this, apparently this is not working as it should
+    #  https://pewpewthespells.com/blog/buildsettings.html#macosx_deployment_target
+    #  it should set the -mmacosx-version-min=$(value) for clang but instead it modifies
+    #  the -target argument but apparently it works in a very similar way???
+    assert "-target x86_64-apple-macos12.0" in client.out
