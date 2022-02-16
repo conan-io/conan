@@ -57,6 +57,10 @@ class _Component(object):
         self._sysroot = None
         self._requires = None
 
+        # LEGACY 1.X fields, can be removed in 2.X
+        self.names = {}
+        self.filenames = {}
+
     @property
     def includedirs(self):
         if self._includedirs is None:
