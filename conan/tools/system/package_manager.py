@@ -53,7 +53,6 @@ class _SystemPackageManagerTool(object):
 
     @property
     def sudo_str(self):
-        breakpoint()
         sudo = "sudo " if self._sudo else ""
         askpass = "-A " if self._sudo and self._sudo_askpass else ""
         return "{}{}".format(sudo, askpass)

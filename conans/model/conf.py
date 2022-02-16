@@ -4,41 +4,40 @@ from collections import OrderedDict
 from conans.errors import ConanException
 
 
-DEFAULT_CONFIGURATION = {
-    "core:required_conan_version": "Raise if current version does not match the defined range.",
-    "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
-    "core:default_profile": "Defines the default host profile ('default' by default)",
-    "core:default_build_profile": "Defines the default build profile (None by default)",
-    "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
-    "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
-    "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
-    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
-    "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
-    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
-    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
-    "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
-    "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
-    "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
-    "tools.env.virtualenv:auto_use": "Automatically activate virtualenv file generation",
-    "tools.files.download:retry": "Number of retries in case of failure when downloading",
-    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
-    "tools.gnu:make_program": "Indicate path to make program",
-    "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
-    "tools.google.bazel:config": "Define Bazel config file",
-    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
-    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: "
-                                         "'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
-    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
-    "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
-    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
-    "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
-    "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
-    "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
-    "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
-    "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
-    "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
-    "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
-    "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+BUILT_IN_CONFS = {
+    "core:required_conan_version": (str, "Raise if current version does not match the defined range."),
+    "core.package_id:msvc_visual_incompatible": (str, "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries"),
+    "core:default_profile": (str, "Defines the default host profile ('default' by default)"),
+    "core:default_build_profile": (str, "Defines the default build profile (None by default)"),
+    "tools.android:ndk_path": (str, "Argument for the CMAKE_ANDROID_NDK"),
+    "tools.build:skip_test": (str, "Do not execute CMake.test() and Meson.test() when enabled"),
+    "tools.build:jobs": (str, "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)"),
+    "tools.cmake.cmaketoolchain:generator": (str, "User defined CMake generator to use instead of default"),
+    "tools.cmake.cmaketoolchain:find_package_prefer_config": (str, "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG"),
+    "tools.cmake.cmaketoolchain:toolchain_file": (str, "Use other existing file rather than conan_toolchain.cmake one"),
+    "tools.cmake.cmaketoolchain:user_toolchain": (str, "Inject existing user toolchain at the beginning of conan_toolchain.cmake"),
+    "tools.cmake.cmaketoolchain:system_name": (str, "Define CMAKE_SYSTEM_NAME in CMakeToolchain"),
+    "tools.cmake.cmaketoolchain:system_version": (str, "Define CMAKE_SYSTEM_VERSION in CMakeToolchain"),
+    "tools.cmake.cmaketoolchain:system_processor": (str, "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain"),
+    "tools.env.virtualenv:auto_use": (str, "Automatically activate virtualenv file generation"),
+    "tools.files.download:retry": (str, "Number of retries in case of failure when downloading"),
+    "tools.files.download:retry_wait": (str, "Seconds to wait between download attempts"),
+    "tools.gnu:make_program": (str, "Indicate path to make program"),
+    "tools.gnu:define_libcxx11_abi": (str, "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11"),
+    "tools.google.bazel:config": (str, "Define Bazel config file"),
+    "tools.google.bazel:bazelrc_path": (str, "Defines Bazel rc-path"),
+    "tools.microsoft.msbuild:verbosity": (str, "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'"),
+    "tools.microsoft.msbuild:vs_version": (str, "Defines the IDE version when using the new msvc compiler"),
+    "tools.microsoft.msbuild:max_cpu_count": (str, "Argument for the /m when running msvc to build parallel projects"),
+    "tools.microsoft.msbuild:installation_path": (str, "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community"),
+    "tools.microsoft.msbuilddeps:exclude_code_analysis": (str, "Suppress MSBuild code analysis for patterns"),
+    "tools.microsoft.msbuildtoolchain:compile_options": (str, "Dictionary with MSBuild compiler options"),
+    "tools.intel:installation_path": (str, "Defines the Intel oneAPI installation root path"),
+    "tools.intel:setvars_args": (str, "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI"),
+    "tools.system.package_manager:tool": (str, "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'"),
+    "tools.system.package_manager:mode": (str, "Mode for package_manager tools: 'check' or 'install'"),
+    "tools.system.package_manager:sudo": (str, "Use 'sudo' when invoking the package manager tools in Linux (False by default)"),
+    "tools.system.package_manager:sudo_askpass": (str, "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)"),
 }
 
 
@@ -63,6 +62,13 @@ class _ConfValue:
     def __repr__(self):
         return repr(self._value)
 
+    @property
+    def value(self):
+        return self._value
+
+    def copy(self):
+        return self.__class__(self._name, self._value)
+
     def dumps(self):
         raise NotImplementedError
 
@@ -82,11 +88,11 @@ class _ConfValue:
 class _ConfStrValue(_ConfValue):
 
     def __init__(self, name, value):
-        value = str(value)
+        value = str(value).strip()
         super(_ConfStrValue, self).__init__(name, value)
 
     def dumps(self):
-        return "{}={}".format(self._name, self._value)
+        return "{}={}".format(self._name, self._value or "")
 
     def remove(self, value):
         self._value = ""
@@ -105,7 +111,6 @@ class _ConfListValue(_ConfValue):
 
     def __init__(self, name, value):
         value = [] if value is None else value if isinstance(value, list) else [value]
-        value = [str(v) for v in value]  # Ensure it's full of strings
         super(_ConfListValue, self).__init__(name, value)
 
     def dumps(self):
@@ -124,9 +129,6 @@ class _ConfListValue(_ConfValue):
                 result.append("{}{}={}".format(self._name, append, v))
                 append = "+"
         return "\n".join(result)
-
-    def copy(self):
-        return _ConfListValue(self._name, self._value)
 
     def remove(self, value):
         self._value.remove(value)
@@ -215,20 +217,31 @@ class Conf:
         Get all the values belonging to the passed conf name. By default, those values
         will be returned as a str-like object.
         """
-        return self._values.get(conf_name, default)
+        conf_value = self._values.get(conf_name)
+        if conf_value:
+            return conf_value.value
+        else:
+            return default
 
     def pop(self, conf_name, default=None):
         """
         Remove any key-value given the conf name
         """
-        return self._values.pop(conf_name, default)
+        value = self.get(conf_name, default)
+        self._values.pop(conf_name, None)
+        return value
 
-    @staticmethod
-    def _get_conf_value(name, value):
-        type_ = DEFAULT_CONFIGURATION.get(name, [None])[0]
-        if type_ is list or isinstance(value, list):
+    def _get_conf_value(self, name, value):
+        """
+        Get a valid _ConfValue object based on the built-in Conf type declared
+        or the value-like object. For now, we only manage lists or strings.
+        """
+        type_ = BUILT_IN_CONFS.get(name, [None])[0]
+        if type_ is list or isinstance(value, list) \
+           or isinstance(self._values.get(name), _ConfListValue):
             return _ConfListValue(name, value)
         else:
+            # Any other value will be converted to string by default
             return _ConfStrValue(name, value)
 
     @staticmethod
@@ -259,11 +272,13 @@ class Conf:
 
     def append(self, name, value):
         self._validate_lower_case(name)
-        self._values.setdefault(name, self._get_conf_value(name, _ConfVarPlaceHolder)).append(value)
+        conf_value = self._get_conf_value(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).append(value)
 
     def prepend(self, name, value):
         self._validate_lower_case(name)
-        self._values.setdefault(name, self._get_conf_value(name, _ConfVarPlaceHolder)).prepend(value)
+        conf_value = self._get_conf_value(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):
         self._values[name].remove(value)
@@ -448,11 +463,8 @@ class ConfDefinition:
                 try:
                     parsed_value = eval(value)
                 except:
-                    raise ConanException("Bad conf definition: {}".format(line))
+                    parsed_value = value.strip()
 
-                if isinstance(parsed_value, dict):
-                    raise ConanException("Bad conf value: {}. It cannot "
-                                         "be a dict-like object.".format(value))
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:

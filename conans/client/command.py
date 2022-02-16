@@ -22,7 +22,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError, ConanInvalidSystemRequirements
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
-from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -661,8 +661,8 @@ class Command(object):
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.writeln("{}: {}".format(key, value))
+            for key, (_, description) in BUILT_IN_CONFS.items():
+                self._out.writeln("{}: {}".format(key, description))
 
     def info(self, *args):
         """
