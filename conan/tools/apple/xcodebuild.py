@@ -6,7 +6,7 @@ from conans.errors import ConanException
 
 class XcodeBuild(object):
     def __init__(self, conanfile):
-        self.conanfile = conanfile
+        self._conanfile = conanfile
         self.build_type = conanfile.settings.get_safe("build_type")
         self.arch = to_apple_arch(conanfile.settings.get_safe("arch"))
         self.sdk = conanfile.settings.get_safe("os.sdk") or ""
@@ -15,7 +15,7 @@ class XcodeBuild(object):
 
     @property
     def verbosity(self):
-        verbosity = self.conanfile.conf["tools.apple.xcodebuild:verbosity"]
+        verbosity = self._conanfile.conf["tools.apple.xcodebuild:verbosity"]
         if not verbosity:
             return ""
         elif verbosity == "quiet" or verbosity == "verbose":
@@ -29,7 +29,7 @@ class XcodeBuild(object):
         # User's sdk_path has priority, then if specified try to compose sdk argument
         # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
         # chosen by the build system
-        sdk = self.conanfile.conf["tools.apple:sdk_path"]
+        sdk = self._conanfile.conf["tools.apple:sdk_path"]
         if not sdk and self.sdk:
             sdk = "{}{}".format(self.sdk, self.sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
@@ -46,4 +46,4 @@ class XcodeBuild(object):
         cmd = "xcodebuild -project {} -configuration {} -arch " \
               "{} {} {} {}".format(xcodeproj, self.build_type, self.arch, self.sdkroot,
                                    self.verbosity, self.deployment_target)
-        self.conanfile.run(cmd)
+        self._conanfile.run(cmd)

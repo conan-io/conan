@@ -73,14 +73,14 @@ class XcodeDeps(object):
         arch = conanfile.settings.get_safe("arch")
         self.architecture = to_apple_arch(arch) or arch
         self.os_version = conanfile.settings.get_safe("os.version")
-        self._sdk = conanfile.settings.get_safe("os.sdk") or ""
-        self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or "*"
+        self.sdk = conanfile.settings.get_safe("os.sdk")
+        self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         check_using_build_profile(self._conanfile)
 
     @property
-    def sdk(self):
-        if self._sdk:
-            sdk = "{}{}".format(self._sdk, self._sdk_version)
+    def sdk_condition(self):
+        if self.sdk:
+            sdk = "{}{}".format(self.sdk, self.sdk_version or "*")
             return sdk
         return "*"
 
@@ -96,8 +96,11 @@ class XcodeDeps(object):
     def _config_filename(self):
         # Default name
         props = [("configuration", self.configuration),
-                 ("architecture", self.architecture)]
-        name = "".join("_{}".format(v) for _, v in props if v is not None)
+                 ("architecture", self.architecture),
+                 ("sdk name", self.sdk),
+                 ("sdk version", self.sdk_version)]
+        name = "".join("_{}".format(v) for _, v in props if v is not None and v)
+        name = name.replace(".", "_").replace("-", "_")
         return name.lower()
 
     def _vars_xconfig_file(self, dep, name, cpp_info):
@@ -106,7 +109,7 @@ class XcodeDeps(object):
         """
 
         condition = "[config={}][arch={}][sdk={}]".format(self.configuration, self.architecture,
-                                                              self.sdk)
+                                                          self.sdk_condition)
         fields = {
             'name': name,
             'root_folder': dep.package_folder,
