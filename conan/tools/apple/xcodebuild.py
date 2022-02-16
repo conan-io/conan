@@ -34,6 +34,10 @@ class XcodeBuild(object):
             sdk = "{}{}".format(self.sdk, self.sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
 
+    # TODO: check this, apparently this is not working as it should
+    #  https://pewpewthespells.com/blog/buildsettings.html#macosx_deployment_target
+    #  it should set the -mmacosx-version-min=$(value) for clang but instead it modifies
+    #  the -target argument but apparently it works in a very similar way???
     @property
     def deployment_target(self):
         return "MACOSX_DEPLOYMENT_TARGET={}".format(self.os_version) if self.os_version else ""
