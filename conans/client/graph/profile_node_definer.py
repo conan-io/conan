@@ -70,7 +70,7 @@ def _initialize_conanfile(conanfile, profile, ref):
             conanfile.display_name, str(e)))
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile.buildenv
-    conanfile.conf = profile.conf.get_conanfile_conf(str(ref))  # Maybe this can be done lazy too
+    conanfile.conf = profile.conf.get_conanfile_conf(ref)  # Maybe this can be done lazy too
 
 
 def txt_definer(conanfile, profile_host):

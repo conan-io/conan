@@ -1,4 +1,3 @@
-import fnmatch
 import os
 import textwrap
 from collections import OrderedDict
@@ -388,14 +387,14 @@ class ProfileEnvironment:
     def __bool__(self):
         return bool(self._environments)
 
-    def get_profile_env(self, ref):
+    def get_profile_env(self, ref, is_consumer=False):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
         result = Environment()
         for pattern, env in self._environments.items():
-            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+            if pattern is None or ref.matches(pattern) or (pattern == "&" and is_consumer):
                 # Latest declared has priority, copy() necessary to not destroy data
                 result = env.copy().compose_env(result)
         return result
@@ -440,6 +439,9 @@ class ProfileEnvironment:
                 pattern_name = pattern_name.split(":", 1)
                 if len(pattern_name) == 2:
                     pattern, name = pattern_name
+                    if pattern != "&" and "/" not in pattern:
+                        raise ConanException("Specify a reference in the [buildenv] entry: '{}/*' "
+                                             "instead of '{}'.".format(pattern, pattern))
                 else:
                     pattern, name = None, pattern_name[0]
 
