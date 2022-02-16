@@ -48,14 +48,14 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "os.subsystem": "catalyst"})
         self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios-macabi")
 
-    @parameterized.expand([("gcc", "x86", "-m32"),
-                           ("gcc", "x86_64", "-m64"),
-                           ("Visual Studio", "x86", "/Qm32"),
-                           ("Visual Studio", "x86_64", "/Qm64"),
+    @parameterized.expand([("Linux", "x86", "-m32"),
+                           ("Linux", "x86_64", "-m64"),
+                           ("Windows", "x86", "/Qm32"),
+                           ("Windows", "x86_64", "/Qm64"),
                            ])
-    def test_arch_flag_intel(self, base, arch, flag):
-        settings = MockSettings({"compiler": "intel",
-                                 "compiler.base": base,
+    def test_arch_flag_intel(self, os_, arch, flag):
+        settings = MockSettings({"compiler": "intel-cc",
+                                 "os": os_,
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 
@@ -68,7 +68,6 @@ class CompilerFlagsTest(unittest.TestCase):
                            ])
     def test_arch_flag_mcst_lcc(self, arch, flag):
         settings = MockSettings({"compiler": "mcst-lcc",
-                                 "compiler.base": "gcc",
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 

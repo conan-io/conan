@@ -7,7 +7,7 @@ import mock
 import pytest
 
 from conans.cli.output import ConanOutput
-from conans.client.source import _run_cache_scm, _run_local_scm
+from conans.client.source import _run_cache_scm
 from conans.client.tools.scm import Git
 from conans.model.scm import SCM
 from conans.test.utils.mocks import RedirectedTestOutput
@@ -16,7 +16,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import redirect_output
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class RunSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -77,32 +77,3 @@ class RunSCMTest(unittest.TestCase):
                                    scm_sources_folder="/not/existing/path")
 
         self.assertIn("SCM: Getting sources from url: '{}'".format(url), output)
-
-    def test_user_space_with_local_sources(self):
-        output = RedirectedTestOutput()
-        with redirect_output(output):
-            # Need a real repo to get a working SCM object
-            local_sources_path = os.path.join(self.tmp_dir, 'git_repo').replace('\\', '/')
-            create_local_git_repo(files={'file1': "content"}, folder=local_sources_path)
-            git = Git(local_sources_path)
-            url = "https://remote.url"
-            git.run("remote add origin \"{}\"".format(url))
-
-            # Mock the conanfile (return scm_data)
-            conanfile = mock.MagicMock()
-            conanfile.output = ConanOutput()
-            conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
-
-            # Mock functions called from inside _run_scm (tests will be here)
-            def merge_directories(src, dst, excluded=None):
-                src = os.path.normpath(src)
-                dst = os.path.normpath(dst)
-                self.assertEqual(src.replace('\\', '/'), local_sources_path)
-                self.assertEqual(dst, self.src_folder)
-
-            with mock.patch("conans.client.source.merge_directories", side_effect=merge_directories):
-                _run_local_scm(conanfile, conanfile_folder=local_sources_path,
-                               src_folder=self.src_folder)
-
-            self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),
-                          str(output).lower())

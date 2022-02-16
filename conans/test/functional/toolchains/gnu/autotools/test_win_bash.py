@@ -13,7 +13,7 @@ from conans.util.files import save
 
 @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool_msys2
+@pytest.mark.tool("msys2")
 def test_autotools_bash_complete():
     client = TestClient(path_with_spaces=False)
     bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"

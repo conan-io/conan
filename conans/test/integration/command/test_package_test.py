@@ -231,14 +231,15 @@ class HelloTestConan(ConanFile):
         client = TestClient()
         conanfile = """
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
     version = "0.1"
-    exports = "*"
+    exports_sources = "*"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         test_conanfile = """
 from conan import ConanFile
@@ -267,6 +268,23 @@ class HelloReuseConan(ConanFile):
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+
+
+def test_no_reference_in_test_package():
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        import os
+
+        class HelloReuseConan(ConanFile):
+            def test(self):
+                self.output.warning("At test: {}".format(self.tested_reference_str))
+        """)
+
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
+    client.run("create . --name=foo --version=1.0", assert_error=True)
+    assert "doesn't declare any requirement, use `self.tested_reference_str` to require the " \
+           "package being created" in client.out
 
 
 def test_tested_reference_str():

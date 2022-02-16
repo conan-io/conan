@@ -1,22 +1,16 @@
 import json
 import os
-import platform
-import stat
 import textwrap
 import unittest
 
 import pytest
 from requests import ConnectionError
 
-from conans.client.tools.files import untargz
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     GenConanfile, TurboTestClient)
-from conans.util.files import load, mkdir, save
+                                     GenConanfile)
+from conans.util.files import load, save
 
 
 class BadConnectionUploader(TestRequester):
@@ -237,13 +231,14 @@ class UploadTest(unittest.TestCase):
     def test_upload_json(self):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
 
             class TestConan(ConanFile):
                 name = "test"
                 version = "0.1"
 
                 def package(self):
-                    self.copy("mylib.so", dst="lib")
+                    copy(self, "mylib.so", self.build_folder, os.path.join(self.package_folder, "lib"))
             """)
 
         client = self._get_client()

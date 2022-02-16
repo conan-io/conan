@@ -39,7 +39,7 @@ def test_reuse_downloaded_tgz():
     # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
     # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
     other_client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    other_client.run("download hello0/0.1@user/stable")
+    other_client.run("download hello0/0.1@user/stable -r default")
     other_client.run("upload hello0/0.1@user/stable -r default")
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out

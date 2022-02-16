@@ -2,7 +2,6 @@ import textwrap
 import unittest
 
 import pytest
-from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
 from conans.model.recipe_ref import RecipeReference
@@ -18,14 +17,14 @@ def test_shallow_none_string():
 
         class Recipe(ConanFile):
             scm = {"type": "git", "url": "https://github.com/repo/library.git",
-                    "revision": "123456", "shallow": 'None' }
+                    "revision": "auto", "shallow": 'None' }
     """)})
 
     client.run('export . --name=name --version=version', assert_error=True)
     assert "ERROR: SCM value for 'shallow' must be of type 'bool' (found 'str')" in str(client.out)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 @parameterized_class([{"shallow": True}, {"shallow": False},
                       {"shallow": None},  # No value written in the recipe
                       {"shallow": 'None'}])  # Explicit 'None' written in the recipe
@@ -71,25 +70,3 @@ class GitShallowTestCase(unittest.TestCase):
             self.assertIn('shallow: null', content)
         else:
             self.assertIn('shallow: false', content)
-
-    # FIXME : https://github.com/conan-io/conan/issues/8449
-    # scm_to_conandata=1 changes behavior for shallow=None
-    @pytest.mark.xfail
-    @parameterized.expand([("c6cc15fa2f4b576bd", False), ("0.22.1", True)])
-    def test_remote_build(self, revision, shallow_works):
-        # Shallow works only with branches or tags
-        # xfail doesn't work (don't know why), just skip manually
-        if self.shallow is "None" and revision == "0.22.1":
-            return
-        client = TestClient()
-        client.save({'conanfile.py':
-                         self.conanfile.format(shallow_attrib=self._shallow_attrib_str(),
-                                               url="https://github.com/conan-io/conan.git",
-                                               rev=revision)})
-
-        client.run(f"create . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
-
-        if self.shallow in [None, True] and shallow_works:
-            self.assertIn(">>> describe-fails", client.out)
-        else:
-            self.assertIn(">>> tags: 0.22.1", client.out)

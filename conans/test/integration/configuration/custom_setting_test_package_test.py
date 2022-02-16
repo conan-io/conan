@@ -22,6 +22,7 @@ class TestConanLib(ConanFile):
     def requirements(self):
         self.output.info("Conditional test requirement: %s, %s, %s"
                          % (self.settings.os, self.settings.build_type, self.settings.product))
+        self.requires(self.tested_reference_str)
 
     def test(self):
         pass

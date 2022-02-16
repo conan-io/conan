@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 
@@ -17,13 +16,13 @@ def client():
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
         class Pkg(ConanFile):
             settings = "build_type", "os", "arch", "compiler"
             {}
             def package(self):
-                save(os.path.join(self.package_folder, "include", "%s.h" % self.name),
+                save(self, os.path.join(self.package_folder, "include", "%s.h" % self.name),
                      '#define MYVAR%s "%s"' % (self.name, self.settings.build_type))
         """)
 
@@ -36,8 +35,9 @@ def client():
     return c
 
 
-@pytest.mark.tool_cmake
-def test_transitive_multi(client):
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
+def test_transitive_multi_windows(client):
     # TODO: Make a full linking example, with correct header transitivity
 
     # Save conanfile and example
@@ -58,47 +58,34 @@ def test_transitive_multi(client):
 
     with client.chdir("build"):
         for bt in ("Debug", "Release"):
-            client.run("install .. --user=user --channel=channel -s build_type={}".format(bt))
+            # NOTE: -of=. otherwise the output files are located in the parent directory
+            client.run("install .. --user=user --channel=channel -s build_type={} -of=.".format(bt))
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
         assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" \
                in client.load("libb-config.cmake")
 
-        if platform.system() == "Windows":
-            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
-            client.run_command('cmake --build . --config Debug')
-            client.run_command('cmake --build . --config Release')
+        client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+        client.run_command('cmake --build . --config Debug')
+        client.run_command('cmake --build . --config Release')
 
-            client.run_command('Debug\\example.exe')
-            assert "main: Debug!" in client.out
-            assert "MYVARliba: Debug" in client.out
-            assert "MYVARlibb: Debug" in client.out
+        client.run_command('Debug\\example.exe')
+        assert "main: Debug!" in client.out
+        assert "MYVARliba: Debug" in client.out
+        assert "MYVARlibb: Debug" in client.out
 
-            client.run_command('Release\\example.exe')
-            assert "main: Release!" in client.out
-            assert "MYVARliba: Release" in client.out
-            assert "MYVARlibb: Release" in client.out
-        else:
-            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
-                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
-            for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
-                client.run_command('cmake --build . --clean-first')
-
-                client.run_command('./example')
-                assert "main: {}!".format(bt) in client.out
-                assert "MYVARliba: {}".format(bt) in client.out
-                assert "MYVARlibb: {}".format(bt) in client.out
+        client.run_command('Release\\example.exe')
+        assert "main: Release!" in client.out
+        assert "MYVARliba: Release" in client.out
+        assert "MYVARlibb: Release" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class Test(ConanFile):
@@ -106,8 +93,8 @@ def test_system_libs():
             version = "0.1"
             settings = "build_type"
             def package(self):
-                save(os.path.join(self.package_folder, "lib/lib1.lib"), "")
-                save(os.path.join(self.package_folder, "lib/liblib1.a"), "")
+                save(self, os.path.join(self.package_folder, "lib/lib1.lib"), "")
+                save(self, os.path.join(self.package_folder, "lib/liblib1.a"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["lib1"]
@@ -161,7 +148,7 @@ def test_system_libs():
         assert "Target libs: %s" % target_libs in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_do_not_mix_cflags_cxxflags():
     # TODO: Verify with components too
     client = TestClient()
@@ -241,15 +228,16 @@ def test_custom_configuration(client):
            open(os.path.join(curdir, data_name_context_host)).read()
 
 
+@pytest.mark.tool("cmake")
 def test_buildirs_working():
     """  If a recipe declares cppinfo.buildirs those dirs will be exposed to be consumer
     to allow a cmake "include" function call after a find_package"""
     c = TestClient()
     conanfile = str(GenConanfile().with_name("my_lib").with_version("1.0")
-                                  .with_import("import os").with_import("from conans import tools"))
+                                  .with_import("import os").with_import("from conan.tools.files import save"))
     conanfile += """
     def package(self):
-        tools.save(os.path.join(self.package_folder, "my_build_dir", "my_cmake_script.cmake"),
+        save(self, os.path.join(self.package_folder, "my_build_dir", "my_cmake_script.cmake"),
                    'set(MYVAR "Like a Rolling Stone")')
 
     def package_info(self):
@@ -274,7 +262,7 @@ def test_buildirs_working():
     assert "MYVAR=>Like a Rolling Stone" in c.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cpp_info_link_objects():
     client = TestClient()
     obj_ext = "obj" if platform.system() == "Windows" else "o"
@@ -337,7 +325,7 @@ def test_private_transitive():
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
-    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=.")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
     assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake

@@ -5,7 +5,6 @@ import textwrap
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
-from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
@@ -100,29 +99,14 @@ class _InstallRecipeReference:
                     if f not in existing.filenames:
                         existing.filenames.append(f)
 
-    def update_unknown(self, package):
-        package_id = package.package_id
-        if package_id == PACKAGE_ID_UNKNOWN:
-            return False
-        existing = self._package_ids.get(package_id)
-        if existing:
-            return False
-        self._package_ids[package_id] = package
-        return True
-
     def add(self, node):
-        if node.package_id == PACKAGE_ID_UNKNOWN:
-            # PACKAGE_ID_UNKNOWN are all different items, because when package_id is computed
-            # it could be different
-            self.packages.append(_InstallPackageReference.create(node))
+        existing = self._package_ids.get(node.package_id)
+        if existing is not None:
+            existing.add(node)
         else:
-            existing = self._package_ids.get(node.package_id)
-            if existing is not None:
-                existing.add(node)
-            else:
-                pkg = _InstallPackageReference.create(node)
-                self.packages.append(pkg)
-                self._package_ids[node.package_id] = pkg
+            pkg = _InstallPackageReference.create(node)
+            self.packages.append(pkg)
+            self._package_ids[node.package_id] = pkg
 
         for dep in node.dependencies:
             if dep.dst.binary != BINARY_SKIP:

@@ -10,6 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain():
     client = TestClient(default_server_user=True)
 
@@ -34,6 +35,7 @@ def test_shared_cmake_toolchain():
     assert "hello: Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
     client = TestClient()
     files = pkg_cmake("hello", "0.1")
@@ -46,12 +48,14 @@ def test_shared_cmake_toolchain_test_package():
 @pytest.fixture()
 def test_client_shared():
     client = TestClient()
-    files = pkg_cmake("hello", "0.1")
-    files.update(pkg_cmake_test("hello"))
+    #files = pkg_cmake("hello", "0.1")
+    #files.update(pkg_cmake_test("hello"))
+    client.run("new -d name=hello -d version=0.1 -f cmake_lib")
     test_conanfile = textwrap.dedent("""
                 import os
                 from conan import ConanFile
                 from conan.tools.cmake import CMake, cmake_layout
+                from conan.tools.files import copy
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
@@ -68,36 +72,38 @@ def test_client_shared():
                         cmake.configure()
                         cmake.build()
 
-                    def imports(self):
-                        self.copy("*.dll", dst=self.folders.build, src="bin")
-                        self.copy("*.dylib", dst=self.folders.build, src="lib")
+                    def generate(self):
+                        for dep in self.dependencies.values():
+                            copy(self, "*.dylib", dep.cpp_info.libdirs[0], self.build_folder)
+                            copy(self, "*.dll", dep.cpp_info.libdirs[0], self.build_folder)
 
                     def test(self):
-                        cmd = os.path.join(self.cpp.build.bindirs[0], "test")
+                        cmd = os.path.join(self.cpp.build.bindirs[0], "example")
                         # This is working without runenv because CMake is puting an internal rpath
                         # to the executable pointing to the dylib of hello, internally is doing something
                         # like: install_name_tool -add_rpath /path/to/hello/lib/libhello.dylib test
                         self.run(cmd)
                 """)
-    files["test_package/conanfile.py"] = test_conanfile
+    files = {"test_package/conanfile.py": test_conanfile}
 
     client.save(files)
     client.run("create . -o hello:shared=True")
-    assert "hello: Release!" in client.out
+    assert "Hello World Release!" in client.out
 
     # We can run the exe from the test package directory also, without environment
     # because there is an internal RPATH in the exe with an abs path to the "hello"
     exe_folder = os.path.join("test_package", "cmake-build-release")
-    assert os.path.exists(os.path.join(client.current_folder, exe_folder, "test"))
-    client.run_command(os.path.join(exe_folder, "test"))
+    assert os.path.exists(os.path.join(client.current_folder, exe_folder, "example"))
+    client.run_command(os.path.join(exe_folder, "example"))
 
     # We try to remove the hello package and run again the executable from the test package,
     # this time it should fail, it doesn't find the shared library
     client.run("remove '*' -f")
-    client.run_command(os.path.join(exe_folder, "test"), assert_error=True)
+    client.run_command(os.path.join(exe_folder, "example"), assert_error=True)
     return client
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_shared_same_dir_using_tool(test_client_shared):
     """
@@ -107,10 +113,11 @@ def test_shared_same_dir_using_tool(test_client_shared):
     exe_folder = os.path.join("test_package", "cmake-build-release")
     # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
     test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
-    test_client_shared.run_command("install_name_tool -add_rpath '.' test")
-    test_client_shared.run_command("./{}".format("test"))
+    test_client_shared.run_command("install_name_tool -add_rpath '.' example")
+    test_client_shared.run_command("./{}".format("example"))
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_shared_same_dir_using_cmake(test_client_shared):
     """
@@ -132,7 +139,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     set(CMAKE_INSTALL_RPATH "@executable_path")
 
     find_package(hello)
-    add_executable(test  src/test.cpp )
+    add_executable(test  src/example.cpp )
     target_link_libraries(test  hello::hello)
     # Hardcoded installation path to keep the exe in the same place in the tests
     install(TARGETS test DESTINATION "bin")
@@ -141,11 +148,19 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     cf = textwrap.dedent("""
                 import os
                 from conan import ConanFile
+                from conan.tools.files import copy
                 from conan.tools.cmake import CMake, cmake_layout
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
                     generators = "CMakeToolchain", "CMakeDeps"
+
+                    def generate(self):
+                        # The exe is installed by cmake at test_package/bin
+                        # FIXME: This is a bit weird folder management
+                        dest = os.path.join(self.folders.base_build, "bin")
+                        for dep in self.dependencies.values():
+                            copy(self, "*.dylib", dep.cpp_info.libdirs[0], dest)
 
                     def requirements(self):
                         self.requires(self.tested_reference_str)
@@ -158,9 +173,6 @@ def test_shared_same_dir_using_cmake(test_client_shared):
                         cmake.configure()
                         cmake.build()
                         cmake.install()
-
-                    def imports(self):
-                        self.copy("*.dylib", dst="bin", src="lib")
 
                     def test(self):
                         cmd = os.path.join(self.cpp.build.bindirs[0], "test")
@@ -176,6 +188,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
     """
@@ -190,7 +203,7 @@ def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
     test_client_shared.run("create . -o hello:shared=True")
     test_client_shared.run("remove '*' -f")
     test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
-    test_client_shared.run_command("DYLD_LIBRARY_PATH=$(pwd) ./test")
-    test_client_shared.run_command("DYLD_LIBRARY_PATH=. ./test")
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=$(pwd) ./example")
+    test_client_shared.run_command("DYLD_LIBRARY_PATH=. ./example")
     # This assert is not working in CI, only locally
     # test_client_shared.run_command("DYLD_LIBRARY_PATH=@executable_path ./test")

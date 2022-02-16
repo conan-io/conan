@@ -9,7 +9,7 @@ from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_na
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build import build_jobs, use_win_mingw, cross_building
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version, is_msvc
@@ -550,18 +550,10 @@ class GenericSystemBlock(Block):
             return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        compiler_base = settings.get_safe("compiler.base")
         if compiler == "Visual Studio":
             subs_toolset = settings.get_safe("compiler.toolset")
             if subs_toolset:
                 return subs_toolset
-        elif compiler == "intel" and compiler_base == "Visual Studio" and "Visual" in generator:
-            # TODO: This intel toolset needs to be validated too
-            compiler_version = settings.get_safe("compiler.version")
-            if compiler_version:
-                compiler_version = compiler_version if "." in compiler_version else \
-                    "%s.0" % compiler_version
-                return "Intel C++ Compiler " + compiler_version
         elif compiler == "intel-cc":
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
@@ -584,14 +576,12 @@ class GenericSystemBlock(Block):
         settings = self._conanfile.settings
         # Returns the generator platform to be used by CMake
         compiler = settings.get_safe("compiler")
-        compiler_base = settings.get_safe("compiler.base")
         arch = settings.get_safe("arch")
 
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
-                generator and "Visual" in generator:
+        if (compiler in ("Visual Studio", "msvc")) and generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
@@ -737,9 +727,7 @@ class CMakeToolchain(object):
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
 
-        if(CMAKE_TOOLCHAIN_FILE)
-            message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
-        endif()
+        message(STATUS "Using Conan toolchain: ${CMAKE_CURRENT_LIST_FILE}")
 
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
@@ -869,11 +857,8 @@ class CMakeToolchain(object):
             vs_version = vs_ide_version(self._conanfile)
             return "Visual Studio %s" % cmake_years[vs_version]
 
-        compiler_base = conanfile.settings.get_safe("compiler.base")
-        compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
-
-        if compiler == "Visual Studio" or compiler_base == "Visual Studio":
-            version = compiler_base_version or compiler_version
+        if compiler == "Visual Studio":
+            version = compiler_version
             major_version = version.split('.', 1)[0]
             base = "Visual Studio %s" % cmake_years[major_version]
             return base

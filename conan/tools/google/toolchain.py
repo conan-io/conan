@@ -1,4 +1,4 @@
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 
 
 class BazelToolchain(object):

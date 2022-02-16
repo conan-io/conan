@@ -13,12 +13,14 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -29,11 +31,12 @@ class CustomConfigurationTest(unittest.TestCase):
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()
 
-            def imports(self):
                 config = str(self.settings.build_type)
                 if self.dependencies["hello"].options.shared:
                     config = "ReleaseShared"
-                self.copy("*.dll", src="bin", dst=config, keep_path=False)
+                src = os.path.join(self.dependencies["hello"].package_folder, "bin")
+                dst = os.path.join(self.build_folder, config)
+                copy(self, "*.dll", src, dst, keep_path=False)
         """)
 
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
@@ -81,8 +84,8 @@ class CustomConfigurationTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         with self.client.chdir('build'):
-            self.client.run("install .. %s -o hello:shared=True" % settings)
-            self.client.run("install .. %s -o hello:shared=False" % settings)
+            self.client.run("install .. %s -o hello:shared=True -of=." % settings)
+            self.client.run("install .. %s -o hello:shared=False -of=." % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-releaseshared.cmake")))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
@@ -99,7 +102,7 @@ class CustomConfigurationTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -178,7 +181,7 @@ class CustomSettingsTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("install .. %s %s" % (settings_h, settings_b))
+            self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 
@@ -190,21 +193,22 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertIn("main: Release!", self.client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_changing_build_type():
     client = TestClient(path_with_spaces=False)
     dep_conanfile = textwrap.dedent(r"""
+       import os
        from conan import ConanFile
-       from conans.tools import save
+       from conan.tools.files import copy, save
 
        class Dep(ConanFile):
            settings = "build_type"
            def build(self):
-               save("hello.h",
+               save(self, "hello.h",
                '# include <iostream>\n'
                'void hello(){{std::cout<<"BUILD_TYPE={}!!";}}'.format(self.settings.build_type))
            def package(self):
-               self.copy("*.h", dst="include")
+               copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
            """)
     client.save({"conanfile.py": dep_conanfile})
     client.run("create . --name=dep --version=0.1 -s build_type=Release")

@@ -32,7 +32,6 @@ from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.util.env import environment_update
-from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
@@ -541,10 +540,16 @@ class TestClient(object):
 
     def run_command(self, command, cwd=None, assert_error=False):
         from conans.test.utils.mocks import RedirectedTestOutput
-        self.out = RedirectedTestOutput()  # Initialize each command
-        with redirect_output(self.out):
-            from conans.util.runners import conan_run
-            ret = conan_run(command, cwd=cwd or self.current_folder)
+        self.stdout = RedirectedTestOutput()  # Initialize each command
+        self.stderr = RedirectedTestOutput()
+        try:
+            with redirect_output(self.stderr, self.stdout):
+                from conans.util.runners import conan_run
+                ret = conan_run(command, cwd=cwd or self.current_folder)
+        finally:
+            self.stdout = str(self.stdout)
+            self.stderr = str(self.stderr)
+            self.out = self.stderr + self.stdout
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
@@ -671,7 +676,8 @@ class TestClient(object):
             package_ids = self.cache.get_package_references(latest_rrev)
             # Let's check if there are several packages because we don't want random behaviours
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
-                                          f"provide a single package_id instead"
+                                          f"provide a single package_id instead" \
+                                          if len(package_ids) > 0 else "No binary packages found"
             pref = package_ids[0]
         return self.cache.get_latest_package_reference(pref)
 

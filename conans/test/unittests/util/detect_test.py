@@ -60,8 +60,5 @@ class DetectTest(unittest.TestCase):
                         mock.MagicMock(return_value=("Visual Studio", "17"))):
             result = detect_defaults_settings()
             result = dict(result)
-            self.assertEqual('msvc', result['compiler'])
-            self.assertEqual('193', result['compiler.version'])
-            self.assertEqual('14', result['compiler.cppstd'])
-            self.assertEqual('dynamic', result['compiler.runtime'])
-            self.assertEqual('Release', result['compiler.runtime_type'])
+            self.assertEqual('Visual Studio', result['compiler'])
+            self.assertEqual('17', result['compiler.version'])

@@ -3,27 +3,23 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
+from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
-from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN
-from conans.client.graph.install_graph import InstallGraph, raise_missing
-from conans.client.importer import remove_imports, run_imports
+    BINARY_UPDATE
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
-from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
-from conans.util.env import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
-    chdir
+from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -123,11 +119,6 @@ class _PackageBuilder(object):
 
         write_generators(conanfile)
 
-        # Build step might need DLLs, binaries as protoc to generate source files
-        # So execute imports() before build, storing the list of copied_files
-
-        copied_files = run_imports(conanfile)
-
         try:
             mkdir(conanfile.build_folder)
             with chdir(conanfile.build_folder):
@@ -142,12 +133,9 @@ class _PackageBuilder(object):
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
             raise ConanException(exc)
-        finally:
-            # Now remove all files that were imported with imports()
-            remove_imports(conanfile, copied_files)
+
 
     def _package(self, conanfile, pref, conanfile_path):
-        # FIXME: Is weak to assign here the recipe_hash
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
         conanfile.output.info("Generated %s" % CONANINFO)
@@ -155,13 +143,9 @@ class _PackageBuilder(object):
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
         # While installing, the infos goes to build folder
-        conanfile.folders.set_base_install(conanfile.folders.base_build)
-
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
-        if get_env("CONAN_READ_ONLY_CACHE", False):
-            make_read_only(conanfile.folders.base_package)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
@@ -201,14 +185,12 @@ class _PackageBuilder(object):
                     conanfile.folders.set_base_source(base_build)
 
                 conanfile.folders.set_base_build(base_build)
-                conanfile.folders.set_base_imports(base_build)
                 conanfile.folders.set_base_package(base_package)
 
                 if not skip_build:
                     # In local cache, generators folder always in build_folder
                     conanfile.folders.set_base_generators(base_build)
                     # In local cache, install folder always is build_folder
-                    conanfile.folders.set_base_install(base_build)
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
@@ -264,7 +246,6 @@ class BinaryInstaller(object):
         self._cache = app.cache
         self._out = ConanOutput()
         self._remote_manager = app.remote_manager
-        self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
         # Load custom generators from the cache, generators are part of the binary
         # build and install. Generators loaded here from the cache will have precedence
@@ -272,9 +253,7 @@ class BinaryInstaller(object):
         for generator_path in app.cache.generators:
             app.loader.load_generators(generator_path)
 
-    def install(self, deps_graph, build_mode):
-        # build_mode is needed exclusively because the package_revision_mode requiring
-        # re-evaluating binaries
+    def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
         self._out.info("\nInstalling (downloading, building) binaries...")
@@ -288,7 +267,7 @@ class BinaryInstaller(object):
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages:
-                    self._handle_package(package, install_reference, build_mode)
+                    self._handle_package(package, install_reference)
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -320,35 +299,14 @@ class BinaryInstaller(object):
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, build_mode):
+    def _handle_package(self, package, install_reference):
         if package.binary == BINARY_EDITABLE:
             self._handle_node_editable(package)
             return
 
-        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN, BINARY_DOWNLOAD,
-                                  BINARY_UPDATE)
+        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_DOWNLOAD, BINARY_UPDATE)
         assert install_reference.ref.revision is not None, "Installer should receive RREV always"
         not_processed = True
-        if package.binary == BINARY_UNKNOWN:
-            assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
-            node = package.nodes[0]
-            self._binaries_analyzer.reevaluate_node(node, build_mode)
-            package.package_id = node.pref.package_id  # Just in case it was recomputed
-            package.prev = node.pref.revision
-            package.binary = node.binary
-            not_processed = install_reference.update_unknown(package)
-            if not_processed:
-                # The new computed package_id has not been processed yet
-                if node.binary == BINARY_MISSING:
-                    raise_missing([package], self._out)
-                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    self._download_pkg(package)
-                elif node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node)
-                    # Need a temporary package revision for package_revision_mode
-                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
-                    node.prev = "editable"
-
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
@@ -385,7 +343,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_source(None)
             conanfile.folders.set_base_build(None)
-            conanfile.folders.set_base_install(None)
             self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -404,8 +361,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(output_folder or base_path)
             conanfile.folders.set_base_source(source_folder or base_path)
             conanfile.folders.set_base_build(output_folder or base_path)
-            conanfile.folders.set_base_install(output_folder or base_path)
-            conanfile.folders.set_base_imports(output_folder or base_path)
             conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
@@ -413,21 +368,18 @@ class BinaryInstaller(object):
 
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
-        # It will only run generation and imports once
+        # It will only run generation
         node = install_node.nodes[0]
         conanfile = node.conanfile
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
         write_generators(conanfile)
-        copied_files = run_imports(conanfile)
-        report_copied_files(copied_files, output)
 
     def _handle_node_build(self, package, pkg_layout):
         node = package.nodes[0]
         pref = node.pref
         assert pref.package_id, "Package-ID without value"
-        assert pref.package_id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         assert pkg_layout, "The pkg_layout should be declared here"
         assert node.binary == BINARY_BUILD
 

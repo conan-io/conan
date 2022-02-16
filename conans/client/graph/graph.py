@@ -22,7 +22,6 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
-BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
 BINARY_ERROR = "ConfigurationError"
 
@@ -189,9 +188,6 @@ class Node(object):
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private]
-
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
 
@@ -250,12 +246,6 @@ class DepsGraph(object):
                 yield node
 
     def by_levels(self):
-        return self._order_levels(True)
-
-    def inverse_levels(self):
-        return self._order_levels(False)
-
-    def _order_levels(self, direct):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -266,7 +256,7 @@ class DepsGraph(object):
         while opened:
             current_level = []
             for o in opened:
-                o_neighs = o.neighbors() if direct else o.inverse_neighbors()
+                o_neighs = o.neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
 
@@ -296,4 +286,3 @@ class DepsGraph(object):
         result["nodes"] = [n.serialize() for n in self.nodes]
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         return result
-

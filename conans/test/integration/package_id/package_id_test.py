@@ -51,7 +51,9 @@ def test_remove_option_setting():
 def test_value_parse():
     # https://github.com/conan-io/conan/issues/2816
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
 
         class TestConan(ConanFile):
             name = "test"
@@ -63,7 +65,8 @@ def test_value_parse():
                 self.info.settings.arch = "kk=kk"
 
             def package(self):
-                self.copy("header.h", dst="include", keep_path=True)
+                copy(self, "header.h", self.source_folder,
+                     os.path.join(self.package_folder, "include"), keep_path=True)
         """)
     server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     servers = {"default": server}

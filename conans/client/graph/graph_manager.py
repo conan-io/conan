@@ -76,8 +76,6 @@ class GraphManager(object):
     def _load_root_node(self, reference, create_reference, profile_build, profile_host,
                         graph_lock, root_ref,
                         is_build_require, require_overrides):
-        profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
-
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, RecipeReference):
             # options without scope like ``-o shared=True`` refer to this reference
@@ -126,8 +124,7 @@ class GraphManager(object):
                 profile_host.options.scope(ref.name)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
-            conanfile = self._loader.load_conanfile_txt(path, ref=ref,
-                                                        require_overrides=require_overrides)
+            conanfile = self._loader.load_conanfile_txt(path, require_overrides=require_overrides)
             txt_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)

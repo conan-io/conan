@@ -57,7 +57,6 @@ class PkgA(ConanFile):
         self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
-        client.run("install . -if=build")
         client.run("build . -bf=build")
         client.run("export-pkg . --name=pkga --version=0.1 --user=user --channel=testing "
                    "-pr=default")
@@ -71,18 +70,6 @@ class PkgA(ConanFile):
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
         self.assertIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
                       client.out)
-
-    def test_develop(self):
-        # https://github.com/conan-io/conan/issues/2513
-        conanfile = """from conan import ConanFile
-class helloPythonConan(ConanFile):
-    def package(self):
-        self.output.info("DEVELOP IS: %s!" % self.develop)
-"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable ")
-        self.assertIn("hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
@@ -148,15 +135,19 @@ class TestConan(ConanFile):
     def test_build_folders(self):
         client = TestClient()
         conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import save, copy
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
     settings = "os"
 
     def package(self):
-        self.copy("*.h", src="include", dst="inc")
-        self.copy("*.lib", src="lib", dst="lib")
+        copy(self, "*.h", os.path.join(self.source_folder, "include"),
+             os.path.join(self.package_folder, "inc"))
+        copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
+             os.path.join(self.package_folder, "lib"))
 """
         client.save({CONANFILE: conanfile,
                      "include/header.h": "//Windows header",
@@ -179,12 +170,17 @@ class TestConan(ConanFile):
 
     def test_default_source_folder(self):
         client = TestClient()
-        conanfile = """from conan import ConanFile
+        conanfile = """
+import os
+from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
 
     def package(self):
-        self.copy("*.h", src="src", dst="include")
-        self.copy("*.lib", dst="lib", keep_path=False)
+        copy(self, "*.h", os.path.join(self.source_folder, "src"),
+             os.path.join(self.package_folder, "include"))
+        copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"),
+             keep_path=False)
 """
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents",
@@ -205,7 +201,10 @@ class TestConan(ConanFile):
 
     def test_build_source_folders(self):
         client = TestClient()
-        conanfile = """from conan import ConanFile
+        conanfile = """
+import os
+from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     settings = "os"
     name = "hello"
@@ -216,8 +215,10 @@ class TestConan(ConanFile):
         self.folders.source = "src"
 
     def package(self):
-        self.copy("*.h", src="include", dst="inc")
-        self.copy("*.lib", src="lib", dst="lib")
+        copy(self, "*.h", os.path.join(self.source_folder, "include"),
+             os.path.join(self.package_folder, "inc"))
+        copy(self, "*.lib", os.path.join(self.build_folder, "lib"),
+             os.path.join(self.package_folder, "lib"))
 """
         client.save({CONANFILE: conanfile,
                      "src/include/header.h": "//Windows header",
@@ -242,13 +243,14 @@ class TestConan(ConanFile):
         client = TestClient()
         conanfile = """
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
     settings = "os"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
@@ -265,11 +267,12 @@ class TestConan(ConanFile):
 
         conanfile = """
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     settings = "os"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
@@ -282,15 +285,17 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=hello --version=0.1 --user=lasote --channel=stable")
         conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
-                                  .with_import("from conans import tools")\
+                                  .with_import("from conans import tools") \
+                                  .with_import("from conan.tools.files import copy, collect_libs") \
                                   .with_require("hello/0.1@lasote/stable")
 
         conanfile = str(conanfile) + """\n    def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        self.cpp_info.libs = collect_libs(self)
     def layout(self):
         self.folders.build = "Release_x86"
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, self.package_folder)
         """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.save({"Release_x86/lib/libmycoollib.a": ""})
@@ -418,13 +423,16 @@ class MyConan(ConanFile):
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
-        conanfile = """from conan import ConanFile
+        conanfile = """import os
+from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
 
     def package(self):
-        self.copy("*.h", src="src", dst="include")
+        copy(self, "*.h", os.path.join(self.source_folder, "src"),
+             os.path.join(self.package_folder, "include"))
 """
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
@@ -440,12 +448,15 @@ class TestConan(ConanFile):
 def test_build_policy_never():
     client = TestClient()
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             build_policy = "never"
 
             def package(self):
-                self.copy("*.h", src="src", dst="include")
+                copy(self, "*.h", os.path.join(self.source_folder, "src"),
+                     os.path.join(self.package_folder, "include"))
         """)
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})

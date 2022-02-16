@@ -3,12 +3,11 @@ import os
 from conan.tools.build import build_jobs
 from conan.tools.meson import MesonToolchain
 
-
 class Meson(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def configure(self):
+    def configure(self, reconfigure=False):
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
         cmd = "meson setup"
@@ -22,6 +21,8 @@ class Meson(object):
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
+        if reconfigure:
+            cmd += ' --reconfigure'
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -37,6 +38,7 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
+        self.configure(reconfigure=True)  # To re-do the destination package-folder
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson install -C "{}"'.format(meson_build_folder)
         self._conanfile.run(cmd)

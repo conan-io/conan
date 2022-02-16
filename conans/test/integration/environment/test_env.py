@@ -14,30 +14,30 @@ def client():
     openssl = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             package_type = "shared-library"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
-                    save("bin/myopenssl.bat", echo)
-                    save("bin/myopenssl.sh", echo)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
             """)
 
     cmake = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             requires = "openssl/1.0"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
-                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
-                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    save(self, "mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save(self, "mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
@@ -49,15 +49,15 @@ def client():
     gtest = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     prefix = "@echo off\n" if self.settings.os == "Windows" else ""
                     echo = "{}echo MYGTEST={}!!".format(prefix, self.settings.os)
-                    save("bin/mygtest.bat", echo)
-                    save("bin/mygtest.sh", echo)
+                    save(self, "bin/mygtest.bat", echo)
+                    save(self, "bin/mygtest.sh", echo)
                     os.chmod("bin/mygtest.sh", 0o777)
 
             def package_info(self):
@@ -431,48 +431,48 @@ def test_environment_scripts_generated_envvars(require_run):
 
     client.run("install consumer_pkg --build")
     if platform.system() == "Windows":
-        conanbuildenv = client.load("conanbuildenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
         if require_run:
-            conanrunenv = client.load("conanrunenv.bat")
+            conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
             assert "LD_LIBRARY_PATH" not in conanbuildenv
             assert "LD_LIBRARY_PATH" not in conanrunenv
         else:
-            assert not os.path.exists("conanrunenv.bat")
+            assert not os.path.exists("consumer_pkg/conanrunenv.bat")
     else:
         if require_run:
-            conanbuildenv = client.load("conanbuildenv.sh")
-            conanrunenv = client.load("conanrunenv.sh")
+            conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+            conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
             assert "LD_LIBRARY_PATH" in conanbuildenv
             assert "LD_LIBRARY_PATH" in conanrunenv
         else:
-            assert not os.path.exists("conanrunenv.sh")
+            assert not os.path.exists("consumer_pkg/conanrunenv.sh")
 
     if require_run:
         # Build context LINUX - Host context LINUX
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
-        conanbuildenv = client.load("conanbuildenv.sh")
-        conanrunenv = client.load("conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 
         # Build context WINDOWS - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
-        conanbuildenv = client.load("conanbuildenv.bat")
-        conanrunenv = client.load("conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context LINUX - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
-        conanbuildenv = client.load("conanbuildenv.sh")
-        conanrunenv = client.load("conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context WINDOWS - Host context LINUX
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
-        conanbuildenv = client.load("conanbuildenv.bat")
-        conanrunenv = client.load("conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 

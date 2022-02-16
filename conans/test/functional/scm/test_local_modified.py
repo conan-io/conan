@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class SCMFolderObsoleteTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conan import ConanFile

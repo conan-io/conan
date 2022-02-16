@@ -1,10 +1,10 @@
-from conan.tools import args_to_string
+from conan.tools.build import args_to_string
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_name
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
 from conan.tools.env import Environment
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conans.errors import ConanException
 from conan.tools.microsoft import VCVars, is_msvc
@@ -83,7 +83,7 @@ class AutotoolsToolchain:
         if not libcxx:
             return
 
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
+        compiler = settings.get_safe("compiler")
         if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'

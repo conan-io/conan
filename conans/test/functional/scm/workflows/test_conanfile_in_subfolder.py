@@ -18,7 +18,7 @@ class ConanfileInSubfolder(TestWorkflow):
     path_from_conanfile_to_root = ".."
 
 
-@pytest.mark.tool_svn
+@pytest.mark.tool("svn")
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\
@@ -51,11 +51,6 @@ class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
         t.run_command("svn co {}/lib1 .".format(self.url))
         self._run_local_test(t, t.current_folder, self.path_to_conanfile)
 
-    def test_local_monorepo(self):
-        t = TestClient(path_with_spaces=False)
-        t.run_command("svn co {} .".format(self.url))
-        self._run_local_test(t, t.current_folder, os.path.join("lib1", self.path_to_conanfile))
-
     def test_local_monorepo_chdir(self):
         t = TestClient(path_with_spaces=False)
         t.run_command("svn co {} .".format(self.url))
@@ -78,7 +73,7 @@ class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
-@pytest.mark.tool_git
+@pytest.mark.tool("git")
 class GitConanfileInSubfolderTest(ConanfileInSubfolder, unittest.TestCase):
 
     conanfile = ConanfileInSubfolder.conanfile_base.format(extra_header="",

@@ -47,6 +47,8 @@ class ConanFile:
     # Run in windows bash
     win_bash = None
 
+    _conan_is_consumer = False
+
     def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
@@ -162,18 +164,8 @@ class ConanFile:
         return self.folders.base_package
 
     @property
-    def install_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.base_install
-
-    @property
     def generators_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.generators_folder if self.folders.generators else self.install_folder
-
-    @property
-    def imports_folder(self):
-        return self.folders.imports_folder
+        return self.folders.generators_folder
 
     def source(self):
         pass
@@ -206,7 +198,7 @@ class ConanFile:
 
     def package(self):
         """ package the needed files from source and build folders.
-        E.g. self.copy("*.h", src="src/includes", dst="includes")
+        E.g. copy(self, "*.h", os.path.join(self.source_folder, "src/includes"), os.path.join(self.package_folder, "includes"))
         """
         self.output.warning("This conanfile has no package step")
 
@@ -214,7 +206,8 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False, shell=True):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False,
+            shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
@@ -246,3 +239,7 @@ class ConanFile:
 
     def __repr__(self):
         return self.display_name
+
+    def set_deploy_folder(self, deploy_folder):
+        self.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.folders.set_base_package(deploy_folder)
