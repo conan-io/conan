@@ -15,6 +15,17 @@ from conans.util.files import save_files, mkdir
 from conans.util.runners import check_output_runner
 
 
+def git_create_bare_repo(folder=None, reponame="repo.git"):
+    folder = folder or temp_folder()
+    cwd = os.getcwd()
+    try:
+        os.chdir(folder)
+        check_output_runner('git init --bare {}'.format(reponame))
+        return os.path.join(folder, reponame).replace("\\", "/")
+    finally:
+        os.chdir(cwd)
+
+
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
                           tags=None, origin_url=None):
     tmp = folder or temp_folder()
@@ -46,6 +57,17 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
         git.run('remote add origin {}'.format(origin_url))
 
     return tmp.replace("\\", "/"), git.get_revision()
+
+
+def git_change_and_commit(files, folder, msg="fix"):
+    save_files(folder, files)
+    cwd = os.getcwd()
+    try:
+        os.chdir(folder)
+        check_output_runner('git add . && git commit -m "{}"'.format(msg))
+        return check_output_runner("git rev-parse HEAD").strip()
+    finally:
+        os.chdir(cwd)
 
 
 def create_local_svn_checkout(files, repo_url, rel_project_path=None,
