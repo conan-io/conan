@@ -115,4 +115,7 @@ def test_generator_files():
         assert '#include "conan_hello.xcconfig"' in conandeps
         assert '#include "conan_goodbye.xcconfig"' in conandeps
 
+        conan_config = client.load("conan_config.xcconfig")
+        assert '#include "conandeps.xcconfig"' in conan_config
+
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "macosx", "12.1")

@@ -3,7 +3,9 @@ import textwrap
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.apple.apple import to_apple_arch
-from conans.util.files import save, load
+from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
+    _add_include_to_file_or_create
+from conans.util.files import save
 
 
 class XcodeToolchain(object):
@@ -20,12 +22,6 @@ class XcodeToolchain(object):
     _agreggated_xconfig = textwrap.dedent("""\
         // Conan XcodeToolchain generated file
         // Includes all installed configurations
-
-        """)
-
-    _general_xconfig = textwrap.dedent("""\
-        // Includes both the toolchain and the dependencies
-        // files if they exist
 
         """)
 
@@ -57,7 +53,7 @@ class XcodeToolchain(object):
                                                          self.cppstd) if self.cppstd else ""
 
     def generate(self):
-        save(self._general_xconfig_filename, self._general_xconfig_content)
+        save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
         save(self._vars_xconfig_filename, self._vars_xconfig_content)
 
@@ -70,27 +66,16 @@ class XcodeToolchain(object):
 
     @property
     def _agreggated_xconfig_content(self):
-        return self._add_include_to_file_or_create(self._agreggated_xconfig_filename,
-                                                   self._agreggated_xconfig,
-                                                   self._vars_xconfig_filename)
+        return _add_include_to_file_or_create(self._agreggated_xconfig_filename,
+                                              self._agreggated_xconfig,
+                                              self._vars_xconfig_filename)
 
     @property
-    def _general_xconfig_content(self):
-        return self._add_include_to_file_or_create(self._general_xconfig_filename,
-                                                   self._general_xconfig,
-                                                   self._agreggated_xconfig_filename)
+    def _global_xconfig_content(self):
+        return _add_include_to_file_or_create(GLOBAL_XCCONFIG_FILENAME,
+                                              GLOBAL_XCCONFIG_TEMPLATE,
+                                              self._agreggated_xconfig_filename)
 
-    @staticmethod
-    def _add_include_to_file_or_create(filename, template, include):
-        if os.path.isfile(filename):
-            content = load(filename)
-        else:
-            content = template
-
-        if include not in content:
-            content = content + '#include "{}"'.format(content) + "\n"
-
-        return content
 
     @property
     def _sdk_condition(self):
@@ -117,7 +102,3 @@ class XcodeToolchain(object):
     @property
     def _agreggated_xconfig_filename(self):
         return self.filename + self.extension
-
-    @property
-    def _general_xconfig_filename(self):
-        return "conan_config" + self.extension
