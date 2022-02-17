@@ -10,8 +10,10 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
-conanfile = """from conan import ConanFile
+conanfile = """import os
+from conan import ConanFile
 from conans.util.files import save
+from conan.tools.files import copy
 class MyTest(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -27,9 +29,11 @@ class MyTest(ConanFile):
     def package(self):
         self.output.info("Packaging %s!" % self.settings.build_type)
         if self.settings.build_type == "Debug":
-            self.copy("*", src="debug", keep_path=False)
+            copy(self, "*", os.path.join(self.build_folder, "debug"), self.package_folder,
+                 keep_path=False)
         else:
-            self.copy("*", src="release", keep_path=False)
+            copy(self, "*", os.path.join(self.build_folder, "release"), self.package_folder,
+                 keep_path=False)
 """
 
 consumer = """[requires]
@@ -47,8 +51,6 @@ class MyTest(ConanFile):
     def build_id(self):
         self.info_build.settings.build_type = "Any"
         self.info_build.requires.clear()
-    def imports(self):
-        self.copy("*")
 """
 
 package_id_windows_release = "e3ae2a66a27043e92d6c3a54fca88b876036e4cf"

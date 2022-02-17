@@ -261,7 +261,15 @@ def list_packages(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         result = CommandResult()
         try:
-            result.elements = conan_api.list.packages_configurations(ref)
+            # This resolves "latest" or no revision
+            refs = conan_api.search.recipe_revisions(args.reference, args.remote)
+            if len(refs) == 0:
+                raise ConanException("There are no recipes matching the expression '{}'"
+                                     "".format(args.reference))
+            if len(refs) > 1:
+                raise ConanException("The expression '{}' resolved more "
+                                     "than one recipe".format(args.reference))
+            result.elements = conan_api.list.packages_configurations(refs[0])
         except Exception as e:
             result.error = str(e)
         results.append(result)

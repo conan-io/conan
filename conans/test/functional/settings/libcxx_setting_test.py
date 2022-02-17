@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 class LibcxxSettingTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_declared_stdlib_and_passed(self):
         file_content = textwrap.dedent('''
             from conan import ConanFile, CMake

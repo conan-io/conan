@@ -7,7 +7,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() not in ("Darwin", "Windows", "Linux"),
                     reason="Not tested for not mainstream boring operating systems")

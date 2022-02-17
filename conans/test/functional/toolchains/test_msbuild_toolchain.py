@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 @parameterized.expand([("msvc", "190", "dynamic"),
                        ("msvc", "191", "static")]
                       )
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_toolchain_win(compiler, version, runtime):
     client = TestClient(path_with_spaces=False)

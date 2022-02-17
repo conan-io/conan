@@ -7,7 +7,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
-@pytest.mark.tool_pkg_config
+@pytest.mark.tool("pkg_config")
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conan import ConanFile

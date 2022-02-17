@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import textwrap
 import unittest
 
@@ -15,7 +16,13 @@ from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
-from conans.util.files import load, mkdir, save, save_files, make_file_read_only
+from conans.util.files import load, mkdir, save, save_files
+
+
+def make_file_read_only(file_path):
+    mode = os.stat(file_path).st_mode
+    os.chmod(file_path, mode & ~ stat.S_IWRITE)
+
 
 win_profile = """[settings]
     os: Windows
@@ -25,13 +32,20 @@ linux_profile = """[settings]
     os: Linux
 """
 
-remotes = """myrepo1 https://myrepourl.net False
-my-repo-2 https://myrepo2.com True
-"""
-
-registry = """myrepo1 https://myrepourl.net False
-
-pkg/1.0@user/channel myrepo1
+remotes = """{
+ "remotes": [
+  {
+   "name": "myrepo1",
+   "url": "https://myrepourl.net",
+   "verify_ssl": false
+  },
+  {
+   "name": "my-repo-2",
+   "url": "https://myrepo2.com",
+   "verify_ssl": true
+  }
+ ]
+}
 """
 
 settings_yml = """os:
@@ -72,7 +86,7 @@ class ConfigInstallTest(unittest.TestCase):
     def _create_profile_folder(folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
-                            "remotes.txt": remotes,
+                            "remotes.json": remotes,
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile,
                             "hooks/dummy": "#hook dummy",
@@ -115,7 +129,7 @@ class ConfigInstallTest(unittest.TestCase):
 
     def test_config_fails_no_storage(self):
         folder = temp_folder(path_with_spaces=False)
-        save_files(folder, {"remotes.txt": remotes})
+        save_files(folder, {"remotes.json": remotes})
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=1.0")
@@ -204,12 +218,12 @@ class ConfigInstallTest(unittest.TestCase):
         profile_folder = self._create_profile_folder()
         self.assertTrue(os.path.isdir(profile_folder))
         src_setting_file = os.path.join(profile_folder, "settings.yml")
-        src_remote_file = os.path.join(profile_folder, "remotes.txt")
+        src_remote_file = os.path.join(profile_folder, "remotes.json")
 
-        # Install profile_folder without settings.yml + remotes.txt in order to install them manually
+        # Install profile_folder without settings.yml + remotes.json in order to install them manually
         tmp_dir = tempfile.mkdtemp()
         dest_setting_file = os.path.join(tmp_dir, "settings.yml")
-        dest_remote_file = os.path.join(tmp_dir, "remotes.txt")
+        dest_remote_file = os.path.join(tmp_dir, "remotes.json")
         shutil.move(src_setting_file, dest_setting_file)
         shutil.move(src_remote_file, dest_remote_file)
         self.client.run('config install "%s"' % profile_folder)
@@ -240,14 +254,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(content, "hello")
         content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
-
-    def test_install_remotes_json_error(self):
-        folder = temp_folder()
-        save_files(folder, {"remotes.json": ""})
-        self.client.run('config install "%s"' % folder, assert_error=True)
-        self.assertIn("ERROR: Failed conan config install: "
-                      "remotes.json install is not supported yet. Use 'remotes.txt'",
-                      self.client.out)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)
@@ -322,7 +328,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_repo(self):
         """ should install from a git repo
         """
@@ -339,7 +345,7 @@ class ConfigInstallTest(unittest.TestCase):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_repo_relative(self):
         relative_folder = "./config"
         absolute_folder = os.path.join(self.client.current_folder, "config")
@@ -355,7 +361,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_install_custom_args(self):
         """ should install from a git repo
         """
@@ -462,7 +468,7 @@ class ConfigInstallTest(unittest.TestCase):
         with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
         with self.client.chdir(folder):
@@ -506,7 +512,6 @@ class ConfigInstallTest(unittest.TestCase):
 
         http_server.run_server()
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
-        self.assertIn("Unzipping", self.client.out)
         http_server.stop()
 
     def test_overwrite_read_only_file(self):
@@ -523,7 +528,7 @@ class ConfigInstallTest(unittest.TestCase):
     def test_dont_copy_file_permissions(self):
         source_folder = self._create_profile_folder()
         # make source settings.yml read-only
-        make_file_read_only(os.path.join(source_folder, 'remotes.txt'))
+        make_file_read_only(os.path.join(source_folder, 'remotes.json'))
 
         self.client.run('config install "%s"' % source_folder)
         self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
@@ -547,7 +552,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('config install "%s"' % self.folder)
         self.assertIn("Copying file global.conf", self.client.out)
 
-    @pytest.mark.tool_git
+    @pytest.mark.tool("git")
     def test_config_install_remove_git_repo(self):
         """ config_install_interval must break when remote git has been removed
         """

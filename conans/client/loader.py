@@ -8,13 +8,12 @@ import yaml
 
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
-from conans.util.files import load
+from conans.util.files import load, chdir
 
 
 class ConanFileLoader:
@@ -50,18 +49,23 @@ class ConanFileLoader:
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
 
-            # If the scm is inherited, create my own instance
-            if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
-                assert isinstance(conanfile.scm, dict), "'scm' attribute must be a dictionary"
-                conanfile.scm = conanfile.scm.copy()
-
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
-            if conan_data and '.conan' in conan_data:
-                scm_data = conan_data['.conan'].get('scm')
-                if scm_data:
-                    conanfile.scm.update(scm_data)
+
+            if hasattr(conanfile, "scm"):
+                if "scm" not in conanfile.__class__.__dict__:
+                    # If the scm is inherited, create my own instance
+                    conanfile.scm = conanfile.scm.copy()
+
+                if conanfile.scm.get("revision", "auto") != "auto":
+                    raise ConanException("'scm' can only be used for 'auto'. For fixed revisions use"
+                                         " the 'source()' method (and maybe conandata.yml file)")
+
+                if conan_data and '.conan' in conan_data:
+                    scm_data = conan_data['.conan'].get('scm')
+                    if scm_data:
+                        conanfile.scm.update(scm_data)
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, module)
             result = conanfile(display)
@@ -73,20 +77,6 @@ class ConanFileLoader:
             return result, module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
-
-    def load_generators(self, conanfile_path):
-        """ Load generator classes from a module. Any non-generator classes
-        will be ignored. python_requires is not processed.
-        """
-        """ Parses a python in-memory module and adds any generators found
-            to the provided generator list
-            @param conanfile_module: the module to be processed
-            """
-        conanfile_module, module_id = load_python_file(conanfile_path)
-        for name, attr in conanfile_module.__dict__.items():
-            if (name.startswith("_") or not inspect.isclass(attr) or
-                    attr.__dict__.get("__module__") != module_id):
-                continue
 
     @staticmethod
     def _load_data(conanfile_path):
@@ -171,13 +161,12 @@ class ConanFileLoader:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
         try:
-            conanfile.develop = True
-
             if require_overrides is not None:
                 for req_override in require_overrides:
                     req_override = RecipeReference.loads(req_override)
                     conanfile.requires.override(req_override)
 
+            conanfile._conan_is_consumer = True
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -192,19 +181,18 @@ class ConanFileLoader:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
         conanfile.name = ref.name
-        # FIXME Conan 2.0, version should be a string not a Version object
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version)
         conanfile.user = ref.user
         conanfile.channel = ref.channel
         return conanfile
 
-    def load_conanfile_txt(self, conan_txt_path, ref=None, require_overrides=None):
+    def load_conanfile_txt(self, conan_txt_path, require_overrides=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path, basename = os.path.split(conan_txt_path)
-        display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
+        display_name = basename
         conanfile = self._parse_conan_txt(contents, path, display_name)
 
         if require_overrides is not None:
@@ -212,6 +200,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
+        conanfile._conan_is_consumer = True
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name):
@@ -235,8 +224,6 @@ class ConanFileLoader:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
 
-        # imports method
-        conanfile.imports = parser.imports_method(conanfile)
         return conanfile
 
     def load_virtual(self, references, is_build_require=False, require_overrides=None):
@@ -256,6 +243,7 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
+        conanfile._conan_is_consumer = True
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 

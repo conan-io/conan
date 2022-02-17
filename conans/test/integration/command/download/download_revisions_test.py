@@ -14,8 +14,8 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         client.run("upload * --confirm -r default")
         client.run("remove * -f")
-        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel#fakerevision'", client.out)
+        client.run("download pkg/1.0@user/channel#fakerevision -r default", assert_error=True)
+        self.assertIn("ERROR: There are no recipes matching 'pkg/1.0@user/channel#fakerevision'", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev(self):

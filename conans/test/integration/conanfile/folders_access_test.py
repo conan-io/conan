@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -56,16 +54,13 @@ class AConan(ConanFile):
 
         if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
-            assert(self.install_folder == self.build_folder)
         else:
             assert(self.source_folder == self.build_folder)
-            self.install_folder
 
         assert(self.package_folder is not None)
         self.copy_build_folder = self.build_folder
 
     def package(self):
-        assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
 
         if self.no_copy_source:
@@ -80,13 +75,6 @@ class AConan(ConanFile):
 
         assert(self.source_folder is None)
         assert(self.build_folder is None)
-        assert(self.install_folder is None)
-
-    def imports(self):
-        assert(self.imports_folder == os.getcwd())
-
-    def deploy(self):
-        assert(self.install_folder == os.getcwd())
 """
 
 
@@ -193,7 +181,6 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_editable(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
@@ -203,8 +190,8 @@ class RecipeFolderTest(unittest.TestCase):
         client.run("editable add pkg pkg/0.1@user/stable")
 
         client.run("install consumer")
+        client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})
         self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable from user folder - Editable", client.out)
         self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)

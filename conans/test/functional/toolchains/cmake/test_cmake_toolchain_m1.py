@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system", ["Macos", "iOS"])
+@pytest.mark.tool("cmake")
 def test_m1(op_system):
     os_version = "os.version=12.0" if op_system == "iOS" else ""
     os_sdk = "" if op_system == "Macos" else "os.sdk=iphoneos"

@@ -15,6 +15,9 @@ class SourceTest(unittest.TestCase):
 from conan.tools.files import save, load
 import os
 class TestexportConan(ConanFile):
+    name = "test"
+    version = "0.1"
+
     exports = "mypython.py"
     exports_sources = "patch.patch"
 
@@ -24,7 +27,7 @@ class TestexportConan(ConanFile):
         self.output.info("PATCH: %s" % load(self, patch))
         header = os.path.join(self.source_folder, "hello/hello.h")
         self.output.info("HEADER: %s" % load(self, header))
-        python = os.path.join(self.source_folder, "mypython.py")
+        python = os.path.join(self.recipe_folder, "mypython.py")
         self.output.info("PYTHON: %s" % load(self, python))
 """
         client = TestClient()
@@ -32,20 +35,22 @@ class TestexportConan(ConanFile):
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
         client.run("source .")
-        self.assertIn("conanfile.py: PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py: PYTHON: mypython", client.out)
+        self.assertIn("conanfile.py (test/0.1): PATCH: mypatch", client.out)
+        self.assertIn("conanfile.py (test/0.1): HEADER: my hello header!", client.out)
+        self.assertIn("conanfile.py (test/0.1): PYTHON: mypython", client.out)
         client.run("source . -sf=mysrc")
-        self.assertIn("conanfile.py: Executing exports to", client.out)
-        self.assertIn("conanfile.py: PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py: PYTHON: mypython", client.out)
+        self.assertIn("conanfile.py (test/0.1): Executing exports to", client.out)
+        self.assertIn("conanfile.py (test/0.1): PATCH: mypatch", client.out)
+        self.assertIn("conanfile.py (test/0.1): HEADER: my hello header!", client.out)
+        self.assertIn("conanfile.py (test/0.1): PYTHON: mypython", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "mysrc", "patch.patch")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "mypython.py")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "mysrc", "hello/hello.h")))
+        client.run("create . ")
+        self.assertIn("test/0.1: PATCH: mypatch", client.out)
+        self.assertIn("test/0.1: HEADER: my hello header!", client.out)
+        self.assertIn("test/0.1: PYTHON: mypython", client.out)
 
     def test_apply_patch(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -53,14 +58,13 @@ class TestexportConan(ConanFile):
         # and local flow
         client = TestClient()
         conanfile = """from conan import ConanFile
-from conans.tools import load
+from conan.tools.files import load
 import os
 class Pkg(ConanFile):
     exports_sources = "*"
     def source(self):
-        if self.develop:
-            patch = os.path.join(self.source_folder, "mypatch")
-            self.output.info("PATCH: %s" % load(patch))
+        patch = os.path.join(self.source_folder, "mypatch")
+        self.output.info("PATCH: %s" % load(self, patch))
 """
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})
@@ -115,7 +119,7 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
-        client.run("install . --install-folder subdir")
+        client.run("install .")
         client.run("source . --source-folder subdir")
         self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
         self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % subdir, client.out)

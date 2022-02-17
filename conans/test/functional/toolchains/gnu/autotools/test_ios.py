@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.apple import XCRun
@@ -11,6 +11,8 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("autotools")
 def test_ios():
     xcrun = XCRun(None, sdk='iphoneos')
     sdk_path = xcrun.sdk_path

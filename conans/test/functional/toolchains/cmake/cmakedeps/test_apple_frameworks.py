@@ -44,7 +44,7 @@ app_conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -192,6 +192,7 @@ timer_cpp = textwrap.dedent("""
     """)
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
          [('',),
@@ -260,7 +261,7 @@ def test_apple_own_framework_cross_build(settings):
 
 @pytest.mark.xfail(reason="run_environment=True no longer works")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
@@ -335,6 +336,7 @@ def test_apple_own_framework_cmake_deps():
     assert "Hello World Debug!" in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
@@ -380,7 +382,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
@@ -502,6 +504,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
     t.run("create . --name=hello --version=1.0")
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_m1():
     xcrun = XCRun(None, sdk='iphoneos')

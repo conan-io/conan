@@ -156,8 +156,8 @@ def test_apply_conandata_patches(mock_patch_ng):
            ' clang compilers.' in str(client.out)
 
     # Test local methods
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)

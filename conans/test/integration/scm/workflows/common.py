@@ -56,8 +56,8 @@ class TestWorkflow(object):
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
             t.current_folder = working_dir
-            t.run("install {} -if tmp".format(path_to_conanfile))
-            t.run("source {} -sf src".format(path_to_conanfile))
+            t.run("install {}".format(path_to_conanfile))
+            t.run("source {}".format(path_to_conanfile))
             self.assertIn(">>>> I'm None/None@user/channel".format(self.lib1_ref), t.out)
             self.assertIn(">>>> content: {}".format(self.lib1_ref), t.out)
         finally:

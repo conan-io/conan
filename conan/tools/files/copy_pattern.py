@@ -6,30 +6,22 @@ from collections import defaultdict
 from conans.util.files import mkdir
 
 
-def report_copied_files(copied, scoped_output, message_suffix="Copied"):
-    ext_files = defaultdict(list)
-    for f in copied:
-        _, ext = os.path.splitext(f)
-        ext_files[ext].append(os.path.basename(f))
-
-    if not ext_files:
-        return False
-
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        file_or_files = "file" if len(files) == 1 else "files"
-        if not ext:
-            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
-        else:
-            scoped_output.info("%s %d '%s' %s%s"
-                               % (message_suffix, len(files), ext, file_or_files, files_str))
-    return True
+def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
+         ignore_case=True, copy_symlink_folders=True):
+    #  FIXME: Simplify this removing the FileCopier class and moving to simple methods
+    file_copier = _FileCopier([src], dst)
+    copied = file_copier(pattern, keep_path=keep_path, excludes=excludes,
+                         ignore_case=ignore_case, copy_symlink_folders=copy_symlink_folders)
+    # FIXME: Not always passed conanfile
+    if conanfile:
+        report_copied_files(copied, conanfile.output)
+    return copied
 
 
-class FileCopier(object):
+# FIXME: Transform to functions, without several origins
+class _FileCopier(object):
     """ main responsible of copying files from place to place:
     package: build folder -> package folder
-    imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
     def __init__(self, source_folders, root_destination_folder):
@@ -211,3 +203,24 @@ class FileCopier(object):
                 shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)
         return copied_files
+
+
+# FIXME: This doesn't belong here
+def report_copied_files(copied, scoped_output, message_suffix="Copied"):
+    ext_files = defaultdict(list)
+    for f in copied:
+        _, ext = os.path.splitext(f)
+        ext_files[ext].append(os.path.basename(f))
+
+    if not ext_files:
+        return False
+
+    for ext, files in ext_files.items():
+        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
+        file_or_files = "file" if len(files) == 1 else "files"
+        if not ext:
+            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
+        else:
+            scoped_output.info("%s %d '%s' %s%s"
+                               % (message_suffix, len(files), ext, file_or_files, files_str))
+    return True

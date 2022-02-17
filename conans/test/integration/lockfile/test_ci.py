@@ -6,19 +6,29 @@ import pytest
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
+
 conanfile = textwrap.dedent("""
     from conan import ConanFile
-    from conan.tools.files import load
+    from conan.tools.files import load, copy
     import os
     class Pkg(ConanFile):
         settings = "os"
         {requires}
         exports_sources = "myfile.txt"
-        keep_imports = True
-        def imports(self):
-            self.copy("myfile.txt", folder=True)
+
+        def generate(self):
+            # Simulate an "imports"
+            for dep in self.dependencies.values():
+                dest_folder = os.path.join(self.build_folder, dep.ref.name)
+                copy(self, "myfile.txt", dep.package_folder, dest_folder)
+
         def package(self):
-            self.copy("*myfile.txt")
+            # Copy the ones from the dependencies
+            copied = copy(self, "*myfile.txt", self.build_folder, self.package_folder, keep_path=True)
+            # Copy the exported one
+            copied = copy(self, "myfile.txt", self.source_folder, self.package_folder)
+            assert len(copied) == 1
+
         def package_info(self):
             self.output.info("SELF OS: %s!!" % self.settings.os)
             self.output.info("SELF FILE: %s"
@@ -312,12 +322,12 @@ def test_single_config_decentralized(client_setup):
     level0 = to_build[0]
     assert len(level0) == 1
     pkgawin = level0[0]
-    assert pkgawin["ref"] == "pkgawin/0.1#4029fc98e50e1f53f20df5ec566a2977"
+    assert pkgawin["ref"] == "pkgawin/0.1#2f297d19d9ee4827caf97071de449a54"
     assert pkgawin["packages"][0]["binary"] == "Cache"
     level1 = to_build[1]
     assert len(level1) == 1
     pkgb = level1[0]
-    assert pkgb["ref"] == "pkgb/0.2#0327abfabf2586a017ce351e8f3fdb61"
+    assert pkgb["ref"] == "pkgb/0.2#476b31358d78b3f04c68c4770bd6a79c"
     assert pkgb["packages"][0]["binary"] == "Cache"
 
     for level in to_build:
@@ -383,15 +393,15 @@ def test_multi_config_decentralized(client_setup):
     level0 = to_build[0]
     assert len(level0) == 2
     pkgawin = level0[0]
-    assert pkgawin["ref"] == "pkgawin/0.1#4029fc98e50e1f53f20df5ec566a2977"
+    assert pkgawin["ref"] == "pkgawin/0.1#2f297d19d9ee4827caf97071de449a54"
     assert pkgawin["packages"][0]["binary"] == "Cache"
     pkgawin = level0[1]
-    assert pkgawin["ref"] == "pkganix/0.1#4029fc98e50e1f53f20df5ec566a2977"
+    assert pkgawin["ref"] == "pkganix/0.1#2f297d19d9ee4827caf97071de449a54"
     assert pkgawin["packages"][0]["binary"] == "Cache"
     level1 = to_build[1]
     assert len(level1) == 1
     pkgb = level1[0]
-    assert pkgb["ref"] == "pkgb/0.2#0327abfabf2586a017ce351e8f3fdb61"
+    assert pkgb["ref"] == "pkgb/0.2#476b31358d78b3f04c68c4770bd6a79c"
     assert pkgb["packages"][0]["binary"] == "Cache"
 
     for level in to_build:

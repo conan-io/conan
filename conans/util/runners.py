@@ -5,9 +5,9 @@ import tempfile
 from contextlib import contextmanager
 from io import StringIO
 
-from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.util.env import environment_update
+from conans.util.files import load
 from conans.util.log import logger
 
 

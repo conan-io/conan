@@ -1,7 +1,6 @@
 import os
 
 from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
-from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -14,10 +13,6 @@ from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
-
-PREV_UNKNOWN = "PREV unknown"
-RREV_UNKNOWN = "RREV unknown"
-PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
 
 
 class _VersionRepr:
@@ -120,9 +115,6 @@ class RequirementInfo(object):
 
     @property
     def sha(self):
-        if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
-            return None
-
         ref = RecipeReference(self.name, self.version, self.user, self.channel,
                                  self.recipe_revision)
         pref = repr(ref)
@@ -205,16 +197,6 @@ class RequirementInfo(object):
         self.package_id = self.full_package_id
         self.recipe_revision = self.full_recipe_revision
         self.package_revision = None
-
-    def package_revision_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.package_id = self.full_package_id
-        self.recipe_revision = self.full_recipe_revision
-        # It is requested to use, but not defined (binary not build yet)
-        self.package_revision = self.full_package_revision or PREV_UNKNOWN
 
 
 class RequirementsInfo(UserRequirementsDict):
@@ -303,10 +285,6 @@ class RequirementsInfo(UserRequirementsDict):
     def recipe_revision_mode(self):
         for r in self._data.values():
             r.recipe_revision_mode()
-
-    def package_revision_mode(self):
-        for r in self._data.values():
-            r.package_revision_mode()
 
 
 class PythonRequireInfo(object):
@@ -538,8 +516,6 @@ class ConanInfo(object):
         result = [self.settings.sha,
                   self.options.sha]
         requires_sha = self.requires.sha
-        if requires_sha is None:
-            return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)
@@ -610,35 +586,3 @@ class ConanInfo(object):
             return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
-
-    def parent_compatible(self, *_, **kwargs):
-        """If a built package for Intel has to be compatible for a Visual/GCC compiler
-        (consumer). Transform the visual/gcc full_settings into an intel one"""
-
-        if "compiler" not in kwargs:
-            raise ConanException("Specify 'compiler' as a keywork argument. e.g: "
-                                 "'parent_compiler(compiler=\"intel\")' ")
-
-        self.settings.compiler = kwargs["compiler"]
-        # You have to use here a specific version or create more than one version of
-        # compatible packages
-        kwargs.pop("compiler")
-        for setting_name in kwargs:
-            # Won't fail even if the setting is not valid, there is no validation at info
-            setattr(self.settings.compiler, setting_name, kwargs[setting_name])
-        self.settings.compiler.base = self.full_settings.compiler
-        for field in self.full_settings.compiler.fields:
-            value = getattr(self.full_settings.compiler, field)
-            setattr(self.settings.compiler.base, field, value)
-
-    def base_compatible(self):
-        """If a built package for Visual/GCC has to be compatible for an Intel compiler
-          (consumer). Transform the Intel profile into an visual/gcc one"""
-        if not self.full_settings.compiler.base:
-            raise ConanException("The compiler '{}' has "
-                                 "no 'base' sub-setting".format(self.full_settings.compiler))
-
-        self.settings.compiler = self.full_settings.compiler.base
-        for field in self.full_settings.compiler.base.fields:
-            value = getattr(self.full_settings.compiler.base, field)
-            setattr(self.settings.compiler, field, value)

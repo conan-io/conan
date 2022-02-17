@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_no_soname_flag():
     """ This test case is testing this graph structure:
             *   'LibNoSoname' -> 'OtherLib' -> 'Executable'

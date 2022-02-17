@@ -3,8 +3,9 @@ from collections import namedtuple
 from io import StringIO
 
 from conan import ConanFile
+from conans.cli.output import ConanOutput
 from conans.model.conf import ConfDefinition, Conf
-from conans.model.layout import Folders
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.util.log import logger
 
@@ -105,8 +106,8 @@ class ConanFileMock(ConanFile):
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")
-        self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
+        self.cpp = Infos()
         self._conan_user = None
         self._conan_channel = None
         self.env_scripts = {}
