@@ -69,21 +69,6 @@ class _ConfValue(object):
     def copy(self):
         return self.__class__(self._name, self._value)
 
-    def dumps(self):
-        raise NotImplementedError
-
-    def remove(self, value):
-        raise NotImplementedError
-
-    def append(self, value):
-        raise NotImplementedError
-
-    def prepend(self, value):
-        raise NotImplementedError
-
-    def compose_conf_value(self, other):
-        raise NotImplementedError
-
 
 class _ConfStrValue(_ConfValue):
 
@@ -98,7 +83,8 @@ class _ConfStrValue(_ConfValue):
             return "{}={}".format(self._name, self._value)
 
     def remove(self, value):
-        self._value = ""
+        if value is not None:
+            self._value = self._value.replace(value, "").strip()
 
     def append(self, value):
         raise ConanException("str values cannot append other values.")
@@ -220,33 +206,32 @@ class Conf:
         # FIXME: Keeping backward compatibility
         return self.dumps()
 
-    def get(self, conf_name, default=None, cast=None):
+    def get(self, conf_name, default=None, check_type=None):
         """
         Get all the values belonging to the passed conf name. You can convert the final conf value
         thanks to "cast" param.
 
         :param conf_name: conf name
         :param default: default value in case of conf does not have the conf_name key
-        :param cast: any callable to apply any kind of transformation to final conf value
+        :param check_type: check the conf type(value) is the same as the given by this param
         """
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if cast is not None:
-                try:
-                    v = cast(v)
-                except TypeError:
-                    raise ConanException("It was impossible to convert "
-                                         "'{}' to {} type.".format(v, cast))
+            if check_type is not None and not isinstance(v, check_type):
+                raise ConanException("[conf] {name} must be a {type}-like object. "
+                                     "The value '{value}' introduced is a {vtype} "
+                                     "object".format(name=conf_name, type=check_type.__name__,
+                                                     value=v, vtype=type(v).__name__))
             return v
         else:
             return default
 
-    def pop(self, conf_name, default=None, cast=None):
+    def pop(self, conf_name, default=None):
         """
         Remove any key-value given the conf name
         """
-        value = self.get(conf_name, default=default, cast=cast)
+        value = self.get(conf_name, default=default)
         self._values.pop(conf_name, None)
         return value
 
@@ -354,19 +339,20 @@ class ConfDefinition:
         pattern, name = self._split_pattern_name(module_name)
         del self._pattern_confs.get(pattern, Conf())[name]
 
-    def get(self, conf_name, default=None, cast=None):
+    def get(self, conf_name, default=None, check_type=None):
         """
         Get the value of the  conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).get(name, default=default, cast=cast)
+        return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
+                                                            check_type=check_type)
 
-    def pop(self, conf_name, default=None, cast=None):
+    def pop(self, conf_name, default=None):
         """
         Remove the conf name passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).pop(name, default=default, cast=cast)
+        return self._pattern_confs.get(pattern, Conf()).pop(name, default=default)
 
     @staticmethod
     def _split_pattern_name(pattern_name):

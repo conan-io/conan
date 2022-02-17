@@ -108,16 +108,9 @@ class MSBuildDeps(object):
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # ca_exclude section
-        self.exclude_code_analysis = None
-        ca_exclude = self._conanfile.conf.get("tools.microsoft.msbuilddeps:exclude_code_analysis")
-        if ca_exclude is not None:
-            # TODO: Accept single strings, not lists
-            if isinstance(ca_exclude, list):
-                self.exclude_code_analysis = ca_exclude
-            else:
-                raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
-                                     " list of package names patterns like ['pkga*']")
-
+        # TODO: Accept single strings, not lists
+        self.exclude_code_analysis = self._conanfile.conf.get("tools.microsoft.msbuilddeps:exclude_code_analysis",
+                                                              check_type=list)
         check_using_build_profile(self._conanfile)
 
     def generate(self):
