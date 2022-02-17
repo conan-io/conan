@@ -206,7 +206,7 @@ class Conf:
         DEPRECATED: it's going to disappear in Conan 2.0.
         """
         # FIXME: Keeping backward compatibility
-        self.pop(name)
+        del self._values[name]
 
     def items(self):
         # FIXME: Keeping backward compatibility
@@ -218,22 +218,29 @@ class Conf:
         # FIXME: Keeping backward compatibility
         return self.dumps()
 
-    def get(self, conf_name, default=None):
+    def get(self, conf_name, default=None, cast=None):
         """
         Get all the values belonging to the passed conf name. By default, those values
         will be returned as a str-like object.
         """
         conf_value = self._values.get(conf_name)
         if conf_value:
-            return conf_value.value
+            v = conf_value.value
+            if cast is not None:
+                try:
+                    v = cast(v)
+                except TypeError:
+                    raise ConanException("It was impossible to convert "
+                                         "'{}' to {} type.".format(v, cast))
+            return v
         else:
             return default
 
-    def pop(self, conf_name, default=None):
+    def pop(self, conf_name, default=None, cast=None):
         """
         Remove any key-value given the conf name
         """
-        value = self.get(conf_name, default)
+        value = self.get(conf_name, default=default, cast=cast)
         self._values.pop(conf_name, None)
         return value
 
@@ -339,21 +346,21 @@ class ConfDefinition:
         if a module name is requested for this, it goes to the None-Global config by default
         """
         pattern, name = self._split_pattern_name(module_name)
-        self._pattern_confs.get(pattern, Conf()).pop(name)
+        del self._pattern_confs.get(pattern, Conf())[name]
 
-    def get(self, conf_name, default=None):
+    def get(self, conf_name, default=None, cast=None):
         """
         Get the value of the  conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).get(name, default=default)
+        return self._pattern_confs.get(pattern, Conf()).get(name, default=default, cast=cast)
 
-    def pop(self, conf_name, default=None):
+    def pop(self, conf_name, default=None, cast=None):
         """
         Remove the conf name passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
-        return self._pattern_confs.get(pattern, Conf()).pop(name, default=default)
+        return self._pattern_confs.get(pattern, Conf()).pop(name, default=default, cast=cast)
 
     @staticmethod
     def _split_pattern_name(pattern_name):
