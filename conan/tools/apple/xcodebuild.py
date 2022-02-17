@@ -25,7 +25,6 @@ class XcodeBuild(object):
 
     @property
     def sdkroot(self):
-        # TODO: check if we want move this logic to tools
         # User's sdk_path has priority, then if specified try to compose sdk argument
         # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
         # chosen by the build system
@@ -34,16 +33,7 @@ class XcodeBuild(object):
             sdk = "{}{}".format(self.sdk, self.sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
 
-    # TODO: check this, apparently this is not working as it should
-    #  https://pewpewthespells.com/blog/buildsettings.html#macosx_deployment_target
-    #  it should set the -mmacosx-version-min=$(value) for clang but instead it modifies
-    #  the -target argument but apparently it works in a very similar way???
-    @property
-    def deployment_target(self):
-        return "MACOSX_DEPLOYMENT_TARGET={}".format(self.os_version) if self.os_version else ""
-
     def build(self, xcodeproj):
-        cmd = "xcodebuild -project {} -configuration {} -arch " \
-              "{} {} {} {}".format(xcodeproj, self.build_type, self.arch, self.sdkroot,
-                                   self.verbosity, self.deployment_target)
+        cmd = "xcodebuild -project {} -configuration {} -arch {} " \
+              "{} {}".format(xcodeproj, self.build_type, self.arch, self.sdkroot, self.verbosity)
         self._conanfile.run(cmd)
