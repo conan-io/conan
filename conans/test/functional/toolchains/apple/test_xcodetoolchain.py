@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 pbxproj = textwrap.dedent("""
@@ -33,12 +34,16 @@ pbxproj = textwrap.dedent("""
     /* Begin PBXFileReference section */
             07879B3C27219EE500B6FB51 /* app */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = app; sourceTree = BUILT_PRODUCTS_DIR; };
             07879B3F27219EE500B6FB51 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-            41608B0827BBEB2800527FAA /* conandeps.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conandeps.xcconfig; path = conandeps.xcconfig; sourceTree = SOURCE_ROOT; };
-            41608B0927BBEB2800527FAA /* conan_hello_vars_release_x86_64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conan_hello_vars_release_x86_64.xcconfig; path = conan_hello_vars_release_x86_64.xcconfig; sourceTree = SOURCE_ROOT; };
-            41608B0A27BBEB2900527FAA /* conan_hello_debug_x86_64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conan_hello_debug_x86_64.xcconfig; path = conan_hello_debug_x86_64.xcconfig; sourceTree = SOURCE_ROOT; };
-            41608B0B27BBEB2900527FAA /* conan_hello.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conan_hello.xcconfig; path = conan_hello.xcconfig; sourceTree = SOURCE_ROOT; };
-            41608B0C27BBEB2900527FAA /* conan_hello_vars_debug_x86_64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conan_hello_vars_debug_x86_64.xcconfig; path = conan_hello_vars_debug_x86_64.xcconfig; sourceTree = SOURCE_ROOT; };
-            41608B0D27BBEB2900527FAA /* conan_hello_release_x86_64.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = conan_hello_release_x86_64.xcconfig; path = conan_hello_release_x86_64.xcconfig; sourceTree = SOURCE_ROOT; };
+            4130DB5F27BE8D0300BDEE84 /* conan_hello_release_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_hello_release_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6027BE8D0300BDEE84 /* conan_hello_vars_debug_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_hello_vars_debug_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6127BE8D0300BDEE84 /* conantoolchain_debug_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conantoolchain_debug_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6227BE8D0300BDEE84 /* conantoolchain_release_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conantoolchain_release_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6327BE8D0300BDEE84 /* conan_hello.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_hello.xcconfig; sourceTree = "<group>"; };
+            4130DB6427BE8D0300BDEE84 /* conan_hello_vars_release_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_hello_vars_release_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6527BE8D0300BDEE84 /* conan_hello_debug_x86_64_macosx_12_1.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_hello_debug_x86_64_macosx_12_1.xcconfig; sourceTree = "<group>"; };
+            4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_config.xcconfig; sourceTree = "<group>"; };
+            4130DB6727BE8D0300BDEE84 /* conantoolchain.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conantoolchain.xcconfig; sourceTree = "<group>"; };
+            4130DB6827BE8D0300BDEE84 /* conandeps.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conandeps.xcconfig; sourceTree = "<group>"; };
     /* End PBXFileReference section */
 
     /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +60,7 @@ pbxproj = textwrap.dedent("""
             07879B3327219EE500B6FB51 = {
                 isa = PBXGroup;
                 children = (
+                    4130DB6927BE8D0D00BDEE84 /* conan */,
                     07879B3E27219EE500B6FB51 /* app */,
                     07879B3D27219EE500B6FB51 /* Products */,
                 );
@@ -71,15 +77,26 @@ pbxproj = textwrap.dedent("""
             07879B3E27219EE500B6FB51 /* app */ = {
                 isa = PBXGroup;
                 children = (
-                    41608B0A27BBEB2900527FAA /* conan_hello_debug_x86_64.xcconfig */,
-                    41608B0D27BBEB2900527FAA /* conan_hello_release_x86_64.xcconfig */,
-                    41608B0C27BBEB2900527FAA /* conan_hello_vars_debug_x86_64.xcconfig */,
-                    41608B0927BBEB2800527FAA /* conan_hello_vars_release_x86_64.xcconfig */,
-                    41608B0B27BBEB2900527FAA /* conan_hello.xcconfig */,
-                    41608B0827BBEB2800527FAA /* conandeps.xcconfig */,
                     07879B3F27219EE500B6FB51 /* main.cpp */,
                 );
                 path = app;
+                sourceTree = "<group>";
+            };
+            4130DB6927BE8D0D00BDEE84 /* conan */ = {
+                isa = PBXGroup;
+                children = (
+                    4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */,
+                    4130DB6527BE8D0300BDEE84 /* conan_hello_debug_x86_64_macosx_12_1.xcconfig */,
+                    4130DB5F27BE8D0300BDEE84 /* conan_hello_release_x86_64_macosx_12_1.xcconfig */,
+                    4130DB6027BE8D0300BDEE84 /* conan_hello_vars_debug_x86_64_macosx_12_1.xcconfig */,
+                    4130DB6427BE8D0300BDEE84 /* conan_hello_vars_release_x86_64_macosx_12_1.xcconfig */,
+                    4130DB6327BE8D0300BDEE84 /* conan_hello.xcconfig */,
+                    4130DB6827BE8D0300BDEE84 /* conandeps.xcconfig */,
+                    4130DB6127BE8D0300BDEE84 /* conantoolchain_debug_x86_64_macosx_12_1.xcconfig */,
+                    4130DB6227BE8D0300BDEE84 /* conantoolchain_release_x86_64_macosx_12_1.xcconfig */,
+                    4130DB6727BE8D0300BDEE84 /* conantoolchain.xcconfig */,
+                );
+                name = conan;
                 sourceTree = "<group>";
             };
     /* End PBXGroup section */
@@ -148,13 +165,12 @@ pbxproj = textwrap.dedent("""
     /* Begin XCBuildConfiguration section */
             07879B4127219EE500B6FB51 /* Debug */ = {
                 isa = XCBuildConfiguration;
-                baseConfigurationReference = 41608B0827BBEB2800527FAA /* conandeps.xcconfig */;
+                baseConfigurationReference = 4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */;
                 buildSettings = {
                     ALWAYS_SEARCH_USER_PATHS = NO;
+                    ARCHS = x86_64;
                     CLANG_ANALYZER_NONNULL = YES;
                     CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-                    CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
-                    CLANG_CXX_LIBRARY = "libc++";
                     CLANG_ENABLE_MODULES = YES;
                     CLANG_ENABLE_OBJC_ARC = YES;
                     CLANG_ENABLE_OBJC_WEAK = YES;
@@ -198,23 +214,21 @@ pbxproj = textwrap.dedent("""
                     GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
                     GCC_WARN_UNUSED_FUNCTION = YES;
                     GCC_WARN_UNUSED_VARIABLE = YES;
-                    MACOSX_DEPLOYMENT_TARGET = 11.3;
                     MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
                     MTL_FAST_MATH = YES;
                     ONLY_ACTIVE_ARCH = YES;
-                    SDKROOT = macosx;
+                    SDKROOT = macosx12.1;
                 };
                 name = Debug;
             };
             07879B4227219EE500B6FB51 /* Release */ = {
                 isa = XCBuildConfiguration;
-                baseConfigurationReference = 41608B0827BBEB2800527FAA /* conandeps.xcconfig */;
+                baseConfigurationReference = 4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */;
                 buildSettings = {
                     ALWAYS_SEARCH_USER_PATHS = NO;
+                    ARCHS = x86_64;
                     CLANG_ANALYZER_NONNULL = YES;
                     CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-                    CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
-                    CLANG_CXX_LIBRARY = "libc++";
                     CLANG_ENABLE_MODULES = YES;
                     CLANG_ENABLE_OBJC_ARC = YES;
                     CLANG_ENABLE_OBJC_WEAK = YES;
@@ -252,16 +266,15 @@ pbxproj = textwrap.dedent("""
                     GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
                     GCC_WARN_UNUSED_FUNCTION = YES;
                     GCC_WARN_UNUSED_VARIABLE = YES;
-                    MACOSX_DEPLOYMENT_TARGET = 11.3;
                     MTL_ENABLE_DEBUG_INFO = NO;
                     MTL_FAST_MATH = YES;
-                    SDKROOT = macosx;
+                    ONLY_ACTIVE_ARCH = YES;
+                    SDKROOT = macosx12.1;
                 };
                 name = Release;
             };
             07879B4427219EE500B6FB51 /* Debug */ = {
                 isa = XCBuildConfiguration;
-                baseConfigurationReference = 41608B0827BBEB2800527FAA /* conandeps.xcconfig */;
                 buildSettings = {
                     CODE_SIGN_IDENTITY = "-";
                     CODE_SIGN_STYLE = Automatic;
@@ -271,7 +284,6 @@ pbxproj = textwrap.dedent("""
             };
             07879B4527219EE500B6FB51 /* Release */ = {
                 isa = XCBuildConfiguration;
-                baseConfigurationReference = 41608B0827BBEB2800527FAA /* conandeps.xcconfig */;
                 buildSettings = {
                     CODE_SIGN_IDENTITY = "-";
                     CODE_SIGN_STYLE = Automatic;
@@ -306,19 +318,6 @@ pbxproj = textwrap.dedent("""
     }
     """)
 
-main = textwrap.dedent("""
-    #include <iostream>
-    #include "hello.h"
-    int main(int argc, char *argv[]) {
-        hello();
-        #ifndef DEBUG
-        std::cout << "App Release!" << std::endl;
-        #else
-        std::cout << "App Debug!" << std::endl;
-        #endif
-    }
-    """)
-
 test = textwrap.dedent("""
     import os
     from conans import ConanFile, tools
@@ -331,18 +330,18 @@ test = textwrap.dedent("""
     """)
 
 
-@pytest.fixture(scope="module")
-def client():
-    client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
-    client.run("create . -s build_type=Release")
-    client.run("create . -s build_type=Debug")
-    return client
-
-
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_xcodebuild
-def test_project_xcodebuild(client):
+@pytest.mark.parametrize("cppstd, cppstd_output, min_version", [
+    ("gnu14", "__cplusplus201402", "12.0"),
+    ("gnu17", "__cplusplus201703", "12.0"),
+    ("gnu17", "__cplusplus201703", "11.0")
+])
+def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
+
+    client = TestClient()
+    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("export .")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -352,11 +351,12 @@ def test_project_xcodebuild(client):
             version = "1.0"
             requires = "hello/0.1"
             settings = "os", "compiler", "build_type", "arch"
-            generators = "XcodeDeps"
+            generators = "XcodeDeps", "XcodeToolchain"
             exports_sources = "app.xcodeproj/*", "app/*"
             def build(self):
                 xcode = XcodeBuild(self)
                 xcode.build("app.xcodeproj")
+                self.run("otool -l build/{}/app".format(self.settings.build_type))
 
             def package(self):
                 self.copy("*/app", dst="bin", src=".", keep_path=False)
@@ -367,71 +367,15 @@ def test_project_xcodebuild(client):
 
     client.save({"conanfile.py": conanfile,
                  "test_package/conanfile.py": test,
-                 "app/main.cpp": main,
+                 "app/main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
                  "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
-    client.run("create . --build=missing")
-    assert "hello/0.1: Hello World Release!" in client.out
-    assert "App Release!" in client.out
-    client.run("create . -s build_type=Debug --build=missing")
-    assert "hello/0.1: Hello World Debug!" in client.out
-    assert "App Debug!" in client.out
 
+    settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version=12.1 -s compiler.cppstd={} " \
+               "-s compiler.libcxx=libc++ -s os.version={} ".format(cppstd, min_version)
 
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.skip(reason="Different sdks not installed in CI")
-def test_xcodebuild_test_different_sdk(client):
-
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.apple import XcodeBuild
-        class MyApplicationConan(ConanFile):
-            name = "myapplication"
-            version = "1.0"
-            requires = "hello/0.1"
-            settings = "os", "compiler", "build_type", "arch"
-            generators = "XcodeDeps"
-            exports_sources = "app.xcodeproj/*", "app/*"
-            def build(self):
-                xcode = XcodeBuild(self)
-                xcode.build("app.xcodeproj")
-                self.run("otool -l build/Release/app")
-        """)
-
-    client.save({"conanfile.py": conanfile,
-                 "app/main.cpp": main,
-                 "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=10.15 "
-               "-c tools.apple:sdk_path='/Applications/Xcode11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk'")
-    assert "sdk 10.15.6" in client.out
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
-               "-c tools.apple:sdk_path='/Applications/Xcode12.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk'")
-    assert "sdk 11.3" in client.out
-
-
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-def test_missing_sdk(client):
-
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.apple import XcodeBuild
-        class MyApplicationConan(ConanFile):
-            name = "myapplication"
-            version = "1.0"
-            requires = "hello/0.1"
-            settings = "os", "compiler", "build_type", "arch"
-            generators = "XcodeDeps"
-            exports_sources = "app.xcodeproj/*", "app/*"
-            def build(self):
-                xcode = XcodeBuild(self)
-                xcode.build("app.xcodeproj")
-        """)
-
-    client.save({"conanfile.py": conanfile,
-                 "app/main.cpp": main,
-                 "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
-               "-c tools.apple:sdk_path='notexistingsdk'", assert_error=True)
-    assert "unable to find sdk 'notexistingsdk'" in client.out
-
+    client.run("create . -s build_type=Release {} --build=missing".format(settings))
+    assert "main __x86_64__ defined" in client.out
+    assert "main {}".format(cppstd_output) in client.out
+    assert "minos {}".format(min_version) in client.out
+    assert "sdk 12.1" in client.out
+    assert "libc++" in client.out

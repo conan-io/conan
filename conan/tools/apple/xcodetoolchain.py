@@ -2,6 +2,7 @@ import os
 import textwrap
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools._compilers import cppstd_flag
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_include_to_file_or_create
@@ -33,23 +34,29 @@ class XcodeToolchain(object):
         self.sdk = conanfile.settings.get_safe("os.sdk")
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.os_version = conanfile.settings.get_safe("os.version")
         check_using_build_profile(self._conanfile)
 
     @property
+    def cppstd(self):
+        cppstd = cppstd_flag(self._conanfile.settings)
+        if cppstd.startswith("-std="):
+            return cppstd[5:]
+        return cppstd
+
+    @property
     def macosx_deployment_target(self):
-        return "MACOSX_DEPLOYMENT_TARGET{}={}".format(self._var_condition,
+        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(self._var_condition,
                                                       self.os_version) if self.os_version else ""
 
     @property
     def clang_cxx_library(self):
-        return "CLANG_CXX_LIBRARY{}={}".format(self._var_condition,
+        return 'CLANG_CXX_LIBRARY{}={}'.format(self._var_condition,
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def clang_cxx_language_standard(self):
-        return "CLANG_CXX_LANGUAGE_STANDARD{}={}".format(self._var_condition,
+        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(self._var_condition,
                                                          self.cppstd) if self.cppstd else ""
 
     def generate(self):
