@@ -12,7 +12,7 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import chdir
+from conans.util.files import chdir, mkdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
