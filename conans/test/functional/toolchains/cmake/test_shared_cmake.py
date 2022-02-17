@@ -48,8 +48,6 @@ def test_shared_cmake_toolchain_test_package():
 @pytest.fixture()
 def test_client_shared():
     client = TestClient()
-    #files = pkg_cmake("hello", "0.1")
-    #files.update(pkg_cmake_test("hello"))
     client.run("new -d name=hello -d version=0.1 -f cmake_lib")
     test_conanfile = textwrap.dedent("""
                 import os
@@ -92,7 +90,7 @@ def test_client_shared():
 
     # We can run the exe from the test package directory also, without environment
     # because there is an internal RPATH in the exe with an abs path to the "hello"
-    exe_folder = os.path.join("test_package", "cmake-build-release")
+    exe_folder = os.path.join("test_package", "test_output", "cmake-build-release")
     assert os.path.exists(os.path.join(client.current_folder, exe_folder, "example"))
     client.run_command(os.path.join(exe_folder, "example"))
 
