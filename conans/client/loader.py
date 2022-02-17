@@ -78,20 +78,6 @@ class ConanFileLoader:
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
-    def load_generators(self, conanfile_path):
-        """ Load generator classes from a module. Any non-generator classes
-        will be ignored. python_requires is not processed.
-        """
-        """ Parses a python in-memory module and adds any generators found
-            to the provided generator list
-            @param conanfile_module: the module to be processed
-            """
-        conanfile_module, module_id = load_python_file(conanfile_path)
-        for name, attr in conanfile_module.__dict__.items():
-            if (name.startswith("_") or not inspect.isclass(attr) or
-                    attr.__dict__.get("__module__") != module_id):
-                continue
-
     @staticmethod
     def _load_data(conanfile_path):
         data_path = os.path.join(os.path.dirname(conanfile_path), DATA_YML)
