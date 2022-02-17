@@ -5,39 +5,39 @@ from conans.errors import ConanException
 
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": (str, "Raise if current version does not match the defined range."),
-    "core.package_id:msvc_visual_incompatible": (str, "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries"),
-    "core:default_profile": (str, "Defines the default host profile ('default' by default)"),
-    "core:default_build_profile": (str, "Defines the default build profile (None by default)"),
-    "tools.android:ndk_path": (str, "Argument for the CMAKE_ANDROID_NDK"),
-    "tools.build:skip_test": (str, "Do not execute CMake.test() and Meson.test() when enabled"),
-    "tools.build:jobs": (str, "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)"),
-    "tools.cmake.cmaketoolchain:generator": (str, "User defined CMake generator to use instead of default"),
-    "tools.cmake.cmaketoolchain:find_package_prefer_config": (str, "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG"),
-    "tools.cmake.cmaketoolchain:toolchain_file": (str, "Use other existing file rather than conan_toolchain.cmake one"),
-    "tools.cmake.cmaketoolchain:user_toolchain": (str, "Inject existing user toolchain at the beginning of conan_toolchain.cmake"),
-    "tools.cmake.cmaketoolchain:system_name": (str, "Define CMAKE_SYSTEM_NAME in CMakeToolchain"),
-    "tools.cmake.cmaketoolchain:system_version": (str, "Define CMAKE_SYSTEM_VERSION in CMakeToolchain"),
-    "tools.cmake.cmaketoolchain:system_processor": (str, "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain"),
-    "tools.env.virtualenv:auto_use": (str, "Automatically activate virtualenv file generation"),
-    "tools.files.download:retry": (str, "Number of retries in case of failure when downloading"),
-    "tools.files.download:retry_wait": (str, "Seconds to wait between download attempts"),
-    "tools.gnu:make_program": (str, "Indicate path to make program"),
-    "tools.gnu:define_libcxx11_abi": (str, "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11"),
-    "tools.google.bazel:config": (str, "Define Bazel config file"),
-    "tools.google.bazel:bazelrc_path": (str, "Defines Bazel rc-path"),
-    "tools.microsoft.msbuild:verbosity": (str, "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'"),
-    "tools.microsoft.msbuild:vs_version": (str, "Defines the IDE version when using the new msvc compiler"),
-    "tools.microsoft.msbuild:max_cpu_count": (str, "Argument for the /m when running msvc to build parallel projects"),
-    "tools.microsoft.msbuild:installation_path": (str, "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community"),
-    "tools.microsoft.msbuilddeps:exclude_code_analysis": (str, "Suppress MSBuild code analysis for patterns"),
-    "tools.microsoft.msbuildtoolchain:compile_options": (str, "Dictionary with MSBuild compiler options"),
-    "tools.intel:installation_path": (str, "Defines the Intel oneAPI installation root path"),
-    "tools.intel:setvars_args": (str, "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI"),
-    "tools.system.package_manager:tool": (str, "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'"),
-    "tools.system.package_manager:mode": (str, "Mode for package_manager tools: 'check' or 'install'"),
-    "tools.system.package_manager:sudo": (str, "Use 'sudo' when invoking the package manager tools in Linux (False by default)"),
-    "tools.system.package_manager:sudo_askpass": (str, "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)"),
+    "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
+    "core:default_profile": "Defines the default host profile ('default' by default)",
+    "core:default_build_profile": "Defines the default build profile (None by default)",
+    "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
+    "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
+    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
+    "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
+    "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
+    "tools.env.virtualenv:auto_use": "Automatically activate virtualenv file generation",
+    "tools.files.download:retry": "Number of retries in case of failure when downloading",
+    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.gnu:make_program": "Indicate path to make program",
+    "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
+    "tools.google.bazel:config": "Define Bazel config file",
+    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
+    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
+    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
+    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
+    "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
+    "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
+    "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
+    "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
+    "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
+    "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
+    "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
+    "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
 }
 
 
@@ -243,7 +243,7 @@ class Conf:
         or the value-like object. For now, we only manage lists or strings.
         """
         if (name in self._values and isinstance(self._values[name], _ConfListValue)) \
-           or BUILT_IN_CONFS.get(name, [None])[0] is list or isinstance(value, list):
+           or isinstance(value, list):
             return _ConfListValue(name, value)
         else:
             # Any other value will be converted to string by default
