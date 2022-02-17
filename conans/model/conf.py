@@ -185,6 +185,7 @@ class Conf:
         """
         return other._values == self._values
 
+    # TODO: Python2, remove in 2.0
     def __ne__(self, other):
         return not self.__eq__(other)
 
