@@ -61,16 +61,3 @@ def test_sdk():
     xcodebuild = XcodeBuild(conanfile)
     xcodebuild.build("app.xcodeproj")
     assert "SDKROOT" not in conanfile.command
-
-
-def test_deployment_target():
-    conanfile = ConanFileMock()
-    conf = ConfDefinition()
-    conanfile.conf = conf
-    conanfile.settings = MockSettings({"os": "Macos",
-                                       "os.version": "12.2.1",
-                                       "os.sdk": "macosx",
-                                       "os.sdk_version": "12.1"})
-    xcodebuild = XcodeBuild(conanfile)
-    xcodebuild.build("app.xcodeproj")
-    assert "MACOSX_DEPLOYMENT_TARGET=12.2.1" in conanfile.command
