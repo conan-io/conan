@@ -11,7 +11,7 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import chdir, mkdir
+from conans.util.files import chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -110,22 +110,14 @@ def create(conan_api, parser, *args):
                                            output_folder=conanfile_folder)
         conanfile = deps_graph.root.conanfile
 
-        if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_build(conanfile_folder)
-            conanfile.folders.set_base_source(conanfile_folder)
-            conanfile.folders.set_base_package(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
-        else:
-            conanfile.folders.set_base_build(conanfile_folder)
-            conanfile.folders.set_base_source(conanfile_folder)
-            conanfile.folders.set_base_package(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
+        conanfile.folders.set_base_build(conanfile_folder)
+        conanfile.folders.set_base_source(conanfile_folder)
+        conanfile.folders.set_base_package(conanfile_folder)
+        conanfile.folders.set_base_generators(conanfile_folder)
 
         out.highlight("\n-------- Testing the package: Building ----------")
-        mkdir(conanfile.build_folder)
-        with chdir(conanfile.build_folder):
-            app = ConanApp(conan_api.cache_folder)
-            run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
+        app = ConanApp(conan_api.cache_folder)
+        run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
         out.highlight("\n-------- Testing the package: Running test() ----------")
         conanfile.output.highlight("Running test()")

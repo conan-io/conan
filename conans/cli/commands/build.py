@@ -8,7 +8,6 @@ from conans.cli.common import _add_common_install_arguments, _help_build_policie
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
-from conans.util.files import mkdir, chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -54,9 +53,8 @@ def build(conan_api, parser, *args):
     # TODO: Decide API to put this
     app = ConanApp(conan_api.cache_folder)
     conanfile = deps_graph.root.conanfile
-    mkdir(conanfile.build_folder)
-    with chdir(conanfile.build_folder):
-        run_build_method(conanfile, app.hook_manager, conanfile_path=path)
+
+    run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
