@@ -173,6 +173,7 @@ class Conf:
     def __bool__(self):
         return bool(self._values)
 
+    # TODO: Python2, remove in 2.0
     __nonzero__ = __bool__
 
     def __repr__(self):
