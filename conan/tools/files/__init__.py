@@ -6,3 +6,4 @@ from conan.tools.files.cpp_package import CppPackage
 from conan.tools.files.packager import AutoPackager
 from conan.tools.files.symlinks import symlinks
 from conan.tools.files.copy_pattern import copy
+from conan.tools.files.conandata import update_conandata

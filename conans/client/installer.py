@@ -317,11 +317,11 @@ class BinaryInstaller(object):
         editable = self._cache.editable_packages.get(ref)
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
-        source_folder = editable.get("source_folder")
+
         # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
         conanfile.folders.set_base_package(output_folder or base_path)
-        conanfile.folders.set_base_source(source_folder or base_path)
+        conanfile.folders.set_base_source(base_path)
         conanfile.folders.set_base_build(output_folder or base_path)
         conanfile.folders.set_base_generators(output_folder or base_path)
         output = conanfile.output
@@ -335,7 +335,7 @@ class BinaryInstaller(object):
             conanfile = node.conanfile
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or base_path)
-            conanfile.folders.set_base_source(source_folder or base_path)
+            conanfile.folders.set_base_source(base_path)
             conanfile.folders.set_base_build(output_folder or base_path)
             conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode
