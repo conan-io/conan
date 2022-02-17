@@ -4,6 +4,7 @@ import platform
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_filename
 from conans.test.utils.tools import TestClient
 
 _expected_dep_xconfig = [
@@ -43,19 +44,9 @@ _expected_conf_xconfig = [
 ]
 
 
-def get_name(configuration, architecture, sdk, sdk_version):
-    props = [("configuration", configuration),
-             ("architecture", architecture),
-             ("sdk name", sdk),
-             ("sdk version", sdk_version)]
-    name = "".join("_{}".format(v) for _, v in props if v is not None and v)
-    name = name.replace(".", "_").replace("-", "_")
-    return name.lower()
-
-
 def expected_files(current_folder, configuration, architecture, sdk, sdk_version):
     files = []
-    name = get_name(configuration, architecture, sdk, sdk_version)
+    name = _get_filename(configuration, architecture, sdk, sdk_version)
     deps = ["hello", "goodbye"]
     files.extend(
         [os.path.join(current_folder, "conan_{}{}.xcconfig".format(dep, name)) for dep in deps])
@@ -69,7 +60,7 @@ def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{}.xcconfig".format(dep_name))
         conf_name = "conan_{}{}.xcconfig".format(dep_name,
-                                                 get_name(configuration, architecture, sdk, sdk_version))
+                                                 _get_filename(configuration, architecture, sdk, sdk_version))
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -77,7 +68,7 @@ def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
             assert line in dep_xconfig
 
         vars_name = "conan_{}_vars{}.xcconfig".format(dep_name,
-                                                      get_name(configuration, architecture, sdk, sdk_version))
+                                                      _get_filename(configuration, architecture, sdk, sdk_version))
         conan_vars = client.load(vars_name)
         for var in _expected_vars_xconfig:
             line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
