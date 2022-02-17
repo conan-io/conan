@@ -220,8 +220,12 @@ class Conf:
 
     def get(self, conf_name, default=None, cast=None):
         """
-        Get all the values belonging to the passed conf name. By default, those values
-        will be returned as a str-like object.
+        Get all the values belonging to the passed conf name. You can convert the final conf value
+        thanks to "cast" param.
+
+        :param conf_name: conf name
+        :param default: default value in case of conf does not have the conf_name key
+        :param cast: any callable to apply any kind of transformation to final conf value
         """
         conf_value = self._values.get(conf_name)
         if conf_value:
