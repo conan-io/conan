@@ -14,7 +14,7 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import mkdir, tar_extract, touch_folder, md5sum, sha1sum, rmdir
+from conans.util.files import mkdir, tar_extract, touch_folder, rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -48,7 +48,6 @@ class RemoteManager(object):
 
     def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
-        self._output = ConanOutput()
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
@@ -183,13 +182,7 @@ class RemoteManager(object):
             scoped_output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
-    def search_recipes(self, remote, pattern, ignorecase=True):
-        """
-        returns (dict str(ref): {packages_info}
-        """
-        # TODO: Remove the ignorecase param. It's not used anymore, we're keeping it
-        # to avoid some test crashes
-
+    def search_recipes(self, remote, pattern):
         return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref):
@@ -262,11 +255,6 @@ class RemoteManager(object):
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
-
-
-def calc_files_checksum(files):
-    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
-            for file_name, path in files.items()}
 
 
 def check_compressed_files(tgz_name, files):

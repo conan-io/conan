@@ -214,8 +214,7 @@ class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, remote=None):
         from conans.model.recipe_ref import RecipeReference
-        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a " \
-                                                    "RecipeReference"
+        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a RecipeReference"
         self.ref = ref
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
@@ -228,8 +227,7 @@ class PackageNotFoundException(NotFoundException):
 
     def __init__(self, pref, remote=None):
         from conans.model.package_ref import PkgReference
-        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a " \
-                                                   "PkgReference"
+        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a PkgReference"
         self.pref = pref
 
         super(PackageNotFoundException, self).__init__(remote=remote)

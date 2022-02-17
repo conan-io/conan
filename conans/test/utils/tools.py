@@ -540,10 +540,16 @@ class TestClient(object):
 
     def run_command(self, command, cwd=None, assert_error=False):
         from conans.test.utils.mocks import RedirectedTestOutput
-        self.out = RedirectedTestOutput()  # Initialize each command
-        with redirect_output(self.out):
-            from conans.util.runners import conan_run
-            ret = conan_run(command, cwd=cwd or self.current_folder)
+        self.stdout = RedirectedTestOutput()  # Initialize each command
+        self.stderr = RedirectedTestOutput()
+        try:
+            with redirect_output(self.stderr, self.stdout):
+                from conans.util.runners import conan_run
+                ret = conan_run(command, cwd=cwd or self.current_folder)
+        finally:
+            self.stdout = str(self.stdout)
+            self.stderr = str(self.stderr)
+            self.out = self.stderr + self.stdout
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
@@ -558,7 +564,7 @@ class TestClient(object):
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-' * 80,
                 cmd=command,
-                output=str(self.stderr) + str(self.stdout)
+                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
             )
             raise Exception(exc_message)
 
