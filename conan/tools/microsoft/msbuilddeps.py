@@ -112,7 +112,7 @@ class MSBuildDeps(object):
         ca_exclude = self._conanfile.conf.get("tools.microsoft.msbuilddeps:exclude_code_analysis")
         if ca_exclude is not None:
             # TODO: Accept single strings, not lists
-            if isinstance(self.exclude_code_analysis, list):
+            if isinstance(ca_exclude, list):
                 self.exclude_code_analysis = ca_exclude
             else:
                 raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
