@@ -15,8 +15,8 @@ class _SystemPackageManagerTool(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._active_tool = self._conanfile.conf["tools.system.package_manager:tool"] or self.get_default_tool()
-        self._sudo = self._conanfile.conf["tools.system.package_manager:sudo"]
-        self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
+        self._sudo = True if self._conanfile.conf["tools.system.package_manager:sudo"] == "True" else False
+        self._sudo_askpass = True if self._conanfile.conf["tools.system.package_manager:sudo_askpass"] == "True" else False
         self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or self.mode_check
         self._arch = self._conanfile.settings_build.get_safe('arch') \
             if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings.get_safe('arch')

@@ -15,12 +15,12 @@ def test_cmake_virtualenv():
     cmakewrapper = textwrap.dedent(r"""
         from conan import ConanFile
         import os
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             def package(self):
-                with chdir(self.package_folder):
-                    save("cmake.bat", "@echo off\necho MYCMAKE WRAPPER!!\ncmake.exe %*")
-                    save("cmake.sh", 'echo MYCMAKE WRAPPER!!\ncmake "$@"')
+                with chdir(self, self.package_folder):
+                    save(self, "cmake.bat", "@echo off\necho MYCMAKE WRAPPER!!\ncmake.exe %*")
+                    save(self, "cmake.sh", 'echo MYCMAKE WRAPPER!!\ncmake "$@"')
                     os.chmod("cmake.sh", 0o777)
 
             def package_info(self):
@@ -86,7 +86,7 @@ def test_complete():
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            exports = "*"
+            exports_sources = "*"
 
             def build(self):
                 cmake = CMake(self)

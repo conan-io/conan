@@ -2,48 +2,12 @@ import json
 import os
 from urllib.parse import urlparse
 
-import stat
-
 from conans.cli.api.model import Remote
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException, NoRemoteAvailable
-from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
-
-
-def load_registry_txt(contents):
-    """Remove in Conan 2.0"""
-    remotes = _Remotes()
-    refs = {}
-    end_remotes = False
-    # Parse the file
-    for line in contents.splitlines():
-        line = line.strip()
-
-        if not line:
-            if end_remotes:
-                raise ConanException("Bad file format, blank line")
-            end_remotes = True
-            continue
-        chunks = line.split()
-        if not end_remotes:
-            if len(chunks) == 2:  # Retro compatibility
-                remote_name, url = chunks
-                verify_ssl = "True"
-            elif len(chunks) == 3:
-                remote_name, url, verify_ssl = chunks
-            else:
-                raise ConanException("Bad file format, wrong item numbers in line '%s'" % line)
-
-            verify_ssl = get_bool_from_text_value(verify_ssl)
-            remotes.add(Remote(remote_name, url, verify_ssl, False))
-        else:
-            ref, remote_name = chunks
-            refs[ref] = remote_name
-
-    return remotes, refs
 
 
 class _Remotes(object):

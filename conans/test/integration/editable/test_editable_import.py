@@ -21,7 +21,7 @@ class TestEditableImport:
             from conan import ConanFile
             from conan.tools.files import copy
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def layout(self):
                     self.folders.source = "src"
                     self.cpp.source.resdirs = ["res"]

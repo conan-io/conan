@@ -4,8 +4,8 @@ import unittest
 import pytest
 
 from conans.assets.templates import SEARCH_TABLE_HTML, INFO_GRAPH_DOT, INFO_GRAPH_HTML
-from conans.client.tools import save
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import save
 
 
 class UserOverridesTemplatesTestCase(unittest.TestCase):

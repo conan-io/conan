@@ -5,7 +5,6 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.client.tools.files import replace_in_file
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
@@ -271,10 +270,10 @@ class Pkg(ConanFile):
         client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
         client.alias("LibC/latest@user/testing",  "LibC/0.1@user/testing")
 
-        client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"')
+        conanfile = conanfile % "LibC/latest@user/testing"
+        conanfile = conanfile.replace('"myoption=True"', '"myoption=True", "LibD:myoption=False"')
+        client.save({"conanfile.py": conanfile})
+
         client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
         client.alias("LibB/latest@user/testing",  "LibB/0.1@user/testing")
 

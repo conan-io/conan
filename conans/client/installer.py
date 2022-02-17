@@ -18,9 +18,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO
-from conans.util.env import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
-    chdir
+from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
 
@@ -136,8 +134,6 @@ class _PackageBuilder(object):
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
-        if get_env("CONAN_READ_ONLY_CACHE", False):
-            make_read_only(conanfile.folders.base_package)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
@@ -218,11 +214,6 @@ class BinaryInstaller(object):
         self._out = ConanOutput()
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
-        # Load custom generators from the cache, generators are part of the binary
-        # build and install. Generators loaded here from the cache will have precedence
-        # and overwrite possible generators loaded from packages (requires)
-        for generator_path in app.cache.generators:
-            app.loader.load_generators(generator_path)
 
     def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
@@ -321,14 +312,13 @@ class BinaryInstaller(object):
         editable = self._cache.editable_packages.get(ref)
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
-        source_folder = editable.get("source_folder")
+
         # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
         conanfile.folders.set_base_package(output_folder or base_path)
-        conanfile.folders.set_base_source(source_folder or base_path)
+        conanfile.folders.set_base_source(base_path)
         conanfile.folders.set_base_build(output_folder or base_path)
         conanfile.folders.set_base_generators(output_folder or base_path)
-
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
@@ -343,7 +333,7 @@ class BinaryInstaller(object):
             conanfile = node.conanfile
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or base_path)
-            conanfile.folders.set_base_source(source_folder or base_path)
+            conanfile.folders.set_base_source(base_path)
             conanfile.folders.set_base_build(output_folder or base_path)
             conanfile.folders.set_base_generators(output_folder or base_path)
             # Need a temporary package revision for package_revision_mode

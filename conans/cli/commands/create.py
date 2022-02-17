@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
@@ -11,7 +12,7 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import chdir
+from conans.util.files import chdir, mkdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -100,17 +101,22 @@ def create(conan_api, parser, *args):
 
     if test_conanfile_path:
         out.highlight("\n-------- Testing the package ----------")
-
+        if len(deps_graph.nodes) == 1:
+            raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
+                                 "use `self.tested_reference_str` to require the "
+                                 "package being created.".format(test_conanfile_path))
         conanfile_folder = os.path.dirname(test_conanfile_path)
+        output_folder = os.path.join(conanfile_folder, "test_output")
+        shutil.rmtree(output_folder, ignore_errors=True)
+        mkdir(output_folder)
         conan_api.install.install_consumer(deps_graph=deps_graph,
                                            source_folder=conanfile_folder,
-                                           output_folder=conanfile_folder)
+                                           output_folder=output_folder)
         conanfile = deps_graph.root.conanfile
-
-        conanfile.folders.set_base_build(conanfile_folder)
+        conanfile.folders.set_base_build(output_folder)
         conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
+        conanfile.folders.set_base_package(output_folder)
+        conanfile.folders.set_base_generators(output_folder)
 
         out.highlight("\n-------- Testing the package: Building ----------")
         app = ConanApp(conan_api.cache_folder)

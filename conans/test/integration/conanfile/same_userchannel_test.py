@@ -20,6 +20,7 @@ class SayConan(ConanFile):
     def requirements(self):
         self.output.info("USER: %s!!" % self.user)
         self.output.info("CHANNEL: %s!!" % self.channel)
+        self.requires(self.tested_reference_str)
 
     def test(self):
         pass
