@@ -11,7 +11,6 @@ class XcodeBuild(object):
         self.arch = to_apple_arch(conanfile.settings.get_safe("arch"))
         self.sdk = conanfile.settings.get_safe("os.sdk") or ""
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
-        self.os_version = conanfile.settings.get_safe("os.version") or ""
 
     @property
     def verbosity(self):
