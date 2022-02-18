@@ -17,11 +17,11 @@ GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
 GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
-def _xcconfig_settings_filename(self, settings):
+def _xcconfig_settings_filename(settings):
     arch = settings.get_safe("arch")
-    self.architecture = to_apple_arch(arch) or arch
+    architecture = to_apple_arch(arch) or arch
     props = [("configuration", settings.get_safe("build_type")),
-             ("architecture", arch),
+             ("architecture", architecture),
              ("sdk name", settings.get_safe("os.sdk")),
              ("sdk version", settings.get_safe("os.sdk_version"))]
     name = "".join("_{}".format(v) for _, v in props if v is not None and v)
