@@ -431,7 +431,7 @@ def test_missing_sdk(client):
     client.save({"conanfile.py": conanfile,
                  "app/main.cpp": main,
                  "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
-               "-c tools.apple:sdk_path='notexistingsdk'", assert_error=True)
+    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=12.0 "
+               "-c tools.apple:sdk_path=notexistingsdk", assert_error=True)
     assert "unable to find sdk 'notexistingsdk'" in client.out
 

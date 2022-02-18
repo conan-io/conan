@@ -333,9 +333,9 @@ test = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_xcodebuild
 @pytest.mark.parametrize("cppstd, cppstd_output, min_version", [
-    ("gnu14", "__cplusplus201402", "12.0"),
-    ("gnu17", "__cplusplus201703", "12.0"),
-    ("gnu17", "__cplusplus201703", "11.0")
+    ("gnu14", "__cplusplus201402", "11.5.2"),
+    ("gnu17", "__cplusplus201703", "11.5.2"),
+    ("gnu17", "__cplusplus201703", "10.15")
 ])
 def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
@@ -370,12 +370,13 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
                  "app/main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
                  "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
 
-    settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version=12.1 -s compiler.cppstd={} " \
-               "-s compiler.libcxx=libc++ -s os.version={} ".format(cppstd, min_version)
+    sdk_version = "11.3"
+    settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version={} -s compiler.cppstd={} " \
+               "-s compiler.libcxx=libc++ -s os.version={} ".format(sdk_version, cppstd, min_version)
 
     client.run("create . -s build_type=Release {} --build=missing".format(settings))
     assert "main __x86_64__ defined" in client.out
     assert "main {}".format(cppstd_output) in client.out
     assert "minos {}".format(min_version) in client.out
-    assert "sdk 12.1" in client.out
+    assert "sdk {}".format(sdk_version) in client.out
     assert "libc++" in client.out
