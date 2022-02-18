@@ -252,7 +252,7 @@ class Conf:
     def update(self, name, value):
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, {})
-        self._values.setdefault(name, conf_value).append(value)
+        self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
         self._validate_lower_case(name)
