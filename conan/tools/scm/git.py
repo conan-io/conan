@@ -2,6 +2,7 @@ import os
 
 from conan.tools.files import chdir
 from conans.errors import ConanException
+from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
 
@@ -55,3 +56,9 @@ class Git(object):
         if in_remote:
             return url, commit
         return self.folder, commit
+
+    def clone(self, url, target=""):
+        if os.path.exists(url):
+            url = url.replace("\\", "/")  # Windows local directory
+        mkdir(self.folder)
+        self._run('clone "{}" {}'.format(url, target))

@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -154,3 +155,38 @@ class TestCaptureExportGitSCM:
             c.run("export .")
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
             assert "pkg/0.1: SCM URL: {}".format(url) in c.out
+
+
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
+class TestGitBasicClone:
+    """ base Git cloning operations
+    """
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def layout(self):
+                self.folders.source = "src"
+
+            def source(self):
+                git = Git(self, self.source_folder)
+                git.clone(url="{url}", target=".")
+                # git.checkout(commit="{commit}")
+                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
+        """)
+
+    def test_clone(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmke"}, folder=folder)
+
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
+        c.run("create .")
+        print(c.out)
