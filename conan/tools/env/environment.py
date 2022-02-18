@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 
 
@@ -394,7 +395,7 @@ class ProfileEnvironment:
         """
         result = Environment()
         for pattern, env in self._environments.items():
-            if pattern is None or ref.matches(pattern) or (pattern == "&" and is_consumer):
+            if pattern is None or ref_matches(ref, pattern, is_consumer):
                 # Latest declared has priority, copy() necessary to not destroy data
                 result = env.copy().compose_env(result)
         return result
@@ -439,9 +440,6 @@ class ProfileEnvironment:
                 pattern_name = pattern_name.split(":", 1)
                 if len(pattern_name) == 2:
                     pattern, name = pattern_name
-                    if pattern != "&" and "/" not in pattern:
-                        raise ConanException("Specify a reference in the [buildenv] entry: '{}/*' "
-                                             "instead of '{}'.".format(pattern, pattern))
                 else:
                     pattern, name = None, pattern_name[0]
 

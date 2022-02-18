@@ -3,6 +3,7 @@ import fnmatch
 from conans.client import settings_preprocessor
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 
 
 def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_context,
@@ -45,18 +46,11 @@ def _initialize_conanfile(conanfile, profile, ref):
     package_settings_values = profile.package_settings_values
 
     if package_settings_values:
-        pkg_settings = None
-        if conanfile._conan_is_consumer and "&" in package_settings_values:
-            # "&" overrides the "name" scoped settings.
-            pkg_settings = package_settings_values.get("&")
+        pkg_settings = []
 
-        if pkg_settings is None:  # If there is no exact match by package name, do fnmatch
-            for pattern, settings in package_settings_values.items():
-                if ref.matches(pattern):
-                    if pkg_settings is None:
-                        pkg_settings = settings
-                    else:
-                        pkg_settings.update_values(settings)
+        for pattern, settings in package_settings_values.items():
+            if ref_matches(ref, pattern, conanfile._conan_is_consumer):
+                pkg_settings.extend(settings)
 
         if pkg_settings:
             tmp_settings.update_values(pkg_settings)
@@ -70,7 +64,7 @@ def _initialize_conanfile(conanfile, profile, ref):
             conanfile.display_name, str(e)))
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile.buildenv
-    conanfile.conf = profile.conf.get_conanfile_conf(ref)  # Maybe this can be done lazy too
+    conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
 
 
 def txt_definer(conanfile, profile_host):
@@ -80,6 +74,7 @@ def txt_definer(conanfile, profile_host):
     tmp_settings = profile_host.processed_settings.copy()
     package_settings_values = profile_host.package_settings_values
     # TODO: The pattern-matching for pkg, buildenv and conf needs to be extracted too
+    # FIXME: This "&" management should be extracted
     if "&" in package_settings_values:
         pkg_settings = package_settings_values.get("&")
         if pkg_settings:

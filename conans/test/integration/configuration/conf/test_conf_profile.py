@@ -97,7 +97,7 @@ def test_cmake_config_package(client):
     assert "/verbosity:Minimal" in client.out
 
 
-def test_invalid_profile_package_pattern(client):
+def test_cmake_config_package_not_scoped(client):
     profile = textwrap.dedent("""\
         [settings]
         os=Windows
@@ -107,12 +107,13 @@ def test_invalid_profile_package_pattern(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        dep*:tools.microsoft.msbuild:verbosity=Minimal
+        tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
-    assert "Error reading 'myprofile' profile: Specify a reference in the conf entry: " \
-           "'dep*/*' instead of 'dep*'." in client.out
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    assert "/verbosity:Minimal" in client.out
+    client.run("create . --name=dep --version=0.1 -pr=myprofile")
+    assert "/verbosity:Minimal" in client.out
 
 
 def test_config_profile_forbidden(client):
@@ -190,7 +191,7 @@ def test_conf_package_patterns():
     conanfile = GenConanfile()
     generate = """
     def generate(self):
-        value = self.conf["myconfig"]
+        value = self.conf["user.build:myconfig"]
         self.output.warning("{} Config:{}".format(self.ref.name, value))
 """
     client.save({"dep/conanfile.py": str(conanfile) + generate,
@@ -201,33 +202,13 @@ def test_conf_package_patterns():
     client.run("export dep --name=dep --version=0.1")
     client.run("export pkg --name=pkg --version=0.1")
 
-    # Invalid package namespace, "*" is not a valid reference pattern
+    # This pattern applies to no package
     profile = """
     [settings]
     os=Windows
     [conf]
-    myconfig=Foo
+    invented/*:user.build:myconfig=Foo
     """
-    client.save({"profile": profile})
-    client.run("install consumer --build missing --profile profile", assert_error=True)
-    assert "Specify a reference in the [buildenv] entry: '*/*' instead of '*'." in client.out
-
-    # Invalid package namespace, "*foo" is not a valid reference pattern
-    profile = """
-        include(default)
-        [buildenv]
-        *foo:myconfig=Foo
-        """
-    client.save({"profile": profile})
-    client.run("install consumer --build --profile profile", assert_error=True)
-    assert "Specify a reference in the [buildenv] entry: '*foo/*' instead of '*foo'." in client.out
-
-    # This pattern applies to no package
-    profile = """
-            include(default)
-            [buildenv]
-            invented/*:myconfig=Foo
-            """
     client.save({"profile": profile})
     client.run("install consumer --build --profile profile")
     assert "WARN: dep Config:None" in client.out
@@ -236,10 +217,11 @@ def test_conf_package_patterns():
 
     # This patterns applies to dep
     profile = """
-                include(default)
-                [buildenv]
-                dep/*:myconfig=Foo
-                """
+    [settings]
+    os=Windows
+    [conf]
+    dep/*:user.build:myconfig=Foo
+    """
     client.save({"profile": profile})
     client.run("install consumer --build --profile profile")
     assert "WARN: dep Config:Foo" in client.out
@@ -247,10 +229,11 @@ def test_conf_package_patterns():
     assert "WARN: None Config:None" in client.out
 
     profile = """
-                    include(default)
-                    [buildenv]
-                    dep/0.1:myconfig=Foo
-                    """
+    [settings]
+    os=Windows
+    [conf]
+    dep/0.1:user.build:myconfig=Foo
+    """
     client.save({"profile": profile})
     client.run("install consumer --build --profile profile")
     assert "WARN: dep Config:Foo" in client.out
@@ -259,12 +242,13 @@ def test_conf_package_patterns():
 
     # The global pattern applies to all
     profile = """
-                    include(default)
-                    [buildenv]
-                    dep/*:myconfig=Foo
-                    pkg/*:myconfig=Foo
-                    myconfig=Var
-                    """
+    [settings]
+    os=Windows
+    [conf]
+    dep/*:user.build:myconfig=Foo
+    pkg/*:user.build:myconfig=Foo2
+    user.build:myconfig=Var
+    """
     client.save({"profile": profile})
     client.run("install consumer --build --profile profile")
     assert "WARN: dep Config:Var" in client.out
@@ -273,12 +257,14 @@ def test_conf_package_patterns():
 
     # "&" pattern for the consumer
     profile = """
-                        include(default)
-                        [buildenv]
-                        dep/*:my_env_var=Foo
-                        pkg/*:my_env_var=Foo2
-                        &:my_env_var=Var
-                        """
+    [settings]
+    os=Windows
+    [conf]
+    dep/*:user.build:myconfig=Foo
+    pkg/*:user.build:myconfig=Foo2
+    &:user.build:myconfig=Var
+    """
+
     client.save({"profile": profile})
     client.run("install consumer --build --profile profile")
     assert "WARN: dep Config:Foo" in client.out

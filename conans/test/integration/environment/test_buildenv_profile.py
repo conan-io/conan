@@ -70,26 +70,6 @@ def test_buildenv_package_patterns():
     client.run("export dep --name=dep --version=0.1")
     client.run("export pkg --name=pkg --version=0.1")
 
-    # Invalid package namespace, "*" is not a valid reference pattern
-    profile = """
-    include(default)
-    [buildenv]
-    *:my_env_var=Foo
-    """
-    client.save({"profile": profile})
-    client.run("install consumer --build missing --profile profile", assert_error=True)
-    assert "Specify a reference in the [buildenv] entry: '*/*' instead of '*'." in client.out
-
-    # Invalid package namespace, "*foo" is not a valid reference pattern
-    profile = """
-        include(default)
-        [buildenv]
-        *foo:my_env_var=Foo
-        """
-    client.save({"profile": profile})
-    client.run("install consumer --build --profile profile", assert_error=True)
-    assert "Specify a reference in the [buildenv] entry: '*foo/*' instead of '*foo'." in client.out
-
     # This pattern applies to no package
     profile = """
             include(default)

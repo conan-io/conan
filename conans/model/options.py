@@ -3,7 +3,7 @@ import fnmatch
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 
 _falsey_options = ["false", "none", "0", "off", ""]
 
@@ -282,11 +282,11 @@ class Options:
         # To access dependencies options like ``options["mydep"]``. This will no longer be
         # a read case, only for defining values. Read access will be via self.dependencies["dep"]
         if isinstance(ref, str):
-            if "/" not in ref: # This to keep 1.X compatibility
+            if "/" not in ref:  # This to keep 1.X compatibility
                 ref += "/*"
             ref = RecipeReference.loads(ref)
         for pattern, options in self._deps_package_options.items():
-            if ref.matches(pattern):
+            if ref_matches(ref, pattern, is_consumer=False): # FIXME: is_consumer always False
                 return options
         return self._deps_package_options.setdefault(ref.repr_notime(), _PackageOptions())
 
@@ -337,13 +337,14 @@ class Options:
                 # Get the non-scoped options, plus the "all-matching=*" pattern
                 self._package_options.update_options(defined_options._package_options)
                 for pattern, options in defined_options._deps_package_options.items():
-                    if RecipeReference.loads("*/*").matches(pattern):
+                    # FIXME: Weird setup to see if the null reference matches
+                    if RecipeReference.loads("*/*").matches(pattern, is_consumer=True):
                         self._package_options.update_options(options, is_pattern=True)
             else:
                 # If the current package has a name, there should be a match, either exact name
                 # match, or a fnmatch approximate one
                 for pattern, options in defined_options._deps_package_options.items():
-                    if own_ref.matches(pattern):
+                    if ref_matches(own_ref, pattern, is_consumer=False):
                         self._package_options.update_options(options, is_pattern="*" in pattern)
 
         self._package_options.freeze()
@@ -365,7 +366,7 @@ class Options:
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            if own_ref.matches(pattern):
+            if ref_matches(own_ref, pattern, is_consumer=False):  # FIXME: Always false?
                 # Remove the exact match to this package, don't further propagate up
                 continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)

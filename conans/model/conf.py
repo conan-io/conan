@@ -1,7 +1,7 @@
 import fnmatch
 
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 
 DEFAULT_CONFIGURATION = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -152,12 +152,12 @@ class ConfDefinition(object):
     def get(self, conf_name, conf_type=None, conf_default=None):
         return self._pattern_confs.get(None, Conf()).get(conf_name, conf_type, conf_default)
 
-    def get_conanfile_conf(self, ref):
+    def get_conanfile_conf(self, ref, is_consumer=False):
         if ref is None:
             ref = RecipeReference.loads("*/*")
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
-            if pattern is None or ref.matches(pattern):
+            if pattern is None or ref_matches(ref, pattern, is_consumer):
                 result.update(conf)
         return result
 
@@ -224,9 +224,6 @@ class ConfDefinition(object):
         """
         if key.count(":") >= 2:
             pattern, name = key.split(":", 1)
-            if "/" not in pattern:
-                raise ConanException("Specify a reference in the conf entry: '{}/*' instead "
-                                     "of '{}'.".format(pattern, pattern))
         else:
             pattern, name = None, key
 

@@ -10,7 +10,7 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
 
@@ -156,13 +156,10 @@ class DepsGraphBuilder(object):
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         tool_requires = profile.tool_requires
-        str_ref = str(node.ref)
         for pattern, tool_requires in tool_requires.items():
-            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
+            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 for tool_require in tool_requires:  # Do the override
-                    if str(tool_require) == str(node.ref):  # FIXME: Ugly str comparison
+                    if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
                     node.conanfile.requires.tool_require(str(tool_require),

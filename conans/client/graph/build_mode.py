@@ -2,6 +2,7 @@ import fnmatch
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 
 
 class BuildMode(object):
@@ -50,7 +51,7 @@ class BuildMode(object):
     def forced(self, conan_file, ref, with_deps_to_build=False):
 
         for pattern in self._excluded_patterns:
-            if ref.matches(pattern):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
@@ -76,7 +77,7 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if ref.matches(pattern):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:

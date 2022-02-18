@@ -111,6 +111,15 @@ class RecipeReference:
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")
 
-    def matches(self, pattern):
-        return (fnmatch.fnmatchcase(str(self), pattern) or
+    def matches(self, pattern, is_consumer):
+        return ((pattern == "&" and is_consumer) or
+                (pattern == "&!" and not is_consumer) or
+                fnmatch.fnmatchcase(str(self), pattern) or
                 fnmatch.fnmatchcase(self.repr_notime(), pattern))
+
+
+def ref_matches(ref, pattern, is_consumer):
+    if not ref or not str(ref):
+        assert is_consumer
+        ref = RecipeReference.loads("*/*")
+    return ref.matches(pattern, is_consumer=is_consumer)
