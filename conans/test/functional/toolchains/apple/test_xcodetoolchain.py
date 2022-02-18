@@ -333,8 +333,8 @@ test = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_xcodebuild
 @pytest.mark.parametrize("cppstd, cppstd_output, min_version", [
-    ("gnu14", "__cplusplus201402", "11.5.2"),
-    ("gnu17", "__cplusplus201703", "11.5.2"),
+    ("gnu14", "__cplusplus201402", "11.0"),
+    ("gnu17", "__cplusplus201703", "11.0"),
     ("gnu17", "__cplusplus201703", "10.15")
 ])
 def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
