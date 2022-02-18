@@ -58,6 +58,7 @@ class _ConfValue(object):
     def __init__(self, name, value):
         self._name = name
         self._value = value
+        self._value_type = type(value)
 
     def __repr__(self):
         return repr(self._value)
@@ -67,68 +68,54 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return self.__class__(self._name, self._value)
-
-
-class _ConfStrValue(_ConfValue):
-
-    def __init__(self, name, value):
-        value = None if value is None else str(value).strip()
-        super(_ConfStrValue, self).__init__(name, value)
+        return _ConfValue(self._name, self._value)
 
     def dumps(self):
-        if self._value is None:
-            return "{}=!".format(self._name)  # unset
+        if self._value_type is not list:
+            if self._value is None:
+                return "{}=!".format(self._name)  # unset
+            else:
+                return "{}={}".format(self._name, self._value)
         else:
-            return "{}={}".format(self._name, self._value)
-
-    def remove(self, value):
-        if value is not None:
-            self._value = self._value.replace(value, "").strip()
-
-    def append(self, value):
-        raise ConanException("str values cannot append other values.")
-
-    def prepend(self, value):
-        raise ConanException("str values cannot prepend other values.")
-
-    def compose_conf_value(self, other):
-        pass
-
-
-class _ConfListValue(_ConfValue):
-
-    def __init__(self, name, value):
-        value = [] if value is None else value if isinstance(value, list) else [value]
-        super(_ConfListValue, self).__init__(name, value)
-
-    def dumps(self):
-        result = []
-        if not self._value:  # Empty means unset
-            result.append("{}=!".format(self._name))
-        elif _ConfVarPlaceHolder in self._value:
-            index = self._value.index(_ConfVarPlaceHolder)
-            for v in self._value[:index]:
-                result.append("{}=+{}".format(self._name, v))
-            for v in self._value[index+1:]:
-                result.append("{}+={}".format(self._name, v))
-        else:
-            append = ""
-            for v in self._value:
-                result.append("{}{}={}".format(self._name, append, v))
-                append = "+"
+            result = []
+            if not self._value:  # Empty means unset
+                result.append("{}=!".format(self._name))
+            elif _ConfVarPlaceHolder in self._value:
+                index = self._value.index(_ConfVarPlaceHolder)
+                for v in self._value[:index]:
+                    result.append("{}=+{}".format(self._name, v))
+                for v in self._value[index+1:]:
+                    result.append("{}+={}".format(self._name, v))
+            else:
+                append = ""
+                for v in self._value:
+                    result.append("{}{}={}".format(self._name, append, v))
+                    append = "+"
         return "\n".join(result)
 
+    def update(self, value):
+        if self._value_type is dict:
+            self._value.update(value)
+
     def remove(self, value):
-        self._value.remove(value)
+        if self._value_type is list:
+            self._value.remove(value)
+        elif self._value_type is dict:
+            self._value.pop(value, None)
 
     def append(self, value):
+        if self._value_type is not list:
+            raise ConanException("Only list-like values can append other values.")
+
         if isinstance(value, list):
             self._value.extend(value)
         else:
             self._value.append(value)
 
     def prepend(self, value):
+        if self._value_type is not list:
+            raise ConanException("Only list-like values can prepend other values.")
+
         if isinstance(value, list):
             self._value = value + self._value
         else:
@@ -140,14 +127,15 @@ class _ConfListValue(_ConfValue):
         self mandates what to do. If self has define(), without placeholder, that will remain.
         :type other: _ConfValue
         """
-        try:
-            index = self._value.index(_ConfVarPlaceHolder)
-        except ValueError:  # It doesn't have placeholder
-            pass
-        else:
-            new_value = self._value[:]  # do a copy
-            new_value[index:index + 1] = other._value  # replace the placeholder
-            self._value = new_value
+        if self._value_type is list:
+            try:
+                index = self._value.index(_ConfVarPlaceHolder)
+            except ValueError:  # It doesn't have placeholder
+                pass
+            else:
+                new_value = self._value[:]  # do a copy
+                new_value[index:index + 1] = other._value  # replace the placeholder
+                self._value = new_value
 
 
 class Conf:
@@ -235,18 +223,6 @@ class Conf:
         self._values.pop(conf_name, None)
         return value
 
-    def _get_conf_value(self, name, value):
-        """
-        Get a valid _ConfValue object based on the built-in Conf type declared
-        or the value-like object. For now, we only manage lists or strings.
-        """
-        if (name in self._values and isinstance(self._values[name], _ConfListValue)) \
-           or isinstance(value, list):
-            return _ConfListValue(name, value)
-        else:
-            # Any other value will be converted to string by default
-            return _ConfStrValue(name, value)
-
     @staticmethod
     def _validate_lower_case(name):
         if name != name.lower():
@@ -265,26 +241,35 @@ class Conf:
 
     def define(self, name, value):
         self._validate_lower_case(name)
-        self._values[name] = self._get_conf_value(name, value)
+        self._values[name] = _ConfValue(name, value)
 
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
         """
-        self._values[name] = self._get_conf_value(name, None)
+        self._values[name] = _ConfValue(name, None)
+
+    def update(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, {})
+        self._values.setdefault(name, conf_value).append(value)
 
     def append(self, name, value):
         self._validate_lower_case(name)
-        conf_value = self._get_conf_value(name, [_ConfVarPlaceHolder])
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).append(value)
 
     def prepend(self, name, value):
         self._validate_lower_case(name)
-        conf_value = self._get_conf_value(name, [_ConfVarPlaceHolder])
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):
-        self._values[name].remove(value)
+        conf_value = self._values.get(name)
+        if conf_value:
+            conf_value.remove(value)
+        else:
+            raise ConanException("Conf {} does not exist.".format(name))
 
     def compose_conf(self, other):
         """
