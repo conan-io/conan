@@ -102,7 +102,7 @@ def test_parse_spaces():
     ("user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}",
      {'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'})
 ])
-def test_different_type_input_objects(text, expected):
+def test_conf_get_different_type_input_objects(text, expected):
     """
     Testing any possible Python-evaluable-input-format introduced
     by the user
@@ -182,5 +182,6 @@ def test_conf_pop():
     c.loads(text)
 
     assert c.pop("user.company.network:proxies") == {'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
+    assert c.pop("tools.microsoft.msbuild:missing") is None
     assert c.pop("tools.microsoft.msbuild:missing", default="fake") == "fake"
     assert c.pop("zlib:user.company.check:shared_str") == '"False"'
