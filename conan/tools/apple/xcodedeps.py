@@ -17,6 +17,28 @@ GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
 GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
+def _xcconfig_settings_filename(self, settings):
+    arch = settings.get_safe("arch")
+    self.architecture = to_apple_arch(arch) or arch
+    props = [("configuration", settings.get_safe("build_type")),
+             ("architecture", arch),
+             ("sdk name", settings.get_safe("os.sdk")),
+             ("sdk version", settings.get_safe("os.sdk_version"))]
+    name = "".join("_{}".format(v) for _, v in props if v is not None and v)
+    name = name.replace(".", "_").replace("-", "_")
+    return name.lower()
+
+
+def _xcconfig_conditional(settings):
+    sdk_condition = "*"
+    arch = settings.get_safe("arch")
+    architecture = to_apple_arch(arch) or arch
+    if settings.get_safe("os.sdk"):
+        sdk_condition = "{}{}".format(settings.get_safe("os.sdk"), settings.get_safe("os.sdk_version") or "*")
+
+    return "[config={}][arch={}][sdk={}]".format(settings.get_safe("build_type"), architecture, sdk_condition)
+
+
 def _add_include_to_file_or_create(filename, template, include):
     if os.path.isfile(filename):
         content = load(filename)
@@ -99,13 +121,6 @@ class XcodeDeps(object):
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         check_using_build_profile(self._conanfile)
 
-    @property
-    def sdk_condition(self):
-        if self.sdk:
-            sdk = "{}{}".format(self.sdk, self.sdk_version or "*")
-            return sdk
-        return "*"
-
     def generate(self):
         if self.configuration is None:
             raise ConanException("XcodeDeps.configuration is None, it should have a value")
@@ -115,23 +130,11 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _config_filename(self):
-        # Default name
-        props = [("configuration", self.configuration),
-                 ("architecture", self.architecture),
-                 ("sdk name", self.sdk),
-                 ("sdk version", self.sdk_version)]
-        name = "".join("_{}".format(v) for _, v in props if v is not None and v)
-        name = name.replace(".", "_").replace("-", "_")
-        return name.lower()
-
     def _vars_xconfig_file(self, dep, name, cpp_info):
         """
         returns a .xcconfig file with the variables definition for one package for one configuration
         """
 
-        condition = "[config={}][arch={}][sdk={}]".format(self.configuration, self.architecture,
-                                                          self.sdk_condition)
         fields = {
             'name': name,
             'root_folder': dep.package_folder,
@@ -148,7 +151,7 @@ class XcodeDeps(object):
             'cxx_compiler_flags': " ".join(cpp_info.cxxflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
-            'condition': condition
+            'condition': _xcconfig_conditional(self._conanfile.settings)
         }
         formatted_template = Template(self._vars_xconfig).render(**fields)
         return formatted_template
@@ -198,7 +201,7 @@ class XcodeDeps(object):
 
     def _content(self):
         result = {}
-        conf_name = self._config_filename()
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
         for dep in self._conanfile.dependencies.host.values():
             dep_name = dep.ref.name

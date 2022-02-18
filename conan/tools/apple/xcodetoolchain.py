@@ -5,7 +5,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import cppstd_flag
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
-    _add_include_to_file_or_create
+    _add_include_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
 from conans.util.files import save
 
 
@@ -46,23 +46,23 @@ class XcodeToolchain(object):
 
     @property
     def macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(self._var_condition,
+        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                       self.os_version) if self.os_version else ""
 
     @property
     def clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(self._var_condition,
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def clang_cxx_language_standard(self):
-        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(self._var_condition,
+        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                          self.cppstd) if self.cppstd else ""
 
     def generate(self):
         save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
-        save(self._vars_xconfig_filename, self._vars_xconfig_content)
+        save(_xcconfig_settings_filename, self._vars_xconfig_content)
 
     @property
     def _vars_xconfig_content(self):
@@ -75,36 +75,13 @@ class XcodeToolchain(object):
     def _agreggated_xconfig_content(self):
         return _add_include_to_file_or_create(self._agreggated_xconfig_filename,
                                               self._agreggated_xconfig,
-                                              self._vars_xconfig_filename)
+                                              _xcconfig_settings_filename)
 
     @property
     def _global_xconfig_content(self):
         return _add_include_to_file_or_create(GLOBAL_XCCONFIG_FILENAME,
                                               GLOBAL_XCCONFIG_TEMPLATE,
                                               self._agreggated_xconfig_filename)
-
-
-    @property
-    def _sdk_condition(self):
-        if self.sdk:
-            sdk = "{}{}".format(self.sdk, self.sdk_version or "*")
-            return sdk
-        return "*"
-
-    @property
-    def _var_condition(self):
-        return "[config={}][arch={}][sdk={}]".format(self.configuration, self.architecture,
-                                                     self._sdk_condition)
-
-    @property
-    def _vars_xconfig_filename(self):
-        props = [("configuration", self.configuration),
-                 ("architecture", self.architecture),
-                 ("sdk name", self.sdk),
-                 ("sdk version", self.sdk_version)]
-        name = "".join("_{}".format(v) for _, v in props if v is not None and v)
-        name = name.replace(".", "_").replace("-", "_")
-        return self.filename + name.lower() + self.extension
 
     @property
     def _agreggated_xconfig_filename(self):
