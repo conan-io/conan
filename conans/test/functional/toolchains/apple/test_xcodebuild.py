@@ -433,5 +433,3 @@ def test_missing_sdk(client):
                  "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
     client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=12.0 "
                "-c tools.apple:sdk_path=notexistingsdk", assert_error=True)
-    assert "unable to find sdk 'notexistingsdk'" in client.out
-
