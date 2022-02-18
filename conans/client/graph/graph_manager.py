@@ -6,8 +6,7 @@ from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
 
-from conans.client.graph.profile_node_definer import txt_definer, virtual_definer, \
-    initialize_conanfile_profile
+from conans.client.graph.profile_node_definer import consumer_definer, initialize_conanfile_profile
 from conans.client.profile_loader import ProfileLoader
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -49,7 +48,7 @@ class GraphManager(object):
 
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path)
-            txt_definer(conanfile, profile_host)
+            consumer_definer(conanfile, profile_host)
         return conanfile
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
@@ -125,7 +124,7 @@ class GraphManager(object):
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = self._loader.load_conanfile_txt(path, require_overrides=require_overrides)
-            txt_definer(conanfile, profile_host)
+            consumer_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
 
@@ -140,7 +139,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference],
                                               is_build_require=is_build_require,
                                               require_overrides=require_overrides)
-        virtual_definer(conanfile, profile_host)
+        consumer_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
 

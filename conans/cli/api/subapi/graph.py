@@ -2,8 +2,7 @@ from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer, \
-    txt_definer
+from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -38,7 +37,7 @@ class GraphAPI:
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = app.loader.load_conanfile_txt(path, require_overrides=require_overrides)
-            txt_definer(conanfile, profile_host)
+            consumer_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
         return root_node
@@ -89,7 +88,7 @@ class GraphAPI:
 
         conanfile = app.loader.load_virtual([ref],  is_build_require=is_build_require,
                                             require_overrides=require_overrides)
-        virtual_definer(conanfile, profile_host)
+        consumer_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
 

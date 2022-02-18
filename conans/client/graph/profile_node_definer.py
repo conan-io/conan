@@ -67,29 +67,17 @@ def _initialize_conanfile(conanfile, profile, ref):
     conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
 
 
-def txt_definer(conanfile, profile_host):
+def consumer_definer(conanfile, profile_host):
     """ conanfile.txt does not declare settings, but it assumes it uses all the profile settings
     These settings are very necessary for helpers like generators to produce the right output
     """
     tmp_settings = profile_host.processed_settings.copy()
     package_settings_values = profile_host.package_settings_values
-    # TODO: The pattern-matching for pkg, buildenv and conf needs to be extracted too
-    # FIXME: This "&" management should be extracted
-    if "&" in package_settings_values:
-        pkg_settings = package_settings_values.get("&")
-        if pkg_settings:
-            tmp_settings.update_values(pkg_settings)
-    conanfile.settings = tmp_settings
-    conanfile._conan_buildenv = profile_host.buildenv
-    conanfile.conf = profile_host.conf.get_conanfile_conf(None)
 
+    for pattern, settings in package_settings_values.items():
+        if ref_matches(ref=None, pattern=pattern, is_consumer=True):
+            tmp_settings.update_values(settings)
 
-def virtual_definer(conanfile, profile_host):
-    """ virtual does not declare settings, but it assumes it uses all the profile settings
-    These settings are very necessary for helpers like generators to produce the right output
-    """
-    tmp_settings = profile_host.processed_settings.copy()
-    # TODO: Maybe "if "&" in package_settings_values": is necessary here too?
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile_host.buildenv
     conanfile.conf = profile_host.conf.get_conanfile_conf(None)
