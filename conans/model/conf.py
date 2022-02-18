@@ -196,8 +196,7 @@ class Conf:
 
     def get(self, conf_name, default=None, check_type=None):
         """
-        Get all the values belonging to the passed conf name. You can convert the final conf value
-        thanks to "cast" param.
+        Get all the values belonging to the passed conf name.
 
         :param conf_name: conf name
         :param default: default value in case of conf does not have the conf_name key

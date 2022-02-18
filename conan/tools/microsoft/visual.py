@@ -36,7 +36,7 @@ class VCVars:
         vcvarsarch = vcvars_arch(conanfile)
         vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
 
-        vs_install_path = conanfile.conf["tools.microsoft.msbuild:installation_path"]
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
@@ -58,7 +58,7 @@ def vs_ide_version(conanfile):
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        toolset_override = conanfile.conf.get("tools.microsoft.msbuild:vs_version")
         if toolset_override:
             visual_version = toolset_override
         else:
