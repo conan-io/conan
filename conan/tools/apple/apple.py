@@ -41,7 +41,7 @@ def apple_sdk_name(settings):
     arch = settings.get_safe('arch')
     os_ = settings.get_safe('os')
     os_sdk = settings.get_safe('os.sdk')
-    os_sdk_version = settings.get_safe('os.sdk_version')
+    os_sdk_version = settings.get_safe('os.sdk_version') or ""
     return "{}{}".format(os_sdk, os_sdk_version) if os_sdk else _guess_apple_sdk_name(os_, arch)
 
 
