@@ -65,7 +65,7 @@ def vs_ide_version(conanfile):
             visual_version = msvc_version_to_vs_ide_version(compiler_version)
     else:
         visual_version = compiler_version
-    return visual_version
+    return str(visual_version)
 
 
 def msvc_runtime_flag(conanfile):
