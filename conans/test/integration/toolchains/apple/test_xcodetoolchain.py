@@ -21,14 +21,14 @@ def _condition(configuration, architecture, sdk_name, sdk_version):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.parametrize("configuration, os_version, libcxx, cppstd, arch, sdk_name, sdk_version", [
-    ("Release", "", "", "", "x86_64", "", ""),
-    ("Release", "12.0", "libc++", "20", "x86_64", "", ""),
-    ("Debug", "12.0", "libc++", "20", "x86_64", "", ""),
-    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "11.3"),
-    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", ""),
+@pytest.mark.parametrize("configuration, os_version, libcxx, cppstd, arch, sdk_name, sdk_version, clang_cppstd", [
+    ("Release", "", "", "", "x86_64", "", "", ""),
+    ("Release", "12.0", "libc++", "20", "x86_64", "", "", "c++2a"),
+    ("Debug", "12.0", "libc++", "20", "x86_64", "", "", "c++2a"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "11.3", "c++2a"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "", "c++2a"),
 ])
-def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_name, sdk_version):
+def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_name, sdk_version, clang_cppstd):
     client = TestClient()
     client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
     cmd = "install . -s build_type={}".format(configuration)
@@ -52,4 +52,4 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_na
     if os_version:
         assert 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(condition, os_version) in toolchain_vars
     if cppstd:
-        assert 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(condition, cppstd) in toolchain_vars
+        assert 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(condition, clang_cppstd) in toolchain_vars
