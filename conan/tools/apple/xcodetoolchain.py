@@ -62,7 +62,12 @@ class XcodeToolchain(object):
     def generate(self):
         save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
-        save(_xcconfig_settings_filename(self._conanfile.settings), self._vars_xconfig_content)
+        save(self._vars_xconfig_filename, self._vars_xconfig_content)
+
+    @property
+    def _vars_xconfig_filename(self):
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
+                                                                       self.extension)
 
     @property
     def _vars_xconfig_content(self):
@@ -75,7 +80,7 @@ class XcodeToolchain(object):
     def _agreggated_xconfig_content(self):
         return _add_include_to_file_or_create(self._agreggated_xconfig_filename,
                                               self._agreggated_xconfig,
-                                              _xcconfig_settings_filename(self._conanfile.settings))
+                                              self._vars_xconfig_filename)
 
     @property
     def _global_xconfig_content(self):
