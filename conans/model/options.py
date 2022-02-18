@@ -323,7 +323,7 @@ class Options:
         for pkg, pkg_option in other._deps_package_options.items():
             self._deps_package_options.setdefault(pkg, _PackageOptions()).update_options(pkg_option)
 
-    def apply_downstream(self, down_options, profile_options, own_ref):
+    def apply_downstream(self, down_options, profile_options, own_ref, is_consumer):
         """ compute the current package options, starting from the self defined ones and applying
         the options defined by the downstrream consumers and the profile
         Only modifies the current package_options, not the dependencies ones
@@ -337,19 +337,18 @@ class Options:
                 # Get the non-scoped options, plus the "all-matching=*" pattern
                 self._package_options.update_options(defined_options._package_options)
                 for pattern, options in defined_options._deps_package_options.items():
-                    # FIXME: Weird setup to see if the null reference matches
-                    if RecipeReference.loads("*/*").matches(pattern, is_consumer=True):
+                    if ref_matches(None, pattern, is_consumer=is_consumer):
                         self._package_options.update_options(options, is_pattern=True)
             else:
                 # If the current package has a name, there should be a match, either exact name
                 # match, or a fnmatch approximate one
                 for pattern, options in defined_options._deps_package_options.items():
-                    if ref_matches(own_ref, pattern, is_consumer=False):
+                    if ref_matches(own_ref, pattern, is_consumer=is_consumer):
                         self._package_options.update_options(options, is_pattern="*" in pattern)
 
         self._package_options.freeze()
 
-    def get_upstream_options(self, down_options, own_ref):
+    def get_upstream_options(self, down_options, own_ref, is_consumer):
         """ compute which options should be propagated to the dependencies, a combination of the
         downstream defined default_options with the current default_options ones. This happens
         at "configure()" time, while building the graph. Also compute the minimum "self_options"
@@ -366,7 +365,7 @@ class Options:
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            if ref_matches(own_ref, pattern, is_consumer=False):  # FIXME: Always false?
+            if ref_matches(own_ref, pattern, is_consumer=is_consumer):
                 # Remove the exact match to this package, don't further propagate up
                 continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
