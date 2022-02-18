@@ -92,72 +92,95 @@ def test_parse_spaces():
     assert c["core:verbosity"] == "minimal"
 
 
-def test_conf_other_patterns_and_access():
+@pytest.mark.parametrize("text, expected", [
+    ("user.company.cpu:jobs=!", None),
+    ("user.company.cpu:jobs=10", 10),
+    ("user.company.build:ccflags=--m superflag", "--m superflag"),
+    ("zlib:user.company.check:shared=True", True),
+    ("zlib:user.company.check:shared_str='True'", '"True"'),
+    ("user.company.list:objs=[1, 2, 3, 4, 'mystr', {'a': 1}]", [1, 2, 3, 4, 'mystr', {'a': 1}]),
+    ("user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}",
+     {'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'})
+])
+def test_different_type_input_objects(text, expected):
+    """
+    Testing any possible Python-evaluable-input-format introduced
+    by the user
+    """
+    c = ConfDefinition()
+    c.loads(text)
+    assert c.get(text.split("=")[0]) == expected
+
+
+def test_compose_conf_complex():
+    """
+    Testing the composition between several ConfDefiniton objects and with
+    different value types
+    """
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
-        tools.cmake.cmaketoolchain:generator=CMake
-        user.company.toolchain:flags=["oneflag", "secondflag"]
-        openssl:user.company.toolchain:flags=["myflag"]
-        zlib:user.company.toolchain:flags=["zflag"]
+        user.company.cpu:jobs=10
+        user.company.build:ccflags=--m superflag
+        zlib:user.company.check:shared=True
+        zlib:user.company.check:shared_str="True"
+        user.company.list:objs=[1, 2, 3, 4, 'mystr', {'a': 1}]
+        user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}
     """)
     c = ConfDefinition()
     c.loads(text)
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=Quiet
-        user.company.toolchain:flags=+["zeroflag"]
-        user.company.toolchain:flags+=thirdflag
-        openssl:user.company.toolchain:flags=!
-        tools.cmake.cmaketoolchain:generator=!
-        zlib:user.company.toolchain:flags=+z2flag
+        user.company.cpu:jobs=5
+        user.company.build:ccflags=--m otherflag
+        zlib:user.company.check:shared=!
+        zlib:user.company.check:shared_str="False"
+        user.company.list:objs+=[5, 6]
+        user.company.list:objs=+0
+        user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         """)
     c2 = ConfDefinition()
     c2.loads(text)
     c.update_conf_definition(c2)
-    expected = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=Quiet
-        user.company.toolchain:flags=zeroflag
-        user.company.toolchain:flags+=oneflag
-        user.company.toolchain:flags+=secondflag
-        user.company.toolchain:flags+=thirdflag
-        tools.cmake.cmaketoolchain:generator=!
-        openssl:user.company.toolchain:flags=!
-        zlib:user.company.toolchain:flags=z2flag
-        zlib:user.company.toolchain:flags+=zflag
+    expected_text = textwrap.dedent("""\
+        user.company.cpu:jobs=5
+        user.company.build:ccflags=--m otherflag
+        user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6]
+        user.company.network:proxies={'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
+        zlib:user.company.check:shared=!
+        zlib:user.company.check:shared_str="False"
     """)
-    if sys.version_info.major == 2:
-        # FIXME: Python 2.x different order and sorted does not work with None keys
-        #        in Python 3.x
-        assert all([v in c.dumps() for v in expected.splitlines()])
-    else:
-        assert c.dumps() == expected
-    assert c["tools.microsoft.msbuild:verbosity"] == "Quiet"
-    assert c["user.company.toolchain:flags"] == ["zeroflag", "oneflag", "secondflag", "thirdflag"]
-    assert c["openssl:user.company.toolchain:flags"] is None
-    assert c["tools.cmake.cmaketoolchain:generator"] is None
+    assert c.dumps() == expected_text
 
 
-def test_conf_get(conf_definition):
-    c, _ = conf_definition
+def test_conf_get_check_type_and_default():
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=!
-        user.company.toolchain:flags=oneflag
-        zlib:user.company.toolchain:flags=["z1flag"]
-        zlib:user.company.toolchain:flags+=z2flag
-        openssl:user.company.toolchain:flags=oflag""")
-    c2 = ConfDefinition()
-    c2.loads(text)
-    c.update_conf_definition(c2)
-    assert c.get("tools.microsoft.msbuild:verbosity") is None  # unset == ""
-    assert c.get("tools.microsoft.msbuild:missing", default="fake") == "fake"
-    assert c.get("user.company.toolchain:flags") == "oneflag"
-    assert c.get("zlib:user.company.toolchain:flags") == ["z1flag", "z2flag"]
-    assert c.get("openssl:user.company.toolchain:flags") == "oflag"
+        user.company.cpu:jobs=5
+        user.company.build:ccflags=--m otherflag
+        user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6]
+        user.company.network:proxies={'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
+        zlib:user.company.check:shared=!
+        zlib:user.company.check:shared_str="False"
+    """)
+    c = ConfDefinition()
+    c.loads(text)
+    assert c.get("user.company.cpu:jobs", check_type=int) == 5
+    with pytest.raises(ConanException) as exc_info:
+        c.get("user.company.cpu:jobs", check_type=list)
+        assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
+    # Check type does not affect to default value
+    assert c.get("non:existing:conf", default=0, check_type=dict) == 0
 
 
-def test_conf_pop(conf_definition):
-    c, _ = conf_definition
-    assert c.pop("tools.microsoft.msbuild:missing") is None
+def test_conf_pop():
+    text = textwrap.dedent("""\
+        user.company.cpu:jobs=5
+        user.company.build:ccflags=--m otherflag
+        user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6]
+        user.company.network:proxies={'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
+        zlib:user.company.check:shared=!
+        zlib:user.company.check:shared_str="False"
+    """)
+    c = ConfDefinition()
+    c.loads(text)
+
+    assert c.pop("user.company.network:proxies") == {'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
     assert c.pop("tools.microsoft.msbuild:missing", default="fake") == "fake"
-    assert c.pop("tools.microsoft.msbuild:verbosity") == "minimal"
-    assert c.pop("tools.microsoft.msbuild:verbosity") is None
-    assert c.pop("user.company.toolchain:flags") == "someflags"
+    assert c.pop("zlib:user.company.check:shared_str") == '"False"'

@@ -54,6 +54,9 @@ class VCVars:
 
 
 def vs_ide_version(conanfile):
+    """
+    Get the VS IDE version as string
+    """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))

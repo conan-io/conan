@@ -71,27 +71,10 @@ class _ConfValue(object):
         return _ConfValue(self._name, self._value)
 
     def dumps(self):
-        if self._value_type is not list:
-            if self._value is None:
-                return "{}=!".format(self._name)  # unset
-            else:
-                return "{}={}".format(self._name, self._value)
+        if self._value is None:
+            return "{}=!".format(self._name)  # unset
         else:
-            result = []
-            if not self._value:  # Empty means unset
-                result.append("{}=!".format(self._name))
-            elif _ConfVarPlaceHolder in self._value:
-                index = self._value.index(_ConfVarPlaceHolder)
-                for v in self._value[:index]:
-                    result.append("{}=+{}".format(self._name, v))
-                for v in self._value[index+1:]:
-                    result.append("{}+={}".format(self._name, v))
-            else:
-                append = ""
-                for v in self._value:
-                    result.append("{}{}={}".format(self._name, append, v))
-                    append = "+"
-        return "\n".join(result)
+            return "{}={}".format(self._name, self._value)
 
     def update(self, value):
         if self._value_type is dict:
@@ -136,6 +119,9 @@ class _ConfValue(object):
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
                 self._value = new_value
+        elif self._value_type is dict and other._value_type is dict:
+            other.update(self._value)
+            self._value = other._value
 
 
 class Conf:
@@ -434,6 +420,22 @@ class ConfDefinition:
             result.append("")
         return "\n".join(result)
 
+    @staticmethod
+    def _get_evaluated_value(__v):
+        """
+        Function to avoid eval() catching local variables
+        """
+        try:
+            # Isolated eval
+            parsed_value = eval(__v)
+            if isinstance(parsed_value, str):  # xxx:xxx = "my string"
+                # Let's respect the quotes introduced by any user
+                parsed_value = '"{}"'.format(parsed_value)
+        except:
+            # It means eval() failed because of a string without quotes
+            parsed_value = __v.strip()
+        return parsed_value
+
     def loads(self, text, profile=False):
         self._pattern_confs = {}
 
@@ -447,11 +449,7 @@ class ConfDefinition:
                     continue
 
                 pattern_name, value = tokens
-                try:
-                    parsed_value = eval(value)
-                except:
-                    parsed_value = value.strip()
-
+                parsed_value = ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:
