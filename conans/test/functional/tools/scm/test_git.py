@@ -234,29 +234,27 @@ class TestFullSCM:
                 git.checkout(commit=sources["commit"])
                 cmake =  os.path.join(self.source_folder, "CMakeLists.txt")
                 file_h =  os.path.join(self.source_folder, "src/myfile.h")
-                self.output.info("MYCMAKE: {{}}".format(load(self, cmake)))
-                self.output.info("MYFILE: {{}}".format(load(self, file_h)))
+                self.output.info("MYCMAKE: {}".format(load(self, cmake)))
+                self.output.info("MYFILE: {}".format(load(self, file_h)))
         """)
 
     def test_full_scm(self):
         # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
-        folder = os.path.join(temp_folder(), "myrepo")
-        create_local_git_repo(files={"src/myfile.h": "myheader!",
-                                     "CMakeLists.txt": "mycmake"}, folder=folder)
-
-        c = TestClient()
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": self.conanfile,
                 "src/myfile.h": "myheader!",
                 "CMakeLists.txt": "mycmake"})
-        commit = c.init_git_repo()
+        c.init_git_repo()
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 
         # Do a change and commit
         git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=c.current_folder)
+        c.run("upload * --all -c")
 
-        c.run("install pkg/0.1@ --build=pkg1")
-        print(c.out)
-        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
-        assert "pkg/0.1: MYFILE: myheader!" in c.out
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install pkg/0.1@ --build=pkg")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
+        assert "pkg/0.1: MYFILE: myheader!" in c2.out
