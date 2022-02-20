@@ -14,8 +14,11 @@ def update_conandata(conanfile, data):
     if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
         raise ConanException("The 'update_conandata()' can only be used in the 'export()' method")
     path = os.path.join(conanfile.export_folder, "conandata.yml")
-    conandata = load(path)
-    conandata = yaml.safe_load(conandata)
+    if os.path.exists(path):
+        conandata = load(path)
+        conandata = yaml.safe_load(conandata)
+    else:  # File doesn't exist, create it
+        conandata = {}
 
     def recursive_dict_update(d, u):
         for k, v in u.items():
