@@ -62,3 +62,6 @@ class Git(object):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
         self._run('clone "{}" {}'.format(url, target))
+
+    def checkout(self, commit):
+        self._run('checkout {}'.format(commit))

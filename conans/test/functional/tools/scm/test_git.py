@@ -162,6 +162,7 @@ class TestGitBasicClone:
     """ base Git cloning operations
     """
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.scm import Git
         from conan.tools.files import load
@@ -171,22 +172,91 @@ class TestGitBasicClone:
             version = "0.1"
 
             def layout(self):
-                self.folders.source = "src"
+                self.folders.source = "source"
 
             def source(self):
                 git = Git(self, self.source_folder)
                 git.clone(url="{url}", target=".")
-                # git.checkout(commit="{commit}")
-                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
-                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
+                git.checkout(commit="{commit}")
+                cmake =  os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h =  os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE: {{}}".format(load(self, cmake)))
+                self.output.info("MYFILE: {{}}".format(load(self, file_h)))
         """)
 
     def test_clone(self):
+        # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
-                                                   "CMakeLists.txt": "mycmke"}, folder=folder)
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder)
+        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
         c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+        # It also works in local flow
+        c.run("source .")
+        assert "conanfile.py (pkg/0.1): MYCMAKE: mycmake" in c.out
+        assert "conanfile.py (pkg/0.1): MYFILE: myheader!" in c.out
+        assert c.load("source/src/myfile.h") == "myheader!"
+        assert c.load("source/CMakeLists.txt") == "mycmake"
+
+
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
+class TestFullSCM:
+    """ Build the full new SCM approach
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load, update_conandata
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, self.recipe_folder)
+                scm_url, scm_commit = git.get_url_commit()
+                update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
+
+            def layout(self):
+                self.folders.source = "source"
+
+            def source(self):
+                git = Git(self, self.source_folder)
+                sources = self.conan_data["sources"]
+                git.clone(url=sources["url"], target=".")
+                git.checkout(commit=sources["commit"])
+                cmake =  os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h =  os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE: {{}}".format(load(self, cmake)))
+                self.output.info("MYFILE: {{}}".format(load(self, file_h)))
+        """)
+
+    def test_full_scm(self):
+        # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+        folder = os.path.join(temp_folder(), "myrepo")
+        create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                     "CMakeLists.txt": "mycmake"}, folder=folder)
+
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile,
+                "src/myfile.h": "myheader!",
+                "CMakeLists.txt": "mycmake"})
+        commit = c.init_git_repo()
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+        # Do a change and commit
+        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=c.current_folder)
+
+        c.run("install pkg/0.1@ --build=pkg1")
         print(c.out)
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
