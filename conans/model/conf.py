@@ -73,6 +73,10 @@ class _ConfValue(object):
     def dumps(self):
         if self._value is None:
             return "{}=!".format(self._name)  # unset
+        elif self._value_type is list and _ConfVarPlaceHolder in self._value:
+            v = self._value[:]
+            v.remove(_ConfVarPlaceHolder)
+            return "{}={}".format(self._name, v)
         else:
             return "{}={}".format(self._name, self._value)
 
@@ -110,7 +114,9 @@ class _ConfValue(object):
         self mandates what to do. If self has define(), without placeholder, that will remain.
         :type other: _ConfValue
         """
-        if self._value_type is list:
+        v_type = self._value_type
+        o_type = other._value_type
+        if v_type is list and o_type is list:
             try:
                 index = self._value.index(_ConfVarPlaceHolder)
             except ValueError:  # It doesn't have placeholder
@@ -119,9 +125,14 @@ class _ConfValue(object):
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
                 self._value = new_value
-        elif self._value_type is dict and other._value_type is dict:
-            other.update(self._value)
-            self._value = other._value
+        elif self._value is None or other._value is None:
+            # It means any of those values were an "unset" so doing nothing because we don't
+            # really know the original value type
+            pass
+        elif o_type != v_type:
+            raise ConanException("It's not possible to compose {} values "
+                                 "and {} ones.".format(v_type.__name__, o_type.__name__))
+        # TODO: In case of any other object types?
 
 
 class Conf:

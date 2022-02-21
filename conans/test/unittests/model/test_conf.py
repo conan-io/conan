@@ -112,6 +112,41 @@ def test_conf_get_different_type_input_objects(text, expected):
     assert c.get(text.split("=")[0]) == expected
 
 
+@pytest.mark.parametrize("text1, text2, expected", [
+    ("user.company.list:objs=[2, 3]", "user.company.list:objs=+[0, 1]", [0, 1, 2, 3]),
+    ("user.company.list:objs=[2, 3]", "user.company.list:objs+=[4, 5]", [2, 3, 4, 5]),
+    ("user.company.list:objs=[2, 3]", "user.company.list:objs+={'a': 1}", [2, 3, {'a': 1}]),
+    ("user.company.list:objs=[2, 3]", "user.company.list:objs=+start", ["start", 2, 3]),
+    ("user.company.list:objs=[2, 3]", "user.company.list:objs=[0, 1]", [0, 1]),
+])
+def test_conf_list_operations(text1, text2, expected):
+    c1 = ConfDefinition()
+    c1.loads(text1)
+    c2 = ConfDefinition()
+    c2.loads(text2)
+    c1.update_conf_definition(c2)
+    assert c1.get(text1.split("=")[0]) == expected
+
+
+@pytest.mark.parametrize("text1, text2", [
+    ("user.company.list:objs=value", "user.company.list:objs=['value']"),
+    ("user.company.list:objs='value'", "user.company.list:objs=+[0, 1]"),
+    ("user.company.list:objs={'a': 1}", "user.company.list:objs+={'b': 1}"),
+    ("user.company.list:objs=True", "user.company.list:objs+=False"),
+    ("user.company.list:objs=10", "user.company.list:objs=+11")
+])
+def test_conf_list_operations_fails_with_wrong_types(text1, text2):
+    c1 = ConfDefinition()
+    c1.loads(text1)
+    c1_value_type = type(c1.get("user.company.list:objs")).__name__
+    c2 = ConfDefinition()
+    c2.loads(text2)
+    with pytest.raises(ConanException) as exc_info:
+        c1.update_conf_definition(c2)
+    assert "It's not possible to compose list values and %s ones" % c1_value_type \
+           in str(exc_info.value)
+
+
 def test_compose_conf_complex():
     """
     Testing the composition between several ConfDefiniton objects and with
@@ -134,6 +169,7 @@ def test_compose_conf_complex():
         zlib:user.company.check:shared_str="False"
         user.company.list:objs+=[5, 6]
         user.company.list:objs=+0
+        user.company.list:objs+={'b': 2}
         user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         """)
     c2 = ConfDefinition()
@@ -142,8 +178,8 @@ def test_compose_conf_complex():
     expected_text = textwrap.dedent("""\
         user.company.cpu:jobs=5
         user.company.build:ccflags=--m otherflag
-        user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6]
-        user.company.network:proxies={'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
+        user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6, {'b': 2}]
+        user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         zlib:user.company.check:shared=!
         zlib:user.company.check:shared_str="False"
     """)
