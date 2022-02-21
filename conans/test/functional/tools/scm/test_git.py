@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -10,7 +11,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
-class TestBasicCaptureExportGit:
+class TestGitBasicCapture:
     """ base Git capture operations. They do not raise (unless errors)
     """
     conanfile = textwrap.dedent("""
@@ -87,7 +88,7 @@ class TestBasicCaptureExportGit:
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
-class TestCaptureExportGitSCM:
+class TestGitCaptureSCM:
     """ test the get_url_commit() high level method intended for SCM capturing into conandata.yaml
     """
     conanfile = textwrap.dedent("""
@@ -114,6 +115,7 @@ class TestCaptureExportGitSCM:
         c.save({"conanfile.py": self.conanfile})
         commit = c.init_git_repo()
         c.run("export .")
+        assert "This revision will not be buildable in other computer" in c.out
         assert "pkg/0.1: SCM COMMIT: {}".format(commit) in c.out
         assert "pkg/0.1: SCM URL: {}".format(c.current_folder) in c.out
 
@@ -148,6 +150,7 @@ class TestCaptureExportGitSCM:
                                                c.current_folder)
 
             c.run("export .")
+            assert "This revision will not be buildable in other computer" in c.out
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
             # NOTE: commit not pushed yet, so locally is the current folder
             assert "pkg/0.1: SCM URL: {}".format(c.current_folder) in c.out
@@ -161,6 +164,7 @@ class TestCaptureExportGitSCM:
 class TestGitBasicClone:
     """ base Git cloning operations
     """
+    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -178,17 +182,17 @@ class TestGitBasicClone:
                 git = Git(self, self.source_folder)
                 git.clone(url="{url}", target=".")
                 git.checkout(commit="{commit}")
-                cmake =  os.path.join(self.source_folder, "CMakeLists.txt")
-                file_h =  os.path.join(self.source_folder, "src/myfile.h")
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
                 self.output.info("MYCMAKE: {{}}".format(load(self, cmake)))
                 self.output.info("MYFILE: {{}}".format(load(self, file_h)))
         """)
 
-    def test_clone(self):
-        # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+    def test_clone_checkout(self):
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
                                                    "CMakeLists.txt": "mycmake"}, folder=folder)
+        # This second commit will NOT be used, as I will use the above commit in the conanfile
         git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
 
         c = TestClient()
@@ -206,9 +210,14 @@ class TestGitBasicClone:
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
-class TestFullSCM:
-    """ Build the full new SCM approach
+class TestGitBasicSCMFlow:
+    """ Build the full new SCM approach:
+    - export() captures the URL and commit with get_url_commit(
+    - export() stores it in conandata.yml
+    - source() recovers the info from conandata.yml and clones it
     """
+    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+    # TODO: the os.remove("conandata.yml") will not be necessary, exports will not be sources
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -225,36 +234,134 @@ class TestFullSCM:
                 update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
 
             def layout(self):
-                self.folders.source = "source"
+                self.folders.source = "."
 
             def source(self):
                 git = Git(self, self.source_folder)
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
-                cmake =  os.path.join(self.source_folder, "CMakeLists.txt")
-                file_h =  os.path.join(self.source_folder, "src/myfile.h")
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
                 self.output.info("MYCMAKE: {}".format(load(self, cmake)))
                 self.output.info("MYFILE: {}".format(load(self, file_h)))
+
+            def build(self):
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE-BUILD: {}".format(load(self, cmake)))
+                self.output.info("MYFILE-BUILD: {}".format(load(self, file_h)))
         """)
 
     def test_full_scm(self):
-        # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile,
+                                                   "src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder)
+
         c = TestClient(default_server_user=True)
-        c.save({"conanfile.py": self.conanfile,
-                "src/myfile.h": "myheader!",
-                "CMakeLists.txt": "mycmake"})
-        c.init_git_repo()
+        c.run_command('git clone "{}" .'.format(url))
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
-
-        # Do a change and commit
-        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=c.current_folder)
         c.run("upload * --all -c")
+
+        # Do a change and commit, this commit will not be used by package
+        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
         c2.run("install pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
+
+        # local flow
+        c.run("install .")
+        c.run("build .")
+        assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
+        assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
+
+
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
+class TestGitMonorepoSCMFlow:
+    """ Build the full new SCM approach:
+    Same as above but with a monorepo with multiple subprojects
+    """
+    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+    # TODO: swap_child_folder() not documented, not public usage
+    conanfile = textwrap.dedent("""
+        import os, shutil
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load, update_conandata
+        from conan.tools.files.files import swap_child_folder
+
+        class Pkg(ConanFile):
+            name = "{pkg}"
+            version = "0.1"
+
+            {requires}
+
+            def export(self):
+                git = Git(self, self.recipe_folder)
+                scm_url, scm_commit = git.get_url_commit()
+                self.output.info("CAPTURING COMMIT: {{}}!!!".format(scm_commit))
+                folder = os.path.basename(self.recipe_folder)
+                update_conandata(self, {{"sources": {{"commit": scm_commit, "url": scm_url,
+                                                      "folder": folder}}}})
+
+            def layout(self):
+                self.folders.source = "."
+
+            def source(self):
+                git = Git(self, self.source_folder)
+                sources = self.conan_data["sources"]
+                git.clone(url=sources["url"], target=".")
+                git.checkout(commit=sources["commit"])
+                swap_child_folder(self.source_folder, sources["folder"])
+
+            def build(self):
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE-BUILD: {{}}".format(load(self, cmake)))
+                self.output.info("MYFILE-BUILD: {{}}".format(load(self, file_h)))
+        """)
+
+    def test_full_scm(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        conanfile1 = self.conanfile.format(pkg="pkg1", requires="")
+        conanfile2 = self.conanfile.format(pkg="pkg2", requires="requires = 'pkg1/0.1'")
+        url, commit = create_local_git_repo(files={"sub1/conanfile.py": conanfile1,
+                                                   "sub1/src/myfile.h": "myheader1!",
+                                                   "sub1/CMakeLists.txt": "mycmake1!",
+                                                   "sub2/conanfile.py": conanfile2,
+                                                   "sub2/src/myfile.h": "myheader2!",
+                                                   "sub2/CMakeLists.txt": "mycmake2!"
+                                                   },
+                                            folder=folder)
+
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone "{}" .'.format(url))
+        c.run("create sub1")
+        commit = re.search(r"CAPTURING COMMIT: (\S+)!!!", str(c.out)).group(1)
+        assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c.out
+        assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c.out
+
+        git_change_and_commit(files={"sub2/src/myfile.h": "my2header!"}, folder=c.current_folder)
+        c.run("create sub2")
+        assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c.out
+        assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c.out
+
+        # Exporting again sub1, gives us exactly the same revision as before
+        c.run("export sub1")
+        assert "CAPTURING COMMIT: {}".format(commit) in c.out
+        c.run("upload * --all -c -r=default")
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install pkg2/0.1@ --build")
+        assert "pkg1/0.1: Checkout: {}".format(commit) in c2.out
+        assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c2.out
+        assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
+        assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
+        assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out

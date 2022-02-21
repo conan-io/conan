@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -14,6 +15,7 @@ import six
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
+from conans.util.files import rmdir
 
 if six.PY3:  # Remove this IF in develop2
     from shutil import which
@@ -491,3 +493,20 @@ def collect_libs(conanfile, folder=None):
                     result.append(name)
     result.sort()
     return result
+
+
+def swap_child_folder(parent_folder, child_folder):
+    """ replaces the current folder contents with the contents of one child folder. This
+    is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder
+    to replace the whole cloned git repo
+    """
+    for f in os.listdir(parent_folder):
+        if f != child_folder:
+            path = os.path.join(parent_folder, f)
+            if os.path.isfile(path):
+                os.remove(path)
+            else:
+                rmdir(path)
+    child = os.path.join(parent_folder, child_folder)
+    for f in os.listdir(child):
+        shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))

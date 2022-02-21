@@ -17,7 +17,9 @@ class Git(object):
 
     def get_commit(self):
         try:
-            commit = self._run("rev-parse HEAD")
+            # commit = self._run("rev-parse HEAD") For the whole repo
+            # This rev-list knows to capture the last commit for the folder
+            commit = self._run('rev-list HEAD -n 1 -- "{}"'.format(self.folder))
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
@@ -55,13 +57,28 @@ class Git(object):
         in_remote = self.commit_in_remote(commit, remote=remote, branch=branch)
         if in_remote:
             return url, commit
-        return self.folder, commit
+        # TODO: Once we know how to pass [conf] to export, enable this
+        # conf_name = "tools.scm:local"
+        # allow_local = self._conanfile.conf[conf_name]
+        # if not allow_local:
+        #    raise ConanException("Current commit {} doesn't exist in remote {}\n"
+        #                         "use '-c {}=1' to allow it".format(commit, remote, conf_name))
+
+        self._conanfile.output.warn("Current commit {} doesn't exist in remote {}\n"
+                                    "This revision will not be buildable in other "
+                                    "computer".format(commit, remote))
+        return self.get_repo_root(), commit
+
+    def get_repo_root(self):
+        return self._run("rev-parse --show-toplevel")
 
     def clone(self, url, target=""):
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
+        self._conanfile.output.info("Cloning git repo")
         self._run('clone "{}" {}'.format(url, target))
 
     def checkout(self, commit):
+        self._conanfile.output.info("Checkout: {}".format(commit))
         self._run('checkout {}'.format(commit))

@@ -105,7 +105,9 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.folders.base_source)
+                if not hasattr(conanfile, "layout"):
+                    # otherwise the conandata.yml is copied, and clones cannot happen
+                    merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
