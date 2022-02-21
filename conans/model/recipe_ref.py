@@ -112,10 +112,17 @@ class RecipeReference:
                 f" in the form name/version[@user/channel]")
 
     def matches(self, pattern, is_consumer):
-        return ((pattern == "&" and is_consumer) or
-                (pattern == "&!" and not is_consumer) or
-                fnmatch.fnmatchcase(str(self), pattern) or
-                fnmatch.fnmatchcase(self.repr_notime(), pattern))
+        negate = False
+        if pattern.startswith("!"):
+            pattern = pattern[1:]
+            negate = True
+
+        condition = ((pattern == "&" and is_consumer) or
+                      fnmatch.fnmatchcase(str(self), pattern) or
+                      fnmatch.fnmatchcase(self.repr_notime(), pattern))
+        if negate:
+            return not condition
+        return condition
 
 
 def ref_matches(ref, pattern, is_consumer):

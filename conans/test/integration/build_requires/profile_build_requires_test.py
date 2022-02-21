@@ -1,7 +1,9 @@
 import os
 import platform
+import textwrap
 import unittest
 
+import pytest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -191,3 +193,35 @@ class mylib(ConanFile):
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
+
+
+def test_consumer_patterns_loop_error():
+    client = TestClient()
+
+    profile_patterns = textwrap.dedent("""
+        [tool_requires]
+        tool1/1.0
+        tool2/1.0
+        """)
+    client.save({"tool1/conanfile.py": GenConanfile(),
+                 "tool2/conanfile.py": GenConanfile().with_build_requires("tool1/1.0"),
+                 "consumer/conanfile.py": GenConanfile(),
+                 "profile.txt": profile_patterns})
+
+    client.run("export tool1 --name=tool1 --version=1.0")
+    client.run("export tool2 --name=tool2 --version=1.0")
+    with pytest.raises(Exception) as e:
+        client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
+    assert "graph loop" in str(e.value)
+
+    # we can fix it with the negation
+    profile_patterns = textwrap.dedent("""
+        [tool_requires]
+        tool1/1.0
+        !tool1*:tool2/1.0
+        """)
+    client.save({"profile.txt": profile_patterns})
+
+    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
+    assert "tool1/1.0: Created package" in client.out
+    assert "tool2/1.0: Created package" in client.out
