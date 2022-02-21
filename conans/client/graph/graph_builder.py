@@ -76,6 +76,9 @@ class DepsGraphBuilder(object):
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
                 require.ref = prev_ref
+                # When closing a loop, if the current version comes forced because force or override
+                # Then it gains the force trait
+                require.force = prev_require.force
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous)
