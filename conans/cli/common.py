@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import Extender, OnceArgument
+from conans.cli.command import Extender, OnceArgument, ExtenderDefaultStar
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -70,7 +70,7 @@ def add_profiles_args(parser):
 
 def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
-        parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
+        parser.add_argument("-b", "--build", action=ExtenderDefaultStar, nargs="?", help=build_help)
 
     parser.add_argument("-r", "--remote", action=Extender, default=None,
                         help='Look in the specified remote or remotes server')

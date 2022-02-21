@@ -95,7 +95,7 @@ def test_install_build_only(build_arg, mode, build_all):
         # FIXME assert "No package matching" in build_all.out
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Build", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Build", "Build", "Build"),
                                                       ("--build=", "Cache", "Build", "Cache"),
                                                       ("--build=*", "Build", "Build", "Build")])
 def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
@@ -111,7 +111,7 @@ def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
     check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Build", "Cache", "Build"),
                                                       ("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Build", "Cache", "Build")])
 def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_all):
@@ -130,7 +130,7 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
         check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Build"),
                                                       ("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Cache", "Cache", "Build")])
 def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_all):

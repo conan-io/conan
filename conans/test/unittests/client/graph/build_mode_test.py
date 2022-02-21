@@ -1,5 +1,3 @@
-from unittest import mock
-
 import pytest
 
 from conans.client.graph.build_mode import BuildMode
@@ -12,6 +10,20 @@ from conans.test.utils.tools import redirect_output
 @pytest.fixture
 def conanfile():
     return MockConanfile(None)
+
+
+def test_skip_package(conanfile):
+    build_mode = BuildMode(["!zlib/*", "other*"])
+    assert not build_mode.forced(conanfile, RecipeReference.loads("zlib/1.2.11#23423423"))
+    assert build_mode.forced(conanfile, RecipeReference.loads("other/1.2"))
+
+    build_mode = BuildMode(["!zlib/*", "*"])
+    assert not build_mode.forced(conanfile, RecipeReference.loads("zlib/1.2.11#23423423"))
+    assert build_mode.forced(conanfile, RecipeReference.loads("other/1.2"))
+
+    build_mode = BuildMode(["!zlib/*"])
+    assert not build_mode.forced(conanfile, RecipeReference.loads("zlib/1.2.11#23423423"))
+    assert not build_mode.forced(conanfile, RecipeReference.loads("other/1.2"))
 
 
 def test_valid_params():

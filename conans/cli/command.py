@@ -19,6 +19,7 @@ class Extender(argparse.Action):
           options = ['qt:value', 'mode:2']
           settings = ['cucumber:true']
     """
+    default_when_none = None
 
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
@@ -38,6 +39,15 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
+        else:  # When "--argument" with no value is specified
+            if self.default_when_none:
+                dest.append(self.default_when_none)
+
+
+class ExtenderDefaultStar(Extender):
+
+    # If --build is specified, it will take a "*" value
+    default_when_none = "*"
 
 
 class OnceArgument(argparse.Action):
