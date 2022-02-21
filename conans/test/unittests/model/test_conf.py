@@ -147,7 +147,12 @@ def test_compose_conf_complex():
         zlib:user.company.check:shared=!
         zlib:user.company.check:shared_str="False"
     """)
-    assert c.dumps() == expected_text
+
+    if sys.version_info.major == 2:  # problems with the order in Python 2.x
+        text = c.dumps()
+        assert all([line in text for line in expected_text.splitlines()])
+    else:
+        assert c.dumps() == expected_text
 
 
 def test_conf_get_check_type_and_default():
