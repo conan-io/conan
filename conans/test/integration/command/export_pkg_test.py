@@ -286,11 +286,11 @@ class TestConan(ConanFile):
         client.run("create . --name=hello --version=0.1 --user=lasote --channel=stable")
         conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
                                   .with_import("from conans import tools") \
-                                  .with_import("from conan.tools.files import copy") \
+                                  .with_import("from conan.tools.files import copy, collect_libs") \
                                   .with_require("hello/0.1@lasote/stable")
 
         conanfile = str(conanfile) + """\n    def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        self.cpp_info.libs = collect_libs(self)
     def layout(self):
         self.folders.build = "Release_x86"
     def package(self):

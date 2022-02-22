@@ -25,7 +25,6 @@ def editable_add(conan_api, parser, subparser, *args):
     subparser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
-    subparser.add_argument("-sf", "--source-folder", help='The root source folder')
     args = parser.parse_args(*args)
 
     path = args.path
@@ -37,11 +36,9 @@ def editable_add(conan_api, parser, subparser, *args):
     # Retrieve conanfile.py from target_path
     target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None
-    source_folder = make_abs_path(args.source_folder) if args.source_folder else None
     # Check the conanfile is there, and name/version matches
     ref = RecipeReference.loads(reference)
-    app.cache.editable_packages.add(ref, target_path, output_folder=output_folder,
-                                    source_folder=source_folder)
+    app.cache.editable_packages.add(ref, target_path, output_folder=output_folder)
     ConanOutput().success("Reference '{}' in editable mode".format(reference))
 
 

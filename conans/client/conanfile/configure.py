@@ -39,6 +39,4 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         # TODO: Maybe this could be integrated in one single requirements() method
         if hasattr(conanfile, "build_requirements"):
             with conanfile_exception_formatter(conanfile, "build_requirements"):
-                conanfile.build_requires = BuildRequirements(conanfile.requires)
-                conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()

@@ -82,6 +82,7 @@ class ConanAPIV1(object):
     @api_method
     def source(self, path, source_folder=None, cwd=None):
         app = ConanApp(self.cache_folder)
+        app.load_remotes()
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
@@ -96,36 +97,3 @@ class ConanAPIV1(object):
         conanfile.folders.set_base_package(None)
 
         config_source_local(conanfile, conanfile_path, app.hook_manager)
-
-
-def get_graph_info(profile_host, profile_build, cwd, cache,
-                   name=None, version=None, user=None, channel=None, lockfile=None):
-
-    root_ref = RecipeReference(name, version, user, channel)
-
-    graph_lock = None
-    if lockfile:
-        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock = Lockfile.load(lockfile)
-        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
-
-    profile_loader = ProfileLoader(cache)
-    profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
-        else profile_host.profiles
-    phost = profile_loader.from_cli_args(profiles, profile_host.settings,
-                                         profile_host.options, profile_host.env,
-                                         profile_host.conf, cwd)
-
-    profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
-        else profile_build.profiles
-    # Only work on the profile_build if something is provided
-    pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
-                                          profile_build.options, profile_build.env,
-                                          profile_build.conf, cwd)
-
-    # Apply the new_config to the profiles the global one, so recipes get it too
-    # TODO: This means lockfiles contain whole copy of the config here?
-    # FIXME: Apply to locked graph-info as well
-    phost.conf.rebase_conf_definition(cache.new_config)
-    pbuild.conf.rebase_conf_definition(cache.new_config)
-    return phost, pbuild, graph_lock, root_ref
