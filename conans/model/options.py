@@ -279,16 +279,15 @@ class Options:
         self._package_options.__delattr__(field)
 
     def __getitem__(self, ref):
-        # To access dependencies options like ``options["mydep"]``. This will no longer be
-        # a read case, only for defining values. Read access will be via self.dependencies["dep"]
-        if isinstance(ref, str):
-            if "/" not in ref:  # This to keep 1.X compatibility
-                ref += "/*"
-            ref = RecipeReference.loads(ref)
+        raise ConanException("The access to options[] is forbidden. Use self.dependencies['xxx'].options")
+
+    # FIXME: Used by graph_builder.py at _conflicting_options
+    def get_options_for_ref(self, ref, is_consumer):
+        ret = _PackageOptions()
         for pattern, options in self._deps_package_options.items():
-            if ref_matches(ref, pattern, is_consumer=False): # FIXME: is_consumer always False
-                return options
-        return self._deps_package_options.setdefault(ref.repr_notime(), _PackageOptions())
+            if ref_matches(ref, pattern, is_consumer):
+                ret.update(options)
+        return self._deps_package_options.setdefault(ref.repr_notime(), ret)
 
     def scope(self, ref):
         """ when there are free options like "shared=True", they apply to the "consumer" package

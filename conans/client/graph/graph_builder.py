@@ -135,7 +135,8 @@ class DepsGraphBuilder(object):
     def _conflicting_options(require, node, prev_node, prev_require, base_previous):
         # Even if the version matches, there still can be a configuration conflict
         # Only the propagated options can conflict, because profile would have already been asigned
-        upstream_options = node.conanfile.up_options[require.ref]
+        is_consumer = node.conanfile._conan_is_consumer
+        upstream_options = node.conanfile.up_options.get_options_for_ref(require.ref, is_consumer)
         for k, v in upstream_options.items():
             prev_option = prev_node.conanfile.options.get_safe(k)
             if prev_option is not None:
