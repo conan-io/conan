@@ -694,7 +694,7 @@ def test_consumer_specific_settings():
     assert "I'm None and my shared is False" in client.out
 
     # Now the dependency by name
-    client.run("install . -s dep/*:build_type=Debug -o dep*:shared=True")
+    client.run("install . -s dep/*:build_type=Debug -o dep/*:shared=True")
     assert "I'm dep and my build type is Debug" in client.out
     assert "I'm None and my build type is Release" in client.out
     assert "I'm dep and my shared is True" in client.out
