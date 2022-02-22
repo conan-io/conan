@@ -55,6 +55,8 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
+    boolean_false_expressions = ("0", "false", "off")
+
     def __init__(self, name, value):
         self._name = name
         self._value = value
@@ -66,6 +68,14 @@ class _ConfValue(object):
     @property
     def value(self):
         return self._value
+
+    def get_boolean_value(self):
+        if self._value_type is bool:
+            return self._value
+        elif str(self._value).lower() in _ConfValue.boolean_false_expressions:
+            return False
+        else:
+            return True
 
     def copy(self):
         return _ConfValue(self._name, self._value)
@@ -202,7 +212,10 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if check_type is not None and not isinstance(v, check_type):
+            if check_type is bool and not isinstance(v, bool):  # smart conversion
+                # Perhaps, user has introduced a "false", "0" or even "off"
+                return conf_value.get_boolean_value()
+            elif check_type is not None and not isinstance(v, check_type):
                 raise ConanException("[conf] {name} must be a {type}-like object. "
                                      "The value '{value}' introduced is a {vtype} "
                                      "object".format(name=conf_name, type=check_type.__name__,
@@ -458,7 +471,6 @@ class ConfDefinition:
                 tokens = line.split(op, 1)
                 if len(tokens) != 2:
                     continue
-
                 pattern_name, value = tokens
                 parsed_value = ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)

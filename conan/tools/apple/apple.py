@@ -75,7 +75,6 @@ def apple_min_version_flag(conanfile):
 
 def apple_sdk_path(conanfile):
     sdk_path = conanfile.conf.get("tools.apple:sdk_path")
-    # It's better to keep the default return later in this case
     if not sdk_path:
         sdk_path = XCRun(conanfile.settings).sdk_path
     return sdk_path

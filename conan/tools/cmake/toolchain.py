@@ -473,8 +473,9 @@ class FindFiles(Block):
         # To find the generated cmake_find_package finders
         # TODO: Change this for parameterized output location of CMakeDeps
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
-        prefer_config = self._conanfile.conf.get("tools.cmake.cmaketoolchain:find_package_prefer_config")
-        if prefer_config in (False, 0) or (isinstance(prefer_config, str) and prefer_config.lower() in ("false", "off")):
+        prefer_config = self._conanfile.conf.get("tools.cmake.cmaketoolchain:find_package_prefer_config",
+                                                 check_type=bool)
+        if prefer_config is False:
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
