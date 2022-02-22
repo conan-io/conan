@@ -9,6 +9,7 @@ from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import txt_definer, virtual_definer, \
     initialize_conanfile_profile
 from conans.client.profile_loader import ProfileLoader
+from conans.errors import conanfile_exception_formatter
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 
@@ -46,6 +47,11 @@ class GraphManager(object):
 
             run_configure_method(conanfile, down_options=Options(),
                                  profile_options=profile_host.options,  ref=None)
+
+            # This is important, otherwise the ``conan source`` doesn't define layout and fails
+            if hasattr(conanfile, "layout"):
+                with conanfile_exception_formatter(conanfile, "layout"):
+                    conanfile.layout()
 
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path)

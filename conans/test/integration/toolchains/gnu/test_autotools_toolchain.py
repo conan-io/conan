@@ -21,6 +21,6 @@ def test_autotools_custom_environment():
             """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("install . -sh:os=Linux")
+    client.run("install . -s:b os=Linux -s:h os=Linux")
     content = load(os.path.join(client.current_folder,  "conanautotoolstoolchain.sh"))
     assert 'export FOO="BAR"' in content
