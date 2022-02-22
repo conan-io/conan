@@ -199,15 +199,21 @@ def test_conf_get_check_type_and_default():
         user.company.network:proxies={'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
         zlib:user.company.check:shared=!
         zlib:user.company.check:shared_str="False"
+        zlib:user.company.check:static_str=off
     """)
     c = ConfDefinition()
     c.loads(text)
     assert c.get("user.company.cpu:jobs", check_type=int) == 5
+    assert c.get("user.company.cpu:jobs", check_type=str) == "5"  # smart conversion
     with pytest.raises(ConanException) as exc_info:
         c.get("user.company.cpu:jobs", check_type=list)
         assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
     # Check type does not affect to default value
     assert c.get("non:existing:conf", default=0, check_type=dict) == 0
+    assert c.get("zlib:user.company.check:shared_str") == '"False"'
+    assert c.get("zlib:user.company.check:shared_str", check_type=bool) is False  # smart conversion
+    assert c.get("zlib:user.company.check:static_str") == "off"
+    assert c.get("zlib:user.company.check:static_str", check_type=bool) is False  # smart conversion
 
 
 def test_conf_pop():

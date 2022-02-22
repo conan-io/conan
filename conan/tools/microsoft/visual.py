@@ -61,7 +61,7 @@ def vs_ide_version(conanfile):
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = str(conanfile.conf.get("tools.microsoft.msbuild:vs_version", default=""))
+        toolset_override = conanfile.conf.get("tools.microsoft.msbuild:vs_version", check_type=str)
         if toolset_override:
             visual_version = toolset_override
         else:

@@ -1,6 +1,8 @@
 import fnmatch
 from collections import OrderedDict
 
+import six
+
 from conans.errors import ConanException
 
 
@@ -55,8 +57,6 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    boolean_false_expressions = ("0", "false", "off")
-
     def __init__(self, name, value):
         self._name = name
         self._value = value
@@ -68,14 +68,6 @@ class _ConfValue(object):
     @property
     def value(self):
         return self._value
-
-    def get_boolean_value(self):
-        if self._value_type is bool:
-            return self._value
-        elif str(self._value).lower() in _ConfValue.boolean_false_expressions:
-            return False
-        else:
-            return True
 
     def copy(self):
         return _ConfValue(self._name, self._value)
@@ -135,7 +127,8 @@ class _ConfValue(object):
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
                 self._value = new_value
-        elif self._value is None or other._value is None:
+        elif self._value is None or other._value is None \
+            or (isinstance(self._value, six.string_types) and isinstance(self._value, six.string_types)):  # TODO: Python2, remove in 2.0
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
             pass
@@ -146,6 +139,9 @@ class _ConfValue(object):
 
 
 class Conf:
+
+    # Putting some default expressions to check that any value could be false
+    boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
@@ -201,20 +197,33 @@ class Conf:
         # FIXME: Keeping backward compatibility
         return self.dumps()
 
+    @staticmethod
+    def get_boolean_value(value):
+        if type(value) is bool:
+            return value
+        elif str(value).lower() in Conf.boolean_false_expressions:
+            return False
+        else:
+            return True
+
     def get(self, conf_name, default=None, check_type=None):
         """
         Get all the values belonging to the passed conf name.
 
         :param conf_name: conf name
         :param default: default value in case of conf does not have the conf_name key
-        :param check_type: check the conf type(value) is the same as the given by this param
+        :param check_type: check the conf type(value) is the same as the given by this param.
+                           There are two default smart conversions for bool and str types.
         """
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if check_type is bool and not isinstance(v, bool):  # smart conversion
+            # Some smart conversions
+            if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
-                return conf_value.get_boolean_value()
+                return Conf.get_boolean_value(v)
+            elif check_type is str and not isinstance(v, str):
+                return str(v)
             elif check_type is not None and not isinstance(v, check_type):
                 raise ConanException("[conf] {name} must be a {type}-like object. "
                                      "The value '{value}' introduced is a {vtype} "
