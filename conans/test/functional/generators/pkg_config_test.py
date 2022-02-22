@@ -254,6 +254,8 @@ class PkgConfigConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                          "componentdir=${prefix}/mydir")
+                    self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                         "19.8.199")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -262,6 +264,7 @@ class PkgConfigConan(ConanFile):
 
         pc_content = client.load("mycomponent.pc")
         self.assertIn("componentdir=${prefix}/mydir", pc_content)
+        self.assertIn("Version: 19.8.199", pc_content)
 
 
 def test_components_and_package_pc_creation_order():

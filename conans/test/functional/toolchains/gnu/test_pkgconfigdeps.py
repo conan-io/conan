@@ -204,7 +204,7 @@ def test_custom_content_and_version_components():
             def package_info(self):
                 self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                      "componentdir=${prefix}/mydir")
-                self.cpp_info.components["mycomponent"].set_property("pkg_config_version",
+                self.cpp_info.components["mycomponent"].set_property("component_version",
                                                                      "19.8.199")
         """)
     client = TestClient()
