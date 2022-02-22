@@ -70,7 +70,8 @@ class Git(object):
         return self.get_repo_root(), commit
 
     def get_repo_root(self):
-        return self._run("rev-parse --show-toplevel")
+        folder = self._run("rev-parse --show-toplevel")
+        return folder.replace("\\", "/")
 
     def clone(self, url, target=""):
         if os.path.exists(url):

@@ -117,7 +117,7 @@ class TestGitCaptureSCM:
         c.run("export .")
         assert "This revision will not be buildable in other computer" in c.out
         assert "pkg/0.1: SCM COMMIT: {}".format(commit) in c.out
-        assert "pkg/0.1: SCM URL: {}".format(c.current_folder) in c.out
+        assert "pkg/0.1: SCM URL: {}".format(c.current_folder.replace("\\", "/")) in c.out
 
         c.save({"conanfile.py": self.conanfile + "\n# something...."})
         c.run("export .", assert_error=True)
@@ -153,7 +153,7 @@ class TestGitCaptureSCM:
             assert "This revision will not be buildable in other computer" in c.out
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
             # NOTE: commit not pushed yet, so locally is the current folder
-            assert "pkg/0.1: SCM URL: {}".format(c.current_folder) in c.out
+            assert "pkg/0.1: SCM URL: {}".format(c.current_folder.replace("\\", "/")) in c.out
             c.run_command("git push")
             c.run("export .")
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
