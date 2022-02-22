@@ -8,7 +8,7 @@ def build_jobs(conanfile):
     njobs = conanfile.conf.get("tools.build:jobs",
                                default=_cpu_count(),
                                check_type=int)
-    return njobs or None
+    return njobs
 
 
 def _cpu_count():
