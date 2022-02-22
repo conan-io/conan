@@ -884,19 +884,6 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
 
-    # FIXME: Remove
-    def test_a_ver_si_me_entero(self):
-        # consumer -> dep1 -> dep2
-        #         \-> dep3
-        self.recipe_cache("dep2/0")
-        self.recipe_cache("dep1/0", ["dep2/0"])
-        self.recipe_cache("dep3/0")
-        consumer = self.consumer_conanfile(GenConanfile("consumer", "0").with_require("dep1/0")
-                                           .with_require("dep3/0"))
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(4, len(deps_graph.nodes))
-
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
         #    \-> --------- ->/
