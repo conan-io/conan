@@ -176,7 +176,7 @@ def test_local_source():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -197,7 +197,7 @@ def test_local_source_change_base():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")

@@ -26,7 +26,7 @@ def conanfile():
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
-        tools.save("my_sources/source.h", "foo")
+        tools.save("source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))
@@ -288,7 +288,7 @@ def test_git_clone_with_source_layout():
                    self.folders.source = "src"
 
                def source(self):
-                   self.run('git clone "{}" src')
+                   self.run('git clone "{}" .')
        """).format(repo.replace("\\", "/"))
 
     client.save({"conanfile.py": conanfile,
@@ -301,7 +301,7 @@ def test_git_clone_with_source_layout():
     sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))
     # The conanfile is cleared from the root before cloning
-    assert not os.path.exists(os.path.join(sf, "conanfile.py"))
+    assert os.path.exists(os.path.join(sf, "conanfile.py"))
     assert not os.path.exists(os.path.join(sf, "cloned.txt"))
 
     assert os.path.exists(os.path.join(sf, "src", "cloned.txt"))

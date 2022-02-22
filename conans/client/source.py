@@ -126,8 +126,8 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Calling post_source hook
     """
 
-
-    src_folder = conanfile.folders.base_source
+    src_folder = conanfile.source_folder if hasattr(conanfile, "layout") \
+        else conanfile.folders.base_source
     mkdir(src_folder)
 
     with tools.chdir(src_folder):
