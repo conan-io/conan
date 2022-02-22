@@ -59,7 +59,8 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
         if conanfile_folder != src_folder:
             _run_local_scm(conanfile, conanfile_folder, src_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
-            export_recipe(conanfile, conanfile_folder, src_folder)
+            if not hasattr(conanfile, "layout"):
+                export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
 
     _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
@@ -104,9 +105,8 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder, output)
-                # so self exported files have precedence over python_requires ones
                 if not hasattr(conanfile, "layout"):
-                    # otherwise the conandata.yml is copied, and clones cannot happen
+                    # so self exported files have precedence over python_requires ones
                     merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
