@@ -282,7 +282,7 @@ def test_git_clone_with_source_layout():
            import os
            from conans import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"
@@ -301,7 +301,7 @@ def test_git_clone_with_source_layout():
     sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))
     # The conanfile is cleared from the root before cloning
-    assert os.path.exists(os.path.join(sf, "conanfile.py"))
+    assert not os.path.exists(os.path.join(sf, "conanfile.py"))
     assert not os.path.exists(os.path.join(sf, "cloned.txt"))
 
     assert os.path.exists(os.path.join(sf, "src", "cloned.txt"))
