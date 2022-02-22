@@ -82,7 +82,7 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
-        client_b.run("install --reference=hello0/0.0@lasote/stable -u --build")
+        client_b.run("install --reference=hello0/0.0@lasote/stable -u --build='*'")
         self.assertIn("hello0/0.0@lasote/stable#64fd8ae21db9eff69c6c681b0e2fc178 - Updated",
                       client_b.out)
 
@@ -105,7 +105,7 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("recipe: Update available", client_b.out)
 
         # Well, now try to update the package with -r default -u
-        client_b.run("install --reference=hello0/0.0@lasote/stable -r default -u --build")
+        client_b.run("install --reference=hello0/0.0@lasote/stable -r default -u --build='*'")
         self.assertIn("hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
         # TODO: cache2.0 conan info not yet implemented with new cache

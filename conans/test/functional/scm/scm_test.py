@@ -283,7 +283,7 @@ class GitSCMTest(unittest.TestCase):
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
-        client2.run("install --reference=lib/0.1@lasote/channel --build")
+        client2.run("install --reference=lib/0.1@lasote/channel --build='*'")
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):

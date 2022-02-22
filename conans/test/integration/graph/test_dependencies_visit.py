@@ -182,7 +182,7 @@ def test_dependencies_visit_build_requires_profile():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": "[tool_requires]\ncmake/0.1"})
-    client.run("install . -pr:b=default -pr:h=profile --build")  # Use 2 contexts
+    client.run("install . -pr:b=default -pr:h=profile --build='*'")  # Use 2 contexts
 
     # Validate time, build-requires available
     assert "conanfile.py: VALIDATE DEPS: 1!!!" in client.out

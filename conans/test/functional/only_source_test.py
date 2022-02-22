@@ -143,7 +143,7 @@ class MyPackage(ConanFile):
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --reference=%s --build" % str(ref))
+        other_client.run("install --reference=%s --build='*'" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))

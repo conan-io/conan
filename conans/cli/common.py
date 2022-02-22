@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import Extender, OnceArgument, ExtenderDefaultStar
+from conans.cli.command import Extender, OnceArgument, ExtenderValueRequired
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -10,7 +10,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     attribute in their conanfile.py takes precedence over the command line parameter.
     Possible parameters:
 
-    --build            Force build for all packages, do not use binary packages.
+    --build="*"        Force build for all packages, do not use binary packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
                        package is not found. Cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
@@ -70,7 +70,7 @@ def add_profiles_args(parser):
 
 def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
-        parser.add_argument("-b", "--build", action=ExtenderDefaultStar, nargs="?", help=build_help)
+        parser.add_argument("-b", "--build", action=ExtenderValueRequired, nargs="?", help=build_help)
 
     parser.add_argument("-r", "--remote", action=Extender, default=None,
                         help='Look in the specified remote or remotes server')

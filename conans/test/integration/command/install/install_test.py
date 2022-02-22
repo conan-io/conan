@@ -48,7 +48,7 @@ def test_install_system_requirements(client):
     client.run(" install .")
     assert "Running system requirements!!" in client.out
     client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-    client.run(" install --reference=pkg/0.1@lasote/testing --build")
+    client.run(" install --reference=pkg/0.1@lasote/testing --build='*'")
     assert "Running system requirements!!" in client.out
     client.run("upload * --confirm -r default")
     client.run('remove "*" -f')
@@ -166,7 +166,7 @@ def test_install_with_profile(client):
 
     client.save({"conanfile.py": conanfile})
     save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
-    client.run("install . -pr=myprofile --build")
+    client.run("install . -pr=myprofile --build='*'")
     assert "PKGOS=Linux" in client.out
     mkdir(os.path.join(client.current_folder, "myprofile"))
     client.run("install . -pr=myprofile")

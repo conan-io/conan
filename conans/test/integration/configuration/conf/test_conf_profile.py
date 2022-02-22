@@ -88,7 +88,7 @@ def test_cmake_config_package(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        dep*/*:tools.microsoft.msbuild:verbosity=Minimal
+        dep*:tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
@@ -210,7 +210,7 @@ def test_conf_package_patterns():
     invented/*:user.build:myconfig=Foo
     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build=* --profile profile")
     assert "WARN: dep Config:None" in client.out
     assert "WARN: pkg Config:None" in client.out
     assert "WARN: None Config:None" in client.out
@@ -223,7 +223,7 @@ def test_conf_package_patterns():
     dep/*:user.build:myconfig=Foo
     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep Config:Foo" in client.out
     assert "WARN: pkg Config:None" in client.out
     assert "WARN: None Config:None" in client.out
@@ -235,7 +235,7 @@ def test_conf_package_patterns():
     dep/0.1:user.build:myconfig=Foo
     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep Config:Foo" in client.out
     assert "WARN: pkg Config:None" in client.out
     assert "WARN: None Config:None" in client.out
@@ -250,7 +250,7 @@ def test_conf_package_patterns():
     user.build:myconfig=Var
     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep Config:Var" in client.out
     assert "WARN: pkg Config:Var" in client.out
     assert "WARN: None Config:Var" in client.out
@@ -266,7 +266,7 @@ def test_conf_package_patterns():
     """
 
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep Config:Foo" in client.out
     assert "WARN: pkg Config:Foo2" in client.out
     assert "WARN: None Config:Var" in client.out

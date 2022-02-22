@@ -463,7 +463,7 @@ def test_build_policy_never():
     client.run("export-pkg . --name=pkg --version=1.0")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
-    client.run("install --reference=pkg/1.0@ --build")
+    client.run("install --reference=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "pkg/1.0: Calling build()" not in client.out
 
@@ -475,7 +475,7 @@ def test_build_policy_never_missing():
                  "consumer.txt": "[requires]\npkg/1.0"})
     client.run("export . --name=pkg --version=1.0")
 
-    client.run("install --reference=pkg/1.0@ --build", assert_error=True)
+    client.run("install --reference=pkg/1.0@ --build='*'", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out
 
     client.run("install --reference=pkg/1.0@ --build=missing", assert_error=True)

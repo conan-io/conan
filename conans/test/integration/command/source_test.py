@@ -219,6 +219,6 @@ class ConanLib(ConanFile):
         # install from server0 and build
         # download sources from server0
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server0 --build")
+        client.run("install --reference=hello/0.1@ -r server0 --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)

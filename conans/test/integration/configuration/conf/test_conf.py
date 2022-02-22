@@ -109,7 +109,7 @@ def test_new_config_file(client):
     conf = textwrap.dedent("""\
         tools.microsoft.msbuild:verbosity=Minimal
         user.mycompany.myhelper:myconfig=myvalue
-        */*:tools.cmake.cmake:generator=X
+        *:tools.cmake.cmake:generator=X
         cache:read_only=True
         """)
     save(client.cache.new_config_path, conf)

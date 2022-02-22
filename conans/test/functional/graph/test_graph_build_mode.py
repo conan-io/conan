@@ -21,7 +21,7 @@ def build_all():
                 .with_require("bar/1.0@user/testing")
                 .with_setting("build_type")})
     client.run("export . --name=foobar --version=1.0 --user=user --channel=testing")
-    client.run("install --reference=foobar/1.0@user/testing --build")
+    client.run("install --reference=foobar/1.0@user/testing --build='*'")
 
     return client
 
@@ -68,7 +68,7 @@ def test_install_build_double(build_all):
     assert "No package matching" not in build_all.out
 
 
-@pytest.mark.parametrize("build_arg,mode", [("--build", "Build"),
+@pytest.mark.parametrize("build_arg,mode", [
                                             ("--build=", "Cache"),
                                             ("--build=*", "Build")])
 def test_install_build_only(build_arg, mode, build_all):
@@ -95,8 +95,7 @@ def test_install_build_only(build_arg, mode, build_all):
         # FIXME assert "No package matching" in build_all.out
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Build", "Build", "Build"),
-                                                      ("--build=", "Cache", "Build", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build=", "Cache", "Build", "Cache"),
                                                       ("--build=*", "Build", "Build", "Build")])
 def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
     """ When --build is passed with another package, only the package must be built from sources.
@@ -111,8 +110,7 @@ def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
     check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Build", "Cache", "Build"),
-                                                      ("--build=", "Cache", "Cache", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Build", "Cache", "Build")])
 def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_all):
     """ When --build is passed with a skipped package, not all packages must be built from sources.
@@ -130,8 +128,7 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
         check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Build"),
-                                                      ("--build=", "Cache", "Cache", "Cache"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Cache", "Cache", "Build")])
 def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_all):
     """ When --build is passed with a skipped package, not all packages must be built from sources.

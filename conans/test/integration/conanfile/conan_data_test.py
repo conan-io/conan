@@ -84,7 +84,7 @@ sources:
         client.save({"conanfile.txt": "[requires]\n{}".format(ref)}, clean_first=True)
         client.run("install . ")
         self.assertIn("My URL:", client.out)
-        client.run("install . --build")
+        client.run("install . --build='*'")
         self.assertIn("My URL:", client.out)
 
     @pytest.mark.slow

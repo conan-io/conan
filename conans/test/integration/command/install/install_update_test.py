@@ -72,7 +72,7 @@ def test_update_not_date():
     client.save({"conanfile.py": GenConanfile("hello1", "1.0").
                 with_requirement("hello0/1.0@lasote/stable")},
                 clean_first=True)
-    client.run("install . --build")
+    client.run("install . --build='*'")
     client.run("upload hello0/1.0@lasote/stable -r default")
 
     prev = client.get_latest_package_reference("hello0/1.0@lasote/stable")
@@ -88,7 +88,7 @@ def test_update_not_date():
     client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_class_attribute("author = 'O'")},
                 clean_first=True)
     client.run("export . --user=lasote --channel=stable")
-    client.run("install --reference=hello0/1.0@lasote/stable --build")
+    client.run("install --reference=hello0/1.0@lasote/stable --build='*'")
 
     rebuild_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
     rebuild_package_timestamp = client.cache.get_package_timestamp(client.get_latest_package_reference(ref))
@@ -121,7 +121,7 @@ def test_reuse():
     client.save({"conanfile.py": conanfile,
                  "header.h": "content1"})
     client.run("export . --user=lasote --channel=stable")
-    client.run("install --reference=hello0/1.0@lasote/stable --build")
+    client.run("install --reference=hello0/1.0@lasote/stable --build='*'")
     client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
@@ -132,7 +132,7 @@ def test_reuse():
     client.save({"header.h": "//EMPTY!"})
     sleep(1)
     client.run("export . --user=lasote --channel=stable")
-    client.run("install --reference=hello0/1.0@lasote/stable --build")
+    client.run("install --reference=hello0/1.0@lasote/stable --build='*'")
     client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2.run("install --reference=hello0/1.0@lasote/stable --update")

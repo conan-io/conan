@@ -294,7 +294,7 @@ class Options:
         """ when there are free options like "shared=True", they apply to the "consumer" package
         Once we know the name of such consumer package, it can be defined in the data, so it will
         be later correctly apply when processing options """
-        package_options = self._deps_package_options.setdefault(ref.repr_notime(), _PackageOptions())
+        package_options = self._deps_package_options.setdefault(str(ref), _PackageOptions())
         package_options.update_options(self._package_options)
         self._package_options = _PackageOptions()
 

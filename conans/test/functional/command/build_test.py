@@ -155,7 +155,7 @@ class AConan(ConanFile):
     def test_build_single_full_reference(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile("foo", "1.0")})
-        client.run("create . --build")
+        client.run("create . --build='*'")
         self.assertIn("foo/1.0: Forced build from source", client.out)
 
     def test_build_multiple_full_reference(self):

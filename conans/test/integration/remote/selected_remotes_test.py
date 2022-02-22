@@ -24,22 +24,22 @@ class TestSelectedRemotesInstall:
         self.client.run("create .")
         self.client.run("upload liba/1.0 -r server1 -c")
         self.client.run("remove * -f")
-        self.client.run("install --reference=liba/1.0 -r server0 -r server1 --build")
+        self.client.run("install --reference=liba/1.0 -r server0 -r server1 --build='*'")
         # we install the revision from the server with more preference
         assert "OLDREV" in self.client.out
         self.client.run("remove * -f")
-        self.client.run("install --reference=liba/1.0 -r server1 -r server0 --build")
+        self.client.run("install --reference=liba/1.0 -r server1 -r server0 --build='*'")
         # changing the order of the remotes in the arguments does not change the result
         # we install the revision from the server with more preference
         assert "OLDREV" in self.client.out
         # select two remotes, just one has liba, will install the rev from that one
         self.client.run("remove * -f")
-        self.client.run("install --reference=liba/1.0 -r server2 -r server1 --build")
+        self.client.run("install --reference=liba/1.0 -r server2 -r server1 --build='*'")
         assert "NEWER_REV" in self.client.out
 
         self.client.save({"consumer.py": GenConanfile().with_require("liba/1.0")})
         self.client.run("remove * -f")
-        self.client.run("create . --build -r server0 -r server1 -r server2")
+        self.client.run("create . --build='*' -r server0 -r server1 -r server2")
         assert "NEWER_REV" in self.client.out
 
     def test_upload_raise_multiple_remotes(self):

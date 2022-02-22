@@ -32,7 +32,7 @@ def test_options():
     client.run("export ffmepg --name=ffmpeg --version=1.0")
     client.run("export variant --name=nano --version=1.0")
 
-    client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
+    client.run("lock create --reference=nano/1.0@ --build=* --lockfile-out=conan.lock")
 
     client.run("graph build-order --reference=nano/1.0@ "
                "--lockfile=conan.lock --lockfile-out=conan.lock --build=missing "

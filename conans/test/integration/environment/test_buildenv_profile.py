@@ -77,7 +77,7 @@ def test_buildenv_package_patterns():
             invented/*:my_env_var=Foo
             """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep ENV:None" in client.out
     assert "WARN: pkg ENV:None" in client.out
     assert "WARN: None ENV:None" in client.out
@@ -89,7 +89,7 @@ def test_buildenv_package_patterns():
                 dep/*:my_env_var=Foo
                 """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep ENV:Foo" in client.out
     assert "WARN: pkg ENV:None" in client.out
     assert "WARN: None ENV:None" in client.out
@@ -100,7 +100,7 @@ def test_buildenv_package_patterns():
                     dep/0.1:my_env_var=Foo
                     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep ENV:Foo" in client.out
     assert "WARN: pkg ENV:None" in client.out
     assert "WARN: None ENV:None" in client.out
@@ -114,7 +114,7 @@ def test_buildenv_package_patterns():
                     my_env_var=Var
                     """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep ENV:Var" in client.out
     assert "WARN: pkg ENV:Var" in client.out
     assert "WARN: None ENV:Var" in client.out
@@ -128,7 +128,7 @@ def test_buildenv_package_patterns():
                         &:my_env_var=Var
                         """
     client.save({"profile": profile})
-    client.run("install consumer --build --profile profile")
+    client.run("install consumer --build='*' --profile profile")
     assert "WARN: dep ENV:Foo" in client.out
     assert "WARN: pkg ENV:Foo2" in client.out
     assert "WARN: None ENV:Var" in client.out

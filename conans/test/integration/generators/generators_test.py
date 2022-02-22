@@ -19,7 +19,7 @@ unknown
 '''
         client = TestClient()
         client.save({"conanfile.txt": base})
-        client.run("install . --build", assert_error=True)
+        client.run("install . --build='*'", assert_error=True)
         self.assertIn("ERROR: Invalid generator 'unknown'. Available types:", client.out)
 
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")

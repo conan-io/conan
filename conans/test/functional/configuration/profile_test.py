@@ -749,10 +749,6 @@ def test_create_and_priority_of_consumer_specific_setting():
     client.run("create . -s foo*:build_type=Debug -s &:build_type=Release")
     assert "I'm foo and my build type is Release" in client.out
 
-    # The order DOES matter !!! This behavior changed!
-    client.run("create . -s foo*:build_type=Debug -s &:build_type=Release")
-    assert "I'm foo and my build type is Release" in client.out
-
     # The order DOES matter
     client.run("create . -s &:build_type=Release -s foo*:build_type=Debug ")
     assert "I'm foo and my build type is Debug" in client.out
