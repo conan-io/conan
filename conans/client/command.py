@@ -103,24 +103,10 @@ class Command(object):
                                          prog="conan source",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
-                            help='Destination directory. Defaulted to current directory')
         args = parser.parse_args(*args)
 
-        try:
-            if "@" in args.path and RecipeReference.loads(args.path):
-                raise ArgumentError(None,
-                                    "'conan source' doesn't accept a reference anymore. "
-                                    "If you were using it as a concurrency workaround, "
-                                    "you can call 'conan install' simultaneously from several "
-                                    "different processes, the concurrency is now natively supported"
-                                    ". The path parameter should be a folder containing a "
-                                    "conanfile.py file.")
-        except ConanException:
-            pass
-
         self._warn_python_version()
-        return self._conan_api.source(args.path, args.source_folder)
+        return self._conan_api.source(args.path)
 
     def _commands(self):
         """ Returns a list of available commands.

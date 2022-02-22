@@ -80,19 +80,16 @@ class ConanAPIV1(object):
         check_required_conan_version(self.cache_folder)
 
     @api_method
-    def source(self, path, source_folder=None, cwd=None):
+    def source(self, path, cwd=None):
         app = ConanApp(self.cache_folder)
         app.load_remotes()
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        source_folder = _make_abs_path(source_folder, cwd)
-
-        mkdir(source_folder)
 
         # only infos if exist
         conanfile = app.graph_manager.load_consumer_conanfile(conanfile_path)
-        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_source(os.path.dirname(conanfile_path))
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 

@@ -193,9 +193,9 @@ class Lib(ConanFile):
         """)
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata})
-        client.run("source . -sf tmp/source")
+        client.run("source .")
         self.assertIn("My URL: this url", client.out)
-        client.run("build . -sf tmp/source -of=tmp/build")
+        client.run("build . -of=tmp/build")
         self.assertIn("My URL: this url", client.out)
         client.run("export-pkg . --name=name --version=version")
         self.assertIn("My URL: this url", client.out)
