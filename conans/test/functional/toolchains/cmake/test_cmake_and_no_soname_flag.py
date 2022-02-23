@@ -98,61 +98,61 @@ def test_no_soname_flag(soname):
     # Uploading it to default remote server
     client.run("upload {} --all".format("nosoname/1.0@lasote/stable"))
 
-    cmakelists_libB = textwrap.dedent("""
+    cmakelists_lib_b = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
-    project(libB CXX)
+    project(lib_b CXX)
 
     find_package(nosoname CONFIG REQUIRED)
 
-    add_library(libB SHARED src/libB.cpp)
-    target_link_libraries(libB nosoname::nosoname)
+    add_library(lib_b SHARED src/lib_b.cpp)
+    target_link_libraries(lib_b nosoname::nosoname)
 
-    set_target_properties(libB PROPERTIES PUBLIC_HEADER "src/libB.h")
-    install(TARGETS libB DESTINATION "."
+    set_target_properties(lib_b PROPERTIES PUBLIC_HEADER "src/lib_b.h")
+    install(TARGETS lib_b DESTINATION "."
             PUBLIC_HEADER DESTINATION include
             RUNTIME DESTINATION bin
             ARCHIVE DESTINATION lib
             LIBRARY DESTINATION lib
             )
     """)
-    cpp = gen_function_cpp(name="libB", includes=["nosoname"], calls=["nosoname"])
-    h = gen_function_h(name="libB")
-    # Creating libB library that requires nosoname one
-    client.save({"CMakeLists.txt": cmakelists_libB,
-                 "src/libB.cpp": cpp,
-                 "src/libB.h": h,
-                 "conanfile.py": conanfile.format(name="libB",
+    cpp = gen_function_cpp(name="lib_b", includes=["nosoname"], calls=["nosoname"])
+    h = gen_function_h(name="lib_b")
+    # Creating lib_b library that requires nosoname one
+    client.save({"CMakeLists.txt": cmakelists_lib_b,
+                 "src/lib_b.cpp": cpp,
+                 "src/lib_b.h": h,
+                 "conanfile.py": conanfile.format(name="lib_b",
                                                   requires='requires = "nosoname/1.0@lasote/stable"',
                                                   generators='generators = "CMakeDeps"')},
                 clean_first=True)
 
     client.run("create . lasote/stable")
     # Uploading it to default remote server
-    client.run("upload {} --all".format("libB/1.0@lasote/stable"))
+    client.run("upload {} --all".format("lib_b/1.0@lasote/stable"))
     # Cleaning the current client cache
     shutil.rmtree(client.cache_folder)
 
-    # Creating the consumer application that requires libB
+    # Creating the consumer application that requires lib_b
     client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
-        find_package(libB CONFIG REQUIRED)
+        find_package(lib_b CONFIG REQUIRED)
 
         add_executable(example src/example.cpp)
-        target_link_libraries(example libB::libB)
+        target_link_libraries(example lib_b::lib_b)
     """)
     conanfile = textwrap.dedent("""
         [requires]
-        libB/1.0@lasote/stable
+        lib_b/1.0@lasote/stable
 
         [generators]
         CMakeDeps
         CMakeToolchain
         VirtualRunEnv
     """)
-    cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
+    cpp = gen_function_cpp(name="main", includes=["lib_b"], calls=["lib_b"])
     client2.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
                   "src/example.cpp": cpp,
                   "conanfile.txt": conanfile},
