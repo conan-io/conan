@@ -31,7 +31,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
-                "configuration": self.cmakedeps.configuration}
+                "configuration": self.cmakedeps.configuration,
+                "nosoname": str(self.nosoname).upper()}
 
     @property
     def template(self):
@@ -67,7 +68,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
                                       {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
                                       "{{ config_suffix }}"  # config_suffix
-                                      "{{ pkg_name }}")    # package_name
+                                      "{{ pkg_name }}"    # package_name
+                                      {{ nosoname }})
+
 
         foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
             list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_FRAMEWORK})
@@ -103,7 +106,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
                                       "{{ config_suffix }}"
-                                      "{{ pkg_name }}_{{ comp_variable_name }}")
+                                      "{{ pkg_name }}_{{ comp_variable_name }}"
+                                      {{ nosoname }})
 
         set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
         {%- endfor %}

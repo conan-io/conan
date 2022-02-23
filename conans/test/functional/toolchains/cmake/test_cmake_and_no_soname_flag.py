@@ -10,11 +10,11 @@ from conans.test.utils.tools import TestClient, TestServer
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.tool_cmake
-@pytest.mark.parametrize("soname", [
+@pytest.mark.parametrize("nosoname", [
     "NO_SONAME 1",  # without SONAME
     ""  # By default, with SONAME
 ])
-def test_no_soname_flag(soname):
+def test_no_soname_flag(nosoname):
     """ This test case is testing this graph structure:
             *   'Executable' -> 'LibB' -> 'LibNoSoname'
         Where:
@@ -70,6 +70,9 @@ def test_no_soname_flag(soname):
 
         def package_info(self):
             self.cpp_info.libs = ["{name}"]
+            if {nosoname}:
+                self.cpp_info.set_property('nosoname', True)
+
     """)
     cmakelists_nosoname = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -85,14 +88,15 @@ def test_no_soname_flag(soname):
                 ARCHIVE DESTINATION lib
                 LIBRARY DESTINATION lib
                 )
-    """.format(soname))
+    """.format(nosoname))
     cpp = gen_function_cpp(name="nosoname")
     h = gen_function_h(name="nosoname")
     # Creating nosoname library
     client.save({"CMakeLists.txt": cmakelists_nosoname,
                  "src/nosoname.cpp": cpp,
                  "src/nosoname.h": h,
-                 "conanfile.py": conanfile.format(name="nosoname", requires="", generators="")})
+                 "conanfile.py": conanfile.format(name="nosoname", requires="", generators="",
+                                                  nosoname=bool(nosoname))})
 
     client.run("create . lasote/stable")
     # Uploading it to default remote server
@@ -123,7 +127,8 @@ def test_no_soname_flag(soname):
                  "src/lib_b.h": h,
                  "conanfile.py": conanfile.format(name="lib_b",
                                                   requires='requires = "nosoname/1.0@lasote/stable"',
-                                                  generators='generators = "CMakeDeps"')},
+                                                  generators='generators = "CMakeDeps"',
+                                                  nosoname=False)},
                 clean_first=True)
 
     client.run("create . lasote/stable")

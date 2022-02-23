@@ -22,6 +22,10 @@ class CMakeDepsFileTemplate(object):
         return self.get_root_target_name(self.conanfile, self.suffix)
 
     @property
+    def nosoname(self):
+        return self.conanfile.cpp_info.get_property("nosoname") or False
+
+    @property
     def file_name(self):
         return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 
