@@ -10,18 +10,26 @@ from conans.test.utils.tools import TestClient, TestServer
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.tool_cmake
-def test_no_soname_flag():
+@pytest.mark.parametrize("soname", [
+    "NO_SONAME 1",  # without SONAME
+    ""  # By default, with SONAME
+])
+def test_no_soname_flag(soname):
     """ This test case is testing this graph structure:
-            *   'LibNoSoname' -> 'OtherLib' -> 'Executable'
+            *   'Executable' -> 'LibB' -> 'LibNoSoname'
         Where:
             *   LibNoSoname: is a package built as shared and without the SONAME flag.
-            *   OtherLib: is a package which requires LibNoSoname.
+            *   LibB: is a package which requires LibNoSoname.
             *   Executable: is the final consumer building an application and depending on OtherLib.
+        How:
+            1- Creates LibNoSoname and upload it to remote server
+            2- Creates LibB and upload it to remote server
+            3- Remove the Conan cache folder
+            4- Creates an application and consume LibB
     """
     test_server = TestServer()
     servers = {"default": test_server}
     client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-
     conanfile = textwrap.dedent("""
     from conans import ConanFile
     from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
@@ -70,22 +78,24 @@ def test_no_soname_flag():
         add_library(nosoname SHARED src/nosoname.cpp)
 
         # Adding NO_SONAME flag to main library
-        set_target_properties(nosoname PROPERTIES PUBLIC_HEADER "src/nosoname.h" NO_SONAME 1)
+        set_target_properties(nosoname PROPERTIES PUBLIC_HEADER "src/nosoname.h" {})
         install(TARGETS nosoname DESTINATION "."
                 PUBLIC_HEADER DESTINATION include
                 RUNTIME DESTINATION bin
                 ARCHIVE DESTINATION lib
                 LIBRARY DESTINATION lib
                 )
-    """)
+    """.format(soname))
     cpp = gen_function_cpp(name="nosoname")
     h = gen_function_h(name="nosoname")
+    # Creating nosoname library
     client.save({"CMakeLists.txt": cmakelists_nosoname,
                  "src/nosoname.cpp": cpp,
                  "src/nosoname.h": h,
                  "conanfile.py": conanfile.format(name="nosoname", requires="", generators="")})
 
     client.run("create . lasote/stable")
+    # Uploading it to default remote server
     client.run("upload {} --all".format("nosoname/1.0@lasote/stable"))
 
     cmakelists_libB = textwrap.dedent("""
@@ -107,6 +117,7 @@ def test_no_soname_flag():
     """)
     cpp = gen_function_cpp(name="libB", includes=["nosoname"], calls=["nosoname"])
     h = gen_function_h(name="libB")
+    # Creating libB library that requires nosoname one
     client.save({"CMakeLists.txt": cmakelists_libB,
                  "src/libB.cpp": cpp,
                  "src/libB.h": h,
@@ -115,14 +126,14 @@ def test_no_soname_flag():
                                                   generators='generators = "CMakeDeps"')},
                 clean_first=True)
 
-    # Now, let's create both libraries
     client.run("create . lasote/stable")
+    # Uploading it to default remote server
     client.run("upload {} --all".format("libB/1.0@lasote/stable"))
-    # Ensuring we're deleting everything
+    # Cleaning the current client cache
     shutil.rmtree(client.cache_folder)
 
+    # Creating the consumer application that requires libB
     client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-    # Now, let's create the application consuming libB
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
@@ -147,6 +158,7 @@ def test_no_soname_flag():
                   "conanfile.txt": conanfile},
                  clean_first=True)
     client2.run('install . ')
+    # Activate the VirtualRunEnv and execute the CMakeToolchain
     client2.run_command('bash -c \'source conanrun.sh '
                         ' && cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
                         ' && cmake --build . && ./example\'')
