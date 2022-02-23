@@ -1,10 +1,11 @@
 import platform
+import shutil
 import textwrap
 
 import pytest
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
@@ -17,7 +18,10 @@ def test_no_soname_flag():
             *   OtherLib: is a package which requires LibNoSoname.
             *   Executable: is the final consumer building an application and depending on OtherLib.
     """
-    client = TestClient()
+    test_server = TestServer()
+    servers = {"default": test_server}
+    client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
     conanfile = textwrap.dedent("""
     from conans import ConanFile
     from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
@@ -80,8 +84,10 @@ def test_no_soname_flag():
                  "src/nosoname.cpp": cpp,
                  "src/nosoname.h": h,
                  "conanfile.py": conanfile.format(name="nosoname", requires="", generators="")})
-    # Now, let's create both libraries
-    client.run("create .")
+
+    client.run("create . lasote/stable")
+    client.run("upload {} --all".format("nosoname/1.0@lasote/stable"))
+
     cmakelists_libB = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
     project(libB CXX)
@@ -104,11 +110,18 @@ def test_no_soname_flag():
     client.save({"CMakeLists.txt": cmakelists_libB,
                  "src/libB.cpp": cpp,
                  "src/libB.h": h,
-                 "conanfile.py": conanfile.format(name="libB", requires='requires = "nosoname/1.0"',
+                 "conanfile.py": conanfile.format(name="libB",
+                                                  requires='requires = "nosoname/1.0@lasote/stable"',
                                                   generators='generators = "CMakeDeps"')},
                 clean_first=True)
+
     # Now, let's create both libraries
-    client.run("create .")
+    client.run("create . lasote/stable")
+    client.run("upload {} --all".format("libB/1.0@lasote/stable"))
+    # Ensuring we're deleting everything
+    shutil.rmtree(client.cache_folder)
+
+    client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
     # Now, let's create the application consuming libB
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -121,17 +134,18 @@ def test_no_soname_flag():
     """)
     conanfile = textwrap.dedent("""
         [requires]
-        libB/1.0
+        libB/1.0@lasote/stable
 
         [generators]
         CMakeDeps
         CMakeToolchain
     """)
     cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
-    client.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
-                 "src/example.cpp": cpp,
-                 "conanfile.txt": conanfile},
-                clean_first=True)
-    client.run('install . ')
-    client.run_command('cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
-                       ' && cmake --build . && ./example')
+    client2.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
+                  "src/example.cpp": cpp,
+                  "conanfile.txt": conanfile},
+                 clean_first=True)
+    client2.run('install . ')
+    client2.run_command(
+        'cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
+        ' && cmake --build . && ./example')
