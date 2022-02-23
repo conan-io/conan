@@ -139,6 +139,7 @@ def test_no_soname_flag():
         [generators]
         CMakeDeps
         CMakeToolchain
+        VirtualRunEnv
     """)
     cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
     client2.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
@@ -146,6 +147,6 @@ def test_no_soname_flag():
                   "conanfile.txt": conanfile},
                  clean_first=True)
     client2.run('install . ')
-    client2.run_command(
-        'cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
-        ' && cmake --build . && ./example')
+    client2.run_command('bash -c \'source conanrun.sh '
+                        ' && cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
+                        ' && cmake --build . && ./example\'')
