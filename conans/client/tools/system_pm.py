@@ -118,6 +118,7 @@ class SystemPackageTool(object):
                                    % "\n".join(packages))
                 raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
+            return
 
         if not force and self._installed(packages):
             return
@@ -169,11 +170,12 @@ class SystemPackageTool(object):
                                   % "\n".join(packages))
                 return
 
-            if mode == "verify" and not self._installed(packages):
+            if mode == "verify" and self._to_be_installed(packages):
                 self._output.error("The following packages need to be installed:\n %s"
                                    % "\n".join(packages))
                 raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
+            return
 
         packages = packages if force else self._to_be_installed(packages)
         if not force and not packages:

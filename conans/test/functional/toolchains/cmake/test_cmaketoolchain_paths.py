@@ -68,7 +68,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class TestConan(ConanFile):
-            exports = "*"
+            exports_sources = "*"
             def layout(self):
                 pass
             def package(self):
@@ -132,7 +132,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
         import os
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            exports = "*"
+            exports_sources = "*"
             generators = "CMakeToolchain"
 
             def layout(self):
@@ -213,7 +213,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
         from conans import ConanFile
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
-            exports = "*"
+            exports_sources = "*"
             def layout(self):
                 pass
             def package(self):
@@ -269,7 +269,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
         from conans import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
-            exports = "*"
+            exports_sources = "*"
             def layout(self):
                 pass
             def package(self):
@@ -322,7 +322,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
         from conans import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
-            exports = "*"
+            exports_sources = "*"
             def layout(self):
                 pass
             def package(self):
@@ -380,7 +380,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
         from conans import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
-            exports = "*"
+            exports_sources = "*"
             def layout(self):
                 pass
             def package(self):

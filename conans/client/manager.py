@@ -23,7 +23,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
                  is_build_require=False, add_txt_generator=True, require_overrides=None,
-                 conanfile_path=None, test=None, source_folder=None, output_folder=None):
+                 conanfile_path=None, test=None, output_folder=None):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -96,7 +96,8 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         manifest_manager.print_log()
 
     if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_source(source_folder or conanfile_path)
+        conanfile.folders.set_base_source(conanfile_path)
+        conanfile.folders.set_base_build(output_folder or conanfile_path)
         conanfile.folders.set_base_install(output_folder or conanfile_path)
         conanfile.folders.set_base_imports(output_folder or conanfile_path)
         conanfile.folders.set_base_generators(output_folder or conanfile_path)

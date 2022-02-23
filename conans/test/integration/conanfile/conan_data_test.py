@@ -255,3 +255,79 @@ class Lib(ConanFile):
         self.assertIn("My URL: this url", client.out)
         client.run("export-pkg . name/version@ -sf tmp/source -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
+
+
+class TestConanDataUpdate:
+    """
+    testing the update_conandata() method
+    """
+    def test_conandata_update(self):
+        """ test the update_conandata() helper
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import update_conandata
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def export(self):
+                    update_conandata(self, {"sources": {"0.1": {"commit": 123, "type": "git"},
+                                                        "0.2": {"url": "new"}
+                                                       }
+                                           })
+
+                def source(self):
+                    data = self.conan_data["sources"]
+                    self.output.info("0.1-commit: {}!!".format(data["0.1"]["commit"]))
+                    self.output.info("0.1-type: {}!!".format(data["0.1"]["type"]))
+                    self.output.info("0.1-url: {}!!".format(data["0.1"]["url"]))
+                    self.output.info("0.2-url: {}!!".format(data["0.2"]["url"]))
+            """)
+        conandata = textwrap.dedent("""\
+            sources:
+                "0.1":
+                    url: myurl
+                    commit: 234
+            """)
+        c.save({"conanfile.py": conanfile,
+                "conandata.yml": conandata})
+        c.run("create .")
+        assert "pkg/0.1: 0.1-commit: 123!!" in c.out
+        assert "pkg/0.1: 0.1-type: git!!" in c.out
+        assert "pkg/0.1: 0.1-url: myurl!!" in c.out
+        assert "pkg/0.1: 0.2-url: new!!" in c.out
+
+    def test_conandata_update_error(self):
+        """ test the update_conandata() helper fails if used outside export()
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import update_conandata
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def source(self):
+                    update_conandata(self, {})
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create .", assert_error=True)
+        assert "The 'update_conandata()' can only be used in the 'export()' method" in c.out
+
+    def test_conandata_create_if_not_exist(self):
+        """ test the update_conandata() creates the file if it doesn't exist
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import update_conandata
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def export(self):
+                    update_conandata(self, {"data": "value"})
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("export .")  # It doesn't fail
+        assert "pkg/0.1: Calling export()" in c.out
