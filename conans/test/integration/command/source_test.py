@@ -22,6 +22,7 @@ class TestexportConan(ConanFile):
     exports_sources = "patch.patch"
 
     def source(self):
+        print(os.getcwd())
         save(self, "hello/hello.h", "my hello header!")
         patch = os.path.join(self.source_folder, "patch.patch")
         self.output.info("PATCH: %s" % load(self, patch))
@@ -85,11 +86,6 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("source .")
         self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
-
-    def test_source_reference(self):
-        client = TestClient()
-        client.run("source lib/1.0@conan/stable", assert_error=True)
-        self.assertIn("'conan source' doesn't accept a reference anymore", client.out)
 
     def test_source_with_path_errors(self):
         client = TestClient()
