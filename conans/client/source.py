@@ -126,7 +126,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Calling post_source hook
     """
 
-    src_folder = conanfile.folders.base_source
+    src_folder = conanfile.source_folder
     mkdir(src_folder)
 
     with tools.chdir(src_folder):
@@ -177,7 +177,6 @@ def _clean_source_folder(folder):
 def _run_cache_scm(conanfile, scm_sources_folder):
     """
     :param conanfile: recipe
-    :param src_folder: sources folder in the cache, (Destination dir)
     :param scm_sources_folder: scm sources folder in the cache, where the scm sources were exported
     :return:
     """
