@@ -1,19 +1,9 @@
 import os
 import textwrap
 import unittest
-from collections import Counter
 
-from mock import Mock
-
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
-from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_manager import GraphManager
-from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import PyRequireLoader
-from conans.client.graph.range_resolver import RangeResolver
-from conans.client.installer import BinaryInstaller
-from conans.client.loader import ConanFileLoader
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options
 from conans.model.profile import Profile
@@ -24,16 +14,6 @@ from conans.util.dates import revision_timestamp_now
 from conans.util.files import save
 
 
-class MockRemoteManager(object):
-    def __init__(self, packages=None):
-        self.packages = packages or []
-        self.count = Counter()
-
-    def search_recipes(self, remote, pattern, ignorecase):  # @UnusedVariable
-        self.count[pattern] += 1
-        return self.packages
-
-
 class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
@@ -42,25 +22,7 @@ class GraphManagerTest(unittest.TestCase):
         save(cache.default_profile_path, "")
         save(cache.settings_path, "os: [Windows, Linux]")
         self.cache = cache
-
-    def _get_app(self):
-        self.remote_manager = MockRemoteManager()
-        cache = self.cache
-        app = Mock()
-        app.cache = cache
-        app.remote_manager = self.remote_manager
-        app.enabled_remotes = []
-        app.selected_remotes = []
-        app.check_updates = False
-        app.update = False
-        app.range_resolver = RangeResolver(app)
-        app.proxy = ConanProxy(app)
-        pyreq_loader = PyRequireLoader(app.proxy, app.range_resolver)
-        app.loader = ConanFileLoader(pyreq_loader=pyreq_loader)
-        app.binaries_analyzer = GraphBinariesAnalyzer(app)
-        app.graph_manager = GraphManager(app)
-        app.hook_manager = Mock()
-        return app
+        self.cache_folder = cache_folder
 
     def recipe_cache(self, reference, requires=None, option_shared=None):
         ref = RecipeReference.loads(reference)
@@ -154,16 +116,15 @@ class GraphManagerTest(unittest.TestCase):
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         build_mode = []  # Means build all
-        ref = ref or RecipeReference(None, None, None, None)
-        app = self._get_app()
 
-        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
-                                                  None, ref, build_mode)
+        conan_api = ConanAPIV2(cache_folder=self.cache_folder)
+
+        root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build)
+        deps_graph = conan_api.graph.load_graph(root_node, profile_host, profile_build)
+
         if install:
-            deps_graph.report_graph_error()
-            binary_installer = BinaryInstaller(app)
-            
-            binary_installer.install(deps_graph)
+            conan_api.graph.analyze_binaries(deps_graph, build_mode)
+            conan_api.install.install_binaries(deps_graph)
 
         return deps_graph
 

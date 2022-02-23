@@ -1,7 +1,6 @@
 import conans
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
@@ -45,7 +44,6 @@ class ConanApp(object):
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self)
-        self.graph_manager = GraphManager(self)
 
         # Remotes
         self.selected_remotes = []
