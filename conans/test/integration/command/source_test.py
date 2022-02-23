@@ -22,7 +22,6 @@ class TestexportConan(ConanFile):
     exports_sources = "patch.patch"
 
     def source(self):
-        print(os.getcwd())
         save(self, "hello/hello.h", "my hello header!")
         patch = os.path.join(self.source_folder, "patch.patch")
         self.output.info("PATCH: %s" % load(self, patch))
