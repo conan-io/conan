@@ -23,7 +23,8 @@ class GraphManager(object):
         self._loader = conan_app.loader
         self._binaries_analyzer = conan_app.binaries_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path):
+    def load_consumer_conanfile(self, conanfile_path, name=None, version=None, user=None,
+                                channel=None):
         """loads a conanfile for local flow: source
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
@@ -32,7 +33,6 @@ class GraphManager(object):
         profiles = [profile_loader.get_default_host()]
         profile_host = profile_loader.from_cli_args(profiles, None, None, None, None, os.getcwd())
 
-        name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             # The global.conf is necessary for download_cache definition
             profile_host.conf.rebase_conf_definition(self._cache.new_config)
