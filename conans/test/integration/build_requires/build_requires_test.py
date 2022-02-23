@@ -526,3 +526,4 @@ def test_tool_requires_conanfile_txt():
             """)
     client.save({"conanfile.txt": consumer}, clean_first=True)
     client.run("install . --build=missing")
+    assert "Applying build-requirement: build_req/1.0@test/test" in client.out
