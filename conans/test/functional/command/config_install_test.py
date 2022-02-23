@@ -166,7 +166,7 @@ class ConfigInstallTest(unittest.TestCase):
     def _check(self, params):
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        api = self.client.get_conan_api()
+        api = self.client.api
         cache_remotes = api.remotes.list()
         self.assertEqual(list(cache_remotes), [
             Remote("myrepo1", "https://myrepourl.net", False, False),

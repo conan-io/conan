@@ -135,7 +135,7 @@ def test_scm_with_source_layout():
     client.run("create . ")
     assert "Created package revision" in client.out
 
-
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
 def test_zip_download_with_subfolder_new_tools(no_copy_source):
     """If we have a zip with the sources in a subfolder, specifying it in the self.folders.source

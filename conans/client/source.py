@@ -68,7 +68,7 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
                 get_sources_from_exports=get_sources_from_exports)
 
 
-def config_source(export_folder, export_source_folder, scm_sources_folder, conanfile,
+def config_source(export_source_folder, scm_sources_folder, conanfile,
                   conanfile_path, reference, hook_manager, cache):
     """ Implements the sources configuration when a package is going to be built in the
     local cache:
