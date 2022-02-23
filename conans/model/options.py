@@ -1,6 +1,3 @@
-
-import fnmatch
-
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference, ref_matches
@@ -278,11 +275,16 @@ class Options:
     def __delattr__(self, field):
         self._package_options.__delattr__(field)
 
-    def __getitem__(self, ref):
-        # Needed for configure() => self.options["foo/1.0"].shared = True
-        if isinstance(ref, str):
-            ref = RecipeReference.loads(ref)
-        return self.get(ref, is_consumer=False)
+    def __getitem__(self, item):
+        # FIXME: Kept for configure => self.options["xxx"].shared = True
+        # To access dependencies options like ``options["mydep"]``. This will no longer be
+        # a read case, only for defining values. Read access will be via self.dependencies["dep"]
+        if isinstance(item, str):
+            if "/" not in item:  # FIXME: To allow patterns like "*" or "foo*"
+                item += "/*"
+            item = RecipeReference.loads(item)
+
+        return self.get(item, is_consumer=False)
 
     def get(self, ref, is_consumer):
         ret = _PackageOptions()

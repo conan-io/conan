@@ -121,7 +121,7 @@ class TestOptionsLoad:
             optimized=3
             path=mypath
             static=True
-            zlib:option=8
+            zlib*:option=8
             *:common=value
             """)
         sut = Options.loads(text)
@@ -131,7 +131,7 @@ class TestOptionsLoad:
         assert sut.path != "whatever"  # Non validating
         assert sut.static == "True"
         assert sut.static != "whatever"  # Non validating
-        assert sut["zlib"].option == 8
+        assert sut["zlib/1*"].option == 8
         assert sut["zlib/1.2.11"].option == 8
         assert sut["zlib/*"].option != "whatever"  # Non validating
         assert sut["*/*"].common == "value"
