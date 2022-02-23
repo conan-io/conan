@@ -1,91 +1,46 @@
-import os
-import textwrap
-import unittest
-
-import pytest
-
-from conans.util.env import environment_update
-from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, load
-import json
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="Conflict Output have changed")
-class ConflictDiamondTest(unittest.TestCase):
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class HelloReuseConan(ConanFile):
-            name = "%s"
-            version = "%s"
-            requires = %s
-        """)
-
-    def _export(self, name, version, deps=None, export=True):
-        deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'
-        conanfile = self.conanfile % (name, version, deps)
-        files = {CONANFILE: conanfile}
-        self.client.save(files, clean_first=True)
-        if export:
-            self.client.run("export . --user=lasote --channel=stable")
-
-    def setUp(self):
-        self.client = TestClient()
-        self._export("hello0", "0.1")
-        self._export("hello0", "0.2")
-        self._export("hello1", "0.1", ["hello0/0.1@lasote/stable"])
-        self._export("Hello2", "0.1", ["hello0/0.2@lasote/stable"])
-
-    def test_conflict(self):
-        """ There is a conflict in the graph: branches with requirement in different
-            version, Conan will raise
+class TestConflictDiamondTest:
+    def test_version_diamond_conflict(self):
         """
-        self._export("Hello3", "0.1", ["hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"],
-                     export=False)
-        self.client.run("install . --build missing", assert_error=True)
-        self.assertIn("Conflict in hello2/0.1@lasote/stable:\n"
-                      "    'hello2/0.1@lasote/stable' requires 'hello0/0.2@lasote/stable' "
-                      "while 'hello1/0.1@lasote/stable' requires 'hello0/0.1@lasote/stable'.\n"
-                      "    To fix this conflict you need to override the package 'hello0' in "
-                      "your root package.", self.client.out)
-        self.assertNotIn("Generated conaninfo.txt", self.client.out)
-
-    def test_override_silent(self):
-        """ There is a conflict in the graph, but the consumer project depends on the conflicting
-            library, so all the graph will use the version from the consumer project
+        test that we obtain a version conflict with a diamond, and that we can fix it by
+        defining an override in the "game" consumer
         """
-        self._export("Hello3", "0.1",
-                     ["hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable",
-                      "hello0/0.1@lasote/stable"], export=False)
-        self.client.run("install . --build missing", assert_error=False)
-        self.assertIn("hello2/0.1@lasote/stable: requirement hello0/0.2@lasote/stable overridden"
-                      " by Hello3/0.1 to hello0/0.1@lasote/stable",
-                      self.client.out)
+        c = TestClient()
+        c.save({"math/conanfile.py": GenConanfile("math"),
+                "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
+                "ai/conanfile.py": GenConanfile("ai", "1.0").with_requires("math/1.0.1"),
+                "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/1.0",
+                                                                               "ai/1.0"),
+                })
+        c.run("create math --version=1.0")
+        c.run("create math --version=1.0.1")
+        c.run("create math --version=1.0.2")
+        c.run("create engine")
+        c.run("create ai")
+        c.run("install game", assert_error=True)
+        assert "Version conflict: ai/1.0->math/1.0.1, game/1.0->math/1.0" in c.out
 
+        def _game_conanfile(version, reverse=False):
+            if reverse:
+                return GenConanfile("game", "1.0")\
+                    .with_requirement(f"math/{version}", override=True)\
+                    .with_requirement("engine/1.0")\
+                    .with_requirement("ai/1.0")
+            else:
+                return GenConanfile("game", "1.0").with_requirement("engine/1.0") \
+                    .with_requirement("ai/1.0") \
+                    .with_requirement(f"math/{version}", override=True)
 
-@pytest.mark.xfail(reason="UX conflict error to be completed")
-def test_create_werror():
-    client = TestClient()
-    client.save({"conanfile.py": """from conan import ConanFile
-class Pkg(ConanFile):
-pass
-    """})
-    client.run("export . --name=LibA --version=0.1 --user=user --channel=channel")
-    client.run("export conanfile.py --name=LibA --version=0.2 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conan import ConanFile
-class Pkg(ConanFile):
-requires = "LibA/0.1@user/channel"
-    """})
-    client.run("export ./ --name=LibB --version=0.1 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conan import ConanFile
-class Pkg(ConanFile):
-requires = "LibA/0.2@user/channel"
-    """})
-    client.run("export . --name=LibC --version=0.1 --user=user --channel=channel")
-    client.save({"conanfile.py": """from conan import ConanFile
-class Pkg(ConanFile):
-requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
-    """})
-    client.run("create ./conanfile.py consumer/0.1@lasote/testing", assert_error=True)
-    self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
-                  client.out)
+        for v in ("1.0", "1.0.1", "1.0.2"):
+            c.save({"game/conanfile.py": _game_conanfile(v)})
+            c.run("install game")
+            c.assert_listed_require({f"math/{v}": "Cache"})
+
+        # Check that order of requirements doesn't affect
+        for v in ("1.0", "1.0.1", "1.0.2"):
+            c.save({"game/conanfile.py": _game_conanfile(v, reverse=True)})
+            c.run("install game")
+            c.assert_listed_require({f"math/{v}": "Cache"})

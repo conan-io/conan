@@ -29,7 +29,6 @@ def build(conan_api, parser, *args):
                         help='Provide a channel')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("-sf", "--source-folder", help='The root source folder')
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     args = parser.parse_args(*args)
 
@@ -44,7 +43,7 @@ def build(conan_api, parser, *args):
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
-    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else folder
+    source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else folder
     out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,

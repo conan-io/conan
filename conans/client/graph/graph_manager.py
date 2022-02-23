@@ -8,6 +8,7 @@ from conans.client.graph.graph_builder import DepsGraphBuilder
 
 from conans.client.graph.profile_node_definer import consumer_definer, initialize_conanfile_profile
 from conans.client.profile_loader import ProfileLoader
+from conans.errors import conanfile_exception_formatter
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 
@@ -22,7 +23,8 @@ class GraphManager(object):
         self._loader = conan_app.loader
         self._binaries_analyzer = conan_app.binaries_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path):
+    def load_consumer_conanfile(self, conanfile_path, name=None, version=None, user=None,
+                                channel=None):
         """loads a conanfile for local flow: source
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
@@ -31,7 +33,6 @@ class GraphManager(object):
         profiles = [profile_loader.get_default_host()]
         profile_host = profile_loader.from_cli_args(profiles, None, None, None, None, os.getcwd())
 
-        name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             # The global.conf is necessary for download_cache definition
             profile_host.conf.rebase_conf_definition(self._cache.new_config)
@@ -45,6 +46,11 @@ class GraphManager(object):
 
             run_configure_method(conanfile, down_options=Options(),
                                  profile_options=profile_host.options,  ref=None)
+
+            # This is important, otherwise the ``conan source`` doesn't define layout and fails
+            if hasattr(conanfile, "layout"):
+                with conanfile_exception_formatter(conanfile, "layout"):
+                    conanfile.layout()
 
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path)

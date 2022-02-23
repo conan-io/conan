@@ -212,6 +212,8 @@ class Requirement:
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        # The force trait is also defined from an override
+        self.force |= other.force or other.override
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):

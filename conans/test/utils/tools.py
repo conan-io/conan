@@ -27,10 +27,8 @@ from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.api.model import Remote
-from conans.cli.cli import Cli, CLI_V1_COMMANDS
+from conans.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
-from conans.client.command import Command
-from conans.client.conan_api import ConanAPIV1
 from conans.util.env import environment_update
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -429,7 +427,7 @@ class TestClient(object):
         return self.cache.store
 
     def update_servers(self):
-        api = self.get_conan_api()
+        api = ConanAPIV2(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)
 
@@ -459,23 +457,6 @@ class TestClient(object):
         with mock.patch("conans.client.rest.conan_requester.requests", _req):
             yield
 
-    def get_conan_api(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return ConanAPIV2(cache_folder=self.cache_folder)
-        else:
-            return ConanAPIV1(cache_folder=self.cache_folder)
-
-    def get_conan_command(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return Cli(self.api)
-        else:
-            return Command(self.api)
-
-    @staticmethod
-    def is_conan_cli_v2_command(args):
-        conan_command = args[0] if args else None
-        return conan_command not in CLI_V1_COMMANDS
-
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -484,8 +465,8 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = self.get_conan_api(args)
-        command = self.get_conan_command(args)
+        self.api = ConanAPIV2(cache_folder=self.cache_folder)
+        command = Cli(self.api)
 
         error = None
         try:

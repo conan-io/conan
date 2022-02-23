@@ -142,7 +142,6 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("-sf", "--source-folder", help='The root source folder')
     parser.add_argument("--deploy", action=Extender,
                         help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
@@ -158,8 +157,6 @@ def install(conan_api, parser, *args):
         source_folder = output_folder = os.path.dirname(path)
     else:
         source_folder = output_folder = cwd
-    if args.source_folder:
-        source_folder = make_abs_path(args.source_folder, cwd)
     if args.output_folder:
         output_folder = make_abs_path(args.output_folder, cwd)
 
@@ -174,8 +171,8 @@ def install(conan_api, parser, *args):
     out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
-                                       source_folder=source_folder,
                                        output_folder=output_folder,
+                                       source_folder=source_folder,
                                        deploy=args.deploy
                                        )
 

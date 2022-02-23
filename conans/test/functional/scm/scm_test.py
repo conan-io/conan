@@ -241,7 +241,7 @@ class GitSCMTest(unittest.TestCase):
         self.client.init_git_repo()
         self.client.save({"aditional_file.txt": "contents"})
 
-        self.client.run("source . --source-folder=./source")
+        self.client.run("source .")
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         # Files are NOT copied
         assert not os.path.exists(os.path.join(curdir, "source", "myfile.txt"))
@@ -263,7 +263,7 @@ class GitSCMTest(unittest.TestCase):
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
 
-        self.client.run("source . --source-folder=./source")
+        self.client.run("source .")
         assert not os.path.exists(os.path.join(curdir, "source", "myfile.txt"))
         assert not os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt"))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
@@ -458,7 +458,7 @@ class SVNSCMTest(SVNLocalRepoTestCase):
                                                                  path=self.client.current_folder))
         self.client.save({"aditional_file.txt": "contents"})
 
-        self.client.run("source . --source-folder=./source")
+        self.client.run("source .")
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         # Files are NOT copied
         assert not os.path.exists(os.path.join(curdir, "source", "myfile.txt"))
@@ -480,7 +480,7 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
 
-        self.client.run("source . --source-folder=./source")
+        self.client.run("source .")
         assert not os.path.exists(os.path.join(curdir, "source", "myfile.txt"))
         assert not os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt"))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
