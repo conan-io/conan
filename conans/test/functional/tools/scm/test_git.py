@@ -283,6 +283,76 @@ class TestGitBasicSCMFlow:
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
+class TestGitBasicSCMFlowSubfolder:
+    """ Same as above, but conanfile.py put in "conan" subfolder in the root
+    """
+    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
+    # TODO: the os.remove("conandata.yml") will not be necessary, exports will not be sources
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load, update_conandata
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, os.path.dirname(self.recipe_folder)) # PARENT!
+                scm_url, scm_commit = git.get_url_commit()
+                update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
+
+            def layout(self):
+                self.folders.source = ".."
+
+            def source(self):
+                git = Git(self, self.source_folder)
+                sources = self.conan_data["sources"]
+                git.clone(url=sources["url"], target=".")
+                git.checkout(commit=sources["commit"])
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE: {}".format(load(self, cmake)))
+                self.output.info("MYFILE: {}".format(load(self, file_h)))
+
+            def build(self):
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE-BUILD: {}".format(load(self, cmake)))
+                self.output.info("MYFILE-BUILD: {}".format(load(self, file_h)))
+        """)
+
+    def test_full_scm(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"conan/conanfile.py": self.conanfile,
+                                                   "src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder)
+
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone "{}" .'.format(url))
+        c.run("create conan")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+        c.run("upload * --all -c")
+
+        # Do a change and commit, this commit will not be used by package
+        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install pkg/0.1@ --build=pkg")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
+        assert "pkg/0.1: MYFILE: myheader!" in c2.out
+
+        # local flow
+        c.run("install conan")
+        c.run("build conan")
+        assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
+        assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
+
+
+@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitMonorepoSCMFlow:
     """ Build the full new SCM approach:
     Same as above but with a monorepo with multiple subprojects
