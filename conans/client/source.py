@@ -31,23 +31,19 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
+    if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
+        return None
+
     export_sources_folder = recipe_layout.export_sources()
     if os.path.exists(export_sources_folder):
         return None
 
-    if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
-        return None
 
-    try:
-        sources_remote = None
-        for r in remotes:
-            sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
-            if sources_remote:
-                break
-    except Exception:
-        raise
-
-    if not sources_remote:
+    for r in remotes:
+        sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
+        if sources_remote:
+            break
+    else:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"
                % str(ref))
