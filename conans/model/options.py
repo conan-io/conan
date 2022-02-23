@@ -279,10 +279,12 @@ class Options:
         self._package_options.__delattr__(field)
 
     def __getitem__(self, ref):
-        raise ConanException("The access to options[] is forbidden. Use self.dependencies['xxx'].options")
+        # Needed for configure() => self.options["foo/1.0"].shared = True
+        if isinstance(ref, str):
+            ref = RecipeReference.loads(ref)
+        return self.get(ref, is_consumer=False)
 
-    # FIXME: Used by graph_builder.py at _conflicting_options
-    def get_options_for_ref(self, ref, is_consumer):
+    def get(self, ref, is_consumer):
         ret = _PackageOptions()
         for pattern, options in self._deps_package_options.items():
             if ref_matches(ref, pattern, is_consumer):
