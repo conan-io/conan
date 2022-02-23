@@ -22,8 +22,6 @@ def source(conan_api, parser, *args):
                         help='Provide a package version if not specified in conanfile')
     parser.add_argument("--user", action=OnceArgument, help='Provide a user')
     parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
-    parser.add_argument("-sf", "--source-folder", action=OnceArgument,
-                        help='Destination directory. Defaulted to current directory')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -34,8 +32,7 @@ def source(conan_api, parser, *args):
     app = ConanApp(conan_api.cache_folder)
     conanfile = app.graph_manager.load_consumer_conanfile(path, name=args.name, version=args.version,
                                                           user=args.user, channel=args.channel)
-    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else folder
-    conanfile.folders.set_base_source(source_folder)
+    conanfile.folders.set_base_source(folder)
     conanfile.folders.set_base_build(None)
     conanfile.folders.set_base_package(None)
 

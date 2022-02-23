@@ -165,8 +165,8 @@ def test_local_source_change_base():
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -of=common")
-    client.run("source . -sf=common")
-    header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
+    client.run("source .")
+    header = os.path.join(client.current_folder, "my_source", "downloaded.h")
     assert os.path.exists(header)
 
 
