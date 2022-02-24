@@ -263,25 +263,27 @@ class EnvVars:
             os.environ.update(old_env)
 
     def save_bat(self, filename, generate_deactivate=True):
+        filepath, filename = os.path.split(filename)
+        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo Capturing current environment in deactivate_{filename}
+            echo Capturing current environment in {filename}
             setlocal
-            echo @echo off > "deactivate_{filename}"
-            echo echo Restoring environment >> "deactivate_{filename}"
+            echo @echo off > "{filename}"
+            echo echo Restoring environment >> "{filename}"
             for %%v in ({vars}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
-                        echo set "%%a=%%b">> "deactivate_{filename}"
+                        echo set "%%a=%%b">> "{filename}"
                         set foundenvvar=1
                     )
                 )
                 if not defined foundenvvar (
-                    echo set %%v=>> "deactivate_{filename}"
+                    echo set %%v=>> "{filename}"
                 )
             )
             endlocal
-            """).format(filename=os.path.basename(filename), vars=" ".join(self._values.keys()))
+            """).format(filename=deactivate_file, vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
             {deactivate}
@@ -296,10 +298,12 @@ class EnvVars:
         save(filename, content)
 
     def save_ps1(self, filename, generate_deactivate=True,):
+        filepath, filename = os.path.split(filename)
+        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo "Capturing current environment in deactivate_{filename}"
+            echo "Capturing current environment in {filename}"
 
-            "echo `"Restoring environment`"" | Out-File -FilePath "deactivate_{filename}"
+            "echo `"Restoring environment`"" | Out-File -FilePath "{filename}"
             $vars = (Get-ChildItem env:*).name
             $updated_vars = @({vars})
 
@@ -308,15 +312,15 @@ class EnvVars:
                 if ($var -in $vars)
                 {{
                     $var_value = (Get-ChildItem env:$var).value
-                    Add-Content "deactivate_{filename}" "`n`$env:$var = `"$var_value`""
+                    Add-Content "{filename}" "`n`$env:$var = `"$var_value`""
                 }}
                 else
                 {{
-                    Add-Content "deactivate_{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                    Add-Content "{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
                 }}
             }}
         """).format(
-            filename=os.path.basename(filename),
+            filename=deactivate_file,
             vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
         )
 
@@ -336,20 +340,22 @@ class EnvVars:
         save(filename, content)
 
     def save_sh(self, filename, generate_deactivate=True):
+        filepath, filename = os.path.split(filename)
+        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo Capturing current environment in deactivate_{filename}
-           echo echo Restoring environment >> deactivate_{filename}
+           echo Capturing current environment in "{filename}"
+           echo echo Restoring environment >> "{filename}"
            for v in {vars}
            do
                value=$(printenv $v)
                if [ -n "$value" ]
                then
-                   echo export "$v='$value'" >> deactivate_{filename}
+                   echo export "$v='$value'" >> "{filename}"
                else
-                   echo unset $v >> deactivate_{filename}
+                   echo unset $v >> "{filename}"
                fi
            done
-           """.format(filename=os.path.basename(filename), vars=" ".join(self._values.keys())))
+           """.format(filename=deactivate_file, vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
               {deactivate}
               echo Configuring environment variables
