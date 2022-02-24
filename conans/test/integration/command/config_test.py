@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
-from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.model.conf import BUILT_IN_CONFS
 
 
 def _assert_dict_subset(expected, actual):
@@ -246,5 +246,5 @@ def test_config_list():
     client = TestClient()
     client.run('config list')
     assert "Supported Conan *experimental* global.conf and [conf] properties:" in client.out
-    for key, value in DEFAULT_CONFIGURATION.items():
-        assert "{}: {}".format(key, value) in client.out
+    for key, description in BUILT_IN_CONFS.items():
+        assert "{}: {}".format(key, description) in client.out
