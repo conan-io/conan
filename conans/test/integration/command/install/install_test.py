@@ -499,11 +499,11 @@ def test_package_folder_available_consumer():
     # Installing it with "install ." with output folder
     client.run("install . -of=my_build")
     assert "WARN: Package folder is None? False" in client.out
-    build_folder = os.path.join(client.current_folder, "my_build")
+    build_folder = os.path.join(client.current_folder, "my_build").replace("\\", "/")
     assert "WARN: Package folder: {}".format(build_folder) in str(client.out).replace("\\", "/")
 
     # Installing it with "install ." without output folder
     client.run("install .")
     assert "WARN: Package folder is None? False" in client.out
-    build_folder = client.current_folder
+    build_folder = client.current_folder.replace("\\", "/")
     assert "WARN: Package folder: {}".format(build_folder) in str(client.out).replace("\\", "/")
