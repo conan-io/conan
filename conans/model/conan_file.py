@@ -255,6 +255,10 @@ class ConanFile(object):
         return self.folders.source_folder
 
     @property
+    def base_source_folder(self):
+        return self.folders._base_source
+
+    @property
     def build_folder(self):
         return self.folders.build_folder
 

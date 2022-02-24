@@ -26,9 +26,23 @@ class Folders(object):
         self.package = ""
         self.generators = ""
         self.imports = ""
+        self.root = None
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def set_local(self, conanfile_folder, output_folder):
+        # This must be called only after ``layout()`` has been called
+        base_folder = conanfile_folder if self.root is None else \
+            os.path.normpath(os.path.join(conanfile_folder, self.root))
+
+        self._base_source = base_folder
+
+        self._base_install = output_folder or base_folder
+        self._base_build = output_folder or base_folder
+        self._base_package = output_folder or base_folder
+        self._base_generators = output_folder or base_folder
+        self._base_imports = output_folder or base_folder
 
     @property
     def source_folder(self):
