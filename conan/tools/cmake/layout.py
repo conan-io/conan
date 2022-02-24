@@ -3,7 +3,7 @@ import os
 from conans.errors import ConanException
 
 
-def cmake_layout(conanfile, generator=None):
+def cmake_layout(conanfile, generator=None, external_sources=False):
     gen = conanfile.conf.get("tools.cmake.cmaketoolchain:generator", default=generator)
     if gen:
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
@@ -14,7 +14,12 @@ def cmake_layout(conanfile, generator=None):
         else:
             multi = False
 
-    conanfile.folders.source = "."
+    if not external_sources:
+        # The CMakeLists.txt is typically in the root
+        conanfile.folders.source = "."
+    else:
+        # Cloned/unzipped in a subdirectory
+        conanfile.folders.source = "src"
     try:
         build_type = str(conanfile.settings.build_type)
     except ConanException:
@@ -27,7 +32,10 @@ def cmake_layout(conanfile, generator=None):
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
 
-    conanfile.cpp.source.includedirs = ["src"]
+    if not external_sources:
+        conanfile.cpp.source.includedirs = ["src"]
+    else:
+        conanfile.cpp.source.includedirs = ["."]
     if multi:
         conanfile.cpp.build.libdirs = ["{}".format(build_type)]
         conanfile.cpp.build.bindirs = ["{}".format(build_type)]
