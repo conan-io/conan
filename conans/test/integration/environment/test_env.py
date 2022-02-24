@@ -532,17 +532,16 @@ def test_deactivate_location():
     client = TestClient()
     client.save({"pkg.py": conanfile})
     client.run("create pkg.py pkg/1.0@")
-
     client.run("install pkg/1.0@ -g VirtualBuildEnv --install-folder=myfolder -s build_type=Release -s arch=x86_64")
-    if platform.system() == "Windows":
-        cmd = "./myfolder/conanbuild.bat"
-    else:
-        cmd = '. ./myfolder/conanbuild.sh'
+
+    source_cmd, script_ext = ("", ".bat") if platform.system() == "Windows" else (". ", ".sh")
+    cmd = "{}./myfolder/conanbuild{}".format(source_cmd, script_ext)
+
     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
                      cwd=client.current_folder).communicate()
 
     assert not os.path.exists(os.path.join(client.current_folder,
-                                           "deactivate_conanbuildenv-release-x86_64.sh"))
+                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
 
     assert os.path.exists(os.path.join(client.current_folder, "myfolder",
-                                       "deactivate_conanbuildenv-release-x86_64.sh"))
+                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
