@@ -128,10 +128,9 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
-        if compile_options is not None:
-            compile_options = eval(compile_options)
-            self.compile_options.update(compile_options)
+        compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
+                                                   default={}, check_type=dict)
+        self.compile_options.update(compile_options)
         parallel = ""
         njobs = build_jobs(self._conanfile)
         if njobs:

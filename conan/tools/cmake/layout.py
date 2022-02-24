@@ -4,7 +4,7 @@ from conans.errors import ConanException
 
 
 def cmake_layout(conanfile, generator=None):
-    gen = conanfile.conf["tools.cmake.cmaketoolchain:generator"] or generator
+    gen = conanfile.conf.get("tools.cmake.cmaketoolchain:generator", default=generator)
     if gen:
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
     else:
