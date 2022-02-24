@@ -192,7 +192,7 @@ def test_custom_content():
     assert "Name: pkg" in pc_content
 
 
-def test_custom_content_components():
+def test_custom_content_and_version_components():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conans.tools import save
@@ -204,6 +204,8 @@ def test_custom_content_components():
             def package_info(self):
                 self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                      "componentdir=${prefix}/mydir")
+                self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                     "19.8.199")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -211,6 +213,7 @@ def test_custom_content_components():
     client.run("install pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
+    assert "Version: 19.8.199" in pc_content
 
 
 def test_pkg_with_public_deps_and_component_requires():
@@ -419,7 +422,7 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
-    assert "Description: Conan component: compo1" in pc_content
+    assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
