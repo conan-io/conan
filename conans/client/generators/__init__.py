@@ -174,6 +174,7 @@ class GeneratorManager(object):
                         generator.generate()
                     continue
                 except Exception as e:
+                    output.error(traceback.format_exc())
                     raise ConanException("Error in generator '{}': {}".format(generator_name,
                                                                               str(e)))
 

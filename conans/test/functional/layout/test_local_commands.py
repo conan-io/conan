@@ -159,10 +159,9 @@ def test_local_build_change_base():
         tools.save("build_file.dll", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=common")
+    client.run("install . -if=common -bf=common")
     client.run("build . -if=common -bf=common")
-    # -bf is ignored here, the layout defines it
-    dll = os.path.join(client.current_folder, "my_build", "build_file.dll")
+    dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
 
@@ -177,7 +176,7 @@ def test_local_source():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -198,7 +197,7 @@ def test_local_source_change_base():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
@@ -423,3 +422,29 @@ def test_importdir_failure():
             assert os.path.exists(expected_build_file)
             c.run("install .. -s build_type=Debug")
             assert os.path.exists(expected_path_debug)
+
+
+def test_local_folders_without_layout():
+    """ Test that the "conan install" can report the local source and build folder
+    """
+    # https://github.com/conan-io/conan/issues/10566
+    client = TestClient()
+    conan_file = textwrap.dedent("""
+        from conan import ConanFile
+        class Test(ConanFile):
+            version = "1.2.3"
+            name = "test"
+
+            def layout(self):
+                self.folders.source = "."
+                self.folders.build = "build"
+
+            def generate(self):
+                self.output.info("generate sf: {}".format(self.source_folder))
+                self.output.info("generate bf: {}".format(self.build_folder))
+        """)
+
+    client.save({"conanfile.py": conan_file})
+    client.run("install .")
+    assert "conanfile.py (test/1.2.3): generate sf: {}".format(client.current_folder) in client.out
+    assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out

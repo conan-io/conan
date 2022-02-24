@@ -18,13 +18,16 @@ class MesonTest(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "pkg_config"
+
+            def layout(self):
+                self.folders.build = "build"
 
             def generate(self):
                 tc = MesonToolchain(self)

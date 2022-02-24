@@ -158,23 +158,41 @@ class MSBuildDeps(object):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
+        pkg_placeholder = "$(Conan{}RootFolder)".format(name)
+
+        def join_paths(paths):
+            # ALmost copied from CMakeDeps TargetDataContext
+            ret = []
+            for p in paths:
+                assert os.path.isabs(p), "{} is not absolute".format(p)
+
+                if p.startswith(package_folder):
+                    rel = p[len(package_folder):]
+                    rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")
+                    norm_path = ("${%s}/%s" % (pkg_placeholder, rel))
+                else:
+                    norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                ret.append(norm_path)
+            return "".join("{};".format(e) for e in ret)
+
         package_folder = dep.package_folder.replace('\\', '/')\
                                            .replace('$', '\\$').replace('"', '\\"')
-        pkg_placeholder = "$(Conan{}RootFolder)/".format(name)
+
         fields = {
             'name': name,
             'root_folder': package_folder,
-            'bin_dirs': "".join("%s;" % (pkg_placeholder + p) for p in cpp_info.bindirs),
-            'res_dirs': "".join("%s;" % (pkg_placeholder + p) for p in cpp_info.resdirs),
-            'include_dirs': "".join("%s;" % (pkg_placeholder + p) for p in cpp_info.includedirs),
-            'lib_dirs': "".join("%s;" % (pkg_placeholder + p) for p in cpp_info.libdirs),
+            'bin_dirs': join_paths(cpp_info.bindirs),
+            'res_dirs': join_paths(cpp_info.resdirs),
+            'include_dirs': join_paths(cpp_info.includedirs),
+            'lib_dirs': join_paths(cpp_info.libdirs),
             'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
+            # TODO: Missing objects
             'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
-            'dependencies': ";".join(deps),
+            'dependencies': ";".join(deps) if not build else "",
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
@@ -196,6 +214,7 @@ class MSBuildDeps(object):
         else:
             ca_exclude = self.exclude_code_analysis
 
+        deps = [] if build else deps  # build-requires do not propagate dependencies
         template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
         content_multi = template.render(host_context=not build,
                                         name=dep_name, ca_exclude=ca_exclude,

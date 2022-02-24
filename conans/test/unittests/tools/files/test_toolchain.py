@@ -5,7 +5,7 @@ import pytest
 from conans import load
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conan.tools.files import load_toolchain_args, save_toolchain_args
+from conan.tools.files.files import load_toolchain_args, save_toolchain_args
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, remove

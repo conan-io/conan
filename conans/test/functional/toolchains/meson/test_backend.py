@@ -11,8 +11,6 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
-# for Linux, build for x86 will require a multilib compiler
-# for macOS, build for x86 is no longer supported by modern Xcode
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
 def test_cross_x86():
     conanfile_py = textwrap.dedent("""
@@ -29,8 +27,11 @@ def test_cross_x86():
                 if self.settings.os == "Windows":
                     del self.options.fPIC
 
+            def layout(self):
+                self.folders.build = "build"
+
             def generate(self):
-                tc = MesonToolchain(self)
+                tc = MesonToolchain(self, backend='vs')
                 tc.generate()
 
             def build(self):
@@ -43,25 +44,17 @@ def test_cross_x86():
         executable('demo', 'main.cpp')
         """)
     main_cpp = gen_function_cpp(name="main")
-    profile_x86 = textwrap.dedent("""
-        include(default)
-        [settings]
-        arch=x86
-        [buildenv]
-        CC=cl
-        CXX=cl
-        """)
-
     client = TestClient()
     client.save({"conanfile.py": conanfile_py,
                  "meson.build": meson_build,
-                 "main.cpp": main_cpp,
-                 "x86": profile_x86})
-    profile_str = "--profile:build=default --profile:host=x86"
-    client.run("install . %s" % profile_str)
+                 "main.cpp": main_cpp})
+    client.run("install .")
+    content = client.load("conan_meson_native.ini")
+    assert "backend = 'vs'" in content
     client.run("build .")
+    assert "Auto detected Visual Studio backend" in client.out
     client.run_command(os.path.join("build", "demo"))
 
-    assert "main _M_IX86 defined" in client.out
+    assert "main _M_X64 defined" in client.out
     assert "main _MSC_VER19" in client.out
     assert "main _MSVC_LANG2014" in client.out

@@ -77,11 +77,11 @@ def test_nowinbash_virtual_msys(client):
     client.run("install . -s:b os=Windows -s:h os=Windows")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    assert 'set AR=c:/path/to/ar' in build_contents
-    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert 'set "AR=c:/path/to/ar"' in build_contents
+    assert 'set "PATH=%PATH%;c:/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
-    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+    assert 'set "RUNTIME_VAR=c:/path/to/exe"' in run_contents
 
     # BUILD subsystem=msys2 HOST subsystem=None
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -92,15 +92,15 @@ def test_nowinbash_virtual_msys(client):
     assert 'export PATH="$PATH:/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
-    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+    assert 'set "RUNTIME_VAR=c:/path/to/exe"' in run_contents
 
     # BUILD subsystem=None HOST subsystem=msys2
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=msys2")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    assert 'set AR=c:/path/to/ar' in build_contents
-    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert 'set "AR=c:/path/to/ar"' in build_contents
+    assert 'set "PATH=%PATH%;c:/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/c/path/to/exe"' in run_contents
@@ -129,11 +129,11 @@ def test_nowinbash_virtual_cygwin(client):
     client.run("install . -s:b os=Windows -s:h os=Windows")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    assert 'set AR=c:/path/to/ar' in build_contents
-    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert 'set "AR=c:/path/to/ar"' in build_contents
+    assert 'set "PATH=%PATH%;c:/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
-    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+    assert 'set "RUNTIME_VAR=c:/path/to/exe"' in run_contents
 
     # BUILD subsystem=cygwin HOST subsystem=None
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -144,15 +144,15 @@ def test_nowinbash_virtual_cygwin(client):
     assert 'export PATH="$PATH:/cygdrive/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
-    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+    assert 'set "RUNTIME_VAR=c:/path/to/exe"' in run_contents
 
     # BUILD subsystem=None HOST subsystem=cygwin
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=cygwin")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    assert 'set AR=c:/path/to/ar' in build_contents
-    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert 'set "AR=c:/path/to/ar"' in build_contents
+    assert 'set "PATH=%PATH%;c:/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents

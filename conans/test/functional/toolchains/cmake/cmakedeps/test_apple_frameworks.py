@@ -191,8 +191,8 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
                          [('',),
-                          ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+                          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+                          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 

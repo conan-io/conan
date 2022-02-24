@@ -2,7 +2,7 @@ from os import chdir
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -235,6 +235,7 @@ def test_architecture_flag(config):
     assert expected in env["CXXFLAGS"]
     assert expected in env["CFLAGS"]
     assert expected in env["LDFLAGS"]
+    assert "-debug" not in env["LDFLAGS"]
 
 
 @pytest.mark.parametrize("compiler", ['Visual Studio', 'msvc'])
@@ -252,6 +253,7 @@ def test_build_type_flag(compiler):
     assert "-Zi -Ob0 -Od" in env["CXXFLAGS"]
     assert "-Zi -Ob0 -Od" in env["CFLAGS"]
     assert "-Zi -Ob0 -Od" not in env["LDFLAGS"]
+    assert "-debug" in env["LDFLAGS"]
 
 
 def test_apple_arch_flag():

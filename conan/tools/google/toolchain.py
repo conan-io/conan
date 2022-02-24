@@ -1,5 +1,5 @@
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 
 
 class BazelToolchain(object):

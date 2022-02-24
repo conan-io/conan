@@ -8,7 +8,7 @@ from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def conanfile():
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
-        tools.save("my_sources/source.h", "foo")
+        tools.save("source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))
@@ -245,6 +245,9 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -261,9 +264,10 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_consumer})
     client.run("install .")
-    assert "**includedirs:['foo/include']**" in client.out
-    assert "**libdirs:['foo/libs']**" in client.out
-    assert "**libs:['foo']**" in client.out
+    out = str(client.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['foo/include']**" in out
+    assert "**libdirs:['foo/libs']**" in out
+    assert "**libs:['foo']**" in out
     cmake = client.load("hello-release-x86_64-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
@@ -278,13 +282,13 @@ def test_git_clone_with_source_layout():
            import os
            from conans import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"
 
                def source(self):
-                   self.run('git clone "{}" src')
+                   self.run('git clone "{}" .')
        """).format(repo.replace("\\", "/"))
 
     client.save({"conanfile.py": conanfile,

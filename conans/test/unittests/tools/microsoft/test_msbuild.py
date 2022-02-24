@@ -4,10 +4,10 @@ import textwrap
 import pytest
 from mock import Mock
 
-from conan.tools.microsoft import MSBuild, MSBuildToolchain
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.env_info import EnvValues
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions, MockConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.tools import load
 from conans import ConanFile, Settings
@@ -172,3 +172,40 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
     msbuild.generate()
     assert '<PlatformToolset>%s</PlatformToolset>' % expected_toolset in load(props_file)
+
+
+@pytest.mark.parametrize("compiler,expected", [
+    ("Visual Studio", True),
+    ("msvc", True),
+    ("clang", False)
+])
+def test_is_msvc(compiler, expected):
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": {compiler: {"version": ["2022"]}},
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.compiler = compiler
+    assert is_msvc(conanfile) == expected
+
+
+@pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
+    ("Visual Studio", True, "MT", "Release", True),
+    ("msvc", True, "static", "Release", True),
+    ("Visual Studio", False, "MT", "Release", True),
+    ("Visual Studio", True, "MD", "Release", False),
+    ("msvc", True, "static", "Debug", True),
+    ("clang", True, None, "Debug", False),
+])
+def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected):
+    options = MockOptions({"shared": shared})
+    settings = MockSettings({"build_type": build_type,
+                             "arch": "x86_64",
+                             "compiler": compiler,
+                             "compiler.runtime": runtime,
+                             "compiler.version": "17",
+                             "cppstd": "17"})
+    conanfile = MockConanfile(settings, options)
+    assert is_msvc_static_runtime(conanfile) == expected
