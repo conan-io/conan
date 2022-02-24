@@ -262,28 +262,28 @@ class EnvVars:
             os.environ.clear()
             os.environ.update(old_env)
 
-    def save_bat(self, filename, generate_deactivate=True):
-        filepath, filename = os.path.split(filename)
+    def save_bat(self, file_location, generate_deactivate=True):
+        filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo Capturing current environment in {filename}
+            echo Capturing current environment in {deactivate_file}
             setlocal
-            echo @echo off > "{filename}"
-            echo echo Restoring environment >> "{filename}"
+            echo @echo off > "{deactivate_file}"
+            echo echo Restoring environment >> "{deactivate_file}"
             for %%v in ({vars}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
-                        echo set "%%a=%%b">> "{filename}"
+                        echo set "%%a=%%b">> "{deactivate_file}"
                         set foundenvvar=1
                     )
                 )
                 if not defined foundenvvar (
-                    echo set %%v=>> "{filename}"
+                    echo set %%v=>> "{deactivate_file}"
                 )
             )
             endlocal
-            """).format(filename=deactivate_file, vars=" ".join(self._values.keys()))
+            """).format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
             {deactivate}
@@ -295,15 +295,15 @@ class EnvVars:
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
-        save(filename, content)
+        save(file_location, content)
 
-    def save_ps1(self, filename, generate_deactivate=True,):
-        filepath, filename = os.path.split(filename)
+    def save_ps1(self, file_location, generate_deactivate=True,):
+        filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo "Capturing current environment in {filename}"
+            echo "Capturing current environment in {deactivate_file}"
 
-            "echo `"Restoring environment`"" | Out-File -FilePath "{filename}"
+            "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
             $vars = (Get-ChildItem env:*).name
             $updated_vars = @({vars})
 
@@ -312,15 +312,15 @@ class EnvVars:
                 if ($var -in $vars)
                 {{
                     $var_value = (Get-ChildItem env:$var).value
-                    Add-Content "{filename}" "`n`$env:$var = `"$var_value`""
+                    Add-Content "{deactivate_file}" "`n`$env:$var = `"$var_value`""
                 }}
                 else
                 {{
-                    Add-Content "{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                    Add-Content "{deactivate_file}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
                 }}
             }}
         """).format(
-            filename=deactivate_file,
+            deactivate_file=deactivate_file,
             vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
         )
 
@@ -337,25 +337,25 @@ class EnvVars:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
-        save(filename, content)
+        save(file_location, content)
 
-    def save_sh(self, filename, generate_deactivate=True):
-        filepath, filename = os.path.split(filename)
+    def save_sh(self, file_location, generate_deactivate=True):
+        filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo Capturing current environment in "{filename}"
-           echo echo Restoring environment >> "{filename}"
+           echo Capturing current environment in "{deactivate_file}"
+           echo echo Restoring environment >> "{deactivate_file}"
            for v in {vars}
            do
                value=$(printenv $v)
                if [ -n "$value" ]
                then
-                   echo export "$v='$value'" >> "{filename}"
+                   echo export "$v='$value'" >> "{deactivate_file}"
                else
-                   echo unset $v >> "{filename}"
+                   echo unset $v >> "{deactivate_file}"
                fi
            done
-           """.format(filename=deactivate_file, vars=" ".join(self._values.keys())))
+           """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
               {deactivate}
               echo Configuring environment variables
@@ -369,7 +369,7 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
-        save(filename, content)
+        save(file_location, content)
 
     def save_script(self, filename):
         name, ext = os.path.splitext(filename)
