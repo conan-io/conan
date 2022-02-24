@@ -36,7 +36,8 @@ class MSBuild(object):
         if verbosity:
             cmd += " {}".format(verbosity)
 
-        maxcpucount = self._conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count")
+        maxcpucount = self._conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count",
+                                               check_type=int)
         if maxcpucount:
             cmd += " /m:{}".format(maxcpucount)
 
