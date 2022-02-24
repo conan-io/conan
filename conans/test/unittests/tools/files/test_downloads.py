@@ -13,6 +13,8 @@ from conans.test.utils.tools import StoppableThreadBottle
 from conans.util.files import save, load
 
 
+@pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "
+                      "very little conan code, mostly python")
 class TestFTP:
 
     def test_ftp_auth(self):
