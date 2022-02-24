@@ -36,10 +36,8 @@ class Autotools(object):
         self._conanfile.run(cmd)
 
     def make(self, target=None):
-        make_program = self._conanfile.conf["tools.gnu:make_program"]
-        if make_program is None:
-            make_program = "mingw32-make" if self._use_win_mingw() else "make"
-
+        make_program = self._conanfile.conf.get("tools.gnu:make_program",
+                                                default="mingw32-make" if self._use_win_mingw() else "make")
         str_args = self._make_args
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():

@@ -11,7 +11,6 @@ from conans.util.files import save
 @pytest.fixture
 def client():
     c = TestClient()
-    save(c.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     clang_profile = textwrap.dedent("""
         [settings]
         arch=armv7

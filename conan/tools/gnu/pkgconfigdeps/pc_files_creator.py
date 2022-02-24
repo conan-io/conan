@@ -33,7 +33,7 @@ def _get_aliases_pc_files_and_content(conanfile, dep, aliases_info, root_pc_file
     return pc_files
 
 
-def _get_components_pc_files_and_content(conanfile, dep, components_info):
+def _get_components_pc_files_and_content(conanfile, dep, package_info, components_info):
     """
     Get the PC files and content for dependency's components
     """
@@ -41,7 +41,7 @@ def _get_components_pc_files_and_content(conanfile, dep, components_info):
     # Loop through all the package's components
     for pc_info_component in components_info:
         # Get the *.pc file content for each component
-        description = "Conan component: %s" % pc_info_component.name
+        description = "Conan component: %s-%s" % (package_info.name, pc_info_component.name)
         pc_name, pc_content = get_pc_filename_and_content(
             conanfile,
             dep,
@@ -71,7 +71,7 @@ def _get_package_with_components_pc_files_and_content(conanfile, dep, package_in
     """
     pc_files = {}
     # First, let's load all the components PC files
-    pc_files.update(_get_components_pc_files_and_content(conanfile, dep, components_info))
+    pc_files.update(_get_components_pc_files_and_content(conanfile, dep, package_info, components_info))
     description = "Conan package: %s" % package_info.name
     pc_name, pc_content = get_alias_pc_filename_and_content(
         dep,
