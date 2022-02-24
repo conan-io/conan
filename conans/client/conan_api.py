@@ -601,7 +601,8 @@ class ConanAPIV1(object):
                                         lockfile=lockfile)
 
             install_folder = _make_abs_path(install_folder, cwd)
-            output_folder = _make_abs_path(output_folder, cwd)
+            if output_folder:
+                output_folder = _make_abs_path(output_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
