@@ -533,16 +533,7 @@ def test_deactivate_location():
     client.save({"pkg.py": conanfile})
     client.run("create pkg.py pkg/1.0@")
 
-    conanfile_txt = textwrap.dedent(r"""
-            [requires]
-            pkg/1.0
-
-            [generators]
-            VirtualBuildEnv
-        """)
-    client.save({"conanfile.txt": conanfile_txt})
-    client.run("install conanfile.txt --install-folder=myfolder -s build_type=Release -s arch=x86_64")
-
+    client.run("install pkg/1.0@ -g VirtualBuildEnv --install-folder=myfolder -s build_type=Release -s arch=x86_64")
     if platform.system() == "Windows":
         cmd = "./myfolder/conanbuild.bat"
     else:
