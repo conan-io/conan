@@ -235,7 +235,7 @@ class PackagePreparator:
             elif tgz_files:
                 if self._output and not self._output.is_terminal:
                     self._output.info(msg)
-                compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", int)
+                compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", check_type=int)
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
                                      compresslevel=compresslevel)
                 result[tgz_name] = tgz
@@ -276,7 +276,7 @@ class PackagePreparator:
                 self._output.info("Compressing package...")
             tgz_files = {f: path for f, path in files.items() if
                          f not in [CONANINFO, CONAN_MANIFEST]}
-            compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", int)
+            compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", check_type=int)
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       compresslevel=compresslevel)
             assert tgz_path == package_tgz

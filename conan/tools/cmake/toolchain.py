@@ -175,7 +175,7 @@ class GLibCXXBlock(Block):
             # we might want to remove this "1", it is the default in most distros
             if libcxx == "libstdc++":
                 glib = "0"
-            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+            elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi"):
                 glib = "1"
         return {"set_libcxx": lib, "glibcxx": glib}
 
@@ -289,7 +289,7 @@ class AndroidSystemBlock(Block):
         #  https://developer.android.com/ndk/guides/cpp-support
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
 
-        android_ndk_path = self._conanfile.conf["tools.android:ndk_path"]
+        android_ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
         if not android_ndk_path:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
@@ -422,8 +422,9 @@ class FindFiles(Block):
         # To find the generated cmake_find_package finders
         # TODO: Change this for parameterized output location of CMakeDeps
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
-        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_config"]
-        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
+        prefer_config = self._conanfile.conf.get("tools.cmake.cmaketoolchain:find_package_prefer_config",
+                                                 check_type=bool)
+        if prefer_config is False:
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
@@ -473,7 +474,7 @@ class UserToolchain(Block):
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
-        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
         toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
         return {"paths": toolchains if toolchains else []}
 
@@ -589,13 +590,13 @@ class GenericSystemBlock(Block):
         return None
 
     def _get_cross_build(self):
-        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
         if user_toolchain is not None:
             return None, None, None  # Will be provided by user_toolchain
 
-        system_name = self._conanfile.conf["tools.cmake.cmaketoolchain:system_name"]
-        system_version = self._conanfile.conf["tools.cmake.cmaketoolchain:system_version"]
-        system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
+        system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
+        system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
+        system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         settings = self._conanfile.settings
         assert hasattr(self._conanfile, "settings_build")
@@ -802,7 +803,7 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
-        toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
+        toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(self.filename, self.content)
         # If we're using Intel oneAPI, we need to generate the environment file and run it
@@ -829,7 +830,7 @@ class CMakeToolchain(object):
         conanfile = self._conanfile
 
         # Downstream consumer always higher priority
-        generator_conf = conanfile.conf["tools.cmake.cmaketoolchain:generator"]
+        generator_conf = conanfile.conf.get("tools.cmake.cmaketoolchain:generator")
         if generator_conf:
             return generator_conf
 

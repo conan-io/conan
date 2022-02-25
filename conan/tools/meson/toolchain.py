@@ -66,9 +66,8 @@ class MesonToolchain(object):
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
-        self._backend = backend_conf or backend or 'ninja'
-
+        self._backend = conanfile.conf.get("tools.meson.mesontoolchain:backend",
+                                           default=backend or 'ninja')
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
                            "Release": "release",
@@ -155,7 +154,7 @@ class MesonToolchain(object):
             return
 
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf["tools.apple:sdk_path"]
+        sdk_path = conanfile.conf.get("tools.apple:sdk_path")
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
