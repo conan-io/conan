@@ -3,6 +3,7 @@ import platform
 import textwrap
 
 import pytest
+import six
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -148,6 +149,7 @@ def test_error_no_build_type():
     assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cmake_layout_external_sources():
     conanfile = textwrap.dedent("""
         import os
@@ -193,6 +195,7 @@ def test_cmake_layout_external_sources():
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 @pytest.mark.parametrize("with_build_type", [True, False])
 def test_basic_layout_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
@@ -243,6 +246,7 @@ def test_basic_layout_external_sources(with_build_type):
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 @pytest.mark.parametrize("with_build_type", [True, False])
 def test_basic_layout_no_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
