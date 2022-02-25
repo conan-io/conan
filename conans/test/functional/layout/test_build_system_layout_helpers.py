@@ -157,7 +157,7 @@ def test_cmake_layout_external_sources():
         from conan.tools.cmake import cmake_layout
         from conan.tools.files import save, copy, load
         class Pkg(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
+            settings = "os", "build_type"
             exports_sources = "exported.txt"
 
             def layout(self):
@@ -180,11 +180,11 @@ def test_cmake_layout_external_sources():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@")
+    client.run("create . foo/1.0@ -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0")
+    client.run("install . foo/1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, "cmake-build-release", "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
@@ -230,12 +230,12 @@ def test_basic_layout_external_sources(with_build_type):
         conanfile = conanfile.format("")
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@")
+    client.run("create . foo/1.0@ -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
     build_folder = "build-release" if with_build_type else "build"
-    client.run("install . foo/1.0")
+    client.run("install . foo/1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
@@ -279,11 +279,11 @@ def test_basic_layout_no_external_sources(with_build_type):
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@")
+    client.run("create . foo/1.0@ -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0")
+    client.run("install . foo/1.0 -s os=Linux")
 
     build_folder = "build-release" if with_build_type else "build"
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
