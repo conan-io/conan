@@ -354,7 +354,7 @@ def test_libcxx_abi_flag():
     assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
 
     # but maybe the conf is better
-    c.conf["tools.gnu:define_libcxx11_abi"] = True
+    c.conf.define("tools.gnu:define_libcxx11_abi", True)
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content

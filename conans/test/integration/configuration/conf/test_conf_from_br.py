@@ -25,7 +25,7 @@ def test_basic():
             build_requires = "android_ndk/1.0"
 
             def generate(self):
-                self.output.info("NDK: %s" % self.conf["tools.android:ndk_path"])
+                self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
         """)
     # CMakeToolchain needs compiler definition
     linux_profile = textwrap.dedent("""
@@ -60,7 +60,7 @@ def test_basic_conf_through_cli():
         class Pkg(ConanFile):
 
             def package_info(self):
-                self.output.info("NDK build: %s" % self.conf["tools.android:ndk_path"])
+                self.output.info("NDK build: %s" % self.conf.get("tools.android:ndk_path"))
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=android_ndk --version=1.0")
@@ -74,7 +74,7 @@ def test_basic_conf_through_cli():
             build_requires = "android_ndk/1.0"
 
             def generate(self):
-                self.output.info("NDK host: %s" % self.conf["tools.android:ndk_path"])
+                self.output.info("NDK host: %s" % self.conf.get("tools.android:ndk_path"))
         """)
     # CMakeToolchain needs compiler definition
     linux_profile = textwrap.dedent("""
