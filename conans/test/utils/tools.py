@@ -457,6 +457,16 @@ class TestClient(object):
         with mock.patch("conans.client.rest.conan_requester.requests", _req):
             yield
 
+    @contextmanager
+    def mocked_io(self):
+        def mock_get_pass(*args, **kwargs):
+            return self.user_inputs.readline()
+
+        with redirect_output(self.stderr, self.stdout):
+            with redirect_input(self.user_inputs):
+                with mock.patch("getpass.getpass", mock_get_pass):
+                    yield
+
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -494,30 +504,29 @@ class TestClient(object):
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
-            with redirect_output(self.stderr, self.stdout):
-                with redirect_input(self.user_inputs):
-                    real_servers = any(isinstance(s, (str, ArtifactoryServer))
-                                       for s in self.servers.values())
-                    http_requester = None
-                    if not real_servers:
-                        if self.requester_class:
-                            http_requester = self.requester_class(self.servers)
-                        else:
-                            http_requester = TestRequester(self.servers)
-                    try:
-                        if http_requester:
-                            with self.mocked_servers(http_requester):
-                                return self.run_cli(command_line, assert_error=assert_error)
-                        else:
+            with self.mocked_io():
+                real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                                   for s in self.servers.values())
+                http_requester = None
+                if not real_servers:
+                    if self.requester_class:
+                        http_requester = self.requester_class(self.servers)
+                    else:
+                        http_requester = TestRequester(self.servers)
+                try:
+                    if http_requester:
+                        with self.mocked_servers(http_requester):
                             return self.run_cli(command_line, assert_error=assert_error)
-                    finally:
-                        self.stdout = str(self.stdout)
-                        self.stderr = str(self.stderr)
-                        self.out = self.stderr + self.stdout
-                        if redirect_stdout:
-                            save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
-                        if redirect_stderr:
-                            save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
+                    else:
+                        return self.run_cli(command_line, assert_error=assert_error)
+                finally:
+                    self.stdout = str(self.stdout)
+                    self.stderr = str(self.stderr)
+                    self.out = self.stderr + self.stdout
+                    if redirect_stdout:
+                        save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
+                    if redirect_stderr:
+                        save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
         from conans.test.utils.mocks import RedirectedTestOutput
