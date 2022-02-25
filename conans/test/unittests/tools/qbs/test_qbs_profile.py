@@ -7,7 +7,7 @@ import pytest
 
 import conan.tools.qbs.qbsprofile as qbs
 
-from conans import tools
+from conans.util.files import rmdir
 from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings, MockOptions
 
@@ -38,7 +38,7 @@ class MockConanfileWithFolders(MockConanfile):
     install_folder = tempfile.mkdtemp()
 
     def __del__(self):
-        tools.rmdir(self.install_folder)
+        rmdir(self.install_folder)
 
     def run(self, *args, **kwargs):
         if self.runner:
