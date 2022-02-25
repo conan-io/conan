@@ -26,7 +26,8 @@ class Folders(object):
         self.package = ""
         self.generators = ""
         self.imports = ""
-        self.root = None
+        # e.g: If the conanfile is in a subfolder of the project self.root = ".."
+        self.root = None  
 
     def __repr__(self):
         return str(self.__dict__)
