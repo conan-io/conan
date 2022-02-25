@@ -374,3 +374,51 @@ class TestCliOverride:
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --name=pkg --version=0.1 --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
+
+
+def test_install_bintray_warning():
+    server = TestServer(complete_urls=True)
+    from conans.client.graph import proxy
+    proxy.DEPRECATED_CONAN_CENTER_BINTRAY_URL = server.fake_url  # Mocking!
+    client = TestClient(servers={"conan-center": server}, inputs=[])
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@lasote/testing")
+    client.run("upload zlib/1.0@lasote/testing --all -r conan-center")
+    client.run("remove * -f")
+    client.run("install zlib/1.0@lasote/testing -r conan-center")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" in client.out
+    client.run("install zlib/1.0@lasote/testing -r conan-center -s build_type=Debug")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" not in client.out
+
+
+def test_package_folder_available_consumer():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+
+        settings = "os", "arch", "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            self.output.warning("Package folder is None? {}".format(self.package_folder is None))
+            self.output.warning("Package folder: {}".format(self.package_folder))
+    """)
+    client.save({"conanfile.py": conanfile})
+
+    # Installing it with "install ." with output folder
+    client.run("install . -of=my_build")
+    assert "WARN: Package folder is None? False" in client.out
+    build_folder = os.path.join(client.current_folder, "my_build").replace("\\", "/")
+    assert "WARN: Package folder: {}".format(build_folder) in str(client.out).replace("\\", "/")
+
+    # Installing it with "install ." without output folder
+    client.run("install .")
+    assert "WARN: Package folder is None? False" in client.out
+    build_folder = client.current_folder.replace("\\", "/")
+    assert "WARN: Package folder: {}".format(build_folder) in str(client.out).replace("\\", "/")
