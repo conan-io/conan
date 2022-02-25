@@ -28,7 +28,7 @@ def download(conan_api: ConanAPIV2, parser, *args):
 
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
-    parallel = conan_api.config.get("core.download:parallel", int, 1)
+    parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
     if ":" in args.reference or args.package_query:
 
         # We are downloading the selected packages and the recipes belonging to these

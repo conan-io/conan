@@ -39,8 +39,8 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
-        retry = self._config.get("core.download:retry", int)
-        retry_wait = self._config.get("core.download:retry_wait", int)
+        retry = self._config.get("core.download:retry", check_type=int)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
         download_cache = False if not use_cache else self._config.download_cache
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,
@@ -184,9 +184,9 @@ class RestV2Methods(RestCommonMethods):
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        retry = self._config.get("core.download:retry", int)
-        retry_wait = self._config.get("core.download:retry_wait", int)
-        download_cache = False if not use_cache else self._config["core.download:download_cache"]
+        retry = self._config.get("core.download:retry", check_type=int)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
+        download_cache = False if not use_cache else self._config.get("core.download:download_cache")
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
