@@ -174,6 +174,13 @@ class Conf:
         """
         return other._values == self._values
 
+    def __getitem__(self, name):
+        """
+        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
+        """
+        # FIXME: Keeping backward compatibility
+        return self.get(name)
+
     def __setitem__(self, name, value):
         """
         DEPRECATED: it's going to disappear in Conan 2.0.
