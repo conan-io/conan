@@ -24,4 +24,4 @@ class ConfigAPI:
     @api_method
     def get(self, name, conf_type=None, conf_default=None):
         app = ConanApp(self.conan_api.cache_folder)
-        return app.cache.new_config.get(name, conf_type, conf_default)
+        return app.cache.new_config.get(name, default=conf_default, check_type=conf_type)

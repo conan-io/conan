@@ -13,8 +13,8 @@ def compute_package_id(node, new_config):
     """
     conanfile = node.conanfile
     # Todo: revise this default too. Should have been defined by requirement traits?
-    default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
-    default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
+    default_package_id_mode = new_config.get("core.package_id:default_mode", default="semver_mode")
+    default_python_requires_id_mode = new_config.get("core.package_id:python_default_mode", default="minor_mode")
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:

@@ -31,7 +31,7 @@ class ProfileLoader:
 
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+            default_profile = cache.new_config.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
@@ -44,7 +44,7 @@ class ProfileLoader:
 
     def get_default_build(self):
         cache = self._cache
-        default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        default_profile = cache.new_config.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default build profile '{}' doesn't exist.\n"
