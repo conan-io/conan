@@ -10,6 +10,10 @@ class MarkDownGeneratorTest(unittest.TestCase):
                     from conans import ConanFile
 
                     class HelloConan(ConanFile):
+                        settings = "os", "arch", "compiler", "build_type"
+                        def configure(self):
+                            del self.settings.compiler.libcxx
+                            del self.settings.compiler.cppstd
                         def package_info(self):
                             self.cpp_info.set_property("cmake_file_name", "FooBar")
                             self.cpp_info.set_property("cmake_target_name", "foobar")
