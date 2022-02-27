@@ -18,27 +18,19 @@ from conans.model import Generator
 
 
 requirement_tpl = textwrap.dedent("""
-    {% from 'macros' import render_cpp_info %}
+    {% from 'macros' import render_component_cpp_info %}
 
     # {{ requirement }}
 
     ---
     <br>
 
-    {% if requires or required_by %}
     {% if requires %}
     ## {{ requirement.ref.name }} dependencies
     {% for dep_name, dep in requires %}
     * [{{ dep }}](https://conan.io/center/{{ dep_name }})
     {%- endfor -%}
     {%- endif %}
-    {%- if required_by %}
-    ## Packages that depend on {{ requirement.ref.name }}
-    {%- for dep_name, dep in required_by %}
-    *[{{ dep }}](https://conan.io/center/{{ dep_name }})
-    {%- endfor -%}
-    {%- endif %}
-    {% endif %}
 
     <br>
 
@@ -53,19 +45,9 @@ requirement_tpl = textwrap.dedent("""
     {% include 'buildsystem_autotools' %}
     {% include 'buildsystem_other' %}
 
-    <br>    
+    <br>
 
-    {% if requirement.cpp_info.has_components %}
-    ## Declared components
 
-    {%- for component_name, component in requirement.cpp_info.components.items() %}
-    {%- if component_name %}
-    * Component ``{{ cmake_variables.component_alias[component_name] }}``:
-
-    {{- render_cpp_info(component)|indent(width=2) }}
-    {%- endif %}
-    {%- endfor %}
-    {%- endif %}
 
 
     ## Header files
@@ -84,28 +66,33 @@ requirement_tpl = textwrap.dedent("""
 """)
 
 macros = textwrap.dedent("""
-    {% macro join_list_sources(items) -%}
+    {% macro join_list_code(items) -%}
     ``{{ "``, ``".join(items) }}``
     {%- endmacro %}
 
-    {% macro render_cpp_info(cpp_info) -%}
+    {% macro join_list_bold(items) -%}
+    **{{ "**, **".join(items) }}**
+    {%- endmacro %}
+
+    {% macro render_component_cpp_info(target_name, cpp_info) %}
+    * CMake target name: ``{{ target_name }}``
     {%- if cpp_info.requires is iterable and cpp_info.requires %}
-    * Requires: {{ join_list_sources(cpp_info.requires) }}
+    * Requires other components: {{ join_list_bold(cpp_info.requires) }}
     {%- endif %}
     {%- if cpp_info.libs %}
-    * Libraries: {{ join_list_sources(cpp_info.libs) }}
+    * Links to libraries: {{ join_list_bold(cpp_info.libs) }}
     {%- endif %}
     {%- if cpp_info.system_libs %}
     * Systems libs: {{ join_list_sources(cpp_info.system_libs) }}
     {%- endif %}
     {%- if cpp_info.defines %}
-    * Preprocessor definitions: {{ join_list_sources(cpp_info.defines) }}
+    * Preprocessor definitions: {{ join_list_code(cpp_info.defines) }}
     {%- endif %}
     {%- if cpp_info.cflags %}
-    * C_FLAGS: {{ join_list_sources(cpp_info.cflags) }}
+    * C_FLAGS: {{ join_list_code(cpp_info.cflags) }}
     {%- endif %}
     {%- if cpp_info.cxxflags %}
-    * CXX_FLAGS: {{ join_list_sources(cpp_info.cxxflags) }}
+    * CXX_FLAGS: {{ join_list_code(cpp_info.cxxflags) }}
     {%- endif %}
     {%- endmacro %}
 """)
@@ -116,11 +103,11 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     <br>
 
-    ### [Conan CMake generators](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake.html) 
+    ### [Conan CMake generators](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake.html)
 
     <br>
 
-    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`. 
+    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
 
     * [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html): generates information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. CMake will use this files when you invoke ``find_package()`` in your *CMakeLists.txt*.
 
@@ -166,29 +153,32 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     <br>
 
-    This Conan package defines different components. That means you can link only the desired part of the library in your project. For example, linking only with the **agromenauer** component, through the **jande::klander** target that links to **jar, narl, nirl** libraries:
+    {% for component_name, target_name in cmake_variables.component_alias.items() %}
+    {%- if loop.index==1 %}
+
+    As the {{ requirement.ref.name }} Conan package defines components you can link only that desired part of the library in your project. For example, linking only with the {{ requirement.ref.name }} **{{ component_name }}** component, through the **{{ target_name }}** target.
 
     ```cmake
-    # Or link just one of its components
-    {% for component_name, component in requirement.cpp_info.components.items() %}
-    {%- if loop.index==1 %}
-    target_link_libraries(<target_name> {{ cmake_variables.component_alias[component_name] }})
+    ...
+    # Link just to {{ requirement.ref.name }} {{ component_name }} component
+    target_link_libraries(${PROJECT_NAME} {{ target_name }})
+    ```
     {%- endif %}
     {%- endfor %}
-    ```
-
 
     <br>
 
-    ```cmake
-    # Or link just one of its components
-    {% for component_name, component in requirement.cpp_info.components.items() %}
+    These are all the declared components for the **{{ requirement.ref.name }}** Conan package:
+
+    {%- for component_name, component_cpp_info in requirement.cpp_info.components.items() %}
     {%- if component_name %}
-    target_link_libraries(<target_name> {{ cmake_variables.component_alias[component_name] }})
+    * Component **{{ component_name }}**:
+    {{- render_component_cpp_info(cmake_variables.component_alias[component_name], component_cpp_info)|indent(width=2) }}
     {%- endif %}
     {%- endfor %}
-    ```
+
     {%- endif %}
+
 
     {% set cmake_build_modules = requirement.cpp_info.get_property('cmake_build_modules') %}
     {% if cmake_build_modules %}
@@ -203,7 +193,10 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 """)
 
 buildsystem_vs_tpl = textwrap.dedent("""
-    ### Visual Studio
+
+    <br>
+
+    ## Using {{ requirement.ref.name }} with Visual Studio
 
     #### Generator [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain)
     `MSBuildToolchain` is the toolchain generator for MSBuild. It translates the current
@@ -221,7 +214,10 @@ buildsystem_vs_tpl = textwrap.dedent("""
 """)
 
 buildsystem_autotools_tpl = textwrap.dedent("""
-    ### Autotools
+
+    <br>
+
+    ## Using {{ requirement.ref.name }} with Autotools
 
     #### Generator [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html)
     `AutotoolsToolchain` is the toolchain generator for Autotools. It will generate
@@ -280,24 +276,17 @@ buildsystem_other_tpl = textwrap.dedent("""
 """)
 
 
-
 class MarkdownGenerator(Generator):
-    def _list_headers(self, requirement):
+    @staticmethod
+    def _list_headers(requirement):
         for include_dir in requirement.cpp_info.includedirs:
             for root, _, files in os.walk(os.path.join(requirement.package_folder, include_dir)):
                 for f in files:
                     yield os.path.relpath(os.path.join(root, f), os.path.join(requirement.package_folder, include_dir))
 
-    def _list_requires(self, requirement):
+    @staticmethod
+    def _list_requires(requirement):
         return [(dep.ref.name, dep) for dep in requirement.dependencies.host.values()]
-
-    def _list_required_by(self, requirement):
-        for dep in self.conanfile.dependencies.host.values():
-            name = dep.ref.name
-            deps = [dep.ref.name for dep in dep.dependencies.host.values()]
-
-            if requirement.ref.name in deps:
-                yield name, dep
 
     @property
     def filename(self):
@@ -333,14 +322,13 @@ class MarkdownGenerator(Generator):
                                                         self.conanfile,
                                                         find_module_mode=False)
 
-            name = requirement.ref.name
-
             cmake_component_alias = {
                 component_name: cmake_deps_template.get_component_alias(requirement, component_name)
                 for component_name, _
                 in requirement.cpp_info.components.items()
                 if component_name
             }
+
             project_type = 'C'
             project_extension = '.c'
             if requirement.settings.get_safe('compiler.libcxx') or requirement.settings.get_safe('compiler.cppstd'):
@@ -348,7 +336,7 @@ class MarkdownGenerator(Generator):
                 project_extension = '.cpp'
 
             cmake_variables = {
-                'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(name),
+                'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(requirement.ref.name),
                 'component_alias': cmake_component_alias,
                 'file_name': cmake_get_file_name(requirement)
             }
@@ -365,15 +353,14 @@ class MarkdownGenerator(Generator):
                 'component_alias': pkgconfig_component_alias
             }
 
-            ret["{}.md".format(name)] = template.render(
+            ret["{}.md".format(requirement.ref.name)] = template.render(
                 requirement=requirement,
                 headers=self._list_headers(requirement),
                 requires=list(self._list_requires(requirement)),
-                required_by=list(self._list_required_by(requirement)),
                 cmake_variables=cmake_variables,
                 pkgconfig_variables=pkgconfig_variables,
                 package_folder=requirement.package_folder,
-                relpath = os.path.relpath,
+                relpath=os.path.relpath,
                 conan_version=conan_version,
                 now=datetime.datetime.now(),
                 project_type=project_type,
