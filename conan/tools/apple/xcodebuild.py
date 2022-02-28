@@ -25,7 +25,7 @@ class XcodeBuild(object):
         # User's sdk_path has priority, then if specified try to compose sdk argument
         # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
         # chosen by the build system
-        sdk = self._conanfile.conf["tools.apple:sdk_path"]
+        sdk = self._conanfile.conf.get("tools.apple:sdk_path")
         if not sdk and self._sdk:
             sdk = "{}{}".format(self._sdk, self._sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
