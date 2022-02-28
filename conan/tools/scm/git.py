@@ -7,7 +7,7 @@ from conans.util.runners import check_output_runner
 
 
 class Git(object):
-    def __init__(self, conanfile, folder):
+    def __init__(self, conanfile, folder="."):
         self._conanfile = conanfile
         self.folder = folder
 

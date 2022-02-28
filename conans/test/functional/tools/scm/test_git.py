@@ -165,7 +165,6 @@ class TestGitCaptureSCM:
 class TestGitBasicClone:
     """ base Git cloning operations
     """
-    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -180,13 +179,11 @@ class TestGitBasicClone:
                 self.folders.source = "source"
 
             def source(self):
-                git = Git(self, self.source_folder)
+                git = Git(self)
                 git.clone(url="{url}", target=".")
                 git.checkout(commit="{commit}")
-                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
-                file_h = os.path.join(self.source_folder, "src/myfile.h")
-                self.output.info("MYCMAKE: {{}}".format(load(self, cmake)))
-                self.output.info("MYFILE: {{}}".format(load(self, file_h)))
+                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
         """)
 
     def test_clone_checkout(self):
@@ -217,8 +214,6 @@ class TestGitBasicSCMFlow:
     - export() stores it in conandata.yml
     - source() recovers the info from conandata.yml and clones it
     """
-    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
-    # TODO: the os.remove("conandata.yml") will not be necessary, exports will not be sources
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -238,14 +233,12 @@ class TestGitBasicSCMFlow:
                 self.folders.source = "."
 
             def source(self):
-                git = Git(self, self.source_folder)
+                git = Git(self)
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
-                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
-                file_h = os.path.join(self.source_folder, "src/myfile.h")
-                self.output.info("MYCMAKE: {}".format(load(self, cmake)))
-                self.output.info("MYFILE: {}".format(load(self, file_h)))
+                self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
 
             def build(self):
                 cmake = os.path.join(self.source_folder, "CMakeLists.txt")
@@ -287,8 +280,6 @@ class TestGitBasicSCMFlow:
 class TestGitBasicSCMFlowSubfolder:
     """ Same as above, but conanfile.py put in "conan" subfolder in the root
     """
-    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
-    # TODO: the os.remove("conandata.yml") will not be necessary, exports will not be sources
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -309,14 +300,12 @@ class TestGitBasicSCMFlowSubfolder:
                 self.folders.source = "."
 
             def source(self):
-                git = Git(self, self.source_folder)
+                git = Git(self)
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
-                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
-                file_h = os.path.join(self.source_folder, "src/myfile.h")
-                self.output.info("MYCMAKE: {}".format(load(self, cmake)))
-                self.output.info("MYFILE: {}".format(load(self, file_h)))
+                self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
 
             def build(self):
                 cmake = os.path.join(self.source_folder, "CMakeLists.txt")
@@ -359,7 +348,6 @@ class TestGitMonorepoSCMFlow:
     """ Build the full new SCM approach:
     Same as above but with a monorepo with multiple subprojects
     """
-    # TODO: This will be simplified if the cwd for source() changes to the self.source_folder
     # TODO: swap_child_folder() not documented, not public usage
     conanfile = textwrap.dedent("""
         import os, shutil
@@ -386,7 +374,7 @@ class TestGitMonorepoSCMFlow:
                 self.folders.source = "."
 
             def source(self):
-                git = Git(self, self.source_folder)
+                git = Git(self)
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
