@@ -255,6 +255,15 @@ class ConanFile(object):
         return self.folders.source_folder
 
     @property
+    def base_source_folder(self):
+        """ returns the base_source folder, that is the containing source folder in the cache
+        irrespective of the layout() and where the final self.source_folder (computed with the
+        layout()) points.
+        This can be necessary in the source() or build() methods to locate where exported sources
+        are, like patches or entire files that will be used to complete downloaded sources"""
+        return self.folders._base_source
+
+    @property
     def build_folder(self):
         return self.folders.build_folder
 
