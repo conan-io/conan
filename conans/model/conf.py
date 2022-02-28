@@ -370,8 +370,6 @@ class ConfDefinition:
             it is only called when conanfile.buildenv is called
             the last one found in the profile file has top priority
         """
-        if ref is None:
-            ref = RecipeReference.loads("*/*")  # FIXME: ugly
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
             if pattern is None or ref_matches(ref, pattern, is_consumer):

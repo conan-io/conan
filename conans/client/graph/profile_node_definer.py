@@ -80,4 +80,4 @@ def consumer_definer(conanfile, profile_host):
 
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile_host.buildenv
-    conanfile.conf = profile_host.conf.get_conanfile_conf(None)
+    conanfile.conf = profile_host.conf.get_conanfile_conf(None, is_consumer=True)
