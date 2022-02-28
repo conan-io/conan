@@ -176,6 +176,8 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
     client.run("install hello/0.1@ -g CMakeToolchain -pr:b default {}".format(settings))
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "# CMAKE_INSTALL_XXXX not set, no package folder." not in toolchain
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     # If it didn't fail, it found the helloConfig.cmake

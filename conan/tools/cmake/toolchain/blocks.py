@@ -3,21 +3,18 @@ import re
 import textwrap
 from collections import OrderedDict
 
-import six
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, use_win_mingw
+from conan.tools._compilers import architecture_flag
 from conan.tools.apple.apple import is_apple_os
 from conan.tools.build import build_jobs
+from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.cross_building import cross_building
-from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft import VCVars
-from conan.tools.microsoft.visual import vs_ide_version, is_msvc
+from conan.tools.microsoft.visual import is_msvc
 from conans.errors import ConanException
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class ToolchainBlocks:
@@ -108,8 +105,8 @@ class VSRuntimeBlock(Block):
             return
 
         config_dict = {}
-        if os.path.exists(CMakeToolchain.filename):
-            existing_include = load(CMakeToolchain.filename)
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_include = load(CONAN_TOOLCHAIN_FILENAME)
             msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
                                            existing_include)
             if msvc_runtime_value:
@@ -738,7 +735,8 @@ class OutputDirsBlock(Block):
 
     @property
     def template(self):
-        assert self._conanfile.package_folder is not None, "There should be always a package folder"
+        if not self._conanfile.package_folder:
+            return "# CMAKE_INSTALL_XXXX not set, no package folder."
 
         return textwrap.dedent("""
            set("CMAKE_INSTALL_PREFIX" "{{package_folder}}")
@@ -752,8 +750,8 @@ class OutputDirsBlock(Block):
         """)
 
     def _get_cpp_info_value(self, name):
-        # Why not taking cpp.build? because this code is for the "cmake install" that correspond
-        # to the package folder (even if the root is the build directory)
+        # Why not taking cpp.build? because this variables are used by the "cmake install"
+        # that correspond to the package folder (even if the root is the build directory)
         elements = getattr(self._conanfile.cpp.package, name)
         return elements[0] if elements else None
 
