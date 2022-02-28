@@ -23,10 +23,12 @@ requirement_tpl = textwrap.dedent("""
     # {{ requirement }}
 
     ---
-    <br>
 
     {% if requires %}
-    ## {{ requirement.ref.name }} dependencies
+
+    <br>
+
+    ## {{ requirement }} dependencies
     {% for dep_name, dep in requires %}
     * [{{ dep }}](https://conan.io/center/{{ dep_name }})
     {%- endfor -%}
@@ -46,9 +48,6 @@ requirement_tpl = textwrap.dedent("""
     {% include 'buildsystem_other' %}
 
     <br>
-
-
-
 
     ## Header files
 
@@ -99,6 +98,8 @@ macros = textwrap.dedent("""
 
 buildsystem_cmake_tpl = textwrap.dedent("""
 
+    <br>
+
     ## Using {{ requirement.ref.name }} with CMake
 
     <br>
@@ -107,9 +108,9 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     <br>
 
-    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
-
     * [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html): generates information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. CMake will use this files when you invoke ``find_package()`` in your *CMakeLists.txt*.
+
+    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
 
     Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
 
@@ -118,8 +119,8 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {{ requirement }}
 
     [generators]
-    CMakeToolchain
     CMakeDeps
+    CMakeToolchain
     ```
 
     <br>
@@ -129,6 +130,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     ```shell
     .
     ├── CMakeLists.txt
+    ├── conanfile.txt
     └── src
         └── main{{ project_extension }}
     ```
@@ -147,6 +149,22 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     # Use the global target
     target_link_libraries(${PROJECT_NAME} {{ cmake_variables.global_target_name }})
+    ```
+
+    <br>
+
+    To install **{{ requirement }}**, its dependencies and build your project, you just have to do:
+
+    ```shell
+    # for Linux/macOS
+    $ conan install . --install-folder cmake-build-release --build=missing
+    $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake
+    $ cmake --build .
+
+    # for Windows and Visual Studio 2017
+    $ conan install . --output-folder cmake-build --build=missing
+    $ cmake . -G "Visual Studio 15 2017" -DCMAKE_TOOLCHAIN_FILE=cmake-build/conan_toolchain.cmake
+    $ cmake --build . --config Release
     ```
 
     {% if requirement.cpp_info.has_components %}
@@ -189,6 +207,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
       {{ bm|read_pkg_file|indent(width=2) }}
       ```
     {%- endfor -%}
+
     {%- endif %}
 """)
 
@@ -198,26 +217,86 @@ buildsystem_vs_tpl = textwrap.dedent("""
 
     ## Using {{ requirement.ref.name }} with Visual Studio
 
-    #### Generator [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain)
-    `MSBuildToolchain` is the toolchain generator for MSBuild. It translates the current
-    package configuration, settings, and options, into a MSBuild properties file that
-    you should add to your Visual Sudio solution projects:
+    <br>
 
-    `conantoolchain.props`
+    ### [Visual Studio Conan generators](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html)
 
-    #### Generator [MSBuildDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuilddeps)
-    `MSBuildDeps` is the dependency information generator for Microsoft MSBuild build
-    system. It generate a property file with the dependencies of a package ready to be
-    used by consumers using MSBuild or Visual Studio.
+    <br>
 
-    Just add the `conandeps.props` file to your solution and projects.
+    * [MSBuildDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuilddeps): generates the **conandeps.props** properties file with information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration.
+
+    * [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain): Generates the **conantoolchain.props** properties file with the current package configuration, settings, and options.
+
+    Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
+
+    ```ini
+    [requires]
+    {{ requirement }}
+
+    [generators]
+    MSBuildDeps
+    MSBuildToolchain
+    ```
+
+    <br>
+
+    Please, [check the Conan documentation](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html) for more detailed information on how to add these properties files to your Visual Studio projects.
+
 """)
 
 buildsystem_autotools_tpl = textwrap.dedent("""
 
     <br>
 
-    ## Using {{ requirement.ref.name }} with Autotools
+    ## Using {{ requirement.ref.name }} with Autotools and pkg-config
+
+    <br>
+
+    ### [Autotools Conan generators](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu.html)
+
+    <br>
+
+    * [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu/autotoolstoolchain.html): generates the **conanautotoolstoolchain.sh/bat** script translating information from the current package configuration, settings, and options setting some enviroment variables for Autotools like: ``CPPFLAGS``, ``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``. It will also generate a ``deactivate_conanautotoolstoolchain.sh/bat`` so you can restore your environment.
+
+    * [AutotoolsDeps](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu/autotoolsdeps.html): generates the **conanautotoolsdeps.sh/bat** script with information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. This is done setting some enviroment variables for Autotools like: ``LIBS``, ``CPPFLAGS``,``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``.  It will also generate a ``deactivate_conanautotoolsdeps.sh/bat`` so you can restore your environment.
+
+    Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
+
+    ```ini
+    [requires]
+    {{ requirement }}
+
+    [generators]
+    AutotoolsToolchain
+    AutotoolsDeps
+    ```
+
+    <br>
+
+    Then, building your project is as easy as:
+
+    ```shell
+    conan install .
+    # set the environment variables for Autotools
+    source conanautotoolstoolchain.sh
+    source conanautotoolsdeps.sh
+    ./configure
+    make
+
+    # restore the environment after the build is completed
+    source deactivate_conanautotoolstoolchain.sh
+    source deactivate_conanautotoolsdeps.sh
+    ```
+
+    <br>
+
+    ### [pkg-config Conan generator](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu.html)
+
+    <br>
+
+    * [PkgConfigDeps](https://docs.conan.io/en/1.45/reference/conanfile/tools/gnu/pkgconfigdeps.html): generates the **.pc** files with information about the dependencies that can be later used by the **pkg-config** tool pkg-config to collect data about the libraries Conan installed.
+
+
 
     #### Generator [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html)
     `AutotoolsToolchain` is the toolchain generator for Autotools. It will generate
