@@ -736,7 +736,7 @@ class OutputDirsBlock(Block):
     @property
     def template(self):
         if not self._conanfile.package_folder:
-            return "# CMAKE_INSTALL_XXXX not set, no package folder."
+            return ""
 
         return textwrap.dedent("""
            set("CMAKE_INSTALL_PREFIX" "{{package_folder}}")
@@ -756,7 +756,9 @@ class OutputDirsBlock(Block):
         return elements[0] if elements else None
 
     def context(self):
-        return {"package_folder": self._conanfile.package_folder,
+        if not self._conanfile.package_folder:
+            return {}
+        return {"package_folder": self._conanfile.package_folder.replace("\\", "/"),
                 "default_bin": self._get_cpp_info_value("bindirs"),
                 "default_lib": self._get_cpp_info_value("libdirs"),
                 "default_include": self._get_cpp_info_value("includedirs"),
