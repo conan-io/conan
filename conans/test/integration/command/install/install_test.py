@@ -154,10 +154,8 @@ def test_install_cwd(client):
     assert "hello/0.1@lasote/stable#a20db3358243e96aa07f654eaada1564 - Cache" in client.out
 
 
-def test_install_with_profile():
+def test_install_with_profile(client):
     # Test for https://github.com/conan-io/conan/pull/2043
-    c = TestClient()
-
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class TestConan(ConanFile):
@@ -166,21 +164,20 @@ def test_install_with_profile():
                 self.output.info("PKGOS=%s" % self.settings.os)
         """)
 
-    c.save({"conanfile.py": conanfile})
-    save(os.path.join(c.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
-    c.run("install . -pr=myprofile")
-    assert "PKGOS=Linux" in c.out
-
-    # Adding a local folder doesn't change or break
-    mkdir(os.path.join(c.current_folder, "myprofile"))
-    c.run("install . -pr=myprofile")
-    assert "PKGOS=Linux" in c.out
-    rmdir(os.path.join(c.current_folder, "myprofile"))
-
-    # TODO: local path has preference over cache???
-    c.save({"myprofile": "Some garbage without sense [garbage]"})
-    c.run("install . -pr=myprofile", assert_error=True)
-    assert "Error while parsing line 0" in c.out
+    client.save({"conanfile.py": conanfile})
+    save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
+    client.run("install . -pr=myprofile --build")
+    assert "PKGOS=Linux" in client.out
+    mkdir(os.path.join(client.current_folder, "myprofile"))
+    client.run("install . -pr=myprofile")
+    save(os.path.join(client.cache.profiles_path, "myotherprofile"), "[settings]\nos=FreeBSD")
+    client.run("install . -pr=myotherprofile")
+    assert "PKGOS=FreeBSD" in client.out
+    client.save({"myotherprofile": "Some garbage without sense [garbage]"})
+    client.run("install . -pr=myotherprofile")
+    assert "PKGOS=FreeBSD" in client.out
+    client.run("install . -pr=./myotherprofile", assert_error=True)
+    assert "Error while parsing line 0" in client.out
 
 
 def test_install_with_path_errors(client):

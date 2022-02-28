@@ -1,10 +1,9 @@
 import os
-import textwrap
 
 import pytest
 
 from conans.test.utils.tools import TestClient
-from conans.util.files import save, mkdir, rmdir
+from conans.util.files import save
 
 
 @pytest.mark.parametrize("local_path", ["", "./"])
@@ -17,7 +16,8 @@ def test_profile_local_folder_priority(local_path):
             "conanfile.txt": ""})
     save(os.path.join(c.cache.profiles_path, "otherprofile"), "[settings]\nos=FreeBSD")
 
-    c.run("install . -pr=profiles/default")
+    # Must use local path, otherwise look for it in the cache
+    c.run("install . -pr=./profiles/default")
     assert "os=AIX" in c.out
 
 
