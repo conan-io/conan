@@ -161,7 +161,7 @@ def test_cmake_layout_external_sources():
             exports_sources = "exported.txt"
 
             def layout(self):
-                cmake_layout(self, external_sources=True)
+                cmake_layout(self, src_folder="src")
 
             def generate(self):
                 save(self, "generate.txt", "generate")
@@ -208,7 +208,7 @@ def test_basic_layout_external_sources(with_build_type):
                 exports_sources = "exported.txt"
 
                 def layout(self):
-                    basic_layout(self, external_sources=True)
+                    basic_layout(self, src_folder="src")
 
                 def generate(self):
                     save(self, "generate.txt", "generate")
