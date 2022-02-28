@@ -29,6 +29,7 @@ def conanfile():
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
     c._conan_node.dependencies = []
+    c.folders.set_base_package("foo_package_folder")
     return c
 
 

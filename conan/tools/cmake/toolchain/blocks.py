@@ -729,3 +729,34 @@ class GenericSystemBlock(Block):
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor}
+
+
+class OutputDirsBlock(Block):
+
+    @property
+    def template(self):
+        assert self._conanfile.package_folder is not None, "There should be always a package folder"
+
+        return textwrap.dedent("""
+           set("CMAKE_INSTALL_PREFIX" "{{package_folder}}")
+           set("CMAKE_INSTALL_BINDIR" "{{default_bin}}")
+           set("CMAKE_INSTALL_SBINDIR" "{{default_bin}}")
+           set("CMAKE_INSTALL_LIBEXECDIR" "{{default_bin}}")
+           set("CMAKE_INSTALL_LIBDIR" "{{default_lib}}")
+           set("CMAKE_INSTALL_INCLUDEDIR" "{{default_include}}")
+           set("CMAKE_INSTALL_OLDINCLUDEDIR" "{{default_include}}")
+           set("CMAKE_INSTALL_DATAROOTDIR"] "{{default_res}}")
+        """)
+
+    def _get_cpp_info_value(self, name):
+        # Why not taking cpp.build? because this code is for the "cmake install" that correspond
+        # to the package folder (even if the root is the build directory)
+        elements = getattr(self._conanfile.cpp.package, name)
+        return elements[0] if elements else None
+
+    def context(self):
+        return {"package_folder": self._conanfile.package_folder,
+                "default_bin": self._get_cpp_info_value("bindirs"),
+                "default_lib": self._get_cpp_info_value("libdirs"),
+                "default_include": self._get_cpp_info_value("includedirs"),
+                "default_res": self._get_cpp_info_value("resdirs")}
