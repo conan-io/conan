@@ -361,7 +361,7 @@ class AppleSystemBlock(Block):
         os_ = self._conanfile.settings.get_safe('os')
         os_sdk = self._conanfile.settings.get_safe('os.sdk')
         os_sdk_version = self._conanfile.settings.get_safe('os.sdk_version') or ""
-        sdk = self._conanfile.conf["tools.apple:sdk_path"]
+        sdk = self._conanfile.conf.get("tools.apple:sdk_path")
 
         if sdk:
             return sdk
