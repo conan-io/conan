@@ -34,12 +34,12 @@ class Git(object):
                     url = url.replace("\\", "/")
                 return url
 
-    def commit_in_remote(self, commit, remote="origin", branch="master"):
-        if not remote or not branch:
+    def commit_in_remote(self, commit, remote="origin"):
+        if not remote:
             return False
         try:
             branches = self._run("branch -r --contains {}".format(commit))
-            return "{}/{}".format(remote, branch) in branches
+            return "{}/".format(remote) in branches
         except Exception as e:
             raise ConanException("Unable to check remote commit in '%s': %s" % (self.folder, str(e)))
 
@@ -47,14 +47,14 @@ class Git(object):
         status = self._run("status -s").strip()
         return bool(status)
 
-    def get_url_commit(self, remote="origin", branch="master"):
+    def get_url_and_commit(self, remote="origin"):
         dirty = self.is_dirty()
         if dirty:
             raise ConanException("Repo is dirty, cannot capture url and commit: "
                                  "{}".format(self.folder))
         commit = self.get_commit()
         url = self.get_remote_url(remote=remote)
-        in_remote = self.commit_in_remote(commit, remote=remote, branch=branch)
+        in_remote = self.commit_in_remote(commit, remote=remote)
         if in_remote:
             return url, commit
         # TODO: Once we know how to pass [conf] to export, enable this

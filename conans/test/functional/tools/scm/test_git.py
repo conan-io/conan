@@ -89,7 +89,8 @@ class TestGitBasicCapture:
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitCaptureSCM:
-    """ test the get_url_commit() high level method intended for SCM capturing into conandata.yaml
+    """ test the get_url_and_commit() high level method intended for SCM capturing
+    into conandata.yaml
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -101,7 +102,7 @@ class TestGitCaptureSCM:
 
             def export(self):
                 git = Git(self, self.recipe_folder)
-                scm_url, scm_commit = git.get_url_commit()
+                scm_url, scm_commit = git.get_url_and_commit()
                 self.output.info("SCM URL: {}".format(scm_url))
                 self.output.info("SCM COMMIT: {}".format(scm_commit))
         """)
@@ -212,7 +213,7 @@ class TestGitBasicClone:
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlow:
     """ Build the full new SCM approach:
-    - export() captures the URL and commit with get_url_commit(
+    - export() captures the URL and commit with get_url_and_commit(
     - export() stores it in conandata.yml
     - source() recovers the info from conandata.yml and clones it
     """
@@ -230,7 +231,7 @@ class TestGitBasicSCMFlow:
 
             def export(self):
                 git = Git(self, self.recipe_folder)
-                scm_url, scm_commit = git.get_url_commit()
+                scm_url, scm_commit = git.get_url_and_commit()
                 update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
 
             def layout(self):
@@ -300,11 +301,12 @@ class TestGitBasicSCMFlowSubfolder:
 
             def export(self):
                 git = Git(self, os.path.dirname(self.recipe_folder)) # PARENT!
-                scm_url, scm_commit = git.get_url_commit()
+                scm_url, scm_commit = git.get_url_and_commit()
                 update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
 
             def layout(self):
-                self.folders.source = ".."
+                self.folders.root = ".."
+                self.folders.source = "."
 
             def source(self):
                 git = Git(self, self.source_folder)
@@ -374,7 +376,7 @@ class TestGitMonorepoSCMFlow:
 
             def export(self):
                 git = Git(self, self.recipe_folder)
-                scm_url, scm_commit = git.get_url_commit()
+                scm_url, scm_commit = git.get_url_and_commit()
                 self.output.info("CAPTURING COMMIT: {{}}!!!".format(scm_commit))
                 folder = os.path.basename(self.recipe_folder)
                 update_conandata(self, {{"sources": {{"commit": scm_commit, "url": scm_url,
