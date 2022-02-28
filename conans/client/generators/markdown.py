@@ -36,7 +36,7 @@ requirement_tpl = textwrap.dedent("""
 
     <br>
 
-    ## Using {{ requirement.ref.name }} Conan Package
+    ## Using the {{ requirement.ref.name }} Conan Package
 
     <br>
 
@@ -46,18 +46,8 @@ requirement_tpl = textwrap.dedent("""
     {% include 'buildsystem_vs' %}
     {% include 'buildsystem_autotools' %}
     {% include 'buildsystem_other' %}
-
-    <br>
-
-    ## Header files
-
-    List of header files exposed by this package. Use them in your ``#include`` directives:
-
-    ```cpp
-    {%- for header in headers %}
-    #include <{{ header }}>
-    {%- endfor %}
-    ```
+    {% include 'components' %}
+    {% include 'headers' %}
 
     ---
     ---
@@ -73,8 +63,9 @@ macros = textwrap.dedent("""
     **{{ "**, **".join(items) }}**
     {%- endmacro %}
 
-    {% macro render_component_cpp_info(target_name, cpp_info) %}
+    {% macro render_component_cpp_info(target_name, pc_name, cpp_info) %}
     * CMake target name: ``{{ target_name }}``
+    * pkg-config *.pc* file: **{{ pc_name }}.pc**
     {%- if cpp_info.requires is iterable and cpp_info.requires %}
     * Requires other components: {{ join_list_bold(cpp_info.requires) }}
     {%- endif %}
@@ -181,34 +172,33 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     # Link just to {{ requirement.ref.name }} {{ component_name }} component
     target_link_libraries(${PROJECT_NAME} {{ target_name }})
     ```
-    {%- endif %}
-    {%- endfor %}
 
     <br>
 
-    These are all the declared components for the **{{ requirement.ref.name }}** Conan package:
+    To check all the available components for **{{ requirement.ref.name }}** Conan package, please check the dedicated section at the end of this document.
 
-    {%- for component_name, component_cpp_info in requirement.cpp_info.components.items() %}
-    {%- if component_name %}
-    * Component **{{ component_name }}**:
-    {{- render_component_cpp_info(cmake_variables.component_alias[component_name], component_cpp_info)|indent(width=2) }}
     {%- endif %}
     {%- endfor %}
 
     {%- endif %}
 
-
     {% set cmake_build_modules = requirement.cpp_info.get_property('cmake_build_modules') %}
     {% if cmake_build_modules %}
-    This generator will include some _build modules_:
+
+    <br>
+
+    ### Declared CMake build modules
+
+    <br>
+
     {% for bm in cmake_build_modules -%}
-    * `{{ relpath(bm, package_folder) | replace("\\\\", "/") }}`
+    #### {{ relpath(bm, package_folder) | replace("\\\\", "/") }}
       ```cmake
       {{ bm|read_pkg_file|indent(width=2) }}
       ```
     {%- endfor -%}
-
     {%- endif %}
+
 """)
 
 buildsystem_vs_tpl = textwrap.dedent("""
@@ -252,13 +242,13 @@ buildsystem_autotools_tpl = textwrap.dedent("""
 
     <br>
 
-    ### [Autotools Conan generators](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu.html)
+    ### [Autotools Conan generators](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu.html)
 
     <br>
 
-    * [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu/autotoolstoolchain.html): generates the **conanautotoolstoolchain.sh/bat** script translating information from the current package configuration, settings, and options setting some enviroment variables for Autotools like: ``CPPFLAGS``, ``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``. It will also generate a ``deactivate_conanautotoolstoolchain.sh/bat`` so you can restore your environment.
+    * [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html): generates the **conanautotoolstoolchain.sh/bat** script translating information from the current package configuration, settings, and options setting some enviroment variables for Autotools like: ``CPPFLAGS``, ``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``. It will also generate a ``deactivate_conanautotoolstoolchain.sh/bat`` so you can restore your environment.
 
-    * [AutotoolsDeps](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu/autotoolsdeps.html): generates the **conanautotoolsdeps.sh/bat** script with information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. This is done setting some enviroment variables for Autotools like: ``LIBS``, ``CPPFLAGS``,``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``.  It will also generate a ``deactivate_conanautotoolsdeps.sh/bat`` so you can restore your environment.
+    * [AutotoolsDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolsdeps.html): generates the **conanautotoolsdeps.sh/bat** script with information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. This is done setting some enviroment variables for Autotools like: ``LIBS``, ``CPPFLAGS``,``CXXFLAGS``, ``CFLAGS`` and ``LDFLAGS``.  It will also generate a ``deactivate_conanautotoolsdeps.sh/bat`` so you can restore your environment.
 
     Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
 
@@ -276,82 +266,118 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     Then, building your project is as easy as:
 
     ```shell
-    conan install .
+    $ conan install .
     # set the environment variables for Autotools
-    source conanautotoolstoolchain.sh
-    source conanautotoolsdeps.sh
-    ./configure
-    make
+    $ source conanautotoolstoolchain.sh
+    $ source conanautotoolsdeps.sh
+    $ ./configure
+    $ make
 
     # restore the environment after the build is completed
-    source deactivate_conanautotoolstoolchain.sh
-    source deactivate_conanautotoolsdeps.sh
+    $ source deactivate_conanautotoolstoolchain.sh
+    $ source deactivate_conanautotoolsdeps.sh
     ```
 
     <br>
 
-    ### [pkg-config Conan generator](https://docs.conan.io/en/latest/reference/reference/conanfile/tools/gnu.html)
+    ### [pkg-config Conan generator](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/pkgconfigdeps.html)
 
     <br>
 
-    * [PkgConfigDeps](https://docs.conan.io/en/1.45/reference/conanfile/tools/gnu/pkgconfigdeps.html): generates the **.pc** files with information about the dependencies that can be later used by the **pkg-config** tool pkg-config to collect data about the libraries Conan installed.
+    * [PkgConfigDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/pkgconfigdeps.html): generates the **{{ pkgconfig_variables.pkg_name }}.pc** file (and the ones corresponding to **{{ requirement.ref.name }}** dependencies) with information about the dependencies that can be later used by the **pkg-config** tool pkg-config to collect data about the libraries Conan installed.
 
+    <br>
 
+    You can use this generator instead of the **AutotoolsDeps** one:
 
-    #### Generator [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html)
-    `AutotoolsToolchain` is the toolchain generator for Autotools. It will generate
-    shell scripts containing environment variable definitions that the autotools build
-    system can understand.
+    ```ini
+    [requires]
+    {{ requirement }}
 
-    `AutotoolsToolchain` will generate the `conanautotoolstoolchain.sh` or
-    `conanautotoolstoolchain.bat` files after a `conan install` command:
+    [generators]
+    AutotoolsToolchain
+    PkgConfigDeps
+    ```
+
+    <br>
+
+    And then using **pkg-config** to set the environment variables you want, like:
 
     ```shell
-    $ conan install conanfile.py # default is Release
+    $ conan install .
+    # set the environment variables for Autotools
     $ source conanautotoolstoolchain.sh
-    # or in Windows
-    $ conanautotoolstoolchain.bat
+
+    # You will have to set the PKG_CONFIG_PATH to where Conan created the {{ pkgconfig_variables.pkg_name }}.pc file
+    $ export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags {{ requirement.ref.name }})"
+    $ export LIBS="$LIBS $(pkg-config --libs-only-l {{ requirement.ref.name }})"
+    $ export LDFLAGS="$LDFLAGS $(pkg-config --libs-only-L --libs-only-other {{ requirement.ref.name }})"
+
+    $ ./configure
+    $ make
+
+    # restore the environment after the build is completed
+    $ source deactivate_conanautotoolstoolchain.sh
     ```
 
-    If your autotools scripts expect to find dependencies using pkg_config, use the
-    `PkgConfigDeps` generator. Otherwise, use `AutotoolsDeps`.
-
-    #### Generator AutotoolsDeps
-    The AutotoolsDeps is the dependencies generator for Autotools. It will generate
-    shell scripts containing environment variable definitions that the autotools
-    build system can understand.
-
-    The AutotoolsDeps will generate after a conan install command the
-    conanautotoolsdeps.sh or conanautotoolsdeps.bat files:
-
-    ```shell
-    $ conan install conanfile.py # default is Release
-    $ source conanautotoolsdeps.sh
-    # or in Windows
-    $ conanautotoolsdeps.bat
-    ```
-
-
-    #### Generator PkgConfigDeps
-    This package provides one *pkg-config* file ``{{ pkgconfig_variables.pkg_name }}.pc`` with
-    all the information from the library
     {% if requirement.cpp_info.has_components %}
-    and, if you want to use the components of the library separately, one `.pc` file per component:
-    {% for component_name, component in requirement.cpp_info.components.items() %}
-    {%- if component_name %}
-    ``{{ pkgconfig_variables.component_alias[component_name] }}.pc``{% if not loop.last %},{% endif %}
-    {%- endif %}
-    {%- endfor %}
-    {%- endif %}
 
-    Use your *pkg-config* tool as usual to consume the information provided by the Conan package.
+    <br>
+
+    As the {{ requirement.ref.name }} Conan package defines components you can use them to link only that desired part of the library in your project.  To check all the available components for **{{ requirement.ref.name }}** Conan package, and the corresponding *.pc* files names, please check the dedicated section at the end of this document.
+
+    {%- endif %}
 """)
 
 buildsystem_other_tpl = textwrap.dedent("""
-    ### Other build systems
-    Conan includes generators for [several more build systems](https://docs.conan.io/en/latest/integrations/build_system.html),
-    and you can even write [custom integrations](https://docs.conan.io/en/latest/integrations/custom.html)
-    if needed.
+
+    <br>
+
+    ## Other build systems
+
+    <br>
+
+    Please, [check the Conan documentation](https://docs.conan.io/en/latest/reference/conanfile/tools.html) for other integrations besides the ones listed in this document.
+
+""")
+
+components_tpl = textwrap.dedent("""
+
+    {% if requirement.cpp_info.has_components %}
+
+    <br>
+
+    ## Declared components for {{ requirement.ref.name }}
+
+    <br>
+
+    These are all the declared components for the **{{ requirement.ref.name }}** Conan package:
+
+    {%- for component_name, component_cpp_info in requirement.cpp_info.components.items() %}
+    {%- if component_name %}
+    * Component **{{ component_name }}**:
+    {{- render_component_cpp_info(cmake_variables.component_alias[component_name], pkgconfig_variables.component_alias[component_name], component_cpp_info)|indent(width=2) }}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+""")
+
+headers_tpl = textwrap.dedent("""
+
+    <br>
+
+    ## Exposed header files for {{ requirement.ref.name }}
+
+    <br>
+
+    ```cpp
+    {%- for header in headers %}
+    #include <{{ header }}>
+    {%- endfor %}
+    ```
+
+    <br>
+
 """)
 
 
@@ -379,7 +405,9 @@ class MarkdownGenerator(Generator):
             'buildsystem_cmake': buildsystem_cmake_tpl,
             'buildsystem_vs': buildsystem_vs_tpl,
             'buildsystem_autotools': buildsystem_autotools_tpl,
-            'buildsystem_other': buildsystem_other_tpl
+            'buildsystem_other': buildsystem_other_tpl,
+            'components': components_tpl,
+            'headers': headers_tpl
         })
         env = Environment(loader=dict_loader)
         template = env.get_template('package.md')
