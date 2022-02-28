@@ -130,9 +130,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     out = ConanOutput()
     overwrite = True
 
-    config_retry = config.get("tools.files.download:retry", int, None)
+    config_retry = config.get("tools.files.download:retry", check_type=int, default=None)
     retry = config_retry if config_retry is not None else retry if retry is not None else 2
-    config_retry_wait = config.get("tools.files.download:retry_wait", int, None)
+    config_retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=None)
     retry_wait = config_retry_wait if config_retry_wait is not None \
         else retry_wait if retry_wait is not None else 5
 

@@ -243,7 +243,7 @@ class BinaryInstaller(object):
         if not downloads:
             return
 
-        parallel = self._cache.new_config.get("core.download:parallel", int)
+        parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)

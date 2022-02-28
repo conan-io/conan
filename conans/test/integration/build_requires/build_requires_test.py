@@ -658,3 +658,25 @@ def test_dependents_new_buildenv():
     client.run("install consumer -pr=profile_prepend")
     result = os.pathsep.join(["profilepath", "myotherprepend", "myboostpath", "myotherpath"])
     assert "LIB PATH {}".format(result) in client.out
+
+
+def test_tool_requires_conanfile_txt():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+
+    build_req = textwrap.dedent("""
+        from conan import ConanFile
+        class BuildReqConan(ConanFile):
+            pass
+        """)
+
+    client.save({"conanfile.py": build_req})
+    client.run("export . --name=build_req --version=1.0 --user=test --channel=test")
+
+    consumer = textwrap.dedent("""
+                [tool_requires]
+                build_req/1.0@test/test
+            """)
+    client.save({"conanfile.txt": consumer}, clean_first=True)
+    client.run("install . --build=missing")
+    assert "build_req/1.0@test/test: Created package" in client.out

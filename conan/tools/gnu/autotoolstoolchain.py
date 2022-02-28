@@ -87,7 +87,8 @@ class AutotoolsToolchain:
         if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
-            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+            elif libcxx == "libstdc++11" and \
+                self._conanfile.conf.get("tools.gnu:define_libcxx11_abi", check_type=bool):
                 return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def environment(self):

@@ -93,10 +93,10 @@ def test_download_all_but_no_packages():
     new_client.run("download hello0/0.1@lasote/stable#latest:* -r default", assert_error=True)
     assert "Recipe not found: 'hello0/0.1@lasote/stable'" in new_client.out
 
-    # Upload only the recipe
+    # Upload the recipe (we don't have packages)
     new_client.save({"conanfile.py": GenConanfile()})
     new_client.run("export . --name=hello0 --version=0.1 --user=lasote --channel=stable")
-    new_client.run("upload  hello0/0.1@lasote/stable -r default")
+    new_client.run("upload hello0/0.1@lasote/stable -r default")
 
     # And try to download all
     new_client.run("download hello0/0.1@lasote/stable#latest:* -r default", assert_error=True)

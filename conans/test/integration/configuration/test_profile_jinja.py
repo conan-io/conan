@@ -64,7 +64,7 @@ def test_profile_template_profile_dir():
         from conan.tools.files import load
         class Pkg(ConanFile):
             def generate(self):
-                content = load(self, self.conf["tools.toolchain:mydir"])
+                content = load(self, self.conf.get("tools.toolchain:mydir"))
                 self.output.info("CONTENT: {}".format(content))
         """)
     client.save({"conanfile.py": conanfile,
