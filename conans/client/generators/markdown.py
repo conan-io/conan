@@ -120,10 +120,10 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     ```shell
     .
-    ├── CMakeLists.txt
-    ├── conanfile.txt
-    └── src
-        └── main{{ project_extension }}
+    |── CMakeLists.txt
+    |── conanfile.txt
+    |── src
+        |── main{{ project_extension }}
     ```
 
     <br>
