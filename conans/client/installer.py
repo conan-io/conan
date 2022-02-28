@@ -467,7 +467,7 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
 
         if hasattr(conanfile, "layout"):
-            conanfile.folders.set_local(base_path, package_layout.output_folder)
+            conanfile.folders.set_base_folders(base_path, package_layout.output_folder)
         else:
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(None)

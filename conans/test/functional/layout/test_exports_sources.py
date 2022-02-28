@@ -4,6 +4,11 @@ from conans.test.utils.tools import TestClient
 
 
 def test_exports_sources_patch():
+    """
+    tests that using ``self.base_source_folder`` we can access both from the source() and build()
+    methods the folder where the exported sources (patches, new build files) are. And maintain
+    a local flow without exports copies
+    """
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os, shutil

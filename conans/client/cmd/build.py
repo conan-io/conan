@@ -45,7 +45,7 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
         #  Only base_path and conanfile_path will remain
         if hasattr(conan_file, "layout"):
             conanfile_folder = os.path.dirname(conanfile_path)
-            conan_file.folders.set_local(conanfile_folder, layout_build_folder)
+            conan_file.folders.set_base_folders(conanfile_folder, layout_build_folder)
         else:
             conan_file.folders.set_base_build(build_folder)
             conan_file.folders.set_base_source(source_folder)

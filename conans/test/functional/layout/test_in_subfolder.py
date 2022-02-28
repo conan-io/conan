@@ -4,6 +4,11 @@ from conans.test.utils.tools import TestClient
 
 
 def test_exports_sources_own_code_in_subfolder():
+    """ test that we can put the conanfile in a subfolder, and it can work. The key is
+    the exports_sources() method that can do:
+        os.path.join(self.recipe_folder, "..")
+    And the layout: self.folders.root = ".."
+    """
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os
@@ -20,8 +25,6 @@ def test_exports_sources_own_code_in_subfolder():
 
             def export_sources(self):
                 source_folder = os.path.join(self.recipe_folder, "..")
-                self.output.info("SRC FOLDER {}".format(source_folder))
-                self.output.info("EXPORT_SOURCE_FOLDER {}".format(self.export_sources_folder))
                 copy(self, "*.txt", source_folder, self.export_sources_folder)
 
             def source(self):
