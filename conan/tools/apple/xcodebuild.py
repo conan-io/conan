@@ -14,16 +14,14 @@ class XcodeBuild(object):
 
     @property
     def verbosity(self):
-        verbosity = self._conanfile.conf["tools.apple.xcodebuild:verbosity"]
-        if not verbosity:
-            return ""
-        elif verbosity == "quiet" or verbosity == "verbose":
+        verbosity = self._conanfile.get("tools.apple.xcodebuild:verbosity", default="", check_type=str)
+        if verbosity == "quiet" or verbosity == "verbose":
             return "-{}".format(verbosity)
         else:
             raise ConanException("Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(verbosity))
 
     @property
-    def sdkroot(self):
+    def _sdkroot(self):
         # User's sdk_path has priority, then if specified try to compose sdk argument
         # with sdk/sdk_version settings, leave blank otherwise and the sdk will be automatically
         # chosen by the build system
@@ -34,5 +32,5 @@ class XcodeBuild(object):
 
     def build(self, xcodeproj):
         cmd = "xcodebuild -project {} -configuration {} -arch {} " \
-              "{} {}".format(xcodeproj, self.build_type, self.arch, self.sdkroot, self.verbosity)
+              "{} {}".format(xcodeproj, self.build_type, self.arch, self._sdkroot, self.verbosity)
         self._conanfile.run(cmd)

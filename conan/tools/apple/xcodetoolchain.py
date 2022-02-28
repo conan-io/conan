@@ -37,33 +37,32 @@ class XcodeToolchain(object):
         self.os_version = conanfile.settings.get_safe("os.version")
         check_using_build_profile(self._conanfile)
 
+    def generate(self):
+        save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
+        save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
+        save(self._vars_xconfig_filename, self._vars_xconfig_content)
+
     @property
-    def cppstd(self):
+    def _cppstd(self):
         cppstd = cppstd_flag(self._conanfile.settings)
         if cppstd.startswith("-std="):
             return cppstd[5:]
         return cppstd
 
     @property
-    def macosx_deployment_target(self):
+    def _macosx_deployment_target(self):
         return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                       self.os_version) if self.os_version else ""
 
     @property
-    def clang_cxx_library(self):
+    def _clang_cxx_library(self):
         return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                self.libcxx) if self.libcxx else ""
 
     @property
-    def clang_cxx_language_standard(self):
+    def _clang_cxx_language_standard(self):
         return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
-                                                         self.cppstd) if self.cppstd else ""
-
-    def generate(self):
-        save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
-        save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
-        save(self._vars_xconfig_filename, self._vars_xconfig_content)
-
+                                                         self._cppstd) if self._cppstd else ""
     @property
     def _vars_xconfig_filename(self):
         return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
@@ -71,9 +70,9 @@ class XcodeToolchain(object):
 
     @property
     def _vars_xconfig_content(self):
-        ret = self._vars_xconfig.format(macosx_deployment_target=self.macosx_deployment_target,
-                                        clang_cxx_library=self.clang_cxx_library,
-                                        clang_cxx_language_standard=self.clang_cxx_language_standard)
+        ret = self._vars_xconfig.format(macosx_deployment_target=self._macosx_deployment_target,
+                                        clang_cxx_library=self._clang_cxx_library,
+                                        clang_cxx_language_standard=self._clang_cxx_language_standard)
         return ret
 
     @property

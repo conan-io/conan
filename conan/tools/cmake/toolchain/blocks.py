@@ -365,9 +365,10 @@ class AppleSystemBlock(Block):
 
         if sdk:
             return sdk
-        elif os_sdk or os_ == "Macos":
-            sdk_name = os_sdk or "macosx"  # if the host is Macos if can only be "macosx"
-            return "{}{}".format(sdk_name, os_sdk_version)
+        elif os_ == "Macos":  # if the host is Macos it can only be "macosx"
+            return "{}{}".format("macosx", os_sdk_version)
+        elif os_sdk:
+            return "{}{}".format(os_sdk, os_sdk_version)
         else:
             raise ConanException("Please, specify a suitable value for os.sdk.")
 

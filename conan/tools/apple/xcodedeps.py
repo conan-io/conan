@@ -46,7 +46,7 @@ def _add_include_to_file_or_create(filename, template, include):
         content = template
 
     if include not in content:
-        content = content + '#include "{}"'.format(include) + "\n"
+        content = content + '#include "{}"\n'.format(include)
 
     return content
 
