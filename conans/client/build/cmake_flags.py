@@ -2,7 +2,6 @@ import os
 import platform
 from collections import OrderedDict
 
-from conan.tools.microsoft.visual import vs_ide_version
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
@@ -67,6 +66,7 @@ def get_generator(conanfile):
     if compiler == "msvc":
         if compiler_version is None:
             raise ConanException("compiler.version must be defined")
+        from conan.tools.microsoft.visual import vs_ide_version
         vs_version = vs_ide_version(conanfile)
         return "Visual Studio %s" % cmake_years[vs_version]
 

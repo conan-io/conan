@@ -25,8 +25,8 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
         env_shell = ["conanbuild.sh"]
         env_win = ["conanbuild.bat"]
 
-    subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
-    shell_path = conanfile.conf["tools.microsoft.bash:path"]
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    shell_path = conanfile.conf.get("tools.microsoft.bash:path")
 
     if not platform.system() == "Windows":
         raise ConanException("Command only for Windows operating system")
@@ -107,7 +107,7 @@ def deduce_subsystem(conanfile, scope):
         if not conanfile.win_bash:
             return WINDOWS
 
-        subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
+        subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
         if not subsystem:
             raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
                                  "needed to run commands in a Windows subsystem")

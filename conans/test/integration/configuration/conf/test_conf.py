@@ -153,3 +153,22 @@ def test_composition_conan_conf_overwritten_by_cli_arg(client):
     assert "tools.microsoft.msbuild:performance$Slow" in client.out
     assert "tools.microsoft.msbuild:robustness$High" in client.out
     assert "tools.meson.meson:verbosity$Super" in client.out
+
+
+def test_composition_conan_conf_different_data_types_by_cli_arg(client):
+    """
+    Testing if you want to introduce a list/dict via cli
+
+    >> conan install . -c "tools.build.flags:ccflags+=['-Werror']"
+    >> conan install . -c "tools.microsoft.msbuildtoolchain:compile_options={'ExceptionHandling': 'Async'}"
+
+    """
+    conf = textwrap.dedent("""\
+        tools.build.flags:ccflags=["-Wall"]
+        """)
+    save(client.cache.new_config_path, conf)
+    client.run('install . -c "tools.build.flags:ccflags+=[\'-Werror\']" '
+               '-c "tools.microsoft.msbuildtoolchain:compile_options={\'ExceptionHandling\': \'Async\'}"')
+
+    assert "tools.build.flags:ccflags$['-Wall', '-Werror']" in client.out
+    assert "tools.microsoft.msbuildtoolchain:compile_options${'ExceptionHandling': 'Async'}" in client.out

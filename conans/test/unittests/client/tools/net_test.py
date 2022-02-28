@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 
+import pytest
 import six
 
 from conans.client.tools import chdir
@@ -12,6 +13,8 @@ from conans.client.tools import net
 from conans.errors import ConanException
 
 
+@pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "
+                      "very little conan code, mostly python")
 class ToolsNetTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):
