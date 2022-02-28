@@ -139,9 +139,10 @@ class ProfileLoader:
         if os.path.isabs(profile_name):
             return valid_path(profile_name)
 
-        if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
-            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-            return valid_path(profile_path, profile_name)
+        # cwd is relative to cwd first always, cwd can be the cache when include() from cache
+        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+        if os.path.isfile(profile_path):
+            return profile_path
 
         default_folder = self._cache.profiles_path
         if not os.path.exists(default_folder):
