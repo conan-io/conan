@@ -2,6 +2,7 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
+from conan.tools.apple.apple import is_apple_os
 from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
 
 
@@ -17,7 +18,7 @@ class GnuDepsFlags(object):
         self.defines = self._format_defines(cpp_info.defines)
         self.libs = self._format_libraries(cpp_info.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
-        self.framework_paths = self._format_framework_paths(cpp_info.frameworkdirs)
+        self.framework_paths = self._format_frameworks(cpp_info.frameworkdirs, is_path=True)
         self.sysroot = self._sysroot_flag(cpp_info.sysroot)
 
         # Direct flags
@@ -38,33 +39,23 @@ class GnuDepsFlags(object):
     def _format_defines(defines):
         return ["-D%s" % define for define in defines] if defines else []
 
-    def _format_frameworks(self, frameworks):
+    def _format_frameworks(self, frameworks, is_path=False):
         """
         returns an appropriate compiler flags to link with Apple Frameworks
         or an empty array, if Apple Frameworks aren't supported by the given compiler
         """
-        if not frameworks:
+        os_ = self._conanfile.settings.get_safe("os")
+        if not frameworks or not is_apple_os(os_):
             return []
         # FIXME: Missing support for subsystems
         compiler = self._conanfile.settings.get_safe("compiler")
         compiler_base = self._conanfile.settings.get_safe("compiler.base")
         if (str(compiler) not in self._GCC_LIKE) and (str(compiler_base) not in self._GCC_LIKE):
             return []
-        return ["-framework %s" % framework for framework in frameworks]
-
-    def _format_framework_paths(self, framework_paths):
-        """
-        returns an appropriate compiler flags to specify Apple Frameworks search paths
-        or an empty array, if Apple Frameworks aren't supported by the given compiler
-        """
-        if not framework_paths:
-            return []
-        compiler = self._conanfile.settings.get_safe("compiler")
-        compiler_base = self._conanfile.settings.get_safe("compiler.base")
-        if (str(compiler) not in self._GCC_LIKE) and (str(compiler_base) not in self._GCC_LIKE):
-            return []
-        return ["-F %s" % self._adjust_path(framework_path) for framework_path in
-                framework_paths]
+        if is_path:
+            return ["-F %s" % self._adjust_path(framework_path) for framework_path in frameworks]
+        else:
+            return ["-framework %s" % framework for framework in frameworks]
 
     def _sysroot_flag(self, sysroot):
         # FIXME: Missing support for subsystems
