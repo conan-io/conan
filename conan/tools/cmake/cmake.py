@@ -19,7 +19,7 @@ def _cmake_cmd_line_args(conanfile, generator):
     if njobs and ("Makefiles" in generator or "Ninja" in generator) and "NMake" not in generator:
         args.append("-j{}".format(njobs))
 
-    maxcpucount = conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count")
+    maxcpucount = conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count", check_type=int)
     if maxcpucount and "Visual Studio" in generator:
         args.append("/m:{}".format(njobs))
 
@@ -136,7 +136,7 @@ class CMake(object):
         self._conanfile.run(command)
 
     def test(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
-        if self._conanfile.conf.get("tools.build:skip_test"):
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool):
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)

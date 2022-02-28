@@ -142,8 +142,7 @@ class _ConfValue(object):
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
                 self._value = new_value
-        elif self._value is None or other._value is None \
-            or (isinstance(self._value, str) and isinstance(self._value, str)):  # TODO: Python2, remove in 2.0
+        elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
             pass
@@ -199,7 +198,7 @@ class Conf:
         return self.dumps()
 
     @staticmethod
-    def get_boolean_value(value):
+    def _get_boolean_value(value):
         if type(value) is bool:
             return value
         elif str(value).lower() in Conf.boolean_false_expressions:
@@ -222,7 +221,7 @@ class Conf:
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
-                return Conf.get_boolean_value(v)
+                return self._get_boolean_value(v)
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif check_type is not None and not isinstance(v, check_type):

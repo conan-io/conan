@@ -142,7 +142,8 @@ class GLibCXXBlock(Block):
             # we might want to remove this "1", it is the default in most distros
             if libcxx == "libstdc++":
                 glib = "0"
-            elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi"):
+            elif libcxx == "libstdc++11" and \
+                self._conanfile.conf.get("tools.gnu:define_libcxx11_abi", check_type=bool):
                 glib = "1"
         return {"set_libcxx": lib, "glibcxx": glib}
 

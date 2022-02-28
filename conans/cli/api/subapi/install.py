@@ -40,6 +40,7 @@ class InstallAPI:
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_generators(output_folder)
         conanfile.folders.set_base_build(output_folder)
+        conanfile.folders.set_base_package(output_folder)
 
         _do_deploys(self.conan_api, deps_graph, deploy, output_folder)
 
