@@ -109,6 +109,13 @@ tools_locations = {
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
+    'premake': {
+        "exe": "premake5",
+        "default": "5.0.0",
+        "5.0.0": {
+            "path": {'Linux': '/usr/local/bin/premake5'}
+        }
+    },
     'premake': {},
     'apt_get': { "exe": "apt-get"},
     'brew': {},
