@@ -8,6 +8,7 @@ import six
 from conans.test.utils.scm import create_local_git_repo, git_change_and_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import rmdir
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
@@ -274,6 +275,31 @@ class TestGitBasicSCMFlow:
         c.run("build .")
         assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
         assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
+
+    def test_branch_flow(self):
+        """ Testing that when a user creates a branch, and pushes a commit,
+        the package can still be built from sources, and get_url_and_commit() captures the
+        remote URL and not the local
+        """
+        url = git_create_bare_repo()
+        c = TestClient(default_server_user=True)
+        c.run_command('git clone "{}" .'.format(url))
+        c.save({"conanfile.py": self.conanfile,
+                "src/myfile.h": "myheader!",
+                "CMakeLists.txt": "mycmake"})
+        c.run_command("git checkout -b mybranch && git add . && git commit -m wip")
+        c.run_command("git push --set-upstream origin mybranch")
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+        c.run("upload * --all -c")
+        rmdir(c.current_folder)  # Remove current folder to make sure things are not used from here
+
+        # use another fresh client
+        c2 = TestClient(servers=c.servers)
+        c2.run("install pkg/0.1@ --build=pkg")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
+        assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
