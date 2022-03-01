@@ -19,6 +19,7 @@ class XcodeBuild(object):
             return "-{}".format(verbosity)
         elif verbosity:
             raise ConanException("Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(verbosity))
+        return ""
 
     @property
     def _sdkroot(self):
