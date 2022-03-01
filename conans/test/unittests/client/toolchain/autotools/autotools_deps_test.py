@@ -69,6 +69,7 @@ def test_foo():
         consumer.settings = MockSettings(
             {"build_type": "Release",
              "arch": "x86",
+             "os": "Macos",
              "compiler": "gcc",
              "compiler.libcxx": "libstdc++11",
              "compiler.version": "7.1",
