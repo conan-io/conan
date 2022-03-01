@@ -314,10 +314,7 @@ class BinaryInstaller(object):
 
         # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
-        conanfile.folders.set_base_package(output_folder or base_path)
-        conanfile.folders.set_base_source(base_path)
-        conanfile.folders.set_base_build(output_folder or base_path)
-        conanfile.folders.set_base_generators(output_folder or base_path)
+        conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
