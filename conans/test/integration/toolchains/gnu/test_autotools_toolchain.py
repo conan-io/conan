@@ -14,7 +14,7 @@ def test_install_output_directories():
     for the libraries is changed
     """
     client = TurboTestClient()
-    client.run("new hello/1.0 --template cmake_lib")
+    client.run("new hello/1.0 --template cmake-lib")
     client.run("create .")
     consumer_conanfile = textwrap.dedent("""
         from conans import ConanFile
