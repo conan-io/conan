@@ -146,3 +146,28 @@ def test_error_no_build_type():
     client.save({"conanfile.py": conanfile})
     client.run('install .',  assert_error=True)
     assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out
+
+
+def test_customize_build_folder_conf():
+    # https://github.com/conan-io/conan/issues/10131
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self)
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s build_type=Debug '
+               '-c tools.cmake.layout:build_folder=mybuild{build_type_lower}')
+    generators = os.path.join(client.current_folder, "mybuilddebug", "conan")
+    assert os.path.exists(os.path.join(generators, "conan_toolchain.cmake"))
+
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run('install . -s build_type=Debug -c tools.cmake.layout:build_folder=.')
+    generators = os.path.join(client.current_folder, "conan")
+    assert os.path.exists(os.path.join(generators, "conan_toolchain.cmake"))
