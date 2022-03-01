@@ -17,7 +17,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
-            exports_sources = "CMakeLists.txt", "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             options = {{"shared": [True, False]}}
@@ -33,7 +33,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
+                self.copy("*.h", dst="include", src="include")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.dll", dst="bin", keep_path=False)
                 self.copy("*.dylib*", dst="lib", keep_path=False)
@@ -53,7 +53,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
     src = gen_function_cpp(name=name, includes=deps, calls=deps)
 
     deps = [r.name for r in refs]
-    files = {"src/{}.h".format(name): hdr,
+    files = {"include/{}.h".format(name): hdr,
              "src/{}.cpp".format(name): src,
              "conanfile.py": conanfile}
     if exe:

@@ -27,11 +27,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
 
-    if src_folder == ".":
-        # The CMakeLists.txt is in the root, the includes (and sources) typically don't
-        conanfile.cpp.source.includedirs = ["src"]
-    else:
-        conanfile.cpp.source.includedirs = ["."]
+    conanfile.cpp.source.includedirs = ["include"]
 
     if multi:
         conanfile.cpp.build.libdirs = ["{}".format(build_type)]

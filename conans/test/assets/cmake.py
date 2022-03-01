@@ -33,6 +33,7 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if libsources %}
         add_library({{libname}} {{libtype}} {% for s in libsources %} {{s}} {% endfor %})
+        target_include_directories({{libname}} PUBLIC "include")
         {% endif %}
 
         {% if libsources and find_package %}
@@ -49,6 +50,7 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if appsources %}
         add_executable({{appname}} {% for s in appsources %} {{s}} {% endfor %})
+        target_include_directories({{appname}} PUBLIC "include")
         {% endif %}
 
         {% if appsources and libsources %}
