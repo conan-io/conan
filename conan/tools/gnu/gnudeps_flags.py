@@ -2,6 +2,7 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
+
 from conan.tools.apple.apple import is_apple_os
 from conan.tools.microsoft import is_msvc
 from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
@@ -27,7 +28,7 @@ class GnuDepsFlags(object):
         self.cflags = cpp_info.cflags or []
         self.sharedlinkflags = cpp_info.sharedlinkflags or []
         self.exelinkflags = cpp_info.exelinkflags or []
-        self.system_libs = cpp_info.system_libs or []
+        self.system_libs = self._format_libraries(cpp_info.system_libs)
 
         # Not used?
         # self.bin_paths
@@ -84,6 +85,7 @@ class GnuDepsFlags(object):
             return []
 
         result = []
+
         is_visual = is_msvc(self._conanfile)
         for library in libraries:
             if is_visual:
