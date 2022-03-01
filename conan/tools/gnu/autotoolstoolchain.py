@@ -176,7 +176,7 @@ class AutotoolsToolchain:
 
             # If someone want arguments but not the defaults can pass them in args manually
             configure_args.extend(
-                    ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
+                    ['--prefix="%s"' % self._conanfile.package_folder.replace("\\", "/"),
                      "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
                      "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
                      "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),

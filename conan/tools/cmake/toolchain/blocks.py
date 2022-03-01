@@ -740,14 +740,14 @@ class OutputDirsBlock(Block):
             return ""
 
         return textwrap.dedent("""
-           set("CMAKE_INSTALL_PREFIX" "{{package_folder}}")
-           set("CMAKE_INSTALL_BINDIR" "{{default_bin}}")
-           set("CMAKE_INSTALL_SBINDIR" "{{default_bin}}")
-           set("CMAKE_INSTALL_LIBEXECDIR" "{{default_bin}}")
-           set("CMAKE_INSTALL_LIBDIR" "{{default_lib}}")
-           set("CMAKE_INSTALL_INCLUDEDIR" "{{default_include}}")
-           set("CMAKE_INSTALL_OLDINCLUDEDIR" "{{default_include}}")
-           set("CMAKE_INSTALL_DATAROOTDIR"] "{{default_res}}")
+           set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
+           set(CMAKE_INSTALL_BINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_SBINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBEXECDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBDIR "{{default_lib}}")
+           set(CMAKE_INSTALL_INCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_OLDINCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_DATAROOTDIR "{{default_res}}")
         """)
 
     def _get_cpp_info_value(self, name):

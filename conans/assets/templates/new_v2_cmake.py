@@ -90,12 +90,7 @@ project({name} CXX)
 add_library({name} src/{name}.cpp)
 
 set_target_properties({name} PROPERTIES PUBLIC_HEADER "src/{name}.h")
-install(TARGETS {name} DESTINATION "."
-        PUBLIC_HEADER DESTINATION include
-        RUNTIME DESTINATION bin
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        )
+install(TARGETS {name})
 """
 
 
