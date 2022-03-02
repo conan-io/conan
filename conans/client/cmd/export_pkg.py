@@ -59,11 +59,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     conanfile.develop = True
     if hasattr(conanfile, "layout"):
         conanfile_folder = os.path.dirname(source_conanfile_path)
-        conanfile.folders.set_base_build(conanfile_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
+        conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
         conanfile.folders.set_base_package(dest_package_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
     else:
         conanfile.folders.set_base_build(build_folder)
         conanfile.folders.set_base_source(source_folder)
