@@ -59,8 +59,7 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
     return tmp.replace("\\", "/"), git.get_revision()
 
 
-def git_change_and_commit(files, folder, msg="fix"):
-    save_files(folder, files)
+def git_add_changes_commit(folder, msg="fix"):
     cwd = os.getcwd()
     try:
         os.chdir(folder)

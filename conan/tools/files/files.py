@@ -495,6 +495,7 @@ def collect_libs(conanfile, folder=None):
     return result
 
 
+# TODO: Do NOT document this yet. It is unclear the interface, maybe should be split
 def swap_child_folder(parent_folder, child_folder):
     """ replaces the current folder contents with the contents of one child folder. This
     is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder

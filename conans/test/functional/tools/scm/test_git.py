@@ -5,10 +5,10 @@ import textwrap
 import pytest
 import six
 
-from conans.test.utils.scm import create_local_git_repo, git_change_and_commit, git_create_bare_repo
+from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conans.util.files import rmdir, save_files
 
 
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
@@ -72,8 +72,8 @@ class TestGitBasicCapture:
         c = TestClient()
         c.run_command('git clone "{}" myclone'.format(url))
         with c.chdir("myclone"):
-            new_commit = git_change_and_commit({"conanfile.py": self.conanfile + "\n# some coment!"},
-                                               c.current_folder)
+            c.save({"conanfile.py": self.conanfile + "\n# some coment!"})
+            new_commit = git_add_changes_commit(c.current_folder)
 
             c.run("export .")
             assert "pkg/0.1: COMMIT: {}".format(new_commit) in c.out
@@ -148,8 +148,8 @@ class TestGitCaptureSCM:
         c = TestClient()
         c.run_command('git clone "{}" myclone'.format(url))
         with c.chdir("myclone"):
-            new_commit = git_change_and_commit({"conanfile.py": self.conanfile + "\n# some coment!"},
-                                               c.current_folder)
+            c.save({"conanfile.py": self.conanfile + "\n# some coment!"})
+            new_commit = git_add_changes_commit(c.current_folder)
 
             c.run("export .")
             assert "This revision will not be buildable in other computer" in c.out
@@ -192,7 +192,8 @@ class TestGitBasicClone:
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
                                                    "CMakeLists.txt": "mycmake"}, folder=folder)
         # This second commit will NOT be used, as I will use the above commit in the conanfile
-        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
+        save_files(path=folder, files={"src/myfile.h": "my2header2!"})
+        git_add_changes_commit(folder=folder)
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
@@ -262,7 +263,8 @@ class TestGitBasicSCMFlow:
         c.run("upload * --all -c")
 
         # Do a change and commit, this commit will not be used by package
-        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
+        save_files(path=folder, files={"src/myfile.h": "my2header2!"})
+        git_add_changes_commit(folder=folder)
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
@@ -354,7 +356,8 @@ class TestGitBasicSCMFlowSubfolder:
         c.run("upload * --all -c")
 
         # Do a change and commit, this commit will not be used by package
-        git_change_and_commit(files={"src/myfile.h": "my2header2!"}, folder=folder)
+        save_files(path=folder, files={"src/myfile.h": "my2header2!"})
+        git_add_changes_commit(folder=folder)
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
@@ -433,7 +436,8 @@ class TestGitMonorepoSCMFlow:
         assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c.out
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c.out
 
-        git_change_and_commit(files={"sub2/src/myfile.h": "my2header!"}, folder=c.current_folder)
+        c.save({"sub2/src/myfile.h": "my2header!"})
+        git_add_changes_commit(folder=c.current_folder)
         c.run("create sub2")
         assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c.out
         assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c.out
