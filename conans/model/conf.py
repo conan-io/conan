@@ -1,7 +1,10 @@
 import fnmatch
+import os
+import platform
 from collections import OrderedDict
 
 import six
+from jinja2 import Template
 
 from conans.errors import ConanException
 
@@ -471,6 +474,7 @@ class ConfDefinition:
         return parsed_value
 
     def loads(self, text, profile=False):
+        text = Template(text).render({"platform": platform, "os": os})
         self._pattern_confs = {}
 
         for line in text.splitlines():
