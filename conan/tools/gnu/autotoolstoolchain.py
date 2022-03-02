@@ -18,7 +18,7 @@ class AutotoolsToolchain:
 
         self.configure_args = []
         self.make_args = []
-        self.default_configure_install_args = False
+        self.default_configure_install_args = True
 
         # TODO: compiler.runtime for Visual studio?
         # defines
@@ -154,16 +154,22 @@ class AutotoolsToolchain:
         configure_args = []
         configure_args.extend(self.configure_args)
 
-        if self.default_configure_install_args:
+        if self.default_configure_install_args and self._conanfile.package_folder:
+            def _get_cpp_info_value(name):
+                # Why not taking cpp.build? because this variables are used by the "cmake install"
+                # that correspond to the package folder (even if the root is the build directory)
+                elements = getattr(self._conanfile.cpp.package, name)
+                return elements[0] if elements else None
+
             # If someone want arguments but not the defaults can pass them in args manually
             configure_args.extend(
-                    ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
-                     "--bindir=${prefix}/bin",
-                     "--sbindir=${prefix}/bin",
-                     "--libdir=${prefix}/lib",
-                     "--includedir=${prefix}/include",
-                     "--oldincludedir=${prefix}/include",
-                     "--datarootdir=${prefix}/share"])
+                    ['--prefix=%s' % self._conanfile.package_folder.replace("\\", "/"),
+                     "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
+                     "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:

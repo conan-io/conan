@@ -358,6 +358,7 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            value = value.replace('"', '\\"')
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:

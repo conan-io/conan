@@ -8,7 +8,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
-    SharedLibBock
+    SharedLibBock, OutputDirsBlock
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -128,7 +128,8 @@ class CMakeToolchain(object):
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
                                        ("rpath", SkipRPath),
-                                       ("shared", SharedLibBock)])
+                                       ("shared", SharedLibBock),
+                                       ("output_dirs", OutputDirsBlock)])
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
