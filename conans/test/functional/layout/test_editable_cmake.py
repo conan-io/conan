@@ -70,8 +70,6 @@ def editable_cmake(generator, build_folder=None):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
 @pytest.mark.tool_mingw64
-@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
-                          "package_folder of the deps")
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
