@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_name
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
 from conan.tools.build import build_jobs, cross_building
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
@@ -301,7 +301,7 @@ class AppleSystemBlock(Block):
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
         host_architecture = to_apple_arch(arch, default=arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
-        host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_name(self._conanfile)
+        host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
 
         ctxt_toolchain = {}
         if host_sdk_name:

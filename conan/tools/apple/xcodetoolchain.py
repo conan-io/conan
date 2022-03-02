@@ -1,11 +1,9 @@
-import os
 import textwrap
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import cppstd_flag
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_include_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
+from conan.tools.build.flags import cppstd_flag
 from conans.util.files import save
 
 
@@ -35,7 +33,6 @@ class XcodeToolchain(object):
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self.os_version = conanfile.settings.get_safe("os.version")
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
         save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)

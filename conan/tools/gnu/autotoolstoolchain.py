@@ -1,5 +1,5 @@
 from conan.tools.build import args_to_string
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_name
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_fullname
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
@@ -48,7 +48,7 @@ class AutotoolsToolchain:
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
 
-        os_sdk = get_apple_sdk_name(conanfile)
+        os_sdk = get_apple_sdk_fullname(conanfile)
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
 
