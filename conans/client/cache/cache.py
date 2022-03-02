@@ -1,7 +1,9 @@
 import copy
 import os
+import platform
 from typing import List
 
+from jinja2 import Template
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
@@ -194,7 +196,9 @@ class ClientCache(object):
         if self._new_config is None:
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):
-                self._new_config.loads(load(self.new_config_path))
+                text = load(self.new_config_path)
+                content = Template(text).render({"platform": platform, "os": os})
+                self._new_config.loads(content)
         return self._new_config
 
     @property
