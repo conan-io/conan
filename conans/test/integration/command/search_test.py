@@ -36,6 +36,8 @@ conan_vars1 = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
+[recipe_hash]
+  hash1
 '''
 
 conan_vars1b = '''
@@ -46,6 +48,8 @@ conan_vars1b = '''
     compiler.libcxx=libstdc++
 [options]
     use_Qt=True
+[recipe_hash]
+  hash1
 '''
 
 conan_vars1c = '''
@@ -79,6 +83,8 @@ conan_vars1d = '''
     libc.version=2.29
 [options]
     use_Qt=True
+[recipe_hash]
+  hash1
 '''
 
 conan_vars2 = '''
@@ -88,6 +94,8 @@ conan_vars2 = '''
     arch=x64
     os=Ubuntu
     version=15.04
+[recipe_hash]
+  hash1
 '''
 
 conan_vars3 = '''
@@ -96,6 +104,8 @@ conan_vars3 = '''
     USE_CONFIG=False
 [settings]
     os=Darwin
+[recipe_hash]
+  hash1
 '''
 
 conan_vars4 = """[settings]
@@ -108,26 +118,36 @@ conan_vars4 = """[settings]
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_winx86 = """[settings]
   os_build=Windows
   arch_build=x86
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_winx64 = """[settings]
   os_build=Windows
   arch_build=x86_64
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_linx86 = """[settings]
   os_build=Linux
   arch_build=x86
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_linx64 = """[settings]
   os_build=Linux
   arch_build=x86_64
+[recipe_hash]
+  hash1
 """
 
 
@@ -1619,4 +1639,3 @@ class TestMixConan1and2:
         c.run("search pkg/0.1@ -r=default")
         assert "Package_ID: package_id_1X" in c.out
         assert "package_id_20" not in c.out
-
