@@ -488,9 +488,13 @@ class FindFiles(Block):
             # If the builddir is the package_folder, then it is the default "root" one
             # The package_folder can be None if editable and layout(), in that case only the
             # host_build_paths_noroot will be populated
-            nf = os.path.normpath(req.package_folder or "")
-            host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
-            host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            if req.package_folder:
+                nf = os.path.normpath(req.package_folder)
+                host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
+                host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            else:
+                host_build_paths_root = []
+                host_build_paths_noroot.extend(p for p in cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
