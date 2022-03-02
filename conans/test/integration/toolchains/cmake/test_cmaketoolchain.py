@@ -1,10 +1,8 @@
 import os
-import platform
 import textwrap
 
-from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TurboTestClient
+from conans.test.utils.tools import TestClient
 
 
 def test_cross_build():
