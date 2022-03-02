@@ -178,18 +178,18 @@ def test_cmake_layout_external_sources():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, "cmake-build-release", "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
     contents = load(os.path.join(client.current_folder, "cmake-build-release", "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
@@ -228,19 +228,19 @@ def test_basic_layout_external_sources(with_build_type):
         conanfile = conanfile.format("")
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
     build_folder = "build-release" if with_build_type else "build"
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
     contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . --name=foo --version=1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
