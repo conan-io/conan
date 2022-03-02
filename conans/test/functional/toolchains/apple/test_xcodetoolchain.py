@@ -217,7 +217,7 @@ pbxproj = textwrap.dedent("""
                     MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
                     MTL_FAST_MATH = YES;
                     ONLY_ACTIVE_ARCH = YES;
-                    SDKROOT = macosx12.1;
+                    SDKROOT = macosx11.3;
                 };
                 name = Debug;
             };
@@ -269,7 +269,7 @@ pbxproj = textwrap.dedent("""
                     MTL_ENABLE_DEBUG_INFO = NO;
                     MTL_FAST_MATH = YES;
                     ONLY_ACTIVE_ARCH = YES;
-                    SDKROOT = macosx12.1;
+                    SDKROOT = macosx11.3;
                 };
                 name = Release;
             };
