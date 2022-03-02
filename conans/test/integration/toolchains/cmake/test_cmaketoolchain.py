@@ -1,7 +1,5 @@
-import textwrap
 import os
-
-import pytest
+import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
