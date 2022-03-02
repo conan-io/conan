@@ -64,6 +64,9 @@ setup(
 
     # The project's main homepage.
     url='https://conan.io',
+    project_urls={
+        'Source': 'https://github.com/conan-io/conan',
+    },
 
     # Author details
     author='JFrog LTD',
