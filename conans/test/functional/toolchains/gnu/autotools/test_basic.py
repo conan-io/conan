@@ -173,6 +173,7 @@ def test_autotoolsdeps_msys():
 
 
 @pytest.mark.tool_autotools()
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 def test_install_output_directories():
     """
     If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
