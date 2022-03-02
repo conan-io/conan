@@ -20,20 +20,21 @@ def to_apple_arch(arch, default=None):
 
 def get_apple_sdk_name(conanfile):
     """
-    Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+    Returns the 'os.sdk' + 'os.sdk_version ' value. Every user should specify it because
     there could be several ones depending on the OS architecture.
 
     Note: In case of MacOS it'll be the same for all the architectures.
     """
     os_ = conanfile.settings.get_safe('os')
     os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_sdk_version = conanfile.settings.get_safe('os.sdk_version') or ""
+
     if os_sdk:
-        return os_sdk
+        return "{}{}".format(os_sdk, os_sdk_version)
     elif os_ == "Macos":  # it has only a single value for all the architectures
-        return "macosx"
+        return "{}{}".format("macosx", os_sdk_version)
     elif is_apple_os(os_):
         raise ConanException("Please, specify a suitable value for os.sdk.")
-
 
 def apple_min_version_flag(os_version, os_sdk, subsystem):
     """compiler flag name which controls deployment target"""
