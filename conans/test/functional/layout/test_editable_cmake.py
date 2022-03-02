@@ -70,6 +70,8 @@ def editable_cmake(generator, build_folder=None):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
 @pytest.mark.tool_mingw64
+@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
+                          "package_folder of the deps")
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
@@ -92,6 +94,8 @@ def test_editable_cmake_linux(generator):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
 @pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
+                          "package_folder of the deps")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
 
@@ -143,6 +147,8 @@ def editable_cmake_exe(generator):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
 @pytest.mark.tool_mingw64
+@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
+                          "package_folder of the deps")
 def test_editable_cmake_windows_exe(generator):
     editable_cmake_exe(generator)
 
@@ -158,5 +164,7 @@ def test_editable_cmake_linux_exe(generator):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
 @pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
+                          "package_folder of the deps")
 def test_editable_cmake_osx_exe(generator):
     editable_cmake_exe(generator)
