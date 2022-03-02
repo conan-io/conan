@@ -3,7 +3,6 @@ import textwrap
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_include_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
-from conan.tools.build.flags import cppstd_flag
 from conans.util.files import save
 
 
@@ -41,6 +40,7 @@ class XcodeToolchain(object):
 
     @property
     def _cppstd(self):
+        from conan.tools.build.flags import cppstd_flag
         cppstd = cppstd_flag(self._conanfile.settings)
         if cppstd.startswith("-std="):
             return cppstd[5:]
