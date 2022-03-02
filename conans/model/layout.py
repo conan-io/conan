@@ -33,7 +33,7 @@ class Folders(object):
     def __repr__(self):
         return str(self.__dict__)
 
-    def set_base_folders(self, conanfile_folder, output_folder):
+    def set_base_folders(self, conanfile_folder, output_folder, editable=False):
         """ this methods can be used for defining all the base folders in the
         local flow (conan install, source, build), where only the current conanfile location
         and the potential --output-folder user argument are the folders to take into account
@@ -51,7 +51,10 @@ class Folders(object):
 
         self._base_install = output_folder or base_folder
         self._base_build = output_folder or base_folder
-        self._base_package = output_folder or base_folder
+        if editable:
+            # If an editable package is reused, need a package folder for the consumers
+            # otherwise, do not set package folder for local methods
+            self._base_package = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_imports = output_folder or base_folder
 
