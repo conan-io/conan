@@ -42,7 +42,9 @@ class Folders(object):
 
         @param conanfile_folder: the location where the current consumer conanfile is
         @param output_folder: Can potentially be None (for export-pkg: TODO), in that case
-        the conanfile location is used"""
+        the conanfile location is used
+        @param editable: If the node is editable, we will set the package folder
+        """
         # This must be called only after ``layout()`` has been called
         base_folder = conanfile_folder if self.root is None else \
             os.path.normpath(os.path.join(conanfile_folder, self.root))
