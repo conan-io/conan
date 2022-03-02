@@ -320,12 +320,15 @@ pbxproj = textwrap.dedent("""
 
 test = textwrap.dedent("""
     import os
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
+    from conan.tools.build import cross_building
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         generators = "VirtualRunEnv"
+        def requirements(self):
+            self.requires(self.tested_reference_str)
         def test(self):
-            if not tools.cross_building(self):
+            if not cross_building(self):
                 self.run("app", env="conanrun")
     """)
 
@@ -340,12 +343,14 @@ test = textwrap.dedent("""
 def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
     client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        import os
+        from conan import ConanFile
         from conan.tools.apple import XcodeBuild
+        from conan.tools.files import copy
         class MyApplicationConan(ConanFile):
             name = "myapplication"
             version = "1.0"
@@ -353,13 +358,14 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
             settings = "os", "compiler", "build_type", "arch"
             generators = "XcodeDeps", "XcodeToolchain"
             exports_sources = "app.xcodeproj/*", "app/*"
+            package_type = "application"
             def build(self):
                 xcode = XcodeBuild(self)
                 xcode.build("app.xcodeproj")
                 self.run("otool -l build/{}/app".format(self.settings.build_type))
 
             def package(self):
-                self.copy("*/app", dst="bin", src=".", keep_path=False)
+                copy(self, "*/app", src=self.build_folder, dst=os.path.join(self.package_folder, "bin"), keep_path=False)
 
             def package_info(self):
                 self.cpp_info.bindirs = ["bin"]
@@ -371,7 +377,7 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
                  "app.xcodeproj/project.pbxproj": pbxproj}, clean_first=True)
 
     sdk_version = "11.3"
-    settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version={} -s compiler.cppstd={} " \
+    settings = "-s arch=x86_64 -s os.sdk_version={} -s compiler.cppstd={} " \
                "-s compiler.libcxx=libc++ -s os.version={} ".format(sdk_version, cppstd, min_version)
 
     client.run("create . -s build_type=Release {} --build=missing".format(settings))
