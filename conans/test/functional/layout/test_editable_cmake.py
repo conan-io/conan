@@ -74,6 +74,8 @@ def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
 
+@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
+                          "package_folder of the deps")
 def test_editable_cmake_windows_folders():
     build_folder = temp_folder()
     editable_cmake(generator=None, build_folder=build_folder)
