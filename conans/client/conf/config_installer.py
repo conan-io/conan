@@ -5,11 +5,9 @@ from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
 from conans.cli.output import ConanOutput
-from conans.client import tools
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.client.tools import Git
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 
 
 def _hide_password(resource):
@@ -40,7 +38,7 @@ def _process_git_repo(config, cache):
     output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
     with tmp_config_install_folder(cache) as tmp_folder:
-        with tools.chdir(tmp_folder):
+        with chdir(tmp_folder):
             try:
                 args = config.args or ""
                 git = Git(verify_ssl=config.verify_ssl)
