@@ -151,7 +151,7 @@ def test_error_no_build_type():
 def test_cmake_layout_external_sources():
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import cmake_layout
         from conan.tools.files import save, copy, load
         class Pkg(ConanFile):
@@ -178,18 +178,18 @@ def test_cmake_layout_external_sources():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, "cmake-build-release", "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
     contents = load(os.path.join(client.current_folder, "cmake-build-release", "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
@@ -198,7 +198,7 @@ def test_cmake_layout_external_sources():
 def test_basic_layout_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.layout import basic_layout
             from conan.tools.files import save, load, copy
             class Pkg(ConanFile):
@@ -228,19 +228,19 @@ def test_basic_layout_external_sources(with_build_type):
         conanfile = conanfile.format("")
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
     build_folder = "build-release" if with_build_type else "build"
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
     contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
@@ -249,7 +249,7 @@ def test_basic_layout_external_sources(with_build_type):
 def test_basic_layout_no_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.layout import basic_layout
             from conan.tools.files import save, load, copy
             class Pkg(ConanFile):
@@ -277,11 +277,11 @@ def test_basic_layout_no_external_sources(with_build_type):
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
 
     build_folder = "build-release" if with_build_type else "build"
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
@@ -289,5 +289,5 @@ def test_basic_layout_no_external_sources(with_build_type):
     client.run("build .")
     contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
     assert contents == "exported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out

@@ -44,9 +44,9 @@ _expected_conf_xconfig = [
 ]
 
 
-def expected_files(current_folder, configuration, architecture, sdk, sdk_version):
+def expected_files(current_folder, configuration, architecture, sdk_version):
     files = []
-    name = _get_filename(configuration, architecture, sdk, sdk_version)
+    name = _get_filename(configuration, architecture, sdk_version)
     deps = ["hello", "goodbye"]
     files.extend(
         [os.path.join(current_folder, "conan_{}{}.xcconfig".format(dep, name)) for dep in deps])
@@ -56,11 +56,11 @@ def expected_files(current_folder, configuration, architecture, sdk, sdk_version
     return files
 
 
-def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
+def check_contents(client, deps, configuration, architecture, sdk_version):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{}.xcconfig".format(dep_name))
         conf_name = "conan_{}{}.xcconfig".format(dep_name,
-                                                 _get_filename(configuration, architecture, sdk, sdk_version))
+                                                 _get_filename(configuration, architecture, sdk_version))
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -68,11 +68,11 @@ def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
             assert line in dep_xconfig
 
         vars_name = "conan_{}_vars{}.xcconfig".format(dep_name,
-                                                      _get_filename(configuration, architecture, sdk, sdk_version))
+                                                      _get_filename(configuration, architecture, sdk_version))
         conan_vars = client.load(vars_name)
         for var in _expected_vars_xconfig:
             line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
-                              sdk=sdk, sdk_version=sdk_version)
+                              sdk="macosx", sdk_version=sdk_version)
             assert line in conan_vars
 
         conan_conf = client.load(conf_name)
@@ -97,9 +97,9 @@ def test_generator_files():
 
     for build_type in ["Release", "Debug"]:
 
-        client.run("install . -g XcodeDeps -s build_type={} -s arch=x86_64 -s os.sdk=macosx -s os.sdk_version=12.1 --build missing".format(build_type))
+        client.run("install . -g XcodeDeps -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1 --build missing".format(build_type))
 
-        for config_file in expected_files(client.current_folder, build_type, "x86_64", "macosx", "12.1"):
+        for config_file in expected_files(client.current_folder, build_type, "x86_64", "12.1"):
             assert os.path.isfile(config_file)
 
         conandeps = client.load("conandeps.xcconfig")
@@ -109,4 +109,4 @@ def test_generator_files():
         conan_config = client.load("conan_config.xcconfig")
         assert '#include "conandeps.xcconfig"' in conan_config
 
-        check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "macosx", "12.1")
+        check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
