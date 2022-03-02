@@ -1,7 +1,7 @@
 import os
 
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save_files
+from conans.util.files import save_files, chdir
 from conans.util.runners import check_output_runner, muted_runner
 
 
@@ -45,7 +45,8 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
     if origin_url:
         muted_runner('git remote add origin {}'.format(origin_url), folder=tmp)
 
-    commit = check_output_runner('git rev-list HEAD -n 1', folder=tmp)
+    with chdir(tmp):
+        commit = check_output_runner('git rev-list HEAD -n 1')
     return tmp.replace("\\", "/"), commit
 
 
