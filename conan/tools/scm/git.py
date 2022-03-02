@@ -64,9 +64,9 @@ class Git(object):
         #    raise ConanException("Current commit {} doesn't exist in remote {}\n"
         #                         "use '-c {}=1' to allow it".format(commit, remote, conf_name))
 
-        self._conanfile.output.warn("Current commit {} doesn't exist in remote {}\n"
-                                    "This revision will not be buildable in other "
-                                    "computer".format(commit, remote))
+        self._conanfile.output.warning("Current commit {} doesn't exist in remote {}\n"
+                                       "This revision will not be buildable in other "
+                                       "computer".format(commit, remote))
         return self.get_repo_root(), commit
 
     def get_repo_root(self):

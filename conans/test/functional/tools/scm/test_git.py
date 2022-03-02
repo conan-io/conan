@@ -260,7 +260,7 @@ class TestGitBasicSCMFlow:
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
-        c.run("upload * --all -c")
+        c.run("upload * -c -r=default")
 
         # Do a change and commit, this commit will not be used by package
         save_files(path=folder, files={"src/myfile.h": "my2header2!"})
@@ -268,7 +268,7 @@ class TestGitBasicSCMFlow:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install pkg/0.1@ --build=pkg")
+        c2.run("install --reference=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -295,12 +295,12 @@ class TestGitBasicSCMFlow:
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
-        c.run("upload * --all -c")
+        c.run("upload * -c -r=default")
         rmdir(c.current_folder)  # Remove current folder to make sure things are not used from here
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install pkg/0.1@ --build=pkg")
+        c2.run("install --reference=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -354,7 +354,7 @@ class TestGitBasicSCMFlowSubfolder:
         c.run("create conan")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
-        c.run("upload * --all -c")
+        c.run("upload * -c -r=default")
 
         # Do a change and commit, this commit will not be used by package
         save_files(path=folder, files={"src/myfile.h": "my2header2!"})
@@ -362,7 +362,7 @@ class TestGitBasicSCMFlowSubfolder:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install pkg/0.1@ --build=pkg")
+        c2.run("install --reference=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -446,11 +446,11 @@ class TestGitMonorepoSCMFlow:
         # Exporting again sub1, gives us exactly the same revision as before
         c.run("export sub1")
         assert "CAPTURING COMMIT: {}".format(commit) in c.out
-        c.run("upload * --all -c -r=default")
+        c.run("upload * -c -r=default")
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install pkg2/0.1@ --build")
+        c2.run("install --reference=pkg2/0.1@ --build")
         assert "pkg1/0.1: Checkout: {}".format(commit) in c2.out
         assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c2.out
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
