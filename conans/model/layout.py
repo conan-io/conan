@@ -42,7 +42,8 @@ class Folders(object):
 
         @param conanfile_folder: the location where the current consumer conanfile is
         @param output_folder: Can potentially be None (for export-pkg: TODO), in that case
-        the conanfile location is used"""
+        the conanfile location is used
+        """
         # This must be called only after ``layout()`` has been called
         base_folder = conanfile_folder if self.root is None else \
             os.path.normpath(os.path.join(conanfile_folder, self.root))
@@ -51,7 +52,6 @@ class Folders(object):
 
         self._base_install = output_folder or base_folder
         self._base_build = output_folder or base_folder
-        self._base_package = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_imports = output_folder or base_folder
 

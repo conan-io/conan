@@ -41,8 +41,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
         # for example a framework test won't be a build require but a "test/not public" require.
         dependency_filenames = self._get_dependency_filenames()
-        package_folder = self.conanfile.package_folder.replace('\\', '/')\
-                                                      .replace('$', '\\$').replace('"', '\\"')
+        # package_folder might not be defined if Editable and layout()
+        package_folder = self.conanfile.package_folder or ""
+        package_folder = package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
                 "file_name": self.file_name,
@@ -181,7 +183,10 @@ class _TargetDataContext(object):
             for p in paths:
                 assert os.path.isabs(p), "{} is not absolute".format(p)
 
-                if p.startswith(package_folder):
+                # Trying to use a ${mypkg_PACKAGE_FOLDER}/include path instead of full
+                # TODO: We could do something similar for some build_folder for editables
+                # package_folder can be None if editable and layout()
+                if package_folder is not None and p.startswith(package_folder):
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
                     rel = p[len(package_folder):]
                     rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")
