@@ -191,7 +191,8 @@ class RemoteManager(object):
         for package_id, data in infos.items():
             # FIXME: we don't have the package reference, it uses the latest, we could check
             #        here doing N requests or improve the Artifactory API.
-            ret[PkgReference(ref, package_id)] = data
+            if not data.get("recipe_hash"):  # To filter out Conan 1.X packages in same repo
+                ret[PkgReference(ref, package_id)] = data
         return ret
 
     def remove_recipe(self, ref, remote):

@@ -19,7 +19,7 @@ class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")
     default_options = {"shared": False, "fPIC": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "CMakeLists.txt", "src/*"
+    exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -49,8 +49,9 @@ cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
 add_library({{name}} src/{{name}}.cpp)
+target_include_directories({{name}} PUBLIC include)
 
-set_target_properties({{name}} PROPERTIES PUBLIC_HEADER "src/{{name}}.h")
+set_target_properties({{name}} PROPERTIES PUBLIC_HEADER "include/{{name}}.h")
 install(TARGETS {{name}} DESTINATION "."
         PUBLIC_HEADER DESTINATION include
         RUNTIME DESTINATION bin
@@ -209,7 +210,7 @@ int main() {
 
 cmake_lib_files = {"conanfile.py": conanfile_sources_v2,
                    "src/{{name}}.cpp": source_cpp,
-                   "src/{{name}}.h": source_h,
+                   "include/{{name}}.h": source_h,
                    "CMakeLists.txt": cmake_v2,
                    "test_package/conanfile.py": test_conanfile_v2,
                    "test_package/src/example.cpp": test_main,
