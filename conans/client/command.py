@@ -2251,8 +2251,6 @@ class Command(object):
             ret_code = ERROR_INVALID_SYSTEM_REQUIREMENTS
             self._out.error(exc)
         except ConanException as exc:
-            import traceback
-            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             self._out.error(exc)
         except Exception as exc:

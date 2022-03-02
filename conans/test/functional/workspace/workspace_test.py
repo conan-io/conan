@@ -1105,8 +1105,6 @@ def test_error_imports():
     assert c.load("libb/build/filea.txt") == "HelloA!"
 
 
-@pytest.mark.xfail(reason="Editable + layout are broken, the generators shouldn't access "
-                          "package_folder of the deps")
 def test_error_imports_modern():
     # https://github.com/conan-io/conan/issues/9263
     c = TestClient()
