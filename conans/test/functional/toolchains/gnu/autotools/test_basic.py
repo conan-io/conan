@@ -172,8 +172,8 @@ def test_autotoolsdeps_msys():
     assert "main2 __CYGWIN__1" in out
 
 
-@pytest.mark.tool_autotools()
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool_autotools()
 def test_install_output_directories():
     """
     If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
