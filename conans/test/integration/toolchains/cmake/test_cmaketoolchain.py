@@ -231,33 +231,3 @@ def test_find_builddirs():
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
-
-
-def test_install_output_directories():
-    """
-    If we change the libdirs of the cpp.package, as we are doing cmake.install, the output directory
-    for the libraries is changed
-    """
-    ref = ConanFileReference.loads("zlib/1.2.11")
-    client = TurboTestClient()
-    client.run("new zlib/1.2.11 --template cmake_lib")
-    cf = client.load("conanfile.py")
-    pref = client.create(ref, conanfile=cf)
-    p_folder = client.cache.package_layout(pref.ref).package(pref)
-    assert not os.path.exists(os.path.join(p_folder, "mylibs"))
-    assert os.path.exists(os.path.join(p_folder, "lib"))
-
-    # Edit the cpp.package.libdirs and check if the library is placed anywhere else
-    cf = client.load("conanfile.py")
-    cf = cf.replace("cmake_layout(self)",
-                    'cmake_layout(self)\n        self.cpp.package.libdirs = ["mylibs"]')
-
-    pref = client.create(ref, conanfile=cf)
-    p_folder = client.cache.package_layout(pref.ref).package(pref)
-    assert os.path.exists(os.path.join(p_folder, "mylibs"))
-    assert not os.path.exists(os.path.join(p_folder, "lib"))
-    b_folder = client.cache.package_layout(pref.ref).build(pref)
-    layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
-    toolchain = client.load(os.path.join(b_folder, layout_folder, "conan", "conan_toolchain.cmake"))
-    assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
-
