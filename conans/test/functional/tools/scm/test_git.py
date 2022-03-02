@@ -289,7 +289,8 @@ class TestGitBasicSCMFlow:
         c.save({"conanfile.py": self.conanfile,
                 "src/myfile.h": "myheader!",
                 "CMakeLists.txt": "mycmake"})
-        c.run_command("git checkout -b mybranch && git add . && git commit -m wip")
+        c.run_command("git checkout -b mybranch")
+        git_add_changes_commit(folder=c.current_folder)
         c.run_command("git push --set-upstream origin mybranch")
         c.run("create .")
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
