@@ -349,17 +349,26 @@ class AppleSystemBlock(Block):
 
     def _apple_sdk_name(self):
         """
-        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
-        there could be several ones depending on the OS architecture.
+        Returns the value for the SDKROOT with this preference:
+        - 1. The full path set in the conf with tools.apple:sdk_path
+        - 2. osd.sdk + os.sdk_version
+        Otherwise None
+        Every user should specify it because there could be several ones depending
+        on the OS architecture.
 
         Note: In case of MacOS it'll be the same for all the architectures.
         """
         os_ = self._conanfile.settings.get_safe('os')
         os_sdk = self._conanfile.settings.get_safe('os.sdk')
-        if os_sdk:
-            return os_sdk
-        elif os_ == "Macos":  # it has only a single value for all the architectures for now
-            return "macosx"
+        os_sdk_version = self._conanfile.settings.get_safe('os.sdk_version') or ""
+        sdk = self._conanfile.conf.get("tools.apple:sdk_path")
+
+        if sdk:
+            return sdk
+        elif os_ == "Macos":  # if the host is Macos it can only be "macosx"
+            return "{}{}".format("macosx", os_sdk_version)
+        elif os_sdk:
+            return "{}{}".format(os_sdk, os_sdk_version)
         else:
             raise ConanException("Please, specify a suitable value for os.sdk.")
 

@@ -19,7 +19,7 @@ class {package_name}Conan(ConanFile):
     default_options = {{"shared": False, "fPIC": True}}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "CMakeLists.txt", "src/*"
+    exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -88,8 +88,9 @@ cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
 add_library({name} src/{name}.cpp)
+target_include_directories({name} PUBLIC include)
 
-set_target_properties({name} PROPERTIES PUBLIC_HEADER "src/{name}.h")
+set_target_properties({name} PROPERTIES PUBLIC_HEADER "include/{name}.h")
 install(TARGETS {name})
 """
 
@@ -208,7 +209,7 @@ def get_cmake_lib_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_sources_v2.format(name=name, version=version,
                                                          package_name=package_name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
-             "src/{}.h".format(name): source_h.format(name=name, version=version),
+             "include/{}.h".format(name): source_h.format(name=name, version=version),
              "CMakeLists.txt": cmake_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_v2.format(name=name,
                                                                    version=version,
@@ -237,7 +238,7 @@ class {package_name}Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "CMakeLists.txt", "src/*"
+    exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
     def layout(self):
         cmake_layout(self)
@@ -260,6 +261,7 @@ cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
 add_executable({name} src/{name}.cpp src/main.cpp)
+target_include_directories({name} PUBLIC include)
 
 install(TARGETS {name} DESTINATION "."
         RUNTIME DESTINATION bin
@@ -289,7 +291,7 @@ def get_cmake_exe_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_exe.format(name=name, version=version,
                                                   package_name=package_name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
-             "src/{}.h".format(name): source_h.format(name=name, version=version),
+             "include/{}.h".format(name): source_h.format(name=name, version=version),
              "src/main.cpp": test_main.format(name=name),
              "CMakeLists.txt": cmake_exe_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_exe_v2.format(name=name,
