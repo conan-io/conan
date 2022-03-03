@@ -61,12 +61,11 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
             conanfile.output.info("Executing exports to: %s" % src_folder)
             export_source(conanfile, src_folder)
 
-    _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
+    _run_source(conanfile, conanfile_path, hook_manager, reference=None,
                 get_sources_from_exports=get_sources_from_exports)
 
 
-def config_source(export_source_folder, conanfile,
-                  conanfile_path, reference, hook_manager, cache):
+def config_source(export_source_folder, conanfile, conanfile_path, reference, hook_manager):
     """ Implements the sources configuration when a package is going to be built in the
     local cache:
     - remove old sources if dirty or build_policy=always
@@ -103,12 +102,11 @@ def config_source(export_source_folder, conanfile,
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
-            _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
+            _run_source(conanfile, conanfile_path, hook_manager, reference,
                         get_sources_from_exports=get_sources_from_exports)
 
 
-def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
-                get_sources_from_exports):
+def _run_source(conanfile, conanfile_path, hook_manager, reference, get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
@@ -123,44 +121,26 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
 
     with chdir(src_folder):
         try:
-            with no_op():  # TODO: Remove this in a later refactor
-                hook_manager.execute("pre_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
-                output = conanfile.output
-                output.info('Configuring sources in %s' % src_folder)
-                get_sources_from_exports()
+            hook_manager.execute("pre_source", conanfile=conanfile,
+                                 conanfile_path=conanfile_path,
+                                 reference=reference)
+            output = conanfile.output
+            output.info('Configuring sources in %s' % src_folder)
+            get_sources_from_exports()
 
-                if cache:
-                    # Clear the conanfile.py to avoid errors cloning git repositories.
-                    _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(conanfile.display_name, "source"):
-
-                    with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is "
+            with conanfile_exception_formatter(conanfile.display_name, "source"):
+                with conan_v2_property(conanfile, 'settings',
+                                       "'self.settings' access in source() method is "
+                                       "deprecated"):
+                    with conan_v2_property(conanfile, 'options',
+                                           "'self.options' access in source() method is "
                                            "deprecated"):
-                        with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is "
-                                               "deprecated"):
-                            conanfile.source()
+                        conanfile.source()
 
-                hook_manager.execute("post_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
+            hook_manager.execute("post_source", conanfile=conanfile,
+                                 conanfile_path=conanfile_path,
+                                 reference=reference)
         except ConanExceptionInUserConanfileMethod:
             raise
         except Exception as e:
             raise ConanException(e)
-
-
-def _clean_source_folder(folder):
-    for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
-        try:
-            os.remove(os.path.join(folder, f))
-        except OSError:
-            pass
-    try:
-        shutil.rmtree(os.path.join(folder, "__pycache__"))
-    except OSError:
-        pass
