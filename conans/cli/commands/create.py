@@ -46,8 +46,7 @@ def create(conan_api, parser, *args):
     ref = conan_api.export.export(path=path,
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
-                                  lockfile=lockfile,
-                                  ignore_dirty=args.ignore_dirty)
+                                  lockfile=lockfile)
 
     out.highlight("\n-------- Input profiles ----------")
     out.info("Profile host:")
