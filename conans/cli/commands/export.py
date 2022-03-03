@@ -33,7 +33,7 @@ def export(conan_api, parser, *args, **kwargs):
 
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     conan_api.export.export(path=path,

@@ -24,7 +24,6 @@ def lock_create(conan_api, parser, subparser, *args):
     Create a lockfile from a conanfile or a reference
     """
     common_graph_args(subparser)
-    add_lockfile_args(subparser, default_strict=False)
     subparser.add_argument("--clean", action="store_true", help="remove unused")
 
     args = parser.parse_args(*args)
@@ -34,7 +33,7 @@ def lock_create(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--reference")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
     if lockfile is None or args.clean:
         lockfile = Lockfile(deps_graph)

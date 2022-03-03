@@ -25,16 +25,16 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                         help='Path to a json file where the install information will be '
                              'written')
+    add_lockfile_args(parser)
     parser.add_argument("--ignore-dirty", default=False, action='store_true',
                         help='When using the "scm" feature with "auto" values, capture the'
                              ' revision and url even if there are uncommitted changes')
-    add_lockfile_args(parser)
     add_profiles_args(parser)
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 

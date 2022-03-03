@@ -21,7 +21,7 @@ def test_user_overrides():
     assert "math/1.0" not in c.out
 
     c.run("lock add --requires=math/1.0 --requires=unrelated/2.0 --lockfile-out=conan.lock")
-    c.run("graph info game --lockfile=conan.lock --lockfile-nostrict --lockfile-out=new.lock")
+    c.run("graph info game --lockfile=conan.lock --lockfile-out=new.lock")
     assert "math/1.0" in c.out
     assert "math/1.2" not in c.out
 
@@ -31,7 +31,7 @@ def test_user_overrides():
 
     # Repeat for 1.1
     c.run("lock add --requires=math/1.1 --requires=unrelated/2.0 --lockfile-out=conan.lock")
-    c.run("graph info game --lockfile=conan.lock --lockfile-nostrict --lockfile-out=new.lock")
+    c.run("graph info game --lockfile=conan.lock --lockfile-out=new.lock")
     assert "math/1.1" in c.out
     assert "math/1.0" not in c.out
 

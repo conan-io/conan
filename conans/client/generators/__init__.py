@@ -3,9 +3,7 @@ import traceback
 
 from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import save, mkdir
-from ..tools import chdir
-
+from conans.util.files import save, mkdir, chdir
 
 _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MSBuildDeps", "QbsToolchain",

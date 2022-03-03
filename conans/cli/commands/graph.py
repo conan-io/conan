@@ -5,7 +5,6 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, 
     Extender
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, common_graph_args
-from conans.cli.common import add_lockfile_args
 from conans.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot, \
     print_graph_info
 from conans.cli.output import ConanOutput
@@ -38,7 +37,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Computes the build order of a dependency graph
     """
     common_graph_args(subparser)
-    add_lockfile_args(subparser, default_strict=True)
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -46,7 +44,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--reference")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=not args.lockfile_nostrict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
 
     out = ConanOutput()
     out.highlight("-------- Computing the build order ----------")
@@ -83,7 +81,6 @@ def graph_info(conan_api, parser, subparser, *args):
     Computes the dependency graph and shows information about it
     """
     common_graph_args(subparser)
-    add_lockfile_args(subparser, default_strict=True)
     subparser.add_argument("--check-updates", default=False, action="store_true")
     subparser.add_argument("--filter", nargs=1, action=Extender,
                            help="Show only the specified fields")
@@ -99,7 +96,7 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=not args.lockfile_nostrict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
     if not args.format:
         print_graph_info(deps_graph, args.filter, args.package_filter)
 

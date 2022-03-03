@@ -38,7 +38,7 @@ def build(conan_api, parser, *args):
     folder = os.path.dirname(path)
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
