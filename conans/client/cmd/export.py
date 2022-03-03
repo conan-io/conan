@@ -13,6 +13,7 @@ from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
     merge_directories, clean_dirty, chdir
 from conans.util.log import logger
+from conans.util.runners import check_output_runner
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,
@@ -103,7 +104,8 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
                            " revision: {} ".format(revision))
     else:
         try:
-            rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
+            with chdir(path):
+                rev_detected = check_output_runner('git rev-list HEAD -n 1').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
@@ -111,9 +113,7 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
 
         revision = rev_detected
 
-        scoped_output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
-        if not is_pristine:
-            scoped_output.warning("Repo status is not pristine: there might be modified files")
+        scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
     return revision
 
