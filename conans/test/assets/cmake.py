@@ -75,19 +75,10 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if install %}
         {% if appsources %}
-        install(TARGETS {{appname}} DESTINATION ".")
+        install(TARGETS {{appname}})
         {% endif %}
         {% if libsources %}
-        install(TARGETS {{libname}} DESTINATION "."
-        {% if public_header %}
-        PUBLIC_HEADER DESTINATION include
-        {% endif %}
-        RUNTIME DESTINATION bin
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        FRAMEWORK DESTINATION Frameworks
-        BUNDLE DESTINATION bin
-        )
+        install(TARGETS {{libname}})
         {% endif %}
         {% endif %}
         """)

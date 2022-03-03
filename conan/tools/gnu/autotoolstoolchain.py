@@ -3,7 +3,7 @@ from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_f
     build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet

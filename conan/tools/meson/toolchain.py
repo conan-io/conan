@@ -4,7 +4,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag

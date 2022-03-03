@@ -1,4 +1,4 @@
-conanfile_sources_v2 = """from conans import ConanFile
+conanfile_sources_v2 = """from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
@@ -48,8 +48,9 @@ class {package_name}Conan(ConanFile):
 
 test_conanfile_v2 = """import os
 
-from conans import ConanFile, tools
+from conan import ConanFile
 from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.build import cross_building
 
 
 class {package_name}TestConan(ConanFile):
@@ -58,6 +59,10 @@ class {package_name}TestConan(ConanFile):
     # (it will be defined in Conan 2.0)
     generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
     apply_env = False
+    test_type = "explicit"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
 
     def build(self):
         cmake = CMake(self)
@@ -68,7 +73,7 @@ class {package_name}TestConan(ConanFile):
         cmake_layout(self)
 
     def test(self):
-        if not tools.cross_building(self):
+        if not cross_building(self):
             cmd = os.path.join(self.cpp.build.bindirs[0], "example")
             self.run(cmd, env="conanrun")
 """
@@ -219,7 +224,7 @@ def get_cmake_lib_files(name, version, package_name="Pkg"):
     return files
 
 
-conanfile_exe = """from conans import ConanFile
+conanfile_exe = """from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
@@ -263,15 +268,13 @@ project({name} CXX)
 add_executable({name} src/{name}.cpp src/main.cpp)
 target_include_directories({name} PUBLIC include)
 
-install(TARGETS {name} DESTINATION "."
-        RUNTIME DESTINATION bin
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        )
+install(TARGETS {name})
 """
 
 test_conanfile_exe_v2 = """import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conan.tools.build import cross_building
+from conan.tools.layout import basic_layout
 
 
 class {package_name}TestConan(ConanFile):
@@ -280,9 +283,16 @@ class {package_name}TestConan(ConanFile):
     # (it will be defined in Conan 2.0)
     generators = "VirtualRunEnv"
     apply_env = False
+    test_type = "explicit"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def layout(self):
+        basic_layout(self)
 
     def test(self):
-        if not tools.cross_building(self):
+        if not cross_building(self):
             self.run("{name}", env="conanrun")
 """
 
