@@ -68,7 +68,7 @@ def add_profiles_args(parser):
         item_fn("host", ":h", ":host")
 
 
-def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
@@ -84,12 +84,20 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
 
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
-    if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile")
-        parser.add_argument("--lockfile-out", action=OnceArgument,
-                            help="Filename of the updated lockfile")
     add_profiles_args(parser)
+
+
+def add_lockfile_args(parser, default_strict=False):
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile")
+    parser.add_argument("--lockfile-out", action=OnceArgument,
+                        help="Filename of the updated lockfile")
+    if default_strict:
+        parser.add_argument("--lockfile-nostrict", action='store_true', default=False,
+                            help="If not necessary that all packages are found in the lockfile")
+    else:
+        parser.add_argument("--lockfile-strict", action='store_true', default=False,
+                            help="If all packages must be found in the lockfile")
 
 
 def get_profiles_from_args(conan_api, args):

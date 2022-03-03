@@ -3,7 +3,8 @@ import os
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args
+from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
+    add_lockfile_args
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -24,13 +25,10 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                         help='Path to a json file where the install information will be '
                              'written')
-    parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                        help="Path to a lockfile.")
-    parser.add_argument("--lockfile-out", action=OnceArgument,
-                        help="Filename of the updated lockfile")
     parser.add_argument("--ignore-dirty", default=False, action='store_true',
                         help='When using the "scm" feature with "auto" values, capture the'
                              ' revision and url even if there are uncommitted changes')
+    add_lockfile_args(parser)
     add_profiles_args(parser)
     args = parser.parse_args(*args)
 

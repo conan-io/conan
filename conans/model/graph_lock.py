@@ -76,7 +76,10 @@ class Lockfile(object):
             else:
                 requires.add(graph_node.ref)
 
-        requires.update(self.requires)
+        # The previously existing incomplete locked requires can be overriden by graph
+        newr = set(str(r) for r in requires)
+        keep_requires = [r for r in self.requires if r.revision is not None or str(r) not in newr]
+        requires.update(keep_requires)
         self.requires = list(reversed(sorted(requires)))
         build_requires.update(self.build_requires)
         self.build_requires = list(reversed(sorted(build_requires)))

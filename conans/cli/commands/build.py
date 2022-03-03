@@ -4,7 +4,7 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, _get_conanfile_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_multiple_remotes
+    get_multiple_remotes, add_lockfile_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
@@ -30,6 +30,7 @@ def build(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+    add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()

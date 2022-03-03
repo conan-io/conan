@@ -3,7 +3,7 @@ import os
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes
+    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
@@ -138,6 +138,7 @@ def install(conan_api, parser, *args):
     generators.
     """
     common_graph_args(parser)
+    add_lockfile_args(parser, default_strict=True)
     parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
@@ -162,7 +163,7 @@ def install(conan_api, parser, *args):
 
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=not args.lockfile_nostrict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
