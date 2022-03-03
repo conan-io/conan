@@ -109,10 +109,10 @@ def test_correct_quotes():
        [settings]
        os=Windows
        arch=x86_64
-       compiler=Visual Studio
-       compiler.version=15
+       compiler=gcc
+       compiler.version=9
        compiler.cppstd=17
-       compiler.runtime=MD
+       compiler.libcxx=libstdc++11
        build_type=Release
        """)
     t = TestClient()
@@ -121,7 +121,6 @@ def test_correct_quotes():
 
     t.run("install . -pr=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "cpp_std = 'vc++17'" in content
-    assert "b_vscrt = 'md'" in content
+    assert "cpp_std = 'c++17'" in content
     assert "backend = 'ninja'" in content
     assert "buildtype = 'release'" in content
