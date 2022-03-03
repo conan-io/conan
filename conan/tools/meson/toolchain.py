@@ -44,7 +44,7 @@ class MesonToolchain(object):
     {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
-    {% if cpp_std %}cpp_std = {{cpp_std}} {% endif %}
+    {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
