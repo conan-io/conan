@@ -6,7 +6,7 @@ from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies, get_multiple_remotes
+    _help_build_policies, get_multiple_remotes, add_lockfile_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -21,8 +21,8 @@ def create(conan_api, parser, *args):
     Create a package
     """
     common_args_export(parser)
-    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"),
-                                  lockfile=False)
+    add_lockfile_args(parser)
+    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
     parser.add_argument("--require-override", action="append",
@@ -37,7 +37,7 @@ def create(conan_api, parser, *args):
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
