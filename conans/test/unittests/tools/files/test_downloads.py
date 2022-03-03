@@ -5,12 +5,11 @@ import requests
 from bottle import HTTPError, auth_basic, static_file
 
 from conan.tools.files import ftp_download, download, get
-from conans.client.tools import chdir
 from conans.errors import ConanException, AuthenticationException
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import StoppableThreadBottle, redirect_output
-from conans.util.files import save, load
+from conans.util.files import save, load, chdir
 
 
 @pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "

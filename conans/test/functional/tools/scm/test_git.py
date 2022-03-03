@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir, save_files
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicCapture:
     """ base Git capture operations. They do not raise (unless errors)
@@ -88,6 +89,7 @@ class TestGitBasicCapture:
             assert "pkg/0.1: DIRTY: False" in c.out
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitCaptureSCM:
     """ test the get_url_and_commit() high level method intended for SCM capturing
@@ -162,6 +164,7 @@ class TestGitCaptureSCM:
             assert "pkg/0.1: SCM URL: {}".format(url) in c.out
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicClone:
     """ base Git cloning operations
@@ -209,6 +212,7 @@ class TestGitBasicClone:
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlow:
     """ Build the full new SCM approach:
@@ -305,6 +309,7 @@ class TestGitBasicSCMFlow:
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlowSubfolder:
     """ Same as above, but conanfile.py put in "conan" subfolder in the root
@@ -373,6 +378,7 @@ class TestGitBasicSCMFlowSubfolder:
         assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
 
 
+@pytest.mark.tool("git")
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitMonorepoSCMFlow:
     """ Build the full new SCM approach:

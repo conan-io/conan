@@ -42,8 +42,7 @@ from conans.test.conftest import default_profiles
 from conans.test.utils.artifactory import ArtifactoryServer
 from conans.test.utils.mocks import RedirectedInputStream
 from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
-    create_remote_svn_repo
+from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
@@ -846,13 +845,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_svn_repo(self, subpath, files=None, repo_url=None):
-        if not repo_url:
-            repo_url = create_remote_svn_repo(temp_folder())
-        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                           rel_project_path=subpath, delete_checkout=False)
-        return rev
 
 
 def get_free_port():

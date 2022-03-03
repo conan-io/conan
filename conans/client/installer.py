@@ -79,7 +79,6 @@ class _PackageBuilder(object):
 
     def _prepare_sources(self, conanfile, pref, recipe_layout):
         export_source_folder = recipe_layout.export_sources()
-        scm_sources_folder = recipe_layout.scm_sources()
         conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
@@ -90,7 +89,7 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        config_source(export_source_folder, scm_sources_folder, conanfile,
+        config_source(export_source_folder, conanfile,
                       conanfile_path, pref.ref, self._hook_manager, self._cache)
 
     @staticmethod
