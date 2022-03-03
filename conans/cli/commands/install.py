@@ -1,10 +1,10 @@
 import os
 
-from conans.cli.commands import make_abs_path
-from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
+from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes
+    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args
+from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
@@ -44,7 +44,7 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
-def graph_compute(args, conan_api, strict_lockfile=True):
+def graph_compute(args, conan_api, strict=False):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -55,7 +55,7 @@ def graph_compute(args, conan_api, strict_lockfile=True):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = get_multiple_remotes(conan_api, args.remote)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=strict_lockfile)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=strict)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
@@ -116,6 +116,7 @@ def common_graph_args(subparser):
                            help='Provide a package reference instead of a conanfile')
 
     _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
+    add_lockfile_args(subparser)
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='The provided reference is a build-require')
     subparser.add_argument("--require-override", action="append",
@@ -142,8 +143,8 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("-sf", "--source-folder", help='The root source folder')
-
+    parser.add_argument("--deploy", action=Extender,
+                        help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -157,24 +158,25 @@ def install(conan_api, parser, *args):
         source_folder = output_folder = os.path.dirname(path)
     else:
         source_folder = output_folder = cwd
-    if args.source_folder:
-        source_folder = make_abs_path(args.source_folder, cwd)
     if args.output_folder:
         output_folder = make_abs_path(args.output_folder, cwd)
-    deploy = True if args.reference else False
 
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
-    out.highlight("\n-------- Finalizing install (generators) ----------")
+
+    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
+                                       output_folder=output_folder,
                                        source_folder=source_folder,
-                                       output_folder=output_folder)
+                                       deploy=args.deploy
+                                       )
+
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")

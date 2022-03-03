@@ -192,6 +192,7 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("A_VAR", "Valuewith=equal")
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Windows profiles")
     def test_install_profile_settings(self):
         # Create a profile and use it
         profile_settings = OrderedDict([("compiler", "Visual Studio"),
@@ -201,9 +202,6 @@ class ProfileTest(unittest.TestCase):
 
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
-
-        tools.replace_in_file(self.client.cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . --user=lasote --channel=stable")

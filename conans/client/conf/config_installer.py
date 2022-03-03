@@ -4,15 +4,11 @@ import shutil
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
-
 from conans.cli.output import ConanOutput
-from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.client.tools import Git
-from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, load
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir
+from conans.util.runners import detect_runner
 
 
 def _hide_password(resource):
@@ -24,12 +20,6 @@ def _hide_password(resource):
     """
     password = urlparse(resource).password
     return resource.replace(password, "<hidden>") if password else resource
-
-
-def _handle_remotes(cache, remote_file):
-    # FIXME: Should we encourage to pass the remotes in json?
-    remotes, _ = load_registry_txt(load(remote_file))
-    cache.remotes_registry.save_remotes(remotes)
 
 
 @contextmanager
@@ -49,14 +39,12 @@ def _process_git_repo(config, cache):
     output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
     with tmp_config_install_folder(cache) as tmp_folder:
-        with tools.chdir(tmp_folder):
-            try:
-                args = config.args or ""
-                git = Git(verify_ssl=config.verify_ssl)
-                git.clone(config.uri, args=args)
-                output.info("Repo cloned!")
-            except Exception as e:
-                raise ConanException("Can't clone repo: %s" % str(e))
+        with chdir(tmp_folder):
+            args = config.args or ""
+            ret, out = detect_runner('git clone "{}" . {}'.format(config.uri, args))
+            if ret != 0:
+                raise ConanException("Can't clone repo: {}".format(out))
+            output.info("Repo cloned!")
         _process_folder(config, tmp_folder, cache)
 
 
@@ -96,31 +84,23 @@ def _process_file(directory, filename, config, cache, folder):
     elif filename == "conan.conf":
         output.info("Processing conan.conf")
         _handle_conan_conf(cache.config, os.path.join(directory, filename))
-    elif filename == "remotes.txt":
-        output.info("Defining remotes from remotes.txt")
-        _handle_remotes(cache, os.path.join(directory, filename))
     elif filename == "remotes.json":
-        # Fix for Conan 2.0
-        raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
+        output.info("Installing remotes.json")
+        _filecopy(directory, filename, cache.cache_folder)
     else:
-        # This is ugly, should be removed in Conan 2.0
-        if filename in ("README.md", "LICENSE.txt"):
-            output.info("Skip %s" % filename)
+        relpath = os.path.relpath(directory, folder)
+        if config.target_folder:
+            target_folder = os.path.join(cache.cache_folder, config.target_folder, relpath)
         else:
-            relpath = os.path.relpath(directory, folder)
-            if config.target_folder:
-                target_folder = os.path.join(cache.cache_folder, config.target_folder,
-                                             relpath)
-            else:
-                target_folder = os.path.join(cache.cache_folder, relpath)
+            target_folder = os.path.join(cache.cache_folder, relpath)
 
-            if os.path.exists(target_folder):
-                if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
-                    remove(target_folder)
+        if os.path.exists(target_folder):
+            if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
+                remove(target_folder)
 
-            mkdir(target_folder)
-            output.info("Copying file %s to %s" % (filename, target_folder))
-            _filecopy(directory, filename, target_folder)
+        mkdir(target_folder)
+        output.info("Copying file %s to %s" % (filename, target_folder))
+        _filecopy(directory, filename, target_folder)
 
 
 def _process_folder(config, folder, cache):

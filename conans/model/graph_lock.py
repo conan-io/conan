@@ -143,6 +143,9 @@ class Lockfile(object):
                             r.channel == ref.channel:
                         require.ref = r
                         break
+                else:
+                    if self.strict:
+                        raise ConanException(f"Requirement '{ref}' not in lockfile")
             else:
                 if ref not in locked_refs and self.strict:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")

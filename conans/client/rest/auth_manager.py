@@ -71,7 +71,7 @@ class ConanApiAuthManager(object):
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
-            ui = UserInput(self._cache.new_config["core:non_interactive"])
+            ui = UserInput(self._cache.new_config.get("core:non_interactive", check_type=bool))
             input_user, input_password = ui.request_login(remote.name, user)
             try:
                 self._authenticate(remote, input_user, input_password)

@@ -115,7 +115,7 @@ def test_update_not_date():
 def test_reuse():
     client = TestClient(default_server_user=True)
     conanfile = GenConanfile("hello0", "1.0")\
-        .with_exports("*")\
+        .with_exports_sources("*")\
         .with_import("from conan.tools.files import copy")\
         .with_package("copy(self, '*', self.source_folder, self.package_folder)")
     client.save({"conanfile.py": conanfile,

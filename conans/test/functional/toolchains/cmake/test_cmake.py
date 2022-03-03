@@ -97,12 +97,12 @@ class Base(unittest.TestCase):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.tools import save
+            from conan.tools.files import save
             import os
             class Pkg(ConanFile):
                 settings = "build_type"
                 def package(self):
-                    save(os.path.join(self.package_folder, "include/hello.h"),
+                    save(self, os.path.join(self.package_folder, "include/hello.h"),
                          '''#include <iostream>
                          void hello(){std::cout<< "Hello: %s" <<std::endl;}'''
                          % self.settings.build_type)

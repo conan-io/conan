@@ -29,7 +29,7 @@ def lock_create(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--reference")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=False)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
     if lockfile is None or args.clean:
         lockfile = Lockfile(deps_graph)

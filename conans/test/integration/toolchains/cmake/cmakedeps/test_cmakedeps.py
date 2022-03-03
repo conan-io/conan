@@ -144,6 +144,9 @@ def test_cpp_info_component_error_aggregate():
             settings = "os", "compiler", "arch", "build_type"
             generators = "VirtualRunEnv", "CMakeDeps"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def test(self):
                 pass
         """)

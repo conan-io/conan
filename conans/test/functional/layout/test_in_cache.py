@@ -13,8 +13,9 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 @pytest.fixture
 def conanfile():
-    conan_file = str(GenConanfile().with_import("from conans import tools")
-                     .with_import("import os").with_import("from conan.tools.files import copy").
+    conan_file = str(GenConanfile()
+                     .with_import("import os")
+                     .with_import("from conan.tools.files import copy, save").
                      with_require("base/1.0"))
 
     conan_file += """
@@ -27,15 +28,15 @@ def conanfile():
     def source(self):
         self.output.warning("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
-        tools.save("my_sources/source.h", "foo")
+        save(self, "source.h", "foo")
 
     def build(self):
         self.output.warning("Build folder: {}".format(self.build_folder))
-        tools.save("build.lib", "bar")
+        save(self, "build.lib", "bar")
 
     def package(self):
         self.output.warning("Package folder: {}".format(self.package_folder))
-        tools.save(os.path.join(self.package_folder, "LICENSE"), "bar")
+        save(self, os.path.join(self.package_folder, "LICENSE"), "bar")
         copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
         copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"))
 
@@ -59,6 +60,10 @@ def test_create_test_package_no_layout():
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 assert os.path.exists("conan_toolchain.cmake")
                 self.output.warning("hey! building")
@@ -85,6 +90,9 @@ def test_create_test_package_with_layout():
 
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def generate(self):
                 deps = CMakeDeps(self)
@@ -230,13 +238,13 @@ def test_git_clone_with_source_layout():
            import os
            from conan import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"
 
                def source(self):
-                   self.run('git clone "{}" src')
+                   self.run('git clone "{}" .')
        """).format(repo.replace("\\", "/"))
 
     client.save({"conanfile.py": conanfile,

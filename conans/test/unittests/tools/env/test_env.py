@@ -8,11 +8,10 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 def test_compose():

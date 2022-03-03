@@ -32,7 +32,6 @@ class GenConanfile(object):
         self._package_files_env = None
         self._package_files_link = None
         self._build_messages = None
-        self._scm = None
         self._requires = None
         self._requirements = None
         self._build_requires = None
@@ -72,10 +71,6 @@ class GenConanfile(object):
 
     def with_revision_mode(self, revision_mode):
         self._revision_mode = revision_mode
-        return self
-
-    def with_scm(self, scm):
-        self._scm = scm
         return self
 
     def with_generator(self, generator):
@@ -188,7 +183,7 @@ class GenConanfile(object):
         self._package_files_link = self._package_files_link or {}
         self._package_files_env = self._package_files_env or {}
         self.with_import("import os")
-        self.with_import("from conans import tools")
+        self.with_import("from conan.tools.files import save, chdir")
         if contents:
             self._package_files[file_name] = contents
         if link:
@@ -263,11 +258,6 @@ class GenConanfile(object):
     @property
     def _deprecated_render(self):
         return "deprecated = {}".format(self._deprecated)
-
-    @property
-    def _scm_render(self):
-        line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
-        return "scm = {%s}" % line
 
     @property
     def _generators_render(self):
@@ -366,16 +356,16 @@ class GenConanfile(object):
         if self._package_lines:
             lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
-            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
+            lines = ['        save(self, os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
                      for key, value in self._package_files.items()]
 
         if self._package_files_env:
-            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
+            lines.extend(['        save(self, os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
         if self._package_files_link:
-            lines.extend(['        with tools.chdir(os.path.dirname('
+            lines.extend(['        with chdir(self, os.path.dirname('
                           'os.path.join(self.package_folder, "{}"))):\n'
                           '            os.symlink(os.path.basename("{}"), '
                           'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
@@ -461,7 +451,7 @@ class GenConanfile(object):
 
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "tool_requires", "test_requires", "requirements", "scm",
+                       "tool_requires", "test_requires", "requirements",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines"
                        ):

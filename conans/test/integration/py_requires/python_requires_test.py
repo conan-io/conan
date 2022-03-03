@@ -53,7 +53,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("install --reference=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
-        client.run("download pkg/0.1@user/testing")
+        client.run("download pkg/0.1@user/testing#latest:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_dot(self):
@@ -279,7 +279,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("install --reference=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
-        client.run("download pkg/0.1@user/testing")
+        client.run("download pkg/0.1@user/testing#*:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_class_members(self):
@@ -585,15 +585,15 @@ class PyRequiresExtendTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.tools import load
+            from conan.tools.files import load
             import os
 
             class Source(object):
                 def set_name(self):
-                    self.name = load("name.txt")
+                    self.name = load(self, "name.txt")
 
                 def set_version(self):
-                    self.version = load("version.txt")
+                    self.version = load(self, "version.txt")
 
             class MyConanfileBase(ConanFile):
                 pass

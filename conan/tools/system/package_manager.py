@@ -14,10 +14,10 @@ class _SystemPackageManagerTool(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._active_tool = self._conanfile.conf["tools.system.package_manager:tool"] or self.get_default_tool()
-        self._sudo = self._conanfile.conf["tools.system.package_manager:sudo"]
-        self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
-        self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or self.mode_check
+        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool", default=self.get_default_tool())
+        self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
+        self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
+        self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
         self._arch = self._conanfile.settings_build.get_safe('arch') \
             if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings.get_safe('arch')
         self._arch_names = {}
@@ -28,7 +28,7 @@ class _SystemPackageManagerTool(object):
         if os_name in ["Linux", "FreeBSD"]:
             import distro
             os_name = distro.id() or os_name
-        elif os_name == "Windows" and self._conanfile.conf["tools.microsoft.bash:subsystem"] == "msys2":
+        elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",

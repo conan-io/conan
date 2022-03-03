@@ -3,13 +3,12 @@ import tarfile
 import unittest
 import zipfile
 
-from conans.client.tools import untargz, unzip
-from conans.client.tools.files import chdir, save
+from conan.tools.files.files import untargz, unzip
 from conans.errors import ConanException
-from conans.test.utils.mocks import RedirectedTestOutput
+from conans.test.utils.mocks import RedirectedTestOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import redirect_output
-from conans.util.files import gzopen_without_timestamps, gather_files
+from conans.util.files import gzopen_without_timestamps, gather_files, chdir, save
 
 
 class ZipExtractPlainTest(unittest.TestCase):
@@ -48,7 +47,7 @@ class ZipExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         output = RedirectedTestOutput()
         with redirect_output(output):
-            unzip(zip_file, destination=extract_folder, strip_root=False)
+            unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=False)
         self.assertNotIn("ERROR: Error extract", output)
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1")))
@@ -60,7 +59,7 @@ class ZipExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         output = RedirectedTestOutput()
         with redirect_output(output):
-            unzip(zip_file, destination=extract_folder, strip_root=True)
+            unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
         self.assertNotIn("ERROR: Error extract", output)
         self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))
@@ -85,7 +84,7 @@ class ZipExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         with self.assertRaisesRegex(ConanException, "The zip file contains more than 1 folder "
                                                          "in the root"):
-            unzip(zip_file, destination=extract_folder, strip_root=True)
+            unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
 
     def test_invalid_flat_single_file(self):
         tmp_folder = temp_folder()
@@ -99,7 +98,7 @@ class ZipExtractPlainTest(unittest.TestCase):
         # Extract without the subfolder
         extract_folder = temp_folder()
         with self.assertRaisesRegex(ConanException, "The zip file contains a file in the root"):
-            unzip(zip_file, destination=extract_folder, strip_root=True)
+            unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
 
 
 class TarExtractPlainTest(unittest.TestCase):
@@ -214,4 +213,4 @@ class TarExtractPlainTest(unittest.TestCase):
         # Extract without the subfolder
         extract_folder = temp_folder()
         with self.assertRaisesRegex(ConanException, "The tgz file contains a file in the root"):
-            unzip(tgz_file, destination=extract_folder, strip_root=True)
+            unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)

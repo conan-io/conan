@@ -1,11 +1,12 @@
 import os
+import shutil
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies, get_multiple_remotes
+    _help_build_policies, get_multiple_remotes, add_lockfile_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -20,8 +21,8 @@ def create(conan_api, parser, *args):
     Create a package
     """
     common_args_export(parser)
-    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"),
-                                  lockfile=False)
+    add_lockfile_args(parser)
+    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
     parser.add_argument("--require-override", action="append",
@@ -36,7 +37,7 @@ def create(conan_api, parser, *args):
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -100,29 +101,26 @@ def create(conan_api, parser, *args):
 
     if test_conanfile_path:
         out.highlight("\n-------- Testing the package ----------")
-
+        if len(deps_graph.nodes) == 1:
+            raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
+                                 "use `self.tested_reference_str` to require the "
+                                 "package being created.".format(test_conanfile_path))
         conanfile_folder = os.path.dirname(test_conanfile_path)
+        output_folder = os.path.join(conanfile_folder, "test_output")
+        shutil.rmtree(output_folder, ignore_errors=True)
+        mkdir(output_folder)
         conan_api.install.install_consumer(deps_graph=deps_graph,
                                            source_folder=conanfile_folder,
-                                           output_folder=conanfile_folder)
+                                           output_folder=output_folder)
         conanfile = deps_graph.root.conanfile
-
-        if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_build(conanfile_folder)
-            conanfile.folders.set_base_source(conanfile_folder)
-            conanfile.folders.set_base_package(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
-        else:
-            conanfile.folders.set_base_build(conanfile_folder)
-            conanfile.folders.set_base_source(conanfile_folder)
-            conanfile.folders.set_base_package(conanfile_folder)
-            conanfile.folders.set_base_generators(conanfile_folder)
+        conanfile.folders.set_base_build(output_folder)
+        conanfile.folders.set_base_source(conanfile_folder)
+        conanfile.folders.set_base_package(output_folder)
+        conanfile.folders.set_base_generators(output_folder)
 
         out.highlight("\n-------- Testing the package: Building ----------")
-        mkdir(conanfile.build_folder)
-        with chdir(conanfile.build_folder):
-            app = ConanApp(conan_api.cache_folder)
-            run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
+        app = ConanApp(conan_api.cache_folder)
+        run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
         out.highlight("\n-------- Testing the package: Running test() ----------")
         conanfile.output.highlight("Running test()")

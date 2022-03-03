@@ -3,7 +3,7 @@ import tempfile
 from io import StringIO
 
 from conans.model.version import Version
-
+from conans.util.files import rmdir
 
 GCC = "gcc"
 LLVM_GCC = "llvm-gcc"  # GCC frontend with LLVM backend
@@ -237,5 +237,7 @@ def detect_compiler_id(executable, runner=None):
                 return compiler
         return UNKNOWN_COMPILER
     finally:
-        os.unlink(tmpname)
-        os.unlink(cmd)
+        try:
+            rmdir(tmpdir)
+        except OSError:
+            pass

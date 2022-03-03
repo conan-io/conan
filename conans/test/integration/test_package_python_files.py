@@ -45,7 +45,7 @@ def test_package_python_files():
 
     client.run("upload * -r=default --confirm")
     client.run("remove * -f")
-    client.run("download pkg/0.1@")
+    client.run("download pkg/0.1#*:* -r default")
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))

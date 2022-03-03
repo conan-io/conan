@@ -18,19 +18,21 @@ def to_apple_arch(arch, default=None):
             'armv7k': 'armv7k'}.get(arch, default)
 
 
-def get_apple_sdk_name(conanfile):
+def get_apple_sdk_fullname(conanfile):
     """
-    Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+    Returns the 'os.sdk' + 'os.sdk_version ' value. Every user should specify it because
     there could be several ones depending on the OS architecture.
 
     Note: In case of MacOS it'll be the same for all the architectures.
     """
     os_ = conanfile.settings.get_safe('os')
     os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_sdk_version = conanfile.settings.get_safe('os.sdk_version') or ""
+
     if os_sdk:
-        return os_sdk
+        return "{}{}".format(os_sdk, os_sdk_version)
     elif os_ == "Macos":  # it has only a single value for all the architectures
-        return "macosx"
+        return "{}{}".format("macosx", os_sdk_version)
     elif is_apple_os(os_):
         raise ConanException("Please, specify a suitable value for os.sdk.")
 
@@ -41,16 +43,24 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
         return ''
 
     # FIXME: This guess seems wrong, nothing has to be guessed, but explicit
-    flag = {'macosx': '-mmacosx-version-min',
-            'iphoneos': '-mios-version-min',
-            'iphonesimulator': '-mios-simulator-version-min',
-            'watchos': '-mwatchos-version-min',
-            'watchsimulator': '-mwatchos-simulator-version-min',
-            'appletvos': '-mtvos-version-min',
-            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+    flag = ''
+    if 'macosx' in os_sdk:
+        flag = '-mmacosx-version-min'
+    elif 'iphoneos' in os_sdk:
+        flag = '-mios-version-min'
+    elif 'iphonesimulator' in os_sdk:
+        flag = '-mios-simulator-version-min'
+    elif 'watchos' in os_sdk:
+        flag = '-mwatchos-version-min'
+    elif 'watchsimulator' in os_sdk:
+        flag = '-mwatchos-simulator-version-min'
+    elif 'appletvos' in os_sdk:
+        flag = '-mtvos-version-min'
+    elif 'appletvsimulator' in os_sdk:
+        flag = '-mtvos-simulator-version-min'
+
     if subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
         flag = '-mios-version-min'
-    if not flag:
-        return ''
-    return "%s=%s" % (flag, os_version)
+
+    return f"{flag}={os_version}" if flag else ''

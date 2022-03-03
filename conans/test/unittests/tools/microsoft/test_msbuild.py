@@ -9,7 +9,7 @@ from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
 from conans.test.utils.test_files import temp_folder
-from conans.tools import load
+from conans.util.files import load
 
 
 def test_msbuild_cpu_count():
@@ -80,7 +80,7 @@ def test_msbuild_standard():
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = Settings({"build_type": ["Release"],
                                    "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
@@ -110,7 +110,7 @@ def test_resource_compile():
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings_build = settings
@@ -151,8 +151,8 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.intel:installation_path", "my/intel/oneapi/path")
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"

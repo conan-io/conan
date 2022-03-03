@@ -49,9 +49,9 @@ class FileUploader(object):
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
                headers=None, display_name=None):
-        retry = retry if retry is not None else self._config.get("core.upload:retry", int, 1)
+        retry = retry if retry is not None else self._config.get("core.upload:retry", default=1, check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
-            self._config.get("core.upload:retry_wait", int, 5)
+            self._config.get("core.upload:retry_wait", default=5, check_type=int)
 
         # Send always the header with the Sha1
         headers = copy(headers) or {}

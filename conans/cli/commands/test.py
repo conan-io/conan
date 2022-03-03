@@ -4,14 +4,14 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    get_multiple_remotes
+    get_multiple_remotes, add_lockfile_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import conanfile_exception_formatter
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import chdir, mkdir
+from conans.util.files import chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -24,6 +24,7 @@ def test(conan_api, parser, *args):
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
     _add_common_install_arguments(parser, build_help=False)  # Package must exist
+    add_lockfile_args(parser)
     parser.add_argument("--require-override", action="append",
                         help="Define a requirement override")
     args = parser.parse_args(*args)
@@ -32,7 +33,7 @@ def test(conan_api, parser, *args):
     ref = RecipeReference.loads(args.reference)
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -86,10 +87,8 @@ def test(conan_api, parser, *args):
     conanfile.folders.set_base_generators(conanfile_folder)
 
     out.highlight("\n-------- Testing the package: Building ----------")
-    mkdir(conanfile.build_folder)
-    with chdir(conanfile.build_folder):
-        app = ConanApp(conan_api.cache_folder)
-        run_build_method(conanfile, app.hook_manager, conanfile_path=path)
+    app = ConanApp(conan_api.cache_folder)
+    run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     out.highlight("\n-------- Testing the package: Running test() ----------")
     conanfile.output.highlight("Running test()")
