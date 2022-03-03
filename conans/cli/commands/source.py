@@ -6,7 +6,7 @@ from conans.cli.conan_app import ConanApp
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
-from conans.client.source import config_source_local
+from conans.client.source import run_source_method
 from conans.errors import conanfile_exception_formatter
 from conans.model.options import Options
 
@@ -55,4 +55,4 @@ def source(conan_api, parser, *args):
     conanfile.folders.set_base_build(None)
     conanfile.folders.set_base_package(None)
 
-    config_source_local(conanfile, cwd, app.hook_manager)
+    run_source_method(conanfile, app.hook_manager, coanfile_path=path)

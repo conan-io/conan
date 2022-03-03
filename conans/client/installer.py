@@ -90,7 +90,7 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_package(None)
 
         config_source(export_source_folder, conanfile,
-                      conanfile_path, pref.ref, self._hook_manager, self._cache)
+                      conanfile_path, pref.ref, self._hook_manager)
 
     @staticmethod
     def _copy_sources(conanfile, source_folder, build_folder):
