@@ -102,3 +102,25 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
     t.run("install . -pr:h host_prof -pr:b build_prof")
     content = t.load(MesonToolchain.cross_filename)
     assert expected_args in content
+
+
+def test_correct_quotes():
+    profile = textwrap.dedent("""
+       [settings]
+       os=Windows
+       arch=x86_64
+       compiler=gcc
+       compiler.version=9
+       compiler.cppstd=17
+       compiler.libcxx=libstdc++11
+       build_type=Release
+       """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+
+    t.run("install . -pr=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "cpp_std = 'c++17'" in content
+    assert "backend = 'ninja'" in content
+    assert "buildtype = 'release'" in content
