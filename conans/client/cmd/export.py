@@ -1,8 +1,6 @@
 import os
 import shutil
 
-import yaml
-
 from conan.tools.files import copy
 from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ScopedOutput
@@ -10,14 +8,12 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, DATA_YML
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
-    merge_directories, clean_dirty, chdir
+from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 from conans.util.log import logger
 from conans.util.runners import check_output_runner
 
 
-def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,
-               ignore_dirty=False):
+def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
