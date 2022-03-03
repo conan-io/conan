@@ -2,11 +2,10 @@ import os
 import platform
 import textwrap
 import uuid
+from shutil import which
 
 import pytest
 
-
-from conans.client.tools import which
 
 """
 To override these locations with your own in your dev machine:
@@ -111,8 +110,15 @@ tools_locations = {
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
+    'premake': {
+        "exe": "premake5",
+        "default": "5.0.0",
+        "5.0.0": {
+            "path": {'Linux': '/usr/local/bin/premake5'}
+        }
+    },
     'premake': {},
-    'apt_get': { "exe": "apt-get"},
+    'apt_get': {"exe": "apt-get"},
     'brew': {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {

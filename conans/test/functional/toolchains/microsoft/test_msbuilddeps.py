@@ -728,7 +728,7 @@ def check_build_vs_project_with_a(vs_version):
         from conan.tools.files import copy
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
-            exports = '*'
+            exports_sources = '*'
             requires = "updep.pkg.team/0.1@"
             generators = "CMakeToolchain"
 
@@ -872,7 +872,7 @@ def test_build_requires():
     client = TestClient()
     package = "copy(self, '*', os.path.join(self.build_folder, str(self.settings.arch))," \
               " os.path.join(self.package_folder, 'bin'))"
-    dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)\
+    dep = GenConanfile().with_exports_sources("*").with_settings("arch").with_package(package)\
         .with_import("import os").with_import("from conan.tools.files import copy")
     consumer = textwrap.dedent("""
         from conan import ConanFile

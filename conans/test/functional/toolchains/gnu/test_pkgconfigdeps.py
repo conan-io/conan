@@ -100,7 +100,7 @@ def test_empty_dirs():
 def test_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
@@ -108,7 +108,7 @@ def test_system_libs():
             version = "0.1"
 
             def package(self):
-                save(os.path.join(self.package_folder, "lib", "file"), "")
+                save(self, os.path.join(self.package_folder, "lib", "file"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["mylib1", "mylib2"]
@@ -127,13 +127,13 @@ def test_multiple_include():
     # https://github.com/conan-io/conan/issues/7056
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
             def package(self):
                 for p in ["inc1", "inc2", "inc3/foo", "lib1", "lib2"]:
-                    save(os.path.join(self.package_folder, p, "file"), "")
+                    save(self, os.path.join(self.package_folder, p, "file"), "")
 
             def package_info(self):
                 self.cpp_info.includedirs = ["inc1", "inc2", "inc3/foo"]
@@ -158,15 +158,15 @@ def test_custom_content():
     # https://github.com/conan-io/conan/issues/7661
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
         import textwrap
 
         class PkgConfigConan(ConanFile):
 
             def package(self):
-                save(os.path.join(self.package_folder, "include" ,"file"), "")
-                save(os.path.join(self.package_folder, "lib" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "include" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "lib" ,"file"), "")
 
             def package_info(self):
                 custom_content = textwrap.dedent(\"""
@@ -191,18 +191,17 @@ def test_custom_content():
     assert "Name: pkg" in pc_content
 
 
-def test_custom_content_components():
+def test_custom_content_and_version_components():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
-        import os
-        import textwrap
 
         class PkgConfigConan(ConanFile):
 
             def package_info(self):
                 self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                      "componentdir=${prefix}/mydir")
+                self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                     "19.8.199")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -210,6 +209,7 @@ def test_custom_content_components():
     client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
+    assert "Version: 19.8.199" in pc_content
 
 
 def test_pkg_with_public_deps_and_component_requires():
@@ -418,7 +418,7 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
-    assert "Description: Conan component: compo1" in pc_content
+    assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")

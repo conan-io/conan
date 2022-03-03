@@ -11,7 +11,7 @@ from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import conanfile_exception_formatter
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import chdir, mkdir
+from conans.util.files import chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -64,8 +64,7 @@ def test(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")
-    conan_api.install.install_binaries(deps_graph=deps_graph,
-                                       remotes=remotes, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
@@ -87,10 +86,8 @@ def test(conan_api, parser, *args):
     conanfile.folders.set_base_generators(conanfile_folder)
 
     out.highlight("\n-------- Testing the package: Building ----------")
-    mkdir(conanfile.build_folder)
-    with chdir(conanfile.build_folder):
-        app = ConanApp(conan_api.cache_folder)
-        run_build_method(conanfile, app.hook_manager, conanfile_path=path)
+    app = ConanApp(conan_api.cache_folder)
+    run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     out.highlight("\n-------- Testing the package: Running test() ----------")
     conanfile.output.highlight("Running test()")

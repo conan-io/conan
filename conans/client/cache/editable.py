@@ -34,12 +34,11 @@ class EditablePackages:
         _tmp.revision = None
         return self._edited_refs.get(_tmp)
 
-    def add(self, ref, path, source_folder=None, output_folder=None):
+    def add(self, ref, path, output_folder=None):
         assert isinstance(ref, RecipeReference)
         _tmp = copy.copy(ref)
         _tmp.revision = None
-        self._edited_refs[_tmp] = {"path": path, "source_folder": source_folder,
-                                   "output_folder": output_folder}
+        self._edited_refs[ref] = {"path": path, "output_folder": output_folder}
         self.save()
 
     def remove(self, ref):

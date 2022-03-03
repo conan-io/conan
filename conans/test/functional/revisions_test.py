@@ -83,7 +83,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.create(project,
                          conanfile=GenConanfile().with_requirement(lib2).with_requirement(lib3),
                          assert_error=True)
-        self.assertIn("ERROR: version conflict", self.c_v2.out)
+        self.assertIn("ERROR: Version conflict", self.c_v2.out)
         # self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
     def test_alias_to_a_rrev(self):

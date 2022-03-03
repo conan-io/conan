@@ -14,14 +14,13 @@ def get_scm_data(conanfile):
         return None
 
 
-def _get_dict_value(data, key, expected_type, default=None, disallowed_type=None):
+def _get_dict_value(data, key, expected_type, default=None):
     if key in data:
         r = data.get(key)
         if r is None:  # None is always a valid value
             return r
-        if not isinstance(r, expected_type) or (disallowed_type and isinstance(r, disallowed_type)):
-            type_str = "' or '".join([it.__name__ for it in expected_type]) \
-                if isinstance(expected_type, tuple) else expected_type.__name__
+        if not isinstance(r, expected_type):
+            type_str = expected_type.__name__
             raise ConanException("SCM value for '{}' must be of type '{}'"
                                  " (found '{}')".format(key, type_str, type(r).__name__))
         return r
@@ -36,8 +35,7 @@ class SCMData(object):
         data = getattr(conanfile, "scm")
         self.type = _get_dict_value(data, "type", str)
         self.url = _get_dict_value(data, "url", str)
-        self.revision = _get_dict_value(data, "revision", (str, int),
-                                        disallowed_type=bool)  # bool is subclass of integer
+        self.revision = _get_dict_value(data, "revision", str)
         self.verify_ssl = _get_dict_value(data, "verify_ssl", bool, SCMData.VERIFY_SSL_DEFAULT)
         self.username = _get_dict_value(data, "username", str)
         self.password = _get_dict_value(data, "password", str)

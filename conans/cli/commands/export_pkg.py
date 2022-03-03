@@ -50,11 +50,8 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                                   lockfile=lockfile,
                                   ignore_dirty=args.ignore_dirty)
 
-    # TODO: loading virtual->(ref from cache)
-    root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
-                                               lockfile, None, create_reference=ref,
-                                               remotes=None,
-                                               update=None)
+    # TODO: Maybe we want to be able to export-pkg it as --build-require
+    root_node = conan_api.graph.load_root_virtual_conanfile(ref, profile_host)
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,

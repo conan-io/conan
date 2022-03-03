@@ -5,7 +5,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.tools import save
+from conans.util.files import save
 
 """
 When we use the VirtualRunEnv and VirtualBuildEnd generators, we take information from the

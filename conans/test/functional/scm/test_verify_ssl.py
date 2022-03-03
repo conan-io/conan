@@ -17,7 +17,7 @@ def test_verify_ssl_none_string():
 
         class Recipe(ConanFile):
             scm = {"type": "git", "url": "https://github.com/repo/library.git",
-                    "revision": "123456", "verify_ssl": 'None' }
+                    "revision": "auto", "verify_ssl": 'None' }
     """)})
 
     client.run('export . --name=name --version=version', assert_error=True)

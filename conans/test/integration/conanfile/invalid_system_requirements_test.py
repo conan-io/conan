@@ -1,5 +1,6 @@
 import unittest
-from conans.client.command import ERROR_INVALID_SYSTEM_REQUIREMENTS
+
+from conans.cli.exit_codes import ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.test.utils.tools import TestClient
 
 

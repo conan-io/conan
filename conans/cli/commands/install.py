@@ -1,10 +1,10 @@
 import os
 
-from conans.cli.commands import make_abs_path
-from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
+from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile, get_multiple_remotes
+from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
@@ -57,8 +57,6 @@ def graph_compute(args, conan_api, strict=False):
     remotes = get_multiple_remotes(conan_api, args.remote)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=strict)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
-    root_ref = RecipeReference(name=args.name, version=args.version,
-                               user=args.user, channel=args.channel)
 
     out = ConanOutput()
     out.highlight("-------- Input profiles ----------")
@@ -67,17 +65,22 @@ def graph_compute(args, conan_api, strict=False):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    # decoupling the most complex part, which is loading the root_node, this is the point where
-    # the difference between "reference", "path", etc
     build_require = args.build_require if "build_require" in args else None
     require_override = args.require_override if "require_override" in args else None
-    root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
-                                               lockfile, root_ref,
-                                               create_reference=None,
-                                               is_build_require=build_require,
-                                               require_overrides=require_override,
-                                               remotes=remotes,
-                                               update=args.update)
+    if reference is None:
+        root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
+                                                                 name=args.name,
+                                                                 version=args.version,
+                                                                 user=args.user,
+                                                                 channel=args.channel,
+                                                                 lockfile=lockfile,
+                                                                 require_overrides=require_override,
+                                                                 remotes=remotes,
+                                                                 update=args.update)
+    else:
+        root_node = conan_api.graph.load_root_virtual_conanfile(reference, profile_host,
+                                                                is_build_require=build_require,
+                                                                require_overrides=require_override)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
@@ -139,10 +142,8 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("-sf", "--source-folder", help='The root source folder')
-    parser.add_argument("--no-imports", action='store_true', default=False,
-                        help='Install specified packages but avoid running imports')
-
+    parser.add_argument("--deploy", action=Extender,
+                        help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -156,11 +157,8 @@ def install(conan_api, parser, *args):
         source_folder = output_folder = os.path.dirname(path)
     else:
         source_folder = output_folder = cwd
-    if args.source_folder:
-        source_folder = make_abs_path(args.source_folder, cwd)
     if args.output_folder:
         output_folder = make_abs_path(args.output_folder, cwd)
-    deploy = True if args.reference else False
 
     remote = get_multiple_remotes(conan_api, args.remote)
 
@@ -168,16 +166,16 @@ def install(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
-    conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
-                                       remotes=remote, update=args.update)
-    out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
+
+    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
-                                       no_imports=args.no_imports,
-                                       deploy=deploy,
+                                       output_folder=output_folder,
                                        source_folder=source_folder,
-                                       output_folder=output_folder
+                                       deploy=args.deploy
                                        )
+
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")

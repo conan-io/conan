@@ -2,13 +2,14 @@ import os
 import tarfile
 from unittest import TestCase
 
-from conans.client.tools.files import save, unzip
+from conan.tools.files import unzip
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
-from conans.util.files import load, save_files
+from conans.util.files import load, save_files, save
 
 
 class XZTest(TestCase):
@@ -79,6 +80,6 @@ class Pkg(ConanFile):
             tar.add(file_path, "a_file.txt")
 
         dest_folder = temp_folder()
-        unzip(txz, dest_folder)
+        unzip(ConanFileMock(), txz, dest_folder)
         content = load(os.path.join(dest_folder, "a_file.txt"))
         self.assertEqual(content, "my content!")

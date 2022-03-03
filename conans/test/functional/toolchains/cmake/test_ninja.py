@@ -4,7 +4,7 @@ import platform
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
@@ -77,9 +77,10 @@ def test_locally_build_linux(build_type, shared, client):
     client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
-    client.run("install --reference=hello/1.0@ -g=deploy -of=mydeploy {}".format(settings))
-    ldpath = os.path.join(client.current_folder, "mydeploy", "hello", "lib")
-    client.run_command("LD_LIBRARY_PATH='{}' ./mydeploy/hello/myapp".format(ldpath))
+    client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
+    deploy_path = os.path.join(client.current_folder, "mydeploy", "host", "hello", "1.0",
+                               build_type, "x86_64")
+    client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/myapp")
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
 
@@ -110,8 +111,8 @@ def test_locally_build_msvc(build_type, shared, client):
     client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
-    client.run("install --reference=hello/1.0@ -g=deploy -of=mydeploy {}".format(settings))
-    client.run_command(r"mydeploy\hello\myapp.exe")
+    client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
+    client.run_command(fr"mydeploy\host\hello\1.0\{build_type}\x86_64\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 

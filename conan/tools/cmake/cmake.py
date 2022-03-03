@@ -1,11 +1,10 @@
 import os
 import platform
 
-from conan.tools import args_to_string
-from conan.tools.build import build_jobs
+from conan.tools.build import build_jobs, args_to_string
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.files import load_toolchain_args, chdir, mkdir
-
+from conan.tools.files import chdir, mkdir
+from conan.tools.files.files import load_toolchain_args
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
 from conans.errors import ConanException
 
@@ -20,7 +19,7 @@ def _cmake_cmd_line_args(conanfile, generator):
     if njobs and ("Makefiles" in generator or "Ninja" in generator) and "NMake" not in generator:
         args.append("-j{}".format(njobs))
 
-    maxcpucount = conanfile.conf["tools.microsoft.msbuild:max_cpu_count"]
+    maxcpucount = conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count", check_type=int)
     if maxcpucount and "Visual Studio" in generator:
         args.append("/m:{}".format(njobs))
 
@@ -52,7 +51,7 @@ class CMake(object):
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
-    def configure(self, build_script_folder=None):
+    def configure(self, variables=None, build_script_folder=None):
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -75,7 +74,10 @@ class CMake(object):
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
         if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
+            # It seems this doesn't work in the toolchain file, it needs to be here in command line
             arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
+        if variables:
+            arg_list.extend(["-D{}={}".format(k, v) for k, v in variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
         command = " ".join(arg_list)
@@ -83,7 +85,7 @@ class CMake(object):
         with chdir(self, build_folder):
             self._conanfile.run(command)
 
-    def _build(self, build_type=None, target=None):
+    def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
         bf = self._conanfile.build_folder
         is_multi = is_multi_configuration(self._generator)
         if build_type and not is_multi:
@@ -98,8 +100,12 @@ class CMake(object):
         args = []
         if target is not None:
             args = ["--target", target]
+        if cli_args:
+            args.extend(cli_args)
 
         cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator)
+        if build_tool_args:
+            cmd_line_args.extend(build_tool_args)
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
@@ -109,8 +115,8 @@ class CMake(object):
         self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 
-    def build(self, build_type=None, target=None):
-        self._build(build_type, target)
+    def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
+        self._build(build_type, target, cli_args, build_tool_args)
 
     def install(self, build_type=None):
         mkdir(self._conanfile, self._conanfile.package_folder)
@@ -129,12 +135,13 @@ class CMake(object):
         self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 
-    def test(self, build_type=None, target=None):
-        if self._conanfile.conf["tools.build:skip_test"]:
+    def test(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool):
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)
             target = "RUN_TESTS" if is_multi else "test"
 
         # CTest behavior controlled by CTEST_ env-vars should be directly defined in [buildenv]
-        self._build(build_type=build_type, target=target)
+        self._build(build_type=build_type, target=target, cli_args=cli_args,
+                    build_tool_args=build_tool_args)

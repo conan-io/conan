@@ -4,8 +4,8 @@ import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain import Block
 from conan import ConanFile
+from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -354,7 +354,7 @@ def test_libcxx_abi_flag():
     assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
 
     # but maybe the conf is better
-    c.conf["tools.gnu:define_libcxx11_abi"] = True
+    c.conf.define("tools.gnu:define_libcxx11_abi", True)
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content

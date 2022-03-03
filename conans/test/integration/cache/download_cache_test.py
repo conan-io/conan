@@ -5,7 +5,6 @@ import unittest
 from collections import Counter
 from threading import Thread
 
-import pytest
 from bottle import static_file, request
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
@@ -154,14 +153,16 @@ class DownloadCacheTest(unittest.TestCase):
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
-            from conan.tools.files import copy
+            from conan.tools.files import copy, load
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def package(self):
                     copy(self, "*", self.source_folder, self.package_folder)
-                def deploy(self):
-                    self.copy("*")
+                def package_info(self):
+                    content = load(self, os.path.join(self.package_folder, "header.h"))
+                    self.output.warning("CONTENT=>{}#".format(content))
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
@@ -180,7 +181,12 @@ class DownloadCacheTest(unittest.TestCase):
         client2.save({"conan.conf": conan_conf}, path=client2.cache.cache_folder)
 
         client2.run("install --reference=mypkg/0.1@user/testing")
-        self.assertEqual("header", client2.load("header.h"))
+
+        def get_value_from_output(output):
+            tmp = str(output).split("CONTENT=>")[1]
+            return tmp.split("#")[0]
+
+        self.assertEqual("header", get_value_from_output(client2.out))
 
         # modify non-revisioned pkg
         client.save({"conanfile.py": conanfile,
@@ -191,7 +197,8 @@ class DownloadCacheTest(unittest.TestCase):
 
         client2.run("remove * -f")
         client2.run("install --reference=mypkg/0.1@user/testing")
-        self.assertEqual("header2", client2.load("header.h"))
+
+        self.assertEqual("header2", get_value_from_output(client2.out))
 
 
 class CachedDownloaderUnitTest(unittest.TestCase):

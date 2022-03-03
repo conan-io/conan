@@ -635,7 +635,7 @@ class TestComponentsCMakeGenerators:
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "CMakeDeps", "CMakeToolchain"
-                exports_sources = "src/*"
+                exports_sources = "src/*", "include/*"
 
                 def build(self):
                     cmake = CMake(self)
@@ -643,7 +643,7 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    copy(self, "*.h", src=join(self.source_folder, "src"),
+                    copy(self, "*.h", src=join(self.source_folder, "include"),
                                       dst=join(self.package_folder, "include"))
                     copy(self, "*.lib", src=self.build_folder,
                                         dst=join(self.package_folder, "lib"), keep_path=False)
@@ -665,6 +665,7 @@ class TestComponentsCMakeGenerators:
             project(middle CXX)
             cmake_minimum_required(VERSION 3.1)
             add_library({name} {name}.cpp)
+            target_include_directories({name} PUBLIC ../include)
             """)
         client = TestClient()
         for name in ["expected", "variant"]:

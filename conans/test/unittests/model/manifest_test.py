@@ -62,3 +62,10 @@ def test_already_pyc_in_manifest():
     read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
     # Not included the pycs or pyo
     assert set(read_manifest.file_sums.keys()) == {"conanfile.py", "conanfile.pyc", "conanfile.pyo"}
+
+
+def test_special_chars():
+    tmp_dir = temp_folder()
+    save(os.path.join(tmp_dir, "conanmanifest.txt"), "1478122267\nsome: file.py: 123\n")
+    read_manifest = FileTreeManifest.load(tmp_dir)
+    assert read_manifest.file_sums["some: file.py"] == "123"

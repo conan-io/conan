@@ -14,30 +14,30 @@ def client():
     openssl = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             package_type = "shared-library"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
-                    save("bin/myopenssl.bat", echo)
-                    save("bin/myopenssl.sh", echo)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
             """)
 
     cmake = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             requires = "openssl/1.0"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
-                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
-                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    save(self, "mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save(self, "mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
@@ -49,15 +49,15 @@ def client():
     gtest = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     prefix = "@echo off\n" if self.settings.os == "Windows" else ""
                     echo = "{}echo MYGTEST={}!!".format(prefix, self.settings.os)
-                    save("bin/mygtest.bat", echo)
-                    save("bin/mygtest.sh", echo)
+                    save(self, "bin/mygtest.bat", echo)
+                    save(self, "bin/mygtest.sh", echo)
                     os.chmod("bin/mygtest.sh", 0o777)
 
             def package_info(self):
@@ -546,3 +546,29 @@ def test_profile_build_env_spaces():
     assert "VAR1= VALUE1!!" in out
     assert  "Restoring environment" in out
     assert "VAR1=!!" in out
+
+
+def test_deactivate_location():
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define("FOO", "BAR")
+        """)
+    client = TestClient()
+    client.save({"pkg.py": conanfile})
+    client.run("create pkg.py --name pkg --version 1.0")
+    client.run("install --reference pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
+
+    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
+    cmd = "{}conanbuild{}".format(source_cmd, script_ext)
+
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                     cwd=client.current_folder).communicate()
+
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
+
+    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
+                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))

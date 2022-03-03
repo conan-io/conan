@@ -8,7 +8,6 @@ from conans.cli.common import _add_common_install_arguments, _help_build_policie
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
-from conans.util.files import mkdir, chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -30,7 +29,6 @@ def build(conan_api, parser, *args):
                         help='Provide a channel')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("-sf", "--source-folder", help='The root source folder')
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     args = parser.parse_args(*args)
 
@@ -43,21 +41,19 @@ def build(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
-    conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
-                                       remotes=remote, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
-    source_folder = make_abs_path(args.source_folder, cwd) if args.source_folder else folder
+    source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else folder
-    out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
+    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
 
     # TODO: Decide API to put this
     app = ConanApp(conan_api.cache_folder)
     conanfile = deps_graph.root.conanfile
-    mkdir(conanfile.build_folder)
-    with chdir(conanfile.build_folder):
-        run_build_method(conanfile, app.hook_manager, conanfile_path=path)
+
+    run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
