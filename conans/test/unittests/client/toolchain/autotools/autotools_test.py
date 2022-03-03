@@ -27,7 +27,7 @@ def test_configure_arguments():
     conanfile.conf.define("tools.build:jobs", 23)
     ab = Autotools(conanfile)
     ab.configure()
-    assert "configure my_configure_args" in runner.command_called
+    assert "configure\" my_configure_args" in runner.command_called
 
     ab = Autotools(conanfile)
     ab.make()

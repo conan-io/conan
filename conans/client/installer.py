@@ -332,6 +332,7 @@ class BinaryInstaller(object):
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+            # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
     def _handle_node_build(self, package, pkg_layout):
@@ -369,6 +370,7 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
                 if hasattr(conanfile, "layout") and is_editable:

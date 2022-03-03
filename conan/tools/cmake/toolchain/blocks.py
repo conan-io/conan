@@ -637,6 +637,40 @@ class GenericSystemBlock(Block):
                 "cmake_system_processor": system_processor}
 
 
+class OutputDirsBlock(Block):
+
+    @property
+    def template(self):
+        if not self._conanfile.package_folder:
+            return ""
+
+        return textwrap.dedent("""
+           set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
+           set(CMAKE_INSTALL_BINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_SBINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBEXECDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBDIR "{{default_lib}}")
+           set(CMAKE_INSTALL_INCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_OLDINCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_DATAROOTDIR "{{default_res}}")
+        """)
+
+    def _get_cpp_info_value(self, name):
+        # Why not taking cpp.build? because this variables are used by the "cmake install"
+        # that correspond to the package folder (even if the root is the build directory)
+        elements = getattr(self._conanfile.cpp.package, name)
+        return elements[0] if elements else None
+
+    def context(self):
+        if not self._conanfile.package_folder:
+            return {}
+        return {"package_folder": self._conanfile.package_folder.replace("\\", "/"),
+                "default_bin": self._get_cpp_info_value("bindirs"),
+                "default_lib": self._get_cpp_info_value("libdirs"),
+                "default_include": self._get_cpp_info_value("includedirs"),
+                "default_res": self._get_cpp_info_value("resdirs")}
+
+
 class ToolchainBlocks:
     def __init__(self, conanfile, toolchain, items=None):
         self._blocks = OrderedDict()
@@ -664,5 +698,3 @@ class ToolchainBlocks:
             if content:
                 result.append(content)
         return result
-
-
