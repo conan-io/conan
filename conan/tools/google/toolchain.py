@@ -9,6 +9,6 @@ class BazelToolchain(object):
 
     def generate(self):
         save_toolchain_args({
-            "bazel_config": self._conanfile.conf["tools.google.bazel:config"],
-            "bazelrc_path": self._conanfile.conf["tools.google.bazel:bazelrc_path"]
+            "bazel_config": self._conanfile.conf.get("tools.google.bazel:config"),
+            "bazelrc_path": self._conanfile.conf.get("tools.google.bazel:bazelrc_path")
         }, namespace=self._namespace)

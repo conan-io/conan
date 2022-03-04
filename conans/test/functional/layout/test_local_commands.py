@@ -141,7 +141,7 @@ def test_local_source():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        save(self, "my_source/downloaded.h", "bar")
+        save(self, "downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -of=my_install")
@@ -161,12 +161,12 @@ def test_local_source_change_base():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        save(self, "my_source/downloaded.h", "bar")
+        save(self, "downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -of=common")
-    client.run("source . -sf=common")
-    header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
+    client.run("source .")
+    header = os.path.join(client.current_folder, "my_source", "downloaded.h")
     assert os.path.exists(header)
 
 
@@ -174,8 +174,8 @@ def test_local_source_change_base():
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     client = TestClient()
-    conan_file = str(GenConanfile().with_import("from conans import tools")
-                     .with_import("from conan.tools.files import copy"))
+    conan_file = str(GenConanfile()
+                     .with_import("from conan.tools.files import copy, save"))
     conan_file += """
     no_copy_source = True
     def layout(self):

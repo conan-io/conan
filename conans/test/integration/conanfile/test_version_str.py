@@ -12,7 +12,7 @@ def test_conan_version_str():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools import Version
+        from conan.tools.scm import Version
 
         class Lib(ConanFile):
             name = "pkg"

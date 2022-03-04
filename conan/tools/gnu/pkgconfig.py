@@ -18,7 +18,7 @@ class PkgConfig:
         self._variables = None
 
     def _parse_output(self, option):
-        executable = self._conanfile.conf["tools.gnu:pkg_config"] or "pkg-config"
+        executable = self._conanfile.conf.get("tools.gnu:pkg_config", default="pkg-config")
         command = [executable, '--' + option, self._library, '--print-errors']
         try:
             env = Environment()

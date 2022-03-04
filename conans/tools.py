@@ -10,6 +10,4 @@
     the currification.
 """
 
-
-from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import

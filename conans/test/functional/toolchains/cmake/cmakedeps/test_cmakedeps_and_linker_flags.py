@@ -26,7 +26,7 @@ def test_shared_link_flags():
         settings = "os", "compiler", "build_type", "arch"
         options = {"shared": [True, False]}
         default_options = {"shared": False}
-        exports_sources = "CMakeLists.txt", "src/*"
+        exports_sources = "CMakeLists.txt", "src/*", "include/*"
         generators = "CMakeDeps", "CMakeToolchain"
 
         def layout(self):

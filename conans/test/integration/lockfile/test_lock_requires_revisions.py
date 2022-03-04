@@ -82,7 +82,8 @@ def test_conanfile_txt_strict_revisions(requires):
     # Not strict mode works
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing#{rrev}"})
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock", assert_error=True)
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock --lockfile-strict",
+               assert_error=True)
     assert f"Requirement 'pkg/0.1@user/testing#{rrev}' not in lockfile" in client.out
 
 

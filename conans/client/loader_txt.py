@@ -8,6 +8,7 @@ class ConanFileTextLoader(object):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
                                                          "imports", "tool_requires"],
+
                                            parse_lines=True)
 
     @property
@@ -22,6 +23,7 @@ class ConanFileTextLoader(object):
         """returns a list of tool_requires
         EX:  "OpenCV/2.4.10@phil/stable"
         """
+
         return [r.strip() for r in self._config_parser.tool_requires.splitlines()]
 
     @property

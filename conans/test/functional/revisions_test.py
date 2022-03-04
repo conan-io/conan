@@ -83,7 +83,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.create(project,
                          conanfile=GenConanfile().with_requirement(lib2).with_requirement(lib3),
                          assert_error=True)
-        self.assertIn("ERROR: version conflict", self.c_v2.out)
+        self.assertIn("ERROR: Version conflict", self.c_v2.out)
         # self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
     def test_alias_to_a_rrev(self):
@@ -830,29 +830,7 @@ class SCMRevisions(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
         client.run("create .", assert_error=True)
         # It error, because the revision_mode is explicitly set to scm
-        self.assertIn("Cannot detect revision using 'scm' mode from repository at "
-                      "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
-                      client.out)
-
-    @pytest.mark.tool("svn")
-    def test_auto_revision_even_without_scm_svn(self):
-        """Even without using the scm feature, the revision is detected from repo.
-         Also while we continue working in local, the revision doesn't change, so the packages
-         can be found"""
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
-        commit = client.init_svn_repo("project",
-                                      files={"file.txt": "hey", "conanfile.py": str(conanfile)})
-        client.current_folder = os.path.join(client.current_folder, "project")
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-
-        # Change the conanfile and make another create, the revision should be the same
-        client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-        self.assertIn("New changes!", client.out)
+        self.assertIn("Cannot detect revision using 'scm' mode from repository", client.out)
 
 
 class CapabilitiesRevisionsTest(unittest.TestCase):

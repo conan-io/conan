@@ -37,9 +37,7 @@ class InstallAPI:
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_generators(output_folder)
-        conanfile.folders.set_base_build(output_folder)
+        conanfile.folders.set_base_folders(source_folder, output_folder)
 
         _do_deploys(self.conan_api, deps_graph, deploy, output_folder)
 

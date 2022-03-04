@@ -5,13 +5,11 @@ import pytest
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.fixture
 def client():
     c = TestClient()
-    save(c.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     clang_profile = textwrap.dedent("""
         [settings]
         arch=armv7
