@@ -123,6 +123,7 @@ class GraphManagerTest(unittest.TestCase):
         deps_graph = conan_api.graph.load_graph(root_node, profile_host, profile_build)
 
         if install:
+            deps_graph.report_graph_error()
             conan_api.graph.analyze_binaries(deps_graph, build_mode)
             conan_api.install.install_binaries(deps_graph)
 
