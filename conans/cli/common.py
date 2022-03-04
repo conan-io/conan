@@ -26,6 +26,17 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 '''
 
 
+def add_reference_args(parser):
+    parser.add_argument("--name", action=OnceArgument,
+                        help='Provide a package name if not specified in conanfile')
+    parser.add_argument("--version", action=OnceArgument,
+                        help='Provide a package version if not specified in conanfile')
+    parser.add_argument("--user", action=OnceArgument,
+                        help='Provide a user if not specified in conanfile')
+    parser.add_argument("--channel", action=OnceArgument,
+                        help='Provide a channel if not specified in conanfil')
+
+
 def add_profiles_args(parser):
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),

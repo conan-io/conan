@@ -1,8 +1,9 @@
 from conan.tools.build import args_to_string
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_fullname
-from conan.tools.build.cross_building import cross_building
+from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.build.cross_building import cross_building
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet

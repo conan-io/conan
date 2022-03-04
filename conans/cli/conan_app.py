@@ -1,6 +1,5 @@
 import conans
 from conans.client.cache.cache import ClientCache
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
@@ -24,7 +23,6 @@ class ConanApp(object):
         # Adjust CONAN_LOGGING_LEVEL with the env readed
         conans.util.log.logger = configure_logger(self.config.logging_level,
                                                   self.config.logging_file)
-        conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
         # Wraps an http_requester to inject proxies, certs, etc
@@ -43,7 +41,6 @@ class ConanApp(object):
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.pyreq_loader, self.requester)
-        self.binaries_analyzer = GraphBinariesAnalyzer(self)
 
         # Remotes
         self.selected_remotes = []

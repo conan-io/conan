@@ -1,6 +1,7 @@
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer, \
     txt_definer
@@ -140,4 +141,5 @@ class GraphAPI:
         conan_app = ConanApp(self.conan_api.cache_folder)
         conan_app.load_remotes(remotes, update=update)
         graph.report_graph_error()
-        conan_app.binaries_analyzer.evaluate_graph(graph, build_mode)
+        binaries_analyzer = GraphBinariesAnalyzer(conan_app)
+        binaries_analyzer.evaluate_graph(graph, build_mode)
