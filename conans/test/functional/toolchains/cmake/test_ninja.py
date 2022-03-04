@@ -79,8 +79,8 @@ def test_locally_build_linux(build_type, shared, client):
     assert "main: {}!".format(build_type) in client.out
     client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
     deploy_path = os.path.join(client.current_folder, "mydeploy", "host", "hello", "1.0",
-                               build_type, "x86_64", "bin")
-    client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/myapp")
+                               build_type, "x86_64")
+    client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/bin/myapp")
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
 
