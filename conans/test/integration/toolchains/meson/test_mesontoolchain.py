@@ -117,7 +117,7 @@ def test_correct_quotes():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_std = 'c++17'" in content
     assert "backend = 'ninja'" in content
