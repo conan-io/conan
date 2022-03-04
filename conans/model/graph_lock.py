@@ -26,6 +26,9 @@ class _LockRequires:
     def refs(self):
         return self._requires.keys()
 
+    def get(self, item):
+        return self._requires.get(item)
+
     def serialize(self):
         result = []
         for k, v in self._requires.items():
@@ -49,7 +52,7 @@ class _LockRequires:
         if package_ids is not None:
             self._requires.setdefault(ref, {}).update(package_ids)
         else:
-            self._requires[ref] = None
+            self._requires.setdefault(ref, None)  # To keep previous packgae_id: prev if exists
 
     def insert(self, ref):
         self._requires[ref] = None
@@ -167,6 +170,14 @@ class Lockfile(object):
         else:
             locked_refs = self._requires.refs()
         self._resolve(require, locked_refs)
+
+    def resolve_prev(self, node):
+        if node.context == CONTEXT_BUILD:
+            prevs = self._build_requires.get(node.ref)
+        else:
+            prevs = self._requires.get(node.ref)
+        if prevs:
+            return prevs.get(node.package_id)
 
     def _resolve(self, require, locked_refs):
         ref = require.ref
