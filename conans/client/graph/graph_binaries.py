@@ -153,7 +153,7 @@ class GraphBinariesAnalyzer(object):
             return
 
         if node.recipe == RECIPE_EDITABLE:
-            if self._evaluate_build(node, build_mode):
+            if build_mode.editable or self._evaluate_build(node, build_mode):
                 node.binary = BINARY_EDITABLE_BUILD
             else:
                 node.binary = BINARY_EDITABLE  # TODO: PREV?

@@ -44,9 +44,9 @@ class TestOtherCommands:
         t.run('list packages lib/0.1')
         assert "There are no recipes" in t.out
 
-    def test_consumer(self):
-        """ there is no reason to really block commands and operations over editable packages
-        except for others doing an install that depends on the editable
+    def test_create_editable(self):
+        """
+        test that an editable can be built with conan create
         """
         t = TestClient()
         conanfile = textwrap.dedent("""
@@ -62,13 +62,24 @@ class TestOtherCommands:
                 "consumer/conanfile.txt": "[requires]\nlib/0.1"})
         t.run('editable add . lib/0.1')
 
+        t.run("list recipes *")
+        assert "There are no matching" in t.out
+
         t.run("create .")
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                                             "EditableBuild")})
         assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+        t.run("list recipes *")
+        assert "lib/0.1" in t.out  # Because the create actually exports, TODO: avoid exporting?
 
         t.run("install consumer --build")
+        t.assert_listed_require({"lib/0.1": "Editable"})
+        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                            "EditableBuild")})
+        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+
+        t.run("install consumer --build=editable")
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                                             "EditableBuild")})

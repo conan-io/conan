@@ -16,6 +16,7 @@ class BuildMode(object):
         self.missing = False
         self.never = False
         self.cascade = False
+        self.editable = False
         self.patterns = []
         self._unused_patterns = []
         self._excluded_patterns = []
@@ -30,6 +31,8 @@ class BuildMode(object):
             for param in params:
                 if param == "missing":
                     self.missing = True
+                elif param == "editable":
+                    self.editable = True
                 elif param == "never":
                     self.never = True
                 elif param == "cascade":
