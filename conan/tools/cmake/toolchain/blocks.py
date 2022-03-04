@@ -6,10 +6,11 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
-from conan.tools.build import build_jobs, cross_building
+from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.build.cross_building import cross_building
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc
 from conans.errors import ConanException

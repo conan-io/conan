@@ -3,7 +3,7 @@ import os
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args
+    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, add_reference_args
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
@@ -103,15 +103,7 @@ def common_graph_args(subparser):
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
                                 "./my_project/conanfile.txt.")
-    subparser.add_argument("--name", action=OnceArgument,
-                           help='Provide a package name if not specified in conanfile')
-    subparser.add_argument("--version", action=OnceArgument,
-                           help='Provide a package version if not specified in conanfile')
-    subparser.add_argument("--user", action=OnceArgument,
-                           help='Provide a user')
-    subparser.add_argument("--channel", action=OnceArgument,
-                           help='Provide a channel')
-
+    add_reference_args(subparser)
     subparser.add_argument("--reference", action=OnceArgument,
                            help='Provide a package reference instead of a conanfile')
 

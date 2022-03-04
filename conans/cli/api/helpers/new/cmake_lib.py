@@ -159,9 +159,8 @@ void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
 
 test_conanfile_v2 = """import os
 
-from conan import ConanFile, tools
-from conan.tools.cmake import CMake
-from conan.tools.layout import cmake_layout
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
 from conan.tools.build import cross_building
 
 
