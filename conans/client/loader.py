@@ -53,20 +53,6 @@ class ConanFileLoader:
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
 
-            if hasattr(conanfile, "scm"):
-                if "scm" not in conanfile.__class__.__dict__:
-                    # If the scm is inherited, create my own instance
-                    conanfile.scm = conanfile.scm.copy()
-
-                if conanfile.scm.get("revision", "auto") != "auto":
-                    raise ConanException("'scm' can only be used for 'auto'. For fixed revisions use"
-                                         " the 'source()' method (and maybe conandata.yml file)")
-
-                if conan_data and '.conan' in conan_data:
-                    scm_data = conan_data['.conan'].get('scm')
-                    if scm_data:
-                        conanfile.scm.update(scm_data)
-
             self._cached_conanfile_classes[conanfile_path] = (conanfile, module)
             result = conanfile(display)
 

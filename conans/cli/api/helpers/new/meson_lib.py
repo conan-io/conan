@@ -2,7 +2,8 @@ from conans.cli.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_sources_v2 = """import os
 from conan import ConanFile
-from conan.tools.meson import MesonToolchain, Meson, meson_layout
+from conan.tools.meson import MesonToolchain, Meson
+from conan.tools.layout import basic_layout
 from conan.tools.files import copy
 
 class {{class_name or name}}Conan(ConanFile):
@@ -22,7 +23,7 @@ class {{class_name or name}}Conan(ConanFile):
             del self.options.fPIC
 
     def layout(self):
-        meson_layout(self)
+        basic_layout(self)
 
     def generate(self):
         tc = MesonToolchain(self)
@@ -50,7 +51,8 @@ class {{class_name or name}}Conan(ConanFile):
 test_conanfile_v2 = """import os
 from conan import ConanFile
 from conan.tools.build import cross_building
-from conan.tools.meson import MesonToolchain, Meson, meson_layout
+from conan.tools.meson import MesonToolchain, Meson
+from conan.tools.layout import basic_layout
 
 
 class {{class_name or name}}TestConan(ConanFile):
@@ -66,7 +68,7 @@ class {{class_name or name}}TestConan(ConanFile):
         meson.build()
 
     def layout(self):
-        meson_layout(self)
+        basic_layout(self)
 
     def test(self):
         if not cross_building(self):

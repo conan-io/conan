@@ -4,7 +4,7 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, _get_conanfile_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_multiple_remotes
+    get_multiple_remotes, add_lockfile_args, add_reference_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
@@ -19,17 +19,11 @@ def build(conan_api, parser, *args):
                         help="Path to a folder containing a recipe (conanfile.py "
                              "or conanfile.txt) or to a recipe file. e.g., "
                              "./my_project/conanfile.txt.")
-    parser.add_argument("--name", action=OnceArgument,
-                        help='Provide a package name if not specified in conanfile')
-    parser.add_argument("--version", action=OnceArgument,
-                        help='Provide a package version if not specified in conanfile')
-    parser.add_argument("--user", action=OnceArgument,
-                        help='Provide a user')
-    parser.add_argument("--channel", action=OnceArgument,
-                        help='Provide a channel')
+    add_reference_args(parser)
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+    add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -37,7 +31,7 @@ def build(conan_api, parser, *args):
     folder = os.path.dirname(path)
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")

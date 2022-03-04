@@ -5,9 +5,8 @@ from conans.cli.output import ScopedOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.tools import chdir
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import save, mkdir
+from conans.util.files import save, mkdir, chdir
 
 
 def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref):

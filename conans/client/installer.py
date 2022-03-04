@@ -79,7 +79,6 @@ class _PackageBuilder(object):
 
     def _prepare_sources(self, conanfile, pref, recipe_layout):
         export_source_folder = recipe_layout.export_sources()
-        scm_sources_folder = recipe_layout.scm_sources()
         conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
@@ -90,7 +89,7 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        config_source(export_source_folder, scm_sources_folder, conanfile,
+        config_source(export_source_folder, conanfile,
                       conanfile_path, pref.ref, self._hook_manager, self._cache)
 
     @staticmethod
@@ -314,10 +313,7 @@ class BinaryInstaller(object):
 
         # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
-        conanfile.folders.set_base_package(output_folder or base_path)
-        conanfile.folders.set_base_source(base_path)
-        conanfile.folders.set_base_build(output_folder or base_path)
-        conanfile.folders.set_base_generators(output_folder or base_path)
+        conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
@@ -335,6 +331,7 @@ class BinaryInstaller(object):
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+            # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
     def _handle_node_build(self, package, pkg_layout):
@@ -372,6 +369,7 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
                 if hasattr(conanfile, "layout") and is_editable:

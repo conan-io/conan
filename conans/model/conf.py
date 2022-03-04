@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference, ref_matches
+from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -367,8 +367,8 @@ class ConfDefinition:
 
     def get_conanfile_conf(self, ref, is_consumer=False):
         """ computes package-specific Conf
-            it is only called when conanfile.buildenv is called
-            the last one found in the profile file has top priority
+        it is only called when conanfile.buildenv is called
+        the last one found in the profile file has top priority
         """
         result = Conf()
         for pattern, conf in self._pattern_confs.items():

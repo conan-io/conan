@@ -1,8 +1,9 @@
 from conan.tools.build import args_to_string
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_name
-from conan.tools.build.cross_building import cross_building
+from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.build.cross_building import cross_building
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
@@ -18,7 +19,7 @@ class AutotoolsToolchain:
 
         self.configure_args = []
         self.make_args = []
-        self.default_configure_install_args = False
+        self.default_configure_install_args = True
 
         # TODO: compiler.runtime for Visual studio?
         # defines
@@ -48,7 +49,7 @@ class AutotoolsToolchain:
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
 
-        os_sdk = get_apple_sdk_name(conanfile)
+        os_sdk = get_apple_sdk_fullname(conanfile)
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
 
@@ -154,16 +155,22 @@ class AutotoolsToolchain:
         configure_args = []
         configure_args.extend(self.configure_args)
 
-        if self.default_configure_install_args:
+        if self.default_configure_install_args and self._conanfile.package_folder:
+            def _get_cpp_info_value(name):
+                # Why not taking cpp.build? because this variables are used by the "cmake install"
+                # that correspond to the package folder (even if the root is the build directory)
+                elements = getattr(self._conanfile.cpp.package, name)
+                return elements[0] if elements else None
+
             # If someone want arguments but not the defaults can pass them in args manually
             configure_args.extend(
-                    ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
-                     "--bindir=${prefix}/bin",
-                     "--sbindir=${prefix}/bin",
-                     "--libdir=${prefix}/lib",
-                     "--includedir=${prefix}/include",
-                     "--oldincludedir=${prefix}/include",
-                     "--datarootdir=${prefix}/share"])
+                    ['--prefix=%s' % self._conanfile.package_folder.replace("\\", "/"),
+                     "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
+                     "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:

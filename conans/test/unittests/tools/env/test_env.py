@@ -8,12 +8,11 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 def test_compose():
@@ -161,7 +160,7 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_profile_env(RecipeReference.loads("*/*"))
+    env = profile_env.get_profile_env("", is_consumer=True)
     env = env.vars(ConanFileMock())
     with environment_update({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",

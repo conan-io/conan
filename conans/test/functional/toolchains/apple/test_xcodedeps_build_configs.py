@@ -231,7 +231,7 @@ def create_xcode_project(client, project_name, source):
                         CLANG_WARN_UNREACHABLE_CODE = YES;
                         CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
                         COPY_PHASE_STRIP = NO;
-                        DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                        DEBUG_INFORMATION_FORMAT = dwarf;
                         ENABLE_NS_ASSERTIONS = NO;
                         ENABLE_STRICT_OBJC_MSGSEND = YES;
                         GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -301,6 +301,7 @@ def create_xcode_project(client, project_name, source):
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
@@ -343,6 +344,7 @@ def test_xcodedeps_build_configurations():
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
 def test_frameworks():
     client = TestClient(path_with_spaces=False)
 
@@ -372,6 +374,7 @@ def test_frameworks():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("xcodebuild")
 def test_xcodedeps_dashes_names_and_arch():
     # https://github.com/conan-io/conan/issues/9949
     client = TestClient(path_with_spaces=False)

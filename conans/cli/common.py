@@ -26,6 +26,17 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 '''
 
 
+def add_reference_args(parser):
+    parser.add_argument("--name", action=OnceArgument,
+                        help='Provide a package name if not specified in conanfile')
+    parser.add_argument("--version", action=OnceArgument,
+                        help='Provide a package version if not specified in conanfile')
+    parser.add_argument("--user", action=OnceArgument,
+                        help='Provide a user if not specified in conanfile')
+    parser.add_argument("--channel", action=OnceArgument,
+                        help='Provide a channel if not specified in conanfil')
+
+
 def add_profiles_args(parser):
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),
@@ -68,7 +79,7 @@ def add_profiles_args(parser):
         item_fn("host", ":h", ":host")
 
 
-def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None):
     if build_help:
         parser.add_argument("-b", "--build", action=ExtenderValueRequired, nargs="?", help=build_help)
 
@@ -84,12 +95,16 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
 
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
-    if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile")
-        parser.add_argument("--lockfile-out", action=OnceArgument,
-                            help="Filename of the updated lockfile")
     add_profiles_args(parser)
+
+
+def add_lockfile_args(parser):
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile.")
+    parser.add_argument("--lockfile-strict", action="store_true",
+                        help="Raise an error if some dependency is not found in lockfile")
+    parser.add_argument("--lockfile-out", action=OnceArgument,
+                        help="Filename of the updated lockfile")
 
 
 def get_profiles_from_args(conan_api, args):
