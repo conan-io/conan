@@ -272,7 +272,7 @@ class TestGitBasicSCMFlow:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install --reference=pkg/0.1@ --build=pkg")
+        c2.run("install --requires=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -304,7 +304,7 @@ class TestGitBasicSCMFlow:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install --reference=pkg/0.1@ --build=pkg")
+        c2.run("install --requires=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -367,7 +367,7 @@ class TestGitBasicSCMFlowSubfolder:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install --reference=pkg/0.1@ --build=pkg")
+        c2.run("install --requires=pkg/0.1@ --build=pkg")
         assert "pkg/0.1: MYCMAKE: mycmake" in c2.out
         assert "pkg/0.1: MYFILE: myheader!" in c2.out
 
@@ -456,7 +456,7 @@ class TestGitMonorepoSCMFlow:
 
         # use another fresh client
         c2 = TestClient(servers=c.servers)
-        c2.run("install --reference=pkg2/0.1@ --build")
+        c2.run("install --requires=pkg2/0.1@ --build")
         assert "pkg1/0.1: Checkout: {}".format(commit) in c2.out
         assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c2.out
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out

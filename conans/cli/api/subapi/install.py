@@ -121,7 +121,7 @@ def direct_deploy(conanfile, output_folder):
     import shutil
 
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
-    # If the argument is --reference, the current conanfile is a virtual one with 1 single
+    # If the argument is --requires, the current conanfile is a virtual one with 1 single
     # dependency, the "reference" package. If the argument is a local path, then all direct
     # dependencies
     for dep in conanfile.dependencies.filter({"direct": True}).values():

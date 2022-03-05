@@ -48,8 +48,8 @@ def graph_compute(args, conan_api, strict=False):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
-    reference = RecipeReference.loads(args.reference) \
-        if ("reference" in args and args.reference) else None
+    reference = RecipeReference.loads(args.requires) \
+        if ("requires" in args and args.requires) else None
     if not path and not reference:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
@@ -104,7 +104,7 @@ def common_graph_args(subparser):
                                 "or conanfile.txt) or to a recipe file. e.g., "
                                 "./my_project/conanfile.txt.")
     add_reference_args(subparser)
-    subparser.add_argument("--reference", action=OnceArgument,
+    subparser.add_argument("--requires", action=OnceArgument,
                            help='Provide a package reference instead of a conanfile')
 
     _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
@@ -140,9 +140,9 @@ def install(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--reference")
+                             "--requires")
 
     cwd = os.getcwd()
     if args.path:

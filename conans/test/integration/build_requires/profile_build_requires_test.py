@@ -66,10 +66,10 @@ class BuildRequiresTest(unittest.TestCase):
                      "profile2.txt": profile2}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.out)
 
-        client.run("install --reference=mylib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertIn("Hello World!", client.out)
 
     def test_profile_open_requires(self):

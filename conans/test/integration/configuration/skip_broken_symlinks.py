@@ -53,7 +53,7 @@ class HelloConan(ConanFile):
         # We can upload the package and reuse it
         client.upload_all(ref)
 
-        client2.run("install --reference={}".format(ref))
+        client2.run("install --requires={}".format(ref))
         self.assertIn("Downloaded package", client2.out)
 
     def test_broken_in_local_sources(self):

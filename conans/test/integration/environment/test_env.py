@@ -392,7 +392,7 @@ def test_diamond_repeated():
     client.run("export pkgc --name=pkgc --version=1.0")
     client.run("export pkgd --name=pkgd --version=1.0")
 
-    client.run("install --reference=pkge --build")
+    client.run("install --requires=pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
@@ -559,7 +559,7 @@ def test_deactivate_location():
     client = TestClient()
     client.save({"pkg.py": conanfile})
     client.run("create pkg.py --name pkg --version 1.0")
-    client.run("install --reference pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
+    client.run("install --requires pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
 
     source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
     cmd = "{}conanbuild{}".format(source_cmd, script_ext)
