@@ -25,7 +25,7 @@ def lock_create(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
