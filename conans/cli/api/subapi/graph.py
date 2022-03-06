@@ -83,11 +83,12 @@ class GraphAPI:
         return root_node
 
     @api_method
-    def load_root_virtual_conanfile(self, ref, profile_host, is_build_require=False,
+    def load_root_virtual_conanfile(self, requires, profile_host, is_build_require=False,
                                     require_overrides=None):
         app = ConanApp(self.conan_api.cache_folder)
-        profile_host.options.scope(ref.name)
-        conanfile = app.loader.load_virtual([ref],  is_build_require=is_build_require,
+        if len(requires) == 1:
+            profile_host.options.scope(requires[0].name)
+        conanfile = app.loader.load_virtual(requires,  is_build_require=is_build_require,
                                             require_overrides=require_overrides)
         virtual_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)

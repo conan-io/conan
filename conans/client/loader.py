@@ -212,16 +212,16 @@ class ConanFileLoader:
 
         return conanfile
 
-    def load_virtual(self, references, is_build_require=False, require_overrides=None):
+    def load_virtual(self, requires, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="virtual")
 
         if is_build_require:
-            for reference in references:
+            for reference in requires:
                 conanfile.requires.build_require(repr(reference))
         else:
-            for reference in references:
+            for reference in requires:
                 conanfile.requires(repr(reference))
 
         if require_overrides is not None:

@@ -69,7 +69,7 @@ def create(conan_api, parser, *args):
                                                              lockfile=lockfile)
     else:
         req_override = args.require_override
-        root_node = conan_api.graph.load_root_virtual_conanfile(ref, profile_host,
+        root_node = conan_api.graph.load_root_virtual_conanfile([ref], profile_host,
                                                                 is_build_require=args.build_require,
                                                                 require_overrides=req_override)
 

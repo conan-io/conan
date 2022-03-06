@@ -403,3 +403,24 @@ def test_package_folder_available_consumer():
     # Installing it with "install ." without output folder
     client.run("install .")
     assert "WARN: Package folder is None? True" in client.out
+
+
+def test_install_multiple_requires_cli():
+    """
+    Test that it is possible to install multiple --requires=xxx --requires=yyy
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=pkg1 --version=0.1")
+    c.run("create . --name=pkg2 --version=0.1")
+
+    c.run("graph info --requires=pkg1/0.1 --requires=pkg2/0.1")
+    assert "pkg1/0.1" in c.out
+    assert "pkg2/0.1" in c.out
+    c.run("install --requires=pkg1/0.1 --requires=pkg2/0.1")
+    assert "pkg1/0.1" in c.out
+    assert "pkg2/0.1" in c.out
+    c.run("lock create --requires=pkg1/0.1 --requires=pkg2/0.1 --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "pkg1/0.1" in lock
+    assert "pkg2/0.1" in lock
