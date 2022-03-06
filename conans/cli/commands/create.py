@@ -69,8 +69,11 @@ def create(conan_api, parser, *args):
                                                              lockfile=lockfile)
     else:
         req_override = args.require_override
-        root_node = conan_api.graph.load_root_virtual_conanfile([ref], profile_host,
-                                                                is_build_require=args.build_require,
+        requires = [ref] if not args.build_require else None
+        tool_requires = [ref] if args.build_require else None
+        root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
+                                                                tool_requires=tool_requires,
+                                                                profile_host=profile_host,
                                                                 require_overrides=req_override)
 
     out.highlight("-------- Computing dependency graph ----------")

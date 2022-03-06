@@ -5,6 +5,7 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer, \
     txt_definer
+from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -83,12 +84,16 @@ class GraphAPI:
         return root_node
 
     @api_method
-    def load_root_virtual_conanfile(self, requires, profile_host, is_build_require=False,
+    def load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None,
                                     require_overrides=None):
+        if not requires and not tool_requires:
+            raise ConanException("Provide requires or tool_requires")
         app = ConanApp(self.conan_api.cache_folder)
-        if len(requires) == 1:
+        if requires and len(requires) == 1 and not tool_requires:
             profile_host.options.scope(requires[0].name)
-        conanfile = app.loader.load_virtual(requires,  is_build_require=is_build_require,
+        if tool_requires and len(tool_requires) == 1 and not requires:
+            profile_host.options.scope(tool_requires[0].name)
+        conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires,
                                             require_overrides=require_overrides)
         virtual_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
