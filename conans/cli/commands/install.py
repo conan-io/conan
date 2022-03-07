@@ -92,7 +92,8 @@ def graph_compute(args, conan_api, strict=False):
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
-    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     return deps_graph, lockfile

@@ -38,7 +38,7 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                                             lockfile=lockfile,
                                             remotes=None,
                                             update=None)
-    conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name])
+    conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()
 
     conan_api.export.export_pkg(deps_graph, path)

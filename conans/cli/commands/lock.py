@@ -32,9 +32,9 @@ def lock_create(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
     if lockfile is None or args.clean:
-        lockfile = Lockfile(deps_graph)
+        lockfile = Lockfile(deps_graph, args.lockfile_packages)
     else:
-        lockfile.update_lock(deps_graph)
+        lockfile.update_lock(deps_graph, args.lockfile_packages)
 
     lockfile_out = make_abs_path(args.lockfile_out or "conan.lock")
     lockfile.save(lockfile_out)

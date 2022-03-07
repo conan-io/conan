@@ -105,6 +105,8 @@ def add_lockfile_args(parser):
                         help="Raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
+    parser.add_argument("--lockfile-packages", action="store_true",
+                        help="Lock package-id and package-revision information")
 
 
 def get_profiles_from_args(conan_api, args):
