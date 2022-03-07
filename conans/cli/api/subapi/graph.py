@@ -89,10 +89,6 @@ class GraphAPI:
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
         app = ConanApp(self.conan_api.cache_folder)
-        if requires and len(requires) == 1 and not tool_requires:
-            profile_host.options.scope(requires[0].name)
-        if tool_requires and len(tool_requires) == 1 and not requires:
-            profile_host.options.scope(tool_requires[0].name)
         conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires,
                                             require_overrides=require_overrides)
         virtual_definer(conanfile, profile_host)

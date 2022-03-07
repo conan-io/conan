@@ -3,7 +3,8 @@ import os
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, add_reference_args
+    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \
+    add_reference_args, scope_options
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
@@ -82,6 +83,7 @@ def graph_compute(args, conan_api, strict=False):
                                                                  remotes=remotes,
                                                                  update=args.update)
     else:
+        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
                                                                 profile_host=profile_host,
