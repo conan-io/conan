@@ -60,9 +60,9 @@ class MyPkg(ConanFile):
     requires = "name/ver"
     settings = "os", "compiler", "build_type", "arch"
     """})
-        self.client.run("create other/ --name=other --version=1 %s" % self.settings_msvc15)
+        self.client.run("create other/ --name=other --version=1.0 %s" % self.settings_msvc15)
 
-        error = self.client.run("create other/ --name=other --version=1 %s" % self.settings_msvc12,
+        error = self.client.run("create other/ --name=other --version=1.0 %s" % self.settings_msvc12,
                                 assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver: Invalid configuration: user says that "

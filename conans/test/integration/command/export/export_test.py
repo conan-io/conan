@@ -483,3 +483,16 @@ def test_export_casing():
     exports_folder = client.get_latest_ref_layout(ref).export()
     assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
     assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
+
+
+def test_export_invalid_refs():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=pkg% --version=0.1", assert_error=True)
+    assert "ERROR: Invalid package name 'pkg%'" in c.out
+    c.run("export . --name=pkg --version=0.1%", assert_error=True)
+    assert "ERROR: Invalid package version '0.1%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user%", assert_error=True)
+    assert "ERROR: Invalid package user 'user%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
+    assert "ERROR: Invalid package channel 'channel%'" in c.out
