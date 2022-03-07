@@ -47,7 +47,7 @@ def test_cmake_toolchain_user_toolchain():
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
         with_generator("CMakeToolchain")
-    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain=mytoolchain.cmake")
+    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake")
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
@@ -79,7 +79,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
                 self.copy("*")
             def package_info(self):
                 f = os.path.join(self.package_folder, "mytoolchain.cmake")
-                self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
+                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain", f)
         """)
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain.cmake !!!running!!!")'})
@@ -136,7 +136,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
                 self.copy("*")
             def package_info(self):
                 f = os.path.join(self.package_folder, "mytoolchain.cmake")
-                self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
+                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain", f)
         """)
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain1.cmake !!!running!!!")'})
@@ -157,12 +157,8 @@ def test_cmake_toolchain_multiple_user_toolchain():
             def generate(self):
                 # Get the toolchains from "tools.cmake.cmaketoolchain:user_toolchain" conf at the
                 # tool_requires
-                user_toolchains = []
-                for dep in self.dependencies.direct_build.values():
-                    ut = dep.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
-                    if ut:
-                        user_toolchains.append(ut.replace('\\\\', '/'))
-
+                user_toolchains = self.conf.get("tools.cmake.cmaketoolchain:user_toolchain", default=[], check_type=list)
+                user_toolchains = [ut.replace('\\\\', '/') for ut in user_toolchains]
                 # Modify the context of the user_toolchain block
                 t = CMakeToolchain(self)
                 t.blocks["user_toolchain"].values["paths"] = user_toolchains
