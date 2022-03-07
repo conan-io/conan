@@ -67,11 +67,16 @@ def lock_merge(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def lock_add(conan_api, parser, subparser, *args):
     """
-    Add requires, build-requires or python-requires to existing or new lockfile
+    Add requires, build-requires or python-requires to existing or new lockfile. Resulting lockfile
+    will be ordereded, newer versions/revisions first.
+    References can be with our without revisions like "--requires=pkg/version", but they
+    must be package references, including at least the version, they cannot contain a version range
     """
-    subparser.add_argument('--requires', action="append", help='Add references to host packages')
-    subparser.add_argument('--build-requires', action="append", help='Add build-requires')
-    subparser.add_argument('--python-requires', action="append", help='Add python-requires')
+    subparser.add_argument('--requires', action="append", help='Add references to lockfile.')
+    subparser.add_argument('--build-requires', action="append",
+                           help='Add build-requires to lockfile')
+    subparser.add_argument('--python-requires', action="append",
+                           help='Add python-requires to lockfile')
 
     subparser.add_argument("--lockfile-out", action=OnceArgument,
                            help="Filename of the created lockfile")
