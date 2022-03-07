@@ -1,10 +1,7 @@
-import os.path
-
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
     conan_subcommand
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import common_graph_args, graph_compute
-from conans.cli.common import add_lockfile_args
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile
@@ -36,9 +33,9 @@ def lock_create(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
     if lockfile is None or args.clean:
-        lockfile = Lockfile(deps_graph)
+        lockfile = Lockfile(deps_graph, args.lockfile_packages)
     else:
-        lockfile.update_lock(deps_graph)
+        lockfile.update_lock(deps_graph, args.lockfile_packages)
 
     lockfile_out = make_abs_path(args.lockfile_out or "conan.lock")
     lockfile.save(lockfile_out)
@@ -70,21 +67,29 @@ def lock_merge(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def lock_add(conan_api, parser, subparser, *args):
     """
-    Merge 2 or more lockfiles
+    Add requires, build-requires or python-requires to existing or new lockfile
     """
-    subparser.add_argument('--requires', action="append", help='Path to lockfile to be merged')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                           help="Filename of the created lockfile")
-    subparser.add_argument("--lockfile", action=OnceArgument, default="conan.lock",
-                           help="Filename of the input lockfile")
+    subparser.add_argument('--requires', action="append", help='Add references to host packages')
+    subparser.add_argument('--build-requires', action="append", help='Add build-requires')
+    subparser.add_argument('--python-requires', action="append", help='Add python-requires')
 
+    subparser.add_argument("--lockfile-out", action=OnceArgument,
+                           help="Filename of the created lockfile")
+    subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
     args = parser.parse_args(*args)
 
-    lockfile = make_abs_path(args.lockfile)
-    lockfile = Lockfile.load(lockfile) if os.path.isfile(lockfile) else Lockfile()
-    # TODO: Make this part of the lockfile class
-    lockfile.requires.extend(RecipeReference.loads(r) for r in args.requires or [])
-    lockfile.requires = list(reversed(sorted(lockfile.requires)))
+    if args.lockfile:
+        lockfile = make_abs_path(args.lockfile)
+        lockfile = Lockfile.load(lockfile)
+    else:
+        lockfile = Lockfile()  # create a new lockfile
+    requires = [RecipeReference.loads(r) for r in args.requires] if args.requires else None
+    build_requires = [RecipeReference.loads(r) for r in args.build_requires] \
+        if args.build_requires else None
+    python_requires = [RecipeReference.loads(r) for r in args.python_requires] \
+        if args.python_requires else None
+
+    lockfile.add(requires=requires, build_requires=build_requires, python_requires=python_requires)
 
     lockfile_out = make_abs_path(args.lockfile_out)
     lockfile.save(lockfile_out)

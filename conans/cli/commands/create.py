@@ -87,7 +87,8 @@ def create(conan_api, parser, *args):
         build_modes = [ref.name]
     else:
         build_modes = args.build
-    conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")

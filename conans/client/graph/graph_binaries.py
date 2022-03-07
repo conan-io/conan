@@ -181,6 +181,32 @@ class GraphBinariesAnalyzer(object):
             if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
                 node.binary = BINARY_INVALID
 
+    def _process_locked_node(self, node, build_mode, locked_prev):
+        # Check that this same reference hasn't already been checked
+        if self._evaluate_is_cached(node):
+            return
+
+        # If the CLI says this package needs to be built, it doesn't make sense to mark
+        # it as invalid
+        if self._evaluate_build(node, build_mode):
+            # TODO: We migth want to rais if strict
+            return
+
+        if node.recipe == RECIPE_EDITABLE:
+            # TODO: Raise if strict
+            node.binary = BINARY_EDITABLE  # TODO: PREV?
+            return
+
+        # in cache:
+        node.prev = locked_prev
+        if self._cache.exists_prev(node.pref):
+            node.binary = BINARY_CACHE
+            node.binary_remote = None
+            # TODO: Dirty
+            return
+
+        # TODO: Check in remotes for download
+
     def _evaluate_download(self, node):
         try:
             self._get_package_from_remotes(node)
@@ -231,12 +257,17 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile):
         build_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
             self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
+            if lockfile:
+                locked_prev = lockfile.resolve_prev(node)
+                if locked_prev:
+                    self._process_locked_node(node, build_mode, locked_prev)
+                    continue
             self._evaluate_node(node, build_mode)
 
         self._skip_binaries(deps_graph)

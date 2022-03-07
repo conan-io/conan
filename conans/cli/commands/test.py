@@ -61,7 +61,8 @@ def test(conan_api, parser, *args):
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
-    conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")
