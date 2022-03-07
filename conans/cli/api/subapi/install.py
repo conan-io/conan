@@ -2,7 +2,7 @@ import os
 
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.client.cache.cache import EXTENSIONS_FOLDER, DEPLOYERS_EXTENSION_FOLDER, ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.loader import load_python_file

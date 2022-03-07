@@ -29,6 +29,7 @@ EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
 GENERATORS_EXTENSION_FOLDER = "generators"
 DEPLOYERS_EXTENSION_FOLDER = "deploy"
+CUSTOM_COMMANDS_FOLDER = "commands"
 
 
 # TODO: Rename this to ClientHome
@@ -223,6 +224,10 @@ class ClientCache(object):
     @property
     def generators_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, GENERATORS_EXTENSION_FOLDER)
+
+    @property
+    def custom_commands_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
 
     @property
     def default_profile_path(self):

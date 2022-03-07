@@ -31,7 +31,8 @@ class TestCustomCommands:
             """)
 
         client = TestClient()
-        command_file_path = os.path.join(client.cache_folder, 'commands', 'cmd_mycommand.py')
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
         client.save({f"{command_file_path}": mycommand})
         client.run("mycommand -f cli")
         foldername = os.path.basename(client.cache_folder)
@@ -70,7 +71,8 @@ class TestCustomCommands:
             """)
 
         client = TestClient()
-        command_file_path = os.path.join(client.cache_folder, 'commands', 'cmd_complex.py')
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_complex.py')
         client.save({f"{command_file_path}": complex_command})
         client.run("complex sub1 myargument -f=cli")
         assert "myargument" in client.out
