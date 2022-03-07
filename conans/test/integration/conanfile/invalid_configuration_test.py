@@ -11,7 +11,7 @@ class InvalidConfigurationTest(unittest.TestCase):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
 from conans import ConanFile
-from conans.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
