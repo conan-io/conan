@@ -17,5 +17,5 @@ def test_fail_rmdir():
     build_folder = client.get_latest_pkg_layout(pref).build()
     f = open(os.path.join(build_folder, "myfile"), "wb")
     f.write(b"Hello world")
-    client.run("install --requires=mypkg/0.1@lasote/testing --build", assert_error=True)
+    client.run("install --requires=mypkg/0.1@lasote/testing --build=*", assert_error=True)
     assert "Couldn't remove folder, might be busy or open" in client.out
