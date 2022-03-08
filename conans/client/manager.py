@@ -10,7 +10,7 @@ from conans.client.output import Color
 from conans.client.source import retrieve_exports_sources
 from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
-from conans.errors import ConanException, ConanInvalidConfiguration
+from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile
@@ -63,9 +63,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     graph_lock = graph_info.graph_lock  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
-    if conanfile.info.invalid:
-        msg = "{}: Invalid ID: {}".format(conanfile, conanfile.info.invalid)
-        raise ConanInvalidConfiguration(msg)
     if root_node.recipe == RECIPE_VIRTUAL:
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
@@ -110,6 +107,11 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         conanfile.folders.set_base_generators(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
+
+    if conanfile.info.invalid:
+        msg = "Invalid ID: {}. ".format(conanfile.info.invalid)
+        msg += "Trying to install dependencies, but this configuration will fail to build a package"
+        output.error(msg)
 
     if install_folder:
         # Write generators

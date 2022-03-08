@@ -275,5 +275,5 @@ class TestValidate(unittest.TestCase):
                     raise ConanInvalidConfiguration("never ever")
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("install .", assert_error=True)
-        assert "Invalid ID: never ever" in c.out
+        c.run("install .")
+        assert "conanfile.py: ERROR: Invalid ID: never ever" in c.out

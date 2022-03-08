@@ -16,7 +16,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
-    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchains at the beginning of conan_toolchain.cmake",
     "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
@@ -67,6 +67,10 @@ class _ConfValue(object):
 
     @property
     def value(self):
+        if self._value_type is list and _ConfVarPlaceHolder in self._value:
+            v = self._value[:]
+            v.remove(_ConfVarPlaceHolder)
+            return v
         return self._value
 
     def copy(self):
