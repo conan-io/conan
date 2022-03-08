@@ -113,7 +113,7 @@ def test_transitive_binary_skipped():
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 
