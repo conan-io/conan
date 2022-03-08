@@ -35,8 +35,8 @@ def test_target_triple():
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
     conanfile.conf = Conf()
-    conanfile.conf["tools.gnu:make_program"] = "my_make"
-    conanfile.conf["tools.gnu.make:jobs"] = "23"
+    conanfile.conf.define("tools.gnu:make_program", "my_make")
+    conanfile.conf.define("tools.gnu.make:jobs", "23")
 
     be = AutotoolsToolchain(conanfile)
     be.make_args = ["foo", "var"]
@@ -213,7 +213,7 @@ def test_cxx11_abi_define():
     assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]
 
     # Also conf is possible
-    conanfile.conf["tools.gnu:define_libcxx11_abi"] = True
+    conanfile.conf.define("tools.gnu:define_libcxx11_abi", True)
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]

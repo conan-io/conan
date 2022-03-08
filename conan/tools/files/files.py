@@ -1,9 +1,9 @@
 import configparser
 import errno
 import gzip
-import hashlib
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -16,6 +16,7 @@ from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.sha import check_with_algorithm_sum
+from conans.util.files import rmdir
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -130,9 +131,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     out = ConanOutput()
     overwrite = True
 
-    config_retry = config.get("tools.files.download:retry", int, None)
+    config_retry = config.get("tools.files.download:retry", check_type=int, default=None)
     retry = config_retry if config_retry is not None else retry if retry is not None else 2
-    config_retry_wait = config.get("tools.files.download:retry_wait", int, None)
+    config_retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=None)
     retry_wait = config_retry_wait if config_retry_wait is not None \
         else retry_wait if retry_wait is not None else 5
 
@@ -459,3 +460,21 @@ def collect_libs(conanfile, folder=None):
                     result.append(name)
     result.sort()
     return result
+
+
+# TODO: Do NOT document this yet. It is unclear the interface, maybe should be split
+def swap_child_folder(parent_folder, child_folder):
+    """ replaces the current folder contents with the contents of one child folder. This
+    is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder
+    to replace the whole cloned git repo
+    """
+    for f in os.listdir(parent_folder):
+        if f != child_folder:
+            path = os.path.join(parent_folder, f)
+            if os.path.isfile(path):
+                os.remove(path)
+            else:
+                rmdir(path)
+    child = os.path.join(parent_folder, child_folder)
+    for f in os.listdir(child):
+        shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))

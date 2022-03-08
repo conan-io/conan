@@ -15,9 +15,9 @@ def setup():
     client.save({"conanfile.py": conanfile})
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
     client.run("export . --name=hello0 --version=0.1 --user=lasote --channel=stable")
-    client.run("install --reference={} -s os=Windows --build missing".format(ref))
-    client.run("install --reference={} -s os=Linux --build missing".format(ref))
-    client.run("install --reference={} -s os=Linux -s arch=x86 --build missing".format(ref))
+    client.run("install --requires={} -s os=Windows --build missing".format(ref))
+    client.run("install --requires={} -s os=Linux --build missing".format(ref))
+    client.run("install --requires={} -s os=Linux -s arch=x86 --build missing".format(ref))
     client.run("upload {} -r default".format(ref))
     latest_rrev = client.cache.get_latest_recipe_reference(ref)
     packages = client.cache.get_package_references(latest_rrev)
@@ -93,10 +93,10 @@ def test_download_all_but_no_packages():
     new_client.run("download hello0/0.1@lasote/stable#latest:* -r default", assert_error=True)
     assert "Recipe not found: 'hello0/0.1@lasote/stable'" in new_client.out
 
-    # Upload only the recipe
+    # Upload the recipe (we don't have packages)
     new_client.save({"conanfile.py": GenConanfile()})
     new_client.run("export . --name=hello0 --version=0.1 --user=lasote --channel=stable")
-    new_client.run("upload  hello0/0.1@lasote/stable -r default")
+    new_client.run("upload hello0/0.1@lasote/stable -r default")
 
     # And try to download all
     new_client.run("download hello0/0.1@lasote/stable#latest:* -r default", assert_error=True)

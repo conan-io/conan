@@ -143,7 +143,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}' created", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("install . -o pkg:optimized=2")
+        client.run("install . -o pkg/*:optimized=2")
         # Information messages
         missing_id = "508da41e46d27c4c4996d7b31df7942c7bba1e27"
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Option optimized 1!", client.out)
@@ -156,7 +156,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # checking the resulting dependencies
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        client.run("install . -o pkg:optimized=3")
+        client.run("install . -o pkg/*:optimized=3")
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
@@ -175,7 +175,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # Back to semver default
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
-        client.run("install --reference=bb/1.0@", assert_error=True)
+        client.run("install --requires=bb/1.0@", assert_error=True)
         self.assertIn("Missing prebuilt package for 'bb/1.0'", client.out)
 
         # What if client modifies the packages declaring a compatible_package with the recipe mode
@@ -203,7 +203,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # Back to semver mode
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
-        client.run("install --reference=bb/1.0@ --update")
+        client.run("install --requires=bb/1.0@ --update")
         self.assertIn(f"Using compatible package '{package_id}'", client.out)
 
     def test_package_id_consumers(self):
@@ -399,9 +399,9 @@ def test_msvc_visual_incompatible():
                  "profile": profile})
     client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
-    client.run("install --reference=pkg/0.1@ -pr=profile")
+    client.run("install --requires=pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out
     new_config = "core.package_id:msvc_visual_incompatible=1"
     save(client.cache.new_config_path, new_config)
-    client.run("install --reference=pkg/0.1@ -pr=profile", assert_error=True)
+    client.run("install --requires=pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

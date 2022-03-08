@@ -52,7 +52,8 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         t.run("export br1.py --name=br1 --version=version")
         t.run("export br2.py --name=br2 --version=version")
         t.run("export br3.py --name=br3 --version=version")
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        t.run("create library.py --profile:host=profile_host --profile:build=profile_build "
+              "--build='*'")
 
 
 class BuildRequiresContextHostFromProfileTest(unittest.TestCase):

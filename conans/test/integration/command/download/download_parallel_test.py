@@ -11,7 +11,7 @@ def test_basic_parallel_download():
 
     package_ids = []
     for i in range(counter):
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg:myoption=%s" % i)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg/*:myoption=%s" % i)
         package_id = client.created_package_id("pkg/0.1@user/testing")
         package_ids.append(package_id)
     client.run("upload * --confirm -r default")

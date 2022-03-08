@@ -27,10 +27,8 @@ from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.api.model import Remote
-from conans.cli.cli import Cli, CLI_V1_COMMANDS
+from conans.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
-from conans.client.command import Command
-from conans.client.conan_api import ConanAPIV1
 from conans.util.env import environment_update
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -44,8 +42,7 @@ from conans.test.conftest import default_profiles
 from conans.test.utils.artifactory import ArtifactoryServer
 from conans.test.utils.mocks import RedirectedInputStream
 from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
-    create_remote_svn_repo
+from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
@@ -429,7 +426,7 @@ class TestClient(object):
         return self.cache.store
 
     def update_servers(self):
-        api = self.get_conan_api()
+        api = ConanAPIV2(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)
 
@@ -459,22 +456,15 @@ class TestClient(object):
         with mock.patch("conans.client.rest.conan_requester.requests", _req):
             yield
 
-    def get_conan_api(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return ConanAPIV2(cache_folder=self.cache_folder)
-        else:
-            return ConanAPIV1(cache_folder=self.cache_folder)
+    @contextmanager
+    def mocked_io(self):
+        def mock_get_pass(*args, **kwargs):
+            return self.user_inputs.readline()
 
-    def get_conan_command(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return Cli(self.api)
-        else:
-            return Command(self.api)
-
-    @staticmethod
-    def is_conan_cli_v2_command(args):
-        conan_command = args[0] if args else None
-        return conan_command not in CLI_V1_COMMANDS
+        with redirect_output(self.stderr, self.stdout):
+            with redirect_input(self.user_inputs):
+                with mock.patch("getpass.getpass", mock_get_pass):
+                    yield
 
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
@@ -484,8 +474,8 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = self.get_conan_api(args)
-        command = self.get_conan_command(args)
+        self.api = ConanAPIV2(cache_folder=self.cache_folder)
+        command = Cli(self.api)
 
         error = None
         try:
@@ -513,30 +503,29 @@ class TestClient(object):
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
-            with redirect_output(self.stderr, self.stdout):
-                with redirect_input(self.user_inputs):
-                    real_servers = any(isinstance(s, (str, ArtifactoryServer))
-                                       for s in self.servers.values())
-                    http_requester = None
-                    if not real_servers:
-                        if self.requester_class:
-                            http_requester = self.requester_class(self.servers)
-                        else:
-                            http_requester = TestRequester(self.servers)
-                    try:
-                        if http_requester:
-                            with self.mocked_servers(http_requester):
-                                return self.run_cli(command_line, assert_error=assert_error)
-                        else:
+            with self.mocked_io():
+                real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                                   for s in self.servers.values())
+                http_requester = None
+                if not real_servers:
+                    if self.requester_class:
+                        http_requester = self.requester_class(self.servers)
+                    else:
+                        http_requester = TestRequester(self.servers)
+                try:
+                    if http_requester:
+                        with self.mocked_servers(http_requester):
                             return self.run_cli(command_line, assert_error=assert_error)
-                    finally:
-                        self.stdout = str(self.stdout)
-                        self.stderr = str(self.stderr)
-                        self.out = self.stderr + self.stdout
-                        if redirect_stdout:
-                            save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
-                        if redirect_stderr:
-                            save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
+                    else:
+                        return self.run_cli(command_line, assert_error=assert_error)
+                finally:
+                    self.stdout = str(self.stdout)
+                    self.stderr = str(self.stderr)
+                    self.out = self.stderr + self.stdout
+                    if redirect_stdout:
+                        save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
+                    if redirect_stderr:
+                        save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
         from conans.test.utils.mocks import RedirectedTestOutput
@@ -743,7 +732,13 @@ class TestClient(object):
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)), str(self.out)).group(1)
+        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+                               str(self.out)).group(1)
+        return package_id
+
+    def created_package_revision(self, ref):
+        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
         return package_id
 
     def exported_recipe_revision(self):
@@ -856,13 +851,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_svn_repo(self, subpath, files=None, repo_url=None):
-        if not repo_url:
-            repo_url = create_remote_svn_repo(temp_folder())
-        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                           rel_project_path=subpath, delete_checkout=False)
-        return rev
 
 
 def get_free_port():

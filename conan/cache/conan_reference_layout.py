@@ -14,7 +14,6 @@ PACKAGES_FOLDER = "p"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
-SCM_SRC_FOLDER = "sc"
 
 
 class LayoutBase:
@@ -63,9 +62,6 @@ class RecipeLayout(LayoutBase):
     def conanfile(self):
         return os.path.join(self.export(), CONANFILE)
 
-    def scm_sources(self):
-        return os.path.join(self.base_folder, SCM_SRC_FOLDER)
-
     def conandata(self):
         return os.path.join(self.export(), DATA_YML)
 
@@ -80,13 +76,6 @@ class RecipeLayout(LayoutBase):
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (src_folder, str(e)))
-        scm_folder = self.scm_sources()
-        try:
-            rmdir(scm_folder)  # This will remove the shortened path too if exists
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (scm_folder, str(e)))
 
     def export_remove(self):
         export_folder = self.export()
@@ -95,8 +84,6 @@ class RecipeLayout(LayoutBase):
         rmdir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
-        scm_folder = os.path.join(self.base_folder, SCM_SRC_FOLDER)
-        rmdir(scm_folder)
 
 
 class PackageLayout(LayoutBase):

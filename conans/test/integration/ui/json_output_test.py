@@ -37,7 +37,7 @@ class JsonOutputTest(unittest.TestCase):
         # Result of an install retrieving only the recipe
         self.client.run("upload cc/1.0@private_user/channel -c -r default --only-recipe")
         self.client.run("remove '*' -f")
-        self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json --build missing ")
+        self.client.run("install --requires=c/1.0@private_user/channel --json=myfile.json --build missing ")
         my_json = json.loads(self.client.load("myfile.json"))
 
         the_time_str = my_json["installed"][0]["recipe"]["time"]
@@ -53,7 +53,7 @@ class JsonOutputTest(unittest.TestCase):
         # Upload the binary too
         self.client.run("upload cc/1.0@private_user/channel -c -r default")
         self.client.run("remove '*' -f")
-        self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json")
+        self.client.run("install --requires=c/1.0@private_user/channel --json=myfile.json")
         my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertFalse(my_json["error"])
@@ -66,7 +66,7 @@ class JsonOutputTest(unittest.TestCase):
 
         # Force build
         self.client.run("remove '*' -f")
-        self.client.run("install --reference=cc/1.0@private_user/channel --json=myfile.json --build")
+        self.client.run("install --requires=cc/1.0@private_user/channel --json=myfile.json --build")
         my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertFalse(my_json["error"])
@@ -80,7 +80,7 @@ class JsonOutputTest(unittest.TestCase):
     def test_errors(self):
 
         # Missing recipe
-        self.client.run("install --reference=cc/1.0@private_user/channel --json=myfile.json", assert_error=True)
+        self.client.run("install --requires=cc/1.0@private_user/channel --json=myfile.json", assert_error=True)
         my_json = json.loads(self.client.load("myfile.json"))
         self.assertTrue(my_json["error"])
         self.assertEqual(len(my_json["installed"]), 1)
@@ -94,7 +94,7 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("create . private_user/channel --json=myfile.json ")
         self.client.run("upload c/1.0@private_user/channel -c -r default --only-recipe")
         self.client.run("remove '*' -f")
-        self.client.run("install --reference=c/1.0@private_user/channel --json=myfile.json", assert_error=True)
+        self.client.run("install --requires=c/1.0@private_user/channel --json=myfile.json", assert_error=True)
         my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertTrue(my_json["error"])

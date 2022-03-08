@@ -91,8 +91,8 @@ def test_profiles_includes():
             [settings]
             os=Windows
             [options]
-            zlib:aoption=1
-            zlib:otheroption=1
+            zlib*:aoption=1
+            zlib*:otheroption=1
         """)
 
     save_profile(profile1, "subdir/profile1.txt")
@@ -119,7 +119,7 @@ def test_profiles_includes():
             include(./profile3.txt)
 
             [options]
-            zlib:otheroption=12
+            zlib*:otheroption=12
         """)
 
     save_profile(profile4, "profile4.txt")
@@ -128,10 +128,10 @@ def test_profiles_includes():
     profile = profile_loader.load_profile("./profile4.txt", tmp)
 
     assert profile.settings == {"os": "1"}
-    assert profile.options["zlib"].aoption == 1
-    assert profile.options["zlib"].otheroption == 12
+    assert profile.options["zlib/1.2.11"].aoption == 1
+    assert profile.options["zlib/*"].otheroption == 12
     assert profile.tool_requires == {"*": [RecipeReference.loads("one/1.5@lasote/stable"),
-                                                 RecipeReference.loads("two/1.2@lasote/stable")]}
+                                           RecipeReference.loads("two/1.2@lasote/stable")]}
 
 
 def test_profile_include_order():

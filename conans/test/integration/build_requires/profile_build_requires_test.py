@@ -1,7 +1,9 @@
 import os
 import platform
+import textwrap
 import unittest
 
+import pytest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -65,11 +67,10 @@ class BuildRequiresTest(unittest.TestCase):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
-
-        client.run("install --reference=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.out)
 
-        client.run("install --reference=mylib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile2.txt --build='*'")
         self.assertIn("Hello World!", client.out)
 
     def test_profile_open_requires(self):
@@ -93,7 +94,7 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=Pythontool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
-        client.run("install . --profile ./profile.txt --build=*tool")
+        client.run("install . --profile ./profile.txt --build=tool/0.1*")
         self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
         # now remove packages, ensure --build=missing also creates them
@@ -181,7 +182,7 @@ class mylib(ConanFile):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("build . -o mylib:coverage=True --build missing")
+        client.run("build . -o mylib*:coverage=True --build missing")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Calling build()", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
@@ -191,3 +192,35 @@ class mylib(ConanFile):
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         self.assertIn("mytool/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
+
+
+def test_consumer_patterns_loop_error():
+    client = TestClient()
+
+    profile_patterns = textwrap.dedent("""
+        [tool_requires]
+        tool1/1.0
+        tool2/1.0
+        """)
+    client.save({"tool1/conanfile.py": GenConanfile(),
+                 "tool2/conanfile.py": GenConanfile().with_build_requires("tool1/1.0"),
+                 "consumer/conanfile.py": GenConanfile(),
+                 "profile.txt": profile_patterns})
+
+    client.run("export tool1 --name=tool1 --version=1.0")
+    client.run("export tool2 --name=tool2 --version=1.0")
+    with pytest.raises(Exception) as e:
+        client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
+    assert "graph loop" in str(e.value)
+
+    # we can fix it with the negation
+    profile_patterns = textwrap.dedent("""
+        [tool_requires]
+        tool1/1.0
+        !tool1*:tool2/1.0
+        """)
+    client.save({"profile.txt": profile_patterns})
+
+    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
+    assert "tool1/1.0: Created package" in client.out
+    assert "tool2/1.0: Created package" in client.out

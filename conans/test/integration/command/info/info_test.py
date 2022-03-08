@@ -197,6 +197,6 @@ class TestInfoRevisions:
         ref = RecipeReference.loads("lib/1.0@conan/testing")
 
         client.create(ref)
-        client.run("graph info --reference={}".format(ref))
+        client.run("graph info --requires={}".format(ref))
         revision = client.recipe_revision(ref)
         assert f"ref: lib/1.0@conan/testing#{revision}" in client.out

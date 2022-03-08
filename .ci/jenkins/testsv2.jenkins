@@ -21,22 +21,15 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
             configs.add([node: "Macos", pyvers: ["PY36"]])
         }
     }
-    else if (jobName == "ConanNightlyv2") {
+    else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
     }
-    else if (branchName =~ /(^release.*)|(^develop2)/) {
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Linux", pyvers: ["PY36"]])
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "Macos", pyvers: ["PY36"]])
-        }
-        else {
-            configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
-        }
+    else if (branchName == "develop2") {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -76,7 +69,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest ${module} -n=4"
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
 
                 if (nodeName=="Linux") {
                     try {

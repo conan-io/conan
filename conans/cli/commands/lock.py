@@ -25,16 +25,16 @@ def lock_create(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--reference")
+                             "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict_lockfile=False)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
     if lockfile is None or args.clean:
-        lockfile = Lockfile(deps_graph)
+        lockfile = Lockfile(deps_graph, args.lockfile_packages)
     else:
-        lockfile.update_lock(deps_graph)
+        lockfile.update_lock(deps_graph, args.lockfile_packages)
 
     lockfile_out = make_abs_path(args.lockfile_out or "conan.lock")
     lockfile.save(lockfile_out)

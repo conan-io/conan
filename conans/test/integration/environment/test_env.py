@@ -274,13 +274,13 @@ def test_transitive_order():
                 self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build")
+    client.run("install . -s:b os=Windows -s:h os=Linux --build='*'")
     assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
     # Even if the generator is duplicated in command line (it used to fail due to bugs)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualRunEnv -g VirtualBuildEnv")
+    client.run("install . -s:b os=Windows -s:h os=Linux --build='*' -g VirtualRunEnv -g VirtualBuildEnv")
     assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
@@ -321,7 +321,7 @@ def test_buildenv_from_requires():
                 self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualBuildEnv")
+    client.run("install . -s:b os=Windows -s:h os=Linux --build='*' -g VirtualBuildEnv")
     assert "BUILDENV POCO: MyPocoLinuxValue!!!" in client.out
     assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
@@ -392,7 +392,7 @@ def test_diamond_repeated():
     client.run("export pkgc --name=pkgc --version=1.0")
     client.run("export pkgd --name=pkgd --version=1.0")
 
-    client.run("install --reference=pkge --build")
+    client.run("install --requires=pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
@@ -429,7 +429,7 @@ def test_environment_scripts_generated_envvars(require_run):
     client.run("export build_require_pkg --name=build_require_pkg --version=1.0")
     client.run("export require_pkg --name=require_pkg --version=1.0")
 
-    client.run("install consumer_pkg --build")
+    client.run("install consumer_pkg --build='*'")
     if platform.system() == "Windows":
         conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
         if require_run:
@@ -449,28 +449,28 @@ def test_environment_scripts_generated_envvars(require_run):
 
     if require_run:
         # Build context LINUX - Host context LINUX
-        client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
+        client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build='*'")
         conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
         conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 
         # Build context WINDOWS - Host context WINDOWS
-        client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
+        client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build='*'")
         conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
         conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context LINUX - Host context WINDOWS
-        client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
+        client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build='*'")
         conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
         conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context WINDOWS - Host context LINUX
-        client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
+        client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build='*'")
         conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
         conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
@@ -546,3 +546,29 @@ def test_profile_build_env_spaces():
     assert "VAR1= VALUE1!!" in out
     assert  "Restoring environment" in out
     assert "VAR1=!!" in out
+
+
+def test_deactivate_location():
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define("FOO", "BAR")
+        """)
+    client = TestClient()
+    client.save({"pkg.py": conanfile})
+    client.run("create pkg.py --name pkg --version 1.0")
+    client.run("install --requires pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
+
+    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
+    cmd = "{}conanbuild{}".format(source_cmd, script_ext)
+
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                     cwd=client.current_folder).communicate()
+
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
+
+    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
+                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))

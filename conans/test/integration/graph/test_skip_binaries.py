@@ -27,11 +27,11 @@ def test_private_no_skip():
     client.run("create . --name=pkg --version=1.0")
 
     # But if we want to build pkg, no skip
-    client.run("create . --name=app --version=1.0 --build=app --build=pkg")
+    client.run("create . --name=app --version=1.0 --build=app/* --build=pkg/*")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
 
     client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
-    client.run("create . --name=app --version=1.0 --build=app --build=pkg", assert_error=True)
+    client.run("create . --name=app --version=1.0 --build=app/* --build=pkg/*", assert_error=True)
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Missing")})
 
 

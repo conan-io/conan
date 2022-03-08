@@ -156,7 +156,7 @@ class TestInvalidBuildPackageID:
     def test_invalid_try_build(self, client):
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
-        client.run("install consumer -s os=Windows --build", assert_error=True)
+        client.run("install consumer -s os=Windows --build='*'", assert_error=True)
         # Only when trying to build, it will try to build the Windows one
         client.assert_listed_binary({"pkg/0.1": (self.windows_package_id, "Invalid")})
         assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out

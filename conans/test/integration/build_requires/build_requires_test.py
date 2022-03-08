@@ -474,11 +474,11 @@ Tool/0.1@lasote/stable
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
@@ -493,17 +493,17 @@ Tool/0.1@lasote/stable
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
@@ -532,7 +532,7 @@ class package(ConanFile):
     build_requires  = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})
-        client.run("install . --build=missing -o Pkg:someoption=3")
+        client.run("install . --build=missing -o Pkg/*:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
 
     def test_failed_assert(self):
@@ -658,3 +658,25 @@ def test_dependents_new_buildenv():
     client.run("install consumer -pr=profile_prepend")
     result = os.pathsep.join(["profilepath", "myotherprepend", "myboostpath", "myotherpath"])
     assert "LIB PATH {}".format(result) in client.out
+
+
+def test_tool_requires_conanfile_txt():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+
+    build_req = textwrap.dedent("""
+        from conan import ConanFile
+        class BuildReqConan(ConanFile):
+            pass
+        """)
+
+    client.save({"conanfile.py": build_req})
+    client.run("export . --name=build_req --version=1.0 --user=test --channel=test")
+
+    consumer = textwrap.dedent("""
+                [tool_requires]
+                build_req/1.0@test/test
+            """)
+    client.save({"conanfile.txt": consumer}, clean_first=True)
+    client.run("install . --build=missing")
+    assert "build_req/1.0@test/test: Created package" in client.out

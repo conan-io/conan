@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import Extender, OnceArgument
+from conans.cli.command import Extender, OnceArgument, ExtenderValueRequired
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -10,7 +10,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     attribute in their conanfile.py takes precedence over the command line parameter.
     Possible parameters:
 
-    --build            Force build for all packages, do not use binary packages.
+    --build="*"        Force build for all packages, do not use binary packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
                        package is not found. Cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
@@ -24,6 +24,17 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.
 '''
+
+
+def add_reference_args(parser):
+    parser.add_argument("--name", action=OnceArgument,
+                        help='Provide a package name if not specified in conanfile')
+    parser.add_argument("--version", action=OnceArgument,
+                        help='Provide a package version if not specified in conanfile')
+    parser.add_argument("--user", action=OnceArgument,
+                        help='Provide a user if not specified in conanfile')
+    parser.add_argument("--channel", action=OnceArgument,
+                        help='Provide a channel if not specified in conanfil')
 
 
 def add_profiles_args(parser):
@@ -68,9 +79,9 @@ def add_profiles_args(parser):
         item_fn("host", ":h", ":host")
 
 
-def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None):
     if build_help:
-        parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
+        parser.add_argument("-b", "--build", action=ExtenderValueRequired, nargs="?", help=build_help)
 
     parser.add_argument("-r", "--remote", action=Extender, default=None,
                         help='Look in the specified remote or remotes server')
@@ -84,12 +95,18 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
 
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
-    if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile")
-        parser.add_argument("--lockfile-out", action=OnceArgument,
-                            help="Filename of the updated lockfile")
     add_profiles_args(parser)
+
+
+def add_lockfile_args(parser):
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile.")
+    parser.add_argument("--lockfile-strict", action="store_true",
+                        help="Raise an error if some dependency is not found in lockfile")
+    parser.add_argument("--lockfile-out", action=OnceArgument,
+                        help="Filename of the updated lockfile")
+    parser.add_argument("--lockfile-packages", action="store_true",
+                        help="Lock package-id and package-revision information")
 
 
 def get_profiles_from_args(conan_api, args):
@@ -135,3 +152,16 @@ def get_multiple_remotes(conan_api, remote_names=None):
     elif remote_names is None:
         # if we don't pass any remotes we want to retrieve only the enabled ones
         return conan_api.remotes.list(only_active=True)
+
+
+def scope_options(profile, requires, tool_requires):
+    """
+    Command line helper to scope options when ``command -o myoption=myvalue`` is used,
+    that needs to be converted to "-o pkg:myoption=myvalue". The "pkg" value will be
+    computed from the given requires/tool_requires
+    """
+    # FIXME: This helper function here is not great, find a better place
+    if requires and len(requires) == 1 and not tool_requires:
+        profile.options.scope(requires[0])
+    if tool_requires and len(tool_requires) == 1 and not requires:
+        profile.options.scope(tool_requires[0])

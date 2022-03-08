@@ -13,7 +13,7 @@ def test_install():
     client.save({"conanfile.py":
                  GenConanfile("pkgb", "0.1").with_require("pkga/[>=0.1]@user/channel")})
     client.run("create . --user=user --channel=channel")
-    client.run("lock create --reference=pkgb/0.1@user/channel --lockfile-out=lock1.lock")
+    client.run("lock create --requires=pkgb/0.1@user/channel --lockfile-out=lock1.lock")
 
     # We can create a pkga/0.2, but it will not be used
     client.save({"conanfile.py": GenConanfile("pkga", "0.2").with_package_file("file.h", "0.2")})
@@ -35,7 +35,7 @@ def test_install_recipes():
     client.save({"conanfile.py":
                  GenConanfile("pkgb", "0.1").with_require("pkga/[>=0.1]@user/channel")})
     client.run("create . --user=user --channel=channel")
-    client.run("lock create --reference=pkgb/0.1@user/channel --lockfile-out=lock1.lock")
+    client.run("lock create --requires=pkgb/0.1@user/channel --lockfile-out=lock1.lock")
 
     # We can create a pkga/0.2, but it will not be used
     client.save({"conanfile.py": GenConanfile("pkga", "0.2").with_package_file("file.h", "0.2")})

@@ -31,15 +31,13 @@ class Autotools(object):
         configure_cmd = "{}/configure".format(source)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
         configure_cmd = subsystem_path(subsystem, configure_cmd)
-        cmd = "{} {}".format(configure_cmd, self._configure_args)
+        cmd = '"{}" {}'.format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
 
     def make(self, target=None):
-        make_program = self._conanfile.conf["tools.gnu:make_program"]
-        if make_program is None:
-            make_program = "mingw32-make" if self._use_win_mingw() else "make"
-
+        make_program = self._conanfile.conf.get("tools.gnu:make_program",
+                                                default="mingw32-make" if self._use_win_mingw() else "make")
         str_args = self._make_args
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():

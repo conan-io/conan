@@ -72,7 +72,8 @@ def test_conanfile_txt_strict(requires):
     # Not strict mode works
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/[>1.0]@user/testing"})
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock", assert_error=True)
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock --lockfile-strict",
+               assert_error=True)
     assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
 
 
@@ -279,3 +280,53 @@ def test_conditional_compatible_range(requires):
     assert "dep/0.2#" in client.out
     assert "dep/0.1" not in client.out
     assert "dep/0.3" not in client.out
+
+
+def test_locking_require_override_version_ranges():
+    """
+    conanfile.txt locking it dependencies (with version ranges) and using a ``--require-override``
+    can work, because the locked version fits in the consumer range
+    """
+    client = TestClient()
+    client.save({"pkg/conanfile.py": GenConanfile(),
+                 "consumer/conanfile.txt": f"[requires]\npkg/[*]"})
+    client.run("create pkg --name=pkg --version=0.1")
+    client.run("create pkg --name=pkg --version=0.2")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock "
+               "--require-override=pkg/0.1")
+    assert "pkg/0.1" in client.out
+    assert "pkg/0.2" not in client.out
+
+    # This work without override, it matches the range
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+    assert "pkg/0.1" in client.out
+    assert "pkg/0.2" not in client.out
+
+
+def test_partial_lockfile():
+    """
+    make sure that a partial lockfile can be applied anywhere downstream without issues,
+    as lockfiles by default are not strict
+    """
+    c = TestClient()
+    c.save({"pkga/conanfile.py": GenConanfile("pkga"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[*]"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/[*]"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgc/[*]")})
+    c.run("create pkga --version=0.1")
+    c.run("lock create pkgb --lockfile-out=b.lock")
+    c.run("create pkga --version=0.2")
+    c.run("create pkgb --lockfile=b.lock")
+    assert "pkga/0.1" in c.out
+    assert "pkga/0.2" not in c.out
+    c.run("install pkgc --lockfile=b.lock")
+    assert "pkga/0.1" in c.out
+    assert "pkga/0.2" not in c.out
+    c.run("create pkgc  --lockfile=b.lock")
+    assert "pkga/0.1" in c.out
+    assert "pkga/0.2" not in c.out
+    c.run("create app --lockfile=b.lock")
+    assert "pkga/0.1" in c.out
+    assert "pkga/0.2" not in c.out
+    c.run("create app --lockfile=b.lock --lockfile-strict", assert_error=True)
+    assert "ERROR: Requirement 'pkgc/[*]' not in lockfile" in c.out
