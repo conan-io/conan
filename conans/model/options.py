@@ -194,6 +194,10 @@ class OptionsValues(object):
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
+                if package.endswith("/*"):
+                    # Compatibility with 2.0, only allowed /*, at Conan 2.0 a version or any
+                    # pattern would be allowed
+                    package = package[:-2]
                 package_values = self._reqs_options.setdefault(package.strip(),
                                                                PackageOptionValues())
                 package_values.add_option(option, v)

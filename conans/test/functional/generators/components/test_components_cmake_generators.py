@@ -161,7 +161,7 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
             generators = "{}", "cmake"
             exports_sources = "src/*"
             requires = "greetings/0.0.1"
-            default_options = {{"greetings:components": "{}"}}
+            default_options = {{"greetings/*:components": "{}"}}
 
             def build(self):
                 cmake = CMake(self)
