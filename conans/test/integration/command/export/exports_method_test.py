@@ -247,6 +247,6 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                       client.out)
         client.run("upload pkg/0.1 -r default")
         client.run("remove * -f")
-        client.run("install --requires=pkg/0.1@ --build")
+        client.run("install --requires=pkg/0.1@ --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("pkg/0.1: CONTENT: mycontent", client.out)

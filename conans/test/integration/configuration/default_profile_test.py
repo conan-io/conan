@@ -53,7 +53,7 @@ class MyConanfile(ConanFile):
 
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
-        client.run('install --requires=mylib/0.1@lasote/stable --build')
+        client.run('install --requires=mylib/0.1@lasote/stable --build="*"')
 
         # Now use a name, in the default profile folder
         os.unlink(default_profile_path)
@@ -61,7 +61,7 @@ class MyConanfile(ConanFile):
         save(client.cache.new_config_path, "core:default_profile=other")
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
-        client.run('install --requires=mylib/0.1@lasote/stable --build')
+        client.run('install --requires=mylib/0.1@lasote/stable --build="*"')
 
     @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):

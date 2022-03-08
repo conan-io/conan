@@ -44,5 +44,5 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing %s  -s compiler.libcxx=libstdc++11" % settings)
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing %s -s compiler.libcxx=libstdc++ "
-                   "-s pkg:compiler.libcxx=libstdc++11" % settings)
+                   "-s pkg*:compiler.libcxx=libstdc++11" % settings)
         self.assertIn("consumer/0.1@user/testing: Created package", client.out)

@@ -231,7 +231,7 @@ class PackageIDTest(unittest.TestCase):
                          settings=["compiler", ])
             self.client.run('install --requires=hello/1.2.0@user/testing '
                             ' -s compiler="Visual Studio" '
-                            ' -s compiler.version=14 --build')
+                            ' -s compiler.version=14 --build=*')
 
             # Should have binary available
             self.client.run('install --requires=hello/1.2.0@user/testing'
@@ -260,7 +260,7 @@ class PackageIDTest(unittest.TestCase):
                      )
         self.client.run('install --requires=hello/1.2.0@user/testing '
                         ' -s compiler="Visual Studio" '
-                        ' -s compiler.version=14 --build')
+                        ' -s compiler.version=14 --build=*')
 
         # Should NOT have binary available
         self.client.run('install --requires=hello/1.2.0@user/testing'
@@ -321,7 +321,7 @@ class PackageIDErrorTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
-        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build')
+        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
     def test_transitive_multi_mode2_package_id(self):
@@ -346,7 +346,7 @@ class PackageIDErrorTest(unittest.TestCase):
                     self.output.info("PKGNAMES: %s" % sorted(self.info.requires.pkg_names))
                 """)
         client.save({"conanfile.py": consumer})
-        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build')
+        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         self.assertIn("dep2/1.0@user/testing: PkgNames: ['dep1']", client.out)
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
@@ -375,7 +375,7 @@ class PackageIDErrorTest(unittest.TestCase):
                     self.output.info("PKGNAMES: %s" % sorted(self.info.requires.pkg_names))
                 """)
         client.save({"conanfile.py": consumer})
-        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build')
+        client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         self.assertIn("dep2/1.0@user/testing: PkgNames: ['dep1']", client.out)
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
@@ -392,5 +392,5 @@ class PackageIDErrorTest(unittest.TestCase):
         client2.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         client2.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")})
-        client2.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build')
+        client2.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         self.assertIn("consumer/1.0@user/testing: Created", client2.out)

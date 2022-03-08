@@ -27,20 +27,22 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("Or try to build locally from sources with '--build=hello0 --build=hello1'",
+        self.assertIn("Or try to build locally from sources with '--build=hello0/0.0@lasote/stable "
+                      "--build=hello1/1.1@lasote/stable'",
                       client.out)
         # Only 1 reference!
         assert "Use 'conan search hello0/0.0@lasote/stable --table=table.html" in client.out
 
         # We generate the package for hello0/0.0
-        client.run("install --requires=hello0/0.0@lasote/stable --build hello0")
+        client.run("install --requires=hello0/0.0@lasote/stable --build hello0*")
 
         # Still missing hello1/1.1
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("Or try to build locally from sources with '--build=hello1'", client.out)
+        self.assertIn("Or try to build locally from sources with "
+                      "'--build=hello1/1.1@lasote/stable'", client.out)
 
         # We generate the package for hello1/1.1
-        client.run("install --requires=hello1/1.1@lasote/stable --build hello1")
+        client.run("install --requires=hello1/1.1@lasote/stable --build hello1*")
 
         # Now Hello2 should be built and not fail
         client.run("create . --user=lasote --channel=stable")
@@ -141,7 +143,7 @@ class MyPackage(ConanFile):
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --requires=%s --build" % str(ref))
+        other_client.run("install --requires=%s --build='*'" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))

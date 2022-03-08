@@ -29,7 +29,7 @@ class BrokenDownloadTest(unittest.TestCase):
         path = server.test_server.server_store.export(ref)
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
-        client.run("install --requires=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("Error while extracting downloaded file", client.out)
         self.assertFalse(os.path.exists(client.get_latest_ref_layout(ref).export()))
 

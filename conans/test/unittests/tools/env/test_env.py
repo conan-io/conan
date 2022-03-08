@@ -8,6 +8,7 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
@@ -159,7 +160,7 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_profile_env("")
+    env = profile_env.get_profile_env("", is_consumer=True)
     env = env.vars(ConanFileMock())
     with environment_update({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
@@ -171,7 +172,7 @@ def test_profile():
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
 
-        env = profile_env.get_profile_env("mypkg1/1.0")
+        env = profile_env.get_profile_env(RecipeReference.loads("mypkg1/1.0"))
         env = env.vars(ConanFileMock())
         assert env.get("MyVar1") == "MyValue1"
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'

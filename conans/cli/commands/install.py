@@ -70,6 +70,7 @@ def graph_compute(args, conan_api, strict=False):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
+    # FIXME: Not used?
     build_require = args.build_require if "build_require" in args else None
     require_override = args.require_override if "require_override" in args else None
     if path is not None:

@@ -1,4 +1,3 @@
-import fnmatch
 import os
 import textwrap
 from collections import OrderedDict
@@ -6,6 +5,7 @@ from contextlib import contextmanager
 
 from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 
 
@@ -395,14 +395,14 @@ class ProfileEnvironment:
     def __bool__(self):
         return bool(self._environments)
 
-    def get_profile_env(self, ref):
+    def get_profile_env(self, ref, is_consumer=False):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
         result = Environment()
         for pattern, env in self._environments.items():
-            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+            if pattern is None or ref_matches(ref, pattern, is_consumer):
                 # Latest declared has priority, copy() necessary to not destroy data
                 result = env.copy().compose_env(result)
         return result

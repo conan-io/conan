@@ -1,3 +1,5 @@
+
+import fnmatch
 import re
 from functools import total_ordering
 
@@ -130,3 +132,23 @@ class RecipeReference:
             raise ConanException(f"Invalid package user '{self.user}'")
         if self.channel and validation_pattern.match(self.channel) is None:
             raise ConanException(f"Invalid package channel '{self.channel}'")
+
+    def matches(self, pattern, is_consumer):
+        negate = False
+        if pattern.startswith("!"):
+            pattern = pattern[1:]
+            negate = True
+
+        condition = ((pattern == "&" and is_consumer) or
+                      fnmatch.fnmatchcase(str(self), pattern) or
+                      fnmatch.fnmatchcase(self.repr_notime(), pattern))
+        if negate:
+            return not condition
+        return condition
+
+
+def ref_matches(ref, pattern, is_consumer):
+    if not ref or not str(ref):
+        assert is_consumer
+        ref = RecipeReference.loads("*/*")  # FIXME: ugly
+    return ref.matches(pattern, is_consumer=is_consumer)

@@ -24,16 +24,14 @@ def test_options():
         from conan import ConanFile
         class Meta(ConanFile):
             requires = "ffmpeg/1.0"
-            default_options = {"ffmpeg:variation": "nano"}
+            default_options = {"ffmpeg/1.0:variation": "nano"}
         """)
 
     client.save({"ffmepg/conanfile.py": ffmpeg,
                  "variant/conanfile.py": variant})
     client.run("export ffmepg --name=ffmpeg --version=1.0")
     client.run("export variant --name=nano --version=1.0")
-
-    client.run("lock create --requires=nano/1.0@ --build --lockfile-out=conan.lock")
-
+    client.run("lock create --requires=nano/1.0@ --build=* --lockfile-out=conan.lock")
     client.run("graph build-order --requires=nano/1.0@ "
                "--lockfile=conan.lock --lockfile-out=conan.lock --build=missing "
                "--format=json", redirect_stdout="build_order.json")

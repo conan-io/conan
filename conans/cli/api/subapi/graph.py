@@ -3,9 +3,10 @@ from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer, \
-    txt_definer
+from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
+
 from conans.errors import ConanException
+
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -36,11 +37,11 @@ class GraphAPI:
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          False, ref)
             if ref.name:
-                profile_host.options.scope(ref.name)
+                profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = app.loader.load_conanfile_txt(path, require_overrides=require_overrides)
-            txt_definer(conanfile, profile_host)
+            consumer_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
         return root_node
@@ -66,7 +67,7 @@ class GraphAPI:
         app.load_remotes(remotes, update=update)
 
         loader = app.loader
-        profile_host.options.scope(tested_reference.name)
+        profile_host.options.scope(tested_reference)
 
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
@@ -91,7 +92,7 @@ class GraphAPI:
         app = ConanApp(self.conan_api.cache_folder)
         conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires,
                                             require_overrides=require_overrides)
-        virtual_definer(conanfile, profile_host)
+        consumer_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
 

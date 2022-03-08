@@ -343,7 +343,7 @@ def client():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 def test_project_xcodebuild(client):
 
     conanfile = textwrap.dedent("""
@@ -383,7 +383,7 @@ def test_project_xcodebuild(client):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 @pytest.mark.skip(reason="Different sdks not installed in CI")
 def test_xcodebuild_test_different_sdk(client):
 
@@ -415,7 +415,7 @@ def test_xcodebuild_test_different_sdk(client):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 def test_missing_sdk(client):
 
     conanfile = textwrap.dedent("""

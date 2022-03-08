@@ -134,7 +134,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                                "tool:myopt=1"
+                                "tool/0.1:myopt=1"
                         ]
                     },
                     {
@@ -144,7 +144,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                                "tool:myopt=2"
+                                "tool/0.1:myopt=2"
                         ]
                     }
                 ]

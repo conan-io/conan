@@ -48,7 +48,7 @@ def test_install_system_requirements(client):
     client.run(" install .")
     assert "Running system requirements!!" in client.out
     client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-    client.run(" install --requires=pkg/0.1@lasote/testing --build")
+    client.run(" install --requires=pkg/0.1@lasote/testing --build='*'")
     assert "Running system requirements!!" in client.out
     client.run("upload * --confirm -r default")
     client.run('remove "*" -f')
@@ -92,19 +92,19 @@ def test_install_transitive_pattern(client):
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2:shared=header")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option reverse
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg:shared=header "
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg/*:shared=header "
                "--build=missing")
     assert "pkg/0.1@user/testing: Calling build()" in client.out
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg/*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence of alphabetical pattern
@@ -166,7 +166,7 @@ def test_install_with_profile(client):
 
     client.save({"conanfile.py": conanfile})
     save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
-    client.run("install . -pr=myprofile --build")
+    client.run("install . -pr=myprofile --build='*'")
     assert "PKGOS=Linux" in client.out
     mkdir(os.path.join(client.current_folder, "myprofile"))
     client.run("install . -pr=myprofile")
@@ -225,22 +225,22 @@ def test_install_argument_order(client):
     client.save({"conanfile.py": conanfile,
                  "conanfile_boost.py": conanfile_boost})
     client.run("create conanfile_boost.py conan/stable")
-    client.run("install . -o boost:shared=True --build=missing")
+    client.run("install . -o boost/*:shared=True --build=missing")
     output_0 = "%s" % client.out
-    client.run("install . -o boost:shared=True --build missing")
+    client.run("install . -o boost/*:shared=True --build missing")
     output_1 = "%s" % client.out
-    client.run("install -o boost:shared=True . --build missing")
+    client.run("install -o boost/*:shared=True . --build missing")
     output_2 = "%s" % client.out
-    client.run("install -o boost:shared=True --build missing .")
+    client.run("install -o boost/*:shared=True --build missing .")
     output_3 = "%s" % client.out
     assert "ERROR" not in output_3
     assert output_0 == output_1
     assert output_1 == output_2
     assert output_2 == output_3
 
-    client.run("install -o boost:shared=True --build boost . --build missing")
+    client.run("install -o boost/*:shared=True --build boost . --build missing")
     output_4 = "%s" % client.out
-    client.run("install -o boost:shared=True --build missing --build boost .")
+    client.run("install -o boost/*:shared=True --build missing --build boost .")
     output_5 = "%s" % client.out
     assert output_4 == output_5
 

@@ -31,7 +31,7 @@ def client():
 
 def test_install_combined(client):
     client.run("install . --build=missing")
-    client.run("install . --build=missing --build hello1")
+    client.run("install . --build=missing --build hello1/*")
     assert "hello0/0.1@lasote/stable: Already installed!" in client.out
     assert "hello1/0.1@lasote/stable: Forced build from source" in client.out
 
@@ -79,8 +79,8 @@ def test_reuse(client):
 
 
 def test_upper_option(client):
-    client.run("install conanfile.py -o hello2:language=1 -o hello1:language=0 "
-               "-o hello0:language=1 --build missing")
+    client.run("install conanfile.py -o hello2*:language=1 -o hello1*:language=0 "
+               "-o hello0*:language=1 --build missing")
     package_id = client.created_package_id("hello0/0.1@lasote/stable")
     package_id2 = client.created_package_id("hello1/0.1@lasote/stable")
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
@@ -99,7 +99,7 @@ def test_upper_option(client):
 
 
 def test_inverse_upper_option(client):
-    client.run("install . -o language=0 -o hello1:language=1 -o hello0:language=0 --build missing")
+    client.run("install . -o language=0 -o hello1*:language=1 -o hello0*:language=0 --build missing")
     package_id = client.created_package_id("hello0/0.1@lasote/stable")
     package_id2 = client.created_package_id("hello1/0.1@lasote/stable")
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
@@ -122,8 +122,8 @@ def test_upper_option_txt(client):
         hello1/0.1@lasote/stable
 
         [options]
-        hello0:language=1
-        hello1:language=0
+        hello0*:language=1
+        hello1*:language=0
         """}
     client.save(files, clean_first=True)
 

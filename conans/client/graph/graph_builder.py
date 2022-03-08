@@ -10,7 +10,7 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
 
@@ -135,7 +135,8 @@ class DepsGraphBuilder(object):
     def _conflicting_options(require, node, prev_node, prev_require, base_previous):
         # Even if the version matches, there still can be a configuration conflict
         # Only the propagated options can conflict, because profile would have already been asigned
-        upstream_options = node.conanfile.up_options[require.ref.name]
+        is_consumer = node.conanfile._conan_is_consumer
+        upstream_options = node.conanfile.up_options.get(require.ref, is_consumer)
         for k, v in upstream_options.items():
             prev_option = prev_node.conanfile.options.get_safe(k)
             if prev_option is not None:
@@ -156,13 +157,10 @@ class DepsGraphBuilder(object):
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         tool_requires = profile.tool_requires
-        str_ref = str(node.ref)
         for pattern, tool_requires in tool_requires.items():
-            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
+            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 for tool_require in tool_requires:  # Do the override
-                    if str(tool_require) == str(node.ref):  # FIXME: Ugly str comparison
+                    if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
                     node.conanfile.requires.tool_require(str(tool_require),
@@ -253,7 +251,7 @@ class DepsGraphBuilder(object):
             # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
             down_options = Options(options_values=require.options)
-            down_options.scope(new_ref.name)
+            down_options.scope(new_ref)
             # At the moment, the behavior is the most restrictive one: default_options and
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is

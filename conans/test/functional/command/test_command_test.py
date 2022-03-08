@@ -22,6 +22,6 @@ class ConanTestTest(unittest.TestCase):
 
         self.assertNotIn("WARN: conanenv.txt file not found", client.out)
 
-        client.run("test test_package hello/0.1@lasote/stable -s hello:build_type=Debug "
+        client.run("test test_package hello/0.1@lasote/stable -s hello/*:build_type=Debug "
                    "--build missing")
         self.assertIn('hello/0.1: Hello World Debug!', client.out)

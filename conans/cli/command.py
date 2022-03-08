@@ -14,11 +14,12 @@ COMMAND_GROUPS = {
 class Extender(argparse.Action):
     """Allows using the same flag several times in command and creates a list with the values.
     For example:
-        conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
+        conan install MyPackage/1.2@user/channel -o qt/*:value -o mode/*:2 -s cucumber/*:true
       It creates:
           options = ['qt:value', 'mode:2']
           settings = ['cucumber:true']
     """
+    raise_if_none = False
 
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
@@ -38,6 +39,15 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
+        else:  # When "--argument" with no value is specified
+            if self.raise_if_none:
+                raise argparse.ArgumentError(None, 'Specify --build="*" instead of --build')
+
+
+class ExtenderValueRequired(Extender):
+
+    # If --build is specified, it will raise
+    raise_if_none = True
 
 
 class OnceArgument(argparse.Action):

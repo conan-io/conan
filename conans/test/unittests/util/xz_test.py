@@ -42,7 +42,8 @@ class Pkg(ConanFile):
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1",
                             "conan_sources.txz": "#"})
-        client.run("install --requires=pkg/0.1@user/channel --build", assert_error=True)
+
+        client.run("install --requires=pkg/0.1@user/channel --build='*'", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_sources.txz' file format", client.out)
 
