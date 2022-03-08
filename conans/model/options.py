@@ -198,12 +198,11 @@ class Options:
                     tokens = k.split(":", 1)
                     if len(tokens) == 2:
                         package, option = tokens
-                        if "/" not in package:
-                            new_package = "{}/*".format(package)
-                            ConanOutput().warning("The usage of package names without a version: "
-                                                  "`{}` in 'default_options' is deprecated, use "
-                                                  "`{}` instead".format(package, new_package))
-                            package = new_package
+                        if "/" not in package and "*" not in package:
+                            msg = "The usage of package names `{}` in 'default_options' is " \
+                                  "deprecated, use a pattern like `{}/*` or `{}*` " \
+                                  "instead".format(k, package, package)
+                            raise ConanException(msg)
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
                         self._package_options[k] = v

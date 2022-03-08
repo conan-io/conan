@@ -72,28 +72,6 @@ class ConanFile:
                                      getattr(self, "test_requires", None),
                                      getattr(self, "tool_requires", None))
 
-        # FIXME: This is allowing default package options only with name: {"openssl:shared": True}
-        #        only for compatibility with 1.X recipes. Remove in 2.1
-        def patch_options_values(option_values):
-            ret = {}
-            if not option_values:
-                return ret
-            for k, v in option_values.items():
-                k = str(k).strip()
-                tokens = k.split(":", 1)
-                if len(tokens) == 2:
-                    package = tokens[0]
-                    if "/" not in package:
-                        new_k = "{}/*:{}".format(package, tokens[1])
-                        self.output.warning("The usage of package names without a version: `{}` "
-                                            "in 'default_options' is deprecated, use `{}` instead"
-                                            "".format(k, new_k))
-                        k = new_k
-                ret[k] = v
-            return ret
-
-        self.default_options = patch_options_values(self.default_options)
-
         self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables

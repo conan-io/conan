@@ -327,8 +327,8 @@ class ProfileTest(unittest.TestCase):
 
     def test_install_profile_options(self):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
-                       options={"hello0:language": 1,
-                                "hello0:static": False})
+                       options={"hello0*:language": 1,
+                                "hello0*:static": False})
 
         self.client.save({"conanfile.py": GenConanfile("hello0", "1").with_option("language", [1, 2])
                           .with_option("static", [True, False])})

@@ -114,9 +114,15 @@ def test_complete():
     client.save({"conanfile.py": mycmake_conanfile,
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
+    client.run("create . --name=mycmake --version=1.0", assert_error=True)
+    assert "The usage of package names `myopenssl:shared` in 'default_options' is deprecated, " \
+           "use a pattern like `myopenssl/*` or `myopenssl*` instead" in client.out
+
+    # Fix the default options and repeat the create
+    fixed_cf = mycmake_conanfile.replace('default_options = {"myopenssl:shared": True}',
+                                         'default_options = {"myopenssl*:shared": True}')
+    client.save({"conanfile.py": fixed_cf})
     client.run("create . --name=mycmake --version=1.0")
-    assert "WARN: The usage of package names without a version: `myopenssl:shared` " \
-           "in 'default_options' is deprecated, use `myopenssl/*:shared` instead" in client.out
 
     mylib = textwrap.dedent(r"""
         from conan import ConanFile

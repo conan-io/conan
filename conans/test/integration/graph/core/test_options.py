@@ -61,7 +61,7 @@ class TestOptions(GraphManagerTest):
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requires("liba/0.1").
-                              with_default_option("liba:shared", True))
+                              with_default_option("liba*:shared", True))
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)

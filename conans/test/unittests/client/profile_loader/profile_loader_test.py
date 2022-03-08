@@ -91,8 +91,8 @@ def test_profiles_includes():
             [settings]
             os=Windows
             [options]
-            zlib:aoption=1
-            zlib:otheroption=1
+            zlib*:aoption=1
+            zlib*:otheroption=1
         """)
 
     save_profile(profile1, "subdir/profile1.txt")
@@ -119,7 +119,7 @@ def test_profiles_includes():
             include(./profile3.txt)
 
             [options]
-            zlib:otheroption=12
+            zlib*:otheroption=12
         """)
 
     save_profile(profile4, "profile4.txt")
