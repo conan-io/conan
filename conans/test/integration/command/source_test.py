@@ -156,7 +156,7 @@ class ConanLib(ConanFile):
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
         # download the sources from server0
-        client.run("install --reference=hello/0.1@ -r server0")
+        client.run("install --requires=hello/0.1@ -r server0")
         client.run("upload hello/0.1 -r server1")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
@@ -164,7 +164,7 @@ class ConanLib(ConanFile):
         # install from server1 that has the sources, upload to server1
         # Will not download sources, revision already in server
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server1")
+        client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
         assert f"hello/0.1#{rrev} already in server, skipping upload" in client.out
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
@@ -173,6 +173,6 @@ class ConanLib(ConanFile):
         # install from server0 and build
         # download sources from server0
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server0 --build='*'")
+        client.run("install --requires=hello/0.1@ -r server0 --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)

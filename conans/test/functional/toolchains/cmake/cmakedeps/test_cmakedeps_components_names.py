@@ -552,7 +552,7 @@ class TestComponentsCMakeGenerators:
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=world --version=0.0.1")
-        client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+        client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
@@ -609,7 +609,7 @@ class TestComponentsCMakeGenerators:
             """)
             client.save({"conanfile.py": conanfile})
             client.run("create . --name=world --version=0.0.1")
-            client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+            client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
             assert ("Component 'greetings::non-existent' not found in 'greetings' "
                     "package requirement" in client.out)
 

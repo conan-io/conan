@@ -150,7 +150,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build='*' -r default")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*' -r default")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -207,7 +207,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build='*'")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*'")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)

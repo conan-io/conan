@@ -474,11 +474,11 @@ Tool/0.1@lasote/stable
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
@@ -493,17 +493,17 @@ Tool/0.1@lasote/stable
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)

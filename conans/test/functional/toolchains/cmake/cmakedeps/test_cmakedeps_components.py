@@ -66,7 +66,7 @@ class PropagateSpecificComponents(unittest.TestCase):
 
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
-        t.run('install --reference=middle/version@ -g CMakeDeps')
+        t.run('install --requires=middle/version@ -g CMakeDeps')
 
         content = t.load('middle-release-x86_64-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
@@ -115,7 +115,7 @@ def test_wrong_component(top_conanfile, from_component):
     t.run('create top.py --name=top --version=version')
     t.run('create consumer.py --name=wrong --version=version')
 
-    t.run('install --reference=wrong/version@ -g CMakeDeps', assert_error=True)
+    t.run('install --requires=wrong/version@ -g CMakeDeps', assert_error=True)
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 

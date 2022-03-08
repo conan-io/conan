@@ -38,7 +38,7 @@ def test_pkg_config_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
@@ -83,7 +83,7 @@ def test_empty_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
@@ -117,7 +117,7 @@ def test_system_libs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("mylib.pc")
     assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
@@ -142,7 +142,7 @@ def test_multiple_include():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "includedir1=${prefix}/inc1" in pc_content
@@ -181,7 +181,7 @@ def test_custom_content():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "libdir1=${prefix}/lib" in pc_content
@@ -206,7 +206,7 @@ def test_custom_content_and_version_components():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content

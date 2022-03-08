@@ -27,8 +27,8 @@ def test_install_reference_txt(client):
 
 def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
-    client.run("install --reference=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
-    assert "ERROR: Can't use --name, --version, --user or --channel arguments with --reference" in client.out
+    client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
+    assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
 
 
 def test_four_subfolder_install(client):
@@ -48,11 +48,11 @@ def test_install_system_requirements(client):
     client.run(" install .")
     assert "Running system requirements!!" in client.out
     client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-    client.run(" install --reference=pkg/0.1@lasote/testing --build='*'")
+    client.run(" install --requires=pkg/0.1@lasote/testing --build='*'")
     assert "Running system requirements!!" in client.out
     client.run("upload * --confirm -r default")
     client.run('remove "*" -f')
-    client.run(" install --reference=pkg/0.1@lasote/testing")
+    client.run(" install --requires=pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
 
 
@@ -81,21 +81,21 @@ def test_install_transitive_pattern(client):
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Priority of non-scoped options
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+    client.run(" install --requires=pkg2/0.1@user/testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option reverse
@@ -104,28 +104,28 @@ def test_install_transitive_pattern(client):
     assert "pkg/0.1@user/testing: Calling build()" in client.out
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg/*:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg/*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence of alphabetical pattern
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of last match, even first pattern match
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
+    client.run(" install --requires=pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
     client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg*:shared=header")
+    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
 
@@ -199,12 +199,12 @@ def test_install_broken_reference(client):
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
     rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
-    client.run("install --reference=hello/0.1@lasote/stable", assert_error=True)
+    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
     # If it was associated, it has to be desasociated
     client.run("remote remove_ref hello/0.1@lasote/stable")
-    client.run("install --reference=hello/0.1@lasote/stable", assert_error=True)
+    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
 
@@ -251,7 +251,7 @@ def test_install_anonymous(client):
     client.run("create . --user=lasote --channel=testing")
     client.run("upload * --confirm -r default")
     client2 = TestClient(servers=client.servers, inputs=[])
-    client2.run("install --reference=pkg/0.1@lasote/testing")
+    client2.run("install --requires=pkg/0.1@lasote/testing")
     assert "pkg/0.1@lasote/testing: Package installed" in client2.out
 
 
@@ -271,7 +271,7 @@ def test_install_without_ref(client):
     assert "Conanfile not found at {}".format(fake_path) in client.out
 
     # Try this syntax to upload too
-    client.run('install --reference=lib/1.0@')
+    client.run('install --requires=lib/1.0@')
     client.run('upload lib/1.0 -c -r default')
 
 
@@ -280,12 +280,12 @@ def test_install_disabled_remote(client):
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload * --confirm -r default")
     client.run("remote disable default")
-    client.run("install --reference=pkg/0.1@lasote/testing -r default", assert_error=True)
+    client.run("install --requires=pkg/0.1@lasote/testing -r default", assert_error=True)
     assert "Remote 'default' is disabled" in client.out
     client.run("remote enable default")
-    client.run("install --reference=pkg/0.1@lasote/testing -r default")
+    client.run("install --requires=pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
-    client.run("install --reference=pkg/0.1@lasote/testing --update -r default", assert_error=True)
+    client.run("install --requires=pkg/0.1@lasote/testing --update -r default", assert_error=True)
     assert "Remote 'default' is disabled" in client.out
 
 
@@ -300,7 +300,7 @@ def test_install_skip_disabled_remote():
     client.run("upload * --confirm -r server3")
     client.run("remove * -f")
     client.run("remote disable default")
-    client.run("install --reference=pkg/0.1@lasote/testing", assert_error=False)
+    client.run("install --requires=pkg/0.1@lasote/testing", assert_error=False)
     assert "Trying with 'default'..." not in client.out
 
 
@@ -319,9 +319,9 @@ def test_install_version_range_reference(client):
     # https://github.com/conan-io/conan/issues/5905
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
-    client.run("install --reference=pkg/[*]@user/channel")
+    client.run("install --requires=pkg/[*]@user/channel")
     assert "pkg/0.1@user/channel: Already installed!" in client.out
-    client.run("install --reference=pkg/[>0]@user/channel")
+    client.run("install --requires=pkg/[>0]@user/channel")
     assert "pkg/0.1@user/channel: Already installed!" in client.out
 
 
@@ -363,7 +363,7 @@ class TestCliOverride:
         client.run("create . --name=zlib --version=1.1")
         client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
         client.run("create . --name=pkg --version=1.0")
-        client.run("install --reference=pkg/1.0@ --require-override=zlib/1.1")
+        client.run("install --requires=pkg/1.0@ --require-override=zlib/1.1")
         assert "zlib/1.1: Already installed" in client.out
 
     def test_create_cli_override(self, client):
@@ -403,3 +403,24 @@ def test_package_folder_available_consumer():
     # Installing it with "install ." without output folder
     client.run("install .")
     assert "WARN: Package folder is None? True" in client.out
+
+
+def test_install_multiple_requires_cli():
+    """
+    Test that it is possible to install multiple --requires=xxx --requires=yyy
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=pkg1 --version=0.1")
+    c.run("create . --name=pkg2 --version=0.1")
+
+    c.run("graph info --requires=pkg1/0.1 --requires=pkg2/0.1")
+    assert "pkg1/0.1" in c.out
+    assert "pkg2/0.1" in c.out
+    c.run("install --requires=pkg1/0.1 --requires=pkg2/0.1")
+    assert "pkg1/0.1" in c.out
+    assert "pkg2/0.1" in c.out
+    c.run("lock create --requires=pkg1/0.1 --requires=pkg2/0.1 --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "pkg1/0.1" in lock
+    assert "pkg2/0.1" in lock

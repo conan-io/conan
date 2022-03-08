@@ -3,7 +3,8 @@ import os
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, add_reference_args
+    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \
+    add_reference_args, scope_options
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
@@ -48,9 +49,13 @@ def graph_compute(args, conan_api, strict=False):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
-    reference = RecipeReference.loads(args.reference) \
-        if ("reference" in args and args.reference) else None
-    if not path and not reference:
+
+    requires = [RecipeReference.loads(r) for r in args.requires] \
+        if ("requires" in args and args.requires) else None
+    tool_requires = [RecipeReference.loads(r) for r in args.tool_requires] \
+        if ("tool_requires" in args and args.tool_requires) else None
+
+    if not path and not requires and not tool_requires:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
     # Basic collaborators, remotes, lockfile, profiles
@@ -65,9 +70,10 @@ def graph_compute(args, conan_api, strict=False):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
+    # FIXME: Not used?
     build_require = args.build_require if "build_require" in args else None
     require_override = args.require_override if "require_override" in args else None
-    if reference is None:
+    if path is not None:
         root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
                                                                  name=args.name,
                                                                  version=args.version,
@@ -78,8 +84,10 @@ def graph_compute(args, conan_api, strict=False):
                                                                  remotes=remotes,
                                                                  update=args.update)
     else:
-        root_node = conan_api.graph.load_root_virtual_conanfile(reference, profile_host,
-                                                                is_build_require=build_require,
+        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
+        root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
+                                                                tool_requires=tool_requires,
+                                                                profile_host=profile_host,
                                                                 require_overrides=require_override)
 
     out.highlight("-------- Computing dependency graph ----------")
@@ -105,13 +113,13 @@ def common_graph_args(subparser):
                                 "or conanfile.txt) or to a recipe file. e.g., "
                                 "./my_project/conanfile.txt.")
     add_reference_args(subparser)
-    subparser.add_argument("--reference", action=OnceArgument,
-                           help='Provide a package reference instead of a conanfile')
-
+    subparser.add_argument("--requires", action="append",
+                           help='Directly provide requires instead of a conanfile')
+    subparser.add_argument("--tool-requires", action='append',
+                           help='Directly provide tool-requires instead of a conanfile')
     _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
     add_lockfile_args(subparser)
-    subparser.add_argument("--build-require", action='store_true', default=False,
-                           help='The provided reference is a build-require')
+
     subparser.add_argument("--require-override", action="append",
                            help="Define a requirement override")
 
@@ -141,9 +149,9 @@ def install(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--reference")
+                             "--requires")
 
     cwd = os.getcwd()
     if args.path:

@@ -27,7 +27,7 @@ def client():
 
 
 def test_override(client):
-    client.run("install --reference=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                "-s compiler.version=14 -s compiler.runtime=MD "
                "-s mingw*:compiler='gcc' -s mingw*:compiler.libcxx='libstdc++' "
                "-s mingw*:compiler.version=4.8")
@@ -56,14 +56,14 @@ def test_override(client):
 
 
 def test_non_existing_setting(client):
-    client.run("install --reference=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                "-s compiler.version=14 -s compiler.runtime=MD "
                "-s mingw/*:missingsetting='gcc' ", assert_error=True)
     assert "settings.missingsetting' doesn't exist" in client.out
 
 
 def test_override_in_non_existing_recipe(client):
-    client.run("install --reference=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                "-s compiler.version=14 -s compiler.runtime=MD "
                "-s MISSINGID:compiler='gcc' ")
 
@@ -97,7 +97,7 @@ def test_exclude_patterns_settings():
     client.run("create consumer --name=consumer --version=1.0 "
                "-s=build_type=Debug -s=!&:build_type=Release")
 
-    client.run("install --reference consumer/1.0 -s consumer/*:build_type=Debug")
+    client.run("install --requires consumer/1.0 -s consumer/*:build_type=Debug")
 
     # Priority between package scoped settings
     client.run('remove consumer/*#* -p="build_type=Debug" -f')
@@ -108,20 +108,20 @@ def test_exclude_patterns_settings():
     client.run("create consumer --name=consumer --version=1.0 -s build_type=Release")
 
     # Try to install with this two scoped conditions, This is OK the right side has priority
-    client.run("install --reference consumer/1.0 -s zlib/*:build_type=Debug -s *:build_type=Release")
+    client.run("install --requires consumer/1.0 -s zlib/*:build_type=Debug -s *:build_type=Release")
 
     # Try to install with this two scoped conditions, This is ERROR the right side has priority
-    client.run("install --reference consumer/1.0 -s *:build_type=Release -s zlib/*:build_type=Debug",
+    client.run("install --requires consumer/1.0 -s *:build_type=Release -s zlib/*:build_type=Debug",
                assert_error=True)
     assert "ERROR: Missing prebuilt package for 'zlib/1.0'" in client.out
 
     # Try to install with this two scoped conditions, This is OK again, the right side has priority
     # The z* points to Release later, so zlib in Release
-    client.run("install --reference consumer/1.0 -s *:build_type=Release "
+    client.run("install --requires consumer/1.0 -s *:build_type=Release "
                "-s zlib/*:build_type=Debug -s z*:build_type=Release")
 
     # Try to install with this two scoped conditions, This is OK again, the right side has priority
     # No package is potato, so all packages in Release
-    client.run("install --reference consumer/1.0 -s !zlib:build_type=Debug "
+    client.run("install --requires consumer/1.0 -s !zlib:build_type=Debug "
                "-s !potato:build_type=Release")
 

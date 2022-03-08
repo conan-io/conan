@@ -6,7 +6,7 @@ from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies, get_multiple_remotes, add_lockfile_args
+    _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -69,8 +69,12 @@ def create(conan_api, parser, *args):
                                                              lockfile=lockfile)
     else:
         req_override = args.require_override
-        root_node = conan_api.graph.load_root_virtual_conanfile(ref, profile_host,
-                                                                is_build_require=args.build_require,
+        requires = [ref] if not args.build_require else None
+        tool_requires = [ref] if args.build_require else None
+        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
+        root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
+                                                                tool_requires=tool_requires,
+                                                                profile_host=profile_host,
                                                                 require_overrides=req_override)
 
     out.highlight("-------- Computing dependency graph ----------")
