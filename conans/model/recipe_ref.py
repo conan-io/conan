@@ -1,6 +1,9 @@
+
 import fnmatch
+import re
 from functools import total_ordering
 
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.dates import timestamp_to_str
 
@@ -110,6 +113,25 @@ class RecipeReference:
             raise ConanException(
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")
+
+    def validate_ref(self):
+        """ at the moment only applied to exported (exact) references, but not for requires
+        that could contain version ranges
+        """
+        self_str = str(self)
+        if self_str != self_str.lower():
+            raise ConanException(f"Conan packages names '{self_str}' must be all lowercase")
+        if len(self_str) > 200:
+            raise ConanException(f"Package reference too long >250 {self_str}")
+        validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}$")
+        if validation_pattern.match(self.name) is None:
+            raise ConanException(f"Invalid package name '{self.name}'")
+        if validation_pattern.match(str(self.version)) is None:
+            raise ConanException(f"Invalid package version '{self.version}'")
+        if self.user and validation_pattern.match(self.user) is None:
+            raise ConanException(f"Invalid package user '{self.user}'")
+        if self.channel and validation_pattern.match(self.channel) is None:
+            raise ConanException(f"Invalid package channel '{self.channel}'")
 
     def matches(self, pattern, is_consumer):
         negate = False

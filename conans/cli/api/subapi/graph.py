@@ -128,10 +128,11 @@ class GraphAPI:
         return deps_graph
 
     @api_method
-    def analyze_binaries(self, graph, build_mode=None, remotes=None, update=None):
+    def analyze_binaries(self, graph, build_mode=None, remotes=None, update=None, lockfile=None):
         """ Given a dependency graph, will compute the package_ids of all recipes in the graph, and
         evaluate if they should be built from sources, downloaded from a remote server, of if the
         packages are already in the local Conan cache
+        :param lockfile:
         :param graph: a Conan dependency graph, as returned by "load_graph()"
         :param build_mode: TODO: Discuss if this should be a BuildMode object or list of arguments
         :param remotes: list of remotes
@@ -142,4 +143,4 @@ class GraphAPI:
         conan_app.load_remotes(remotes, update=update)
         graph.report_graph_error()
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
-        binaries_analyzer.evaluate_graph(graph, build_mode)
+        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile)

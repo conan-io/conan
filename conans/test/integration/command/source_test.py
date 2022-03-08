@@ -107,7 +107,7 @@ class ConanLib(ConanFile):
 
         client.run("install .")
         client.run("source .")
-        self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
+        self.assertIn("conanfile.py (hello/0.1): Calling source()", client.out)
         self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % client.current_folder, client.out)
 
     def test_local_source(self):
@@ -133,7 +133,7 @@ class ConanLib(ConanFile):
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Calling source() in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
 

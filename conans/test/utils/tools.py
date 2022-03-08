@@ -732,7 +732,13 @@ class TestClient(object):
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)), str(self.out)).group(1)
+        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+                               str(self.out)).group(1)
+        return package_id
+
+    def created_package_revision(self, ref):
+        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
         return package_id
 
     def exported_recipe_revision(self):
