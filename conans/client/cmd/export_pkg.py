@@ -78,6 +78,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)
     if pkg_node.graph_lock_node:
+        pkg_node.graph_lock_node.relax()
+        pkg_node.graph_lock_node.unlock_prev()
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
         pkg_node.graph_lock_node.prev = pref.revision
