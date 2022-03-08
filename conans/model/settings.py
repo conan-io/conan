@@ -11,7 +11,7 @@ def bad_value_msg(name, value, value_range):
               '#error-invalid-setting"'
 
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
-            % (value, name, value_range, tip))
+            % (value, name, sorted(value_range), tip))
 
 
 def undefined_field(name, field, fields=None, value=None):
@@ -55,35 +55,16 @@ class SettingsItem(object):
         """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
+        if not isinstance(self._definition, dict):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
 
-    def copy_values(self):
-        if self._value is None and "None" not in self._definition:
-            return None
-
-        result = SettingsItem({}, name=self._name)
-        result._value = self._value
-        if self.is_final:
-            result._definition = self._definition[:]
-        else:
-            result._definition = {k: v.copy_values() for k, v in self._definition.items()}
-        return result
-
-    @property
-    def is_final(self):
-        return not isinstance(self._definition, dict)
-
     def __bool__(self):
         if not self._value:
             return False
         return self._value.lower() not in ["false", "none", "0", "off"]
-
-    def __nonzero__(self):
-        return self.__bool__()
 
     def __str__(self):
         return str(self._value)
@@ -99,33 +80,12 @@ class SettingsItem(object):
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def __delattr__(self, item):
         """ This is necessary to remove libcxx subsetting from compiler in config()
            del self.settings.compiler.stdlib
         """
-        try:
-            self._get_child(self._value).remove(item)
-        except Exception:
-            pass
-
-    def remove(self, values):
-        if not isinstance(values, (list, tuple, set)):
-            values = [values]
-        for v in values:
-            v = str(v)
-            if isinstance(self._definition, dict):
-                self._definition.pop(v, None)
-            elif self._definition == "ANY":
-                if v == "ANY":
-                    self._definition = []
-            elif v in self._definition:
-                self._definition.remove(v)
-
-        if self._value is not None and self._value not in self._definition and self._not_any():
-            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+        child_setting = self._get_child(self._value)
+        delattr(child_setting, item)
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
@@ -147,13 +107,6 @@ class SettingsItem(object):
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
 
-    def __getitem__(self, value):
-        value = str(value)
-        try:
-            return self._definition[value]
-        except Exception:
-            raise ConanException(bad_value_msg(self._name, value, self.values_range))
-
     @property
     def value(self):
         return self._value
@@ -167,10 +120,8 @@ class SettingsItem(object):
 
     @property
     def values_range(self):
-        try:
-            return sorted(list(self._definition.keys()))
-        except Exception:
-            return self._definition
+        # This needs to support 2 operations: "in" and iteration. Beware it can return "ANY"
+        return self._definition
 
     @property
     def values_list(self):
@@ -202,6 +153,9 @@ class Settings(object):
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
+    def serialize(self):
+        return {k: v.value for k, v in self._data.items()}
+
     def get_safe(self, name, default=None):
         try:
             tmp = self
@@ -221,16 +175,6 @@ class Settings(object):
             result._data[k] = v.copy()
         return result
 
-    def copy_values(self):
-        """ deepcopy, recursive
-        """
-        result = Settings({}, name=self._name, parent_value=self._parent_value)
-        for k, v in self._data.items():
-            value = v.copy_values()
-            if value is not None:
-                result._data[k] = value
-        return result
-
     @staticmethod
     def loads(text):
         try:
@@ -246,13 +190,6 @@ class Settings(object):
     @property
     def fields(self):
         return sorted(list(self._data.keys()))
-
-    def remove(self, item):
-        if not isinstance(item, (list, tuple, set)):
-            item = [item]
-        for it in item:
-            it = str(it)
-            self._data.pop(it, None)
 
     def clear(self):
         self._data = {}
@@ -313,49 +250,19 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.update_values(vals.as_list())
 
-    def constraint(self, constraint_def):
+    def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
         """
-        if isinstance(constraint_def, (list, tuple, set)):
-            constraint_def = {str(k): None for k in constraint_def or []}
-        else:
-            constraint_def = {str(k): v for k, v in constraint_def.items()}
+        constraint_def = constraint_def or []
+        if not isinstance(constraint_def, (list, tuple, set)):
+            raise ConanException("Please defines settings as a list or tuple")
 
-        fields_to_remove = []
-        for field, config_item in self._data.items():
-            if field not in constraint_def:
-                fields_to_remove.append(field)
-                continue
-
-            other_field_def = constraint_def[field]
-            if other_field_def is None:  # Means leave it as is
-                continue
-            if isinstance(other_field_def, str):
-                other_field_def = [other_field_def]
-
-            values_to_remove = []
-            for value in config_item.values_range:  # value = "Visual Studio"
-                if value not in other_field_def:
-                    values_to_remove.append(value)
-                else:  # recursion
-                    if (not config_item.is_final and isinstance(other_field_def, dict) and
-                            other_field_def[value] is not None):
-                        config_item[value].constraint(other_field_def[value])
-
-            # Sanity check of input constraint values
-            for value in other_field_def:
-                if value not in config_item.values_range:
-                    raise ConanException(bad_value_msg(field, value, config_item.values_range))
-
-            config_item.remove(values_to_remove)
-
-        # Sanity check for input constraint wrong fields
         for field in constraint_def:
-            if field not in self._data:
-                raise undefined_field(self._name, field, self.fields)
+            self._check_field(field)
 
-        # remove settings not defined in the constraint
-        self.remove(fields_to_remove)
+        to_remove = [k for k in self._data if k not in constraint_def]
+        for k in to_remove:
+            del self._data[k]

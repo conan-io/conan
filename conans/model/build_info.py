@@ -1,19 +1,12 @@
+import copy
 import os
 from collections import OrderedDict
-from copy import copy
 
-from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_error
-
-DEFAULT_INCLUDE = "include"
-DEFAULT_LIB = "lib"
-DEFAULT_BIN = "bin"
-DEFAULT_RES = "res"
-DEFAULT_SHARE = "share"
-DEFAULT_BUILD = ""
-DEFAULT_FRAMEWORK = "Frameworks"
-
-COMPONENT_SCOPE = "::"
+_DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
+                   "_frameworkdirs", "_objects"]
+_FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
+                    "_sharedlinkflags", "_exelinkflags"]
+_ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
 class DefaultOrderedDict(OrderedDict):
@@ -35,708 +28,429 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
-class BuildModulesDict(dict):
-    """
-    A dictionary with append and extend for cmake build modules to keep it backwards compatible
-    with the list interface
-    """
-
-    def __getitem__(self, key):
-        if key not in self.keys():
-            super(BuildModulesDict, self).__setitem__(key, list())
-        return super(BuildModulesDict, self).__getitem__(key)
-
-    def _append(self, item):
-        if item.endswith(".cmake"):
-            self["cmake"].append(item)
-            self["cmake_multi"].append(item)
-            self["cmake_find_package"].append(item)
-            self["cmake_find_package_multi"].append(item)
-
-    def append(self, item):
-        conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
-                       'instead'.format(item=item))
-        self._append(item)
-
-    def extend(self, items):
-        conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
-                       "instead".format(items=items))
-        for item in items:
-            self._append(item)
-
-    @classmethod
-    def from_list(cls, build_modules):
-        the_dict = BuildModulesDict()
-        the_dict.extend(build_modules)
-        return the_dict
-
-
-def dict_to_abs_paths(the_dict, rootpath):
-    new_dict = {}
-    for generator, values in the_dict.items():
-        new_dict[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
-                               for p in values]
-    return new_dict
-
-
-def merge_lists(seq1, seq2):
-    return seq1 + [s for s in seq2 if s not in seq1]
-
-
-def merge_dicts(d1, d2):
-    def merge_lists(seq1, seq2):
-        return [s for s in seq1 if s not in seq2] + seq2
-
-    result = d1.copy()
-    for k, v in d2.items():
-        if k not in d1.keys():
-            result[k] = v
-        else:
-            result[k] = merge_lists(d1[k], d2[k])
-    return result
-
-
-class _CppInfo(object):
-    """ Object that stores all the necessary information to build in C/C++.
-    It is intended to be system independent, translation to
-    specific systems will be produced from this info
-    """
+class _Component(object):
 
     def __init__(self):
-        self._name = None
-        self._generator_properties = {}
-        self.names = {}
-        self.system_libs = []  # Ordered list of system libraries
-        self.includedirs = []  # Ordered list of include paths
-        self.srcdirs = []  # Ordered list of source paths
-        self.libdirs = []  # Directories to find libraries
-        self.resdirs = []  # Directories to find resources, data, etc
-        self.bindirs = []  # Directories to find executables and shared libs
-        self.builddirs = []
-        self.frameworks = []  # Macos .framework
-        self.frameworkdirs = []
-        self.rootpaths = []
-        self.libs = []  # The libs to link against
-        self.defines = []  # preprocessor definitions
-        self.cflags = []  # pure C flags
-        self.cxxflags = []  # C++ compilation flags
-        self.sharedlinkflags = []  # linker flags
-        self.exelinkflags = []  # linker flags
-        self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
-        self.filenames = {}  # name of filename to create for various generators
-        self.rootpath = ""
-        self.sysroot = ""
-        self.requires = []
-        self._build_modules_paths = None
-        self._build_modules = None
-        self._include_paths = None
-        self._lib_paths = None
-        self._bin_paths = None
-        self._build_paths = None
-        self._res_paths = None
-        self._src_paths = None
-        self._framework_paths = None
-        self.version = None  # Version of the conan package
-        self.description = None  # Description of the conan package
-        # When package is editable, filter_empty=False, so empty dirs are maintained
-        self.filter_empty = True
+        # ###### PROPERTIES
+        self._generator_properties = None
 
-    def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
-        if self.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
-        else:
-            return abs_paths
+        # ###### DIRECTORIES
+        self._includedirs = None  # Ordered list of include paths
+        self._srcdirs = None  # Ordered list of source paths
+        self._libdirs = None  # Directories to find libraries
+        self._resdirs = None  # Directories to find resources, data, etc
+        self._bindirs = None  # Directories to find executables and shared libs
+        self._builddirs = None
+        self._frameworkdirs = None
 
-    @property
-    def build_modules_paths(self):
-        if self._build_modules_paths is None:
-            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
-                conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                               "{the_list}' instead".format(the_list=self.build_modules))
-                self.build_modules = BuildModulesDict.from_list(self.build_modules)
-                # Invalidate necessary, get_build_modules used raise_incorrect_components_definition
-                self._build_modules = None
-            tmp = dict_to_abs_paths(BuildModulesDict(self.get_build_modules()), self.rootpath)
-            self._build_modules_paths = tmp
-        return self._build_modules_paths
+        # ##### FIELDS
+        self._system_libs = None  # Ordered list of system libraries
+        self._frameworks = None  # Macos .framework
+        self._libs = None  # The libs to link against
+        self._defines = None  # preprocessor definitions
+        self._cflags = None  # pure C flags
+        self._cxxflags = None  # C++ compilation flags
+        self._sharedlinkflags = None  # linker flags
+        self._exelinkflags = None  # linker flags
+        self._objects = None  # linker flags
 
-    @property
-    def include_paths(self):
-        if self._include_paths is None:
-            self._include_paths = self._filter_paths(self.includedirs)
-        return self._include_paths
-
-    @property
-    def lib_paths(self):
-        if self._lib_paths is None:
-            self._lib_paths = self._filter_paths(self.libdirs)
-        return self._lib_paths
-
-    @property
-    def src_paths(self):
-        if self._src_paths is None:
-            self._src_paths = self._filter_paths(self.srcdirs)
-        return self._src_paths
-
-    @property
-    def bin_paths(self):
-        if self._bin_paths is None:
-            self._bin_paths = self._filter_paths(self.bindirs)
-        return self._bin_paths
-
-    @property
-    def build_paths(self):
-        if self._build_paths is None:
-            self._build_paths = self._filter_paths(self.builddirs)
-        return self._build_paths
-
-    @property
-    def res_paths(self):
-        if self._res_paths is None:
-            self._res_paths = self._filter_paths(self.resdirs)
-        return self._res_paths
-
-    @property
-    def framework_paths(self):
-        if self._framework_paths is None:
-            self._framework_paths = self._filter_paths(self.frameworkdirs)
-        return self._framework_paths
-
-    @property
-    def name(self):
-        conan_v2_error("Use 'get_name(generator)' instead")
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    # TODO: Deprecate for 2.0. Only cmake and pkg_config generators should access this.
-    #  Use get_property for 2.0
-    def get_name(self, generator, default_name=True):
-        property_name = None
-        if "cmake" in generator:
-            property_name = "cmake_target_name"
-        elif "pkg_config" in generator:
-            property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
-               or self.names.get(generator, self._name if default_name else None)
-
-    # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
-    def get_filename(self, generator, default_name=True):
-        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
-        if result:
-            return result
-        return self.get_name(generator, default_name=default_name)
-
-    # TODO: Deprecate for 2.0. Use get_property for 2.0
-    def get_build_modules(self):
-        if self._build_modules is None:  # Not cached yet
-            try:
-                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
-            except KeyError:
-                ret_dict = {}
-            else:
-                ret_dict = {"cmake_find_package": default_build_modules_value,
-                            "cmake_find_package_multi": default_build_modules_value,
-                            "cmake": default_build_modules_value,
-                            "cmake_multi": default_build_modules_value}
-
-            for generator, values in self._generator_properties.items():
-                if generator:
-                    v = values.get("cmake_build_modules")
-                    if v:
-                        ret_dict[generator] = v
-            self._build_modules = ret_dict if ret_dict else self.build_modules
-        return self._build_modules
-
-    def set_property(self, property_name, value, generator=None):
-        self._generator_properties.setdefault(generator, {})[property_name] = value
-
-    def get_property(self, property_name, generator=None):
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
-        try:
-            return self._generator_properties[None][property_name]
-        except KeyError:
-            pass
-
-    # Compatibility for 'cppflags' (old style property to allow decoration)
-    def get_cppflags(self):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        return self.cxxflags
-
-    def set_cppflags(self, value):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        self.cxxflags = value
-
-    cppflags = property(get_cppflags, set_cppflags)
-
-
-class Component(_CppInfo):
-
-    def __init__(self, rootpath, version, default_values):
-        super(Component, self).__init__()
-        self.rootpath = rootpath
-        if default_values.includedir is not None:
-            self.includedirs.append(default_values.includedir)
-        if default_values.libdir is not None:
-            self.libdirs.append(default_values.libdir)
-        if default_values.bindir is not None:
-            self.bindirs.append(default_values.bindir)
-        if default_values.resdir is not None:
-            self.resdirs.append(default_values.resdir)
-        if default_values.builddir is not None:
-            self.builddirs.append(default_values.builddir)
-        if default_values.frameworkdir is not None:
-            self.frameworkdirs.append(default_values.frameworkdir)
-        self.requires = []
-        self.version = version
-
-
-class CppInfoDefaultValues(object):
-
-    def __init__(self, includedir=None, libdir=None, bindir=None,
-                 resdir=None, builddir=None, frameworkdir=None):
-        self.includedir = includedir
-        self.libdir = libdir
-        self.bindir = bindir
-        self.resdir = resdir
-        self.builddir = builddir
-        self.frameworkdir = frameworkdir
-
-
-class CppInfo(_CppInfo):
-    """ Build Information declared to be used by the CONSUMERS of a
-    conans. That means that consumers must use this flags and configs i order
-    to build properly.
-    Defined in user CONANFILE, directories are relative at user definition time
-    """
-
-    def __init__(self, ref_name, root_folder, default_values=None):
-        super(CppInfo, self).__init__()
-        self._ref_name = ref_name
-        self._name = ref_name
-        self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self._default_values = default_values or CppInfoDefaultValues(DEFAULT_INCLUDE, DEFAULT_LIB,
-                                                                      DEFAULT_BIN, DEFAULT_RES,
-                                                                      DEFAULT_BUILD,
-                                                                      DEFAULT_FRAMEWORK)
-        if self._default_values.includedir is not None:
-            self.includedirs.append(self._default_values.includedir)
-        if self._default_values.libdir is not None:
-            self.libdirs.append(self._default_values.libdir)
-        if self._default_values.bindir is not None:
-            self.bindirs.append(self._default_values.bindir)
-        if self._default_values.resdir is not None:
-            self.resdirs.append(self._default_values.resdir)
-        if self._default_values.builddir is not None:
-            self.builddirs.append(self._default_values.builddir)
-        if self._default_values.frameworkdir is not None:
-            self.frameworkdirs.append(self._default_values.frameworkdir)
-        self.components = DefaultOrderedDict(lambda: Component(self.rootpath,
-                                                               self.version, self._default_values))
-        # public_deps is needed to accumulate list of deps for cmake targets
-        self.public_deps = []
-        self._configs = {}
-
-    def __str__(self):
-        return self._ref_name
-
-    def get_name(self, generator, default_name=True):
-        name = super(CppInfo, self).get_name(generator, default_name=default_name)
-
-        # Legacy logic for pkg_config generator
-        from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
-            fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
-            if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
-                conan_v2_error("Generated file and name for {gen} generator will change in"
-                               " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
-                               " = \"{fallback}\"' in your recipe to continue using current name."
-                               .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
-            name = self.names.get(generator, fallback)
-        return name
-
-    @property
-    def configs(self):
-        return self._configs
-
-    def __getattr__(self, config):
-        def _get_cpp_info():
-            result = _CppInfo()
-            result.filter_empty = self.filter_empty
-            result.rootpath = self.rootpath
-            result.sysroot = self.sysroot
-            result.includedirs.append(self._default_values.includedir)
-            result.libdirs.append(self._default_values.libdir)
-            result.bindirs.append(self._default_values.bindir)
-            result.resdirs.append(self._default_values.resdir)
-            result.builddirs.append(self._default_values.builddir)
-            result.frameworkdirs.append(self._default_values.frameworkdir)
-            return result
-
-        return self._configs.setdefault(config, _get_cpp_info())
-
-    def _raise_incorrect_components_definition(self, package_name, package_requires):
-        if not self.components and not self.requires:
-            return
-
-        # Raise if mixing components
-        if self.components and \
-            (self.includedirs != ([self._default_values.includedir]
-                if self._default_values.includedir is not None else []) or
-             self.libdirs != ([self._default_values.libdir]
-                if self._default_values.libdir is not None else []) or
-             self.bindirs != ([self._default_values.bindir]
-                if self._default_values.bindir is not None else []) or
-             self.resdirs != ([self._default_values.resdir]
-                if self._default_values.resdir is not None else []) or
-             self.builddirs != ([self._default_values.builddir]
-                if self._default_values.builddir is not None else []) or
-             self.frameworkdirs != ([self._default_values.frameworkdir]
-                if self._default_values.frameworkdir is not None  else []) or
-             self.libs or
-             self.system_libs or
-             self.frameworks or
-             self.defines or
-             self.cflags or
-             self.cxxflags or
-             self.sharedlinkflags or
-             self.exelinkflags or
-             self.get_build_modules() or
-             self.requires):
-            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
-                                 "global values at the same time")
-        if self._configs:
-            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
-                                 " (release/debug/...) at the same time")
-
-        pkg_requires = [require.ref.name for require in package_requires.values()]
-
-        def _check_components_requires_instersection(comp_requires):
-            reqs = [it.split(COMPONENT_SCOPE)[0] for it in comp_requires if COMPONENT_SCOPE in it]
-            # Raise on components requires without package requires
-            for pkg_require in pkg_requires:
-                if package_requires[pkg_require].private or package_requires[pkg_require].override:
-                    # Not standard requires, skip
-                    continue
-                if pkg_require not in reqs:
-                    raise ConanException("Package require '%s' not used in components requires"
-                                         % pkg_require)
-            # Raise on components requires requiring inexistent package requires
-            for comp_require in reqs:
-                reason = None
-                if comp_require not in pkg_requires:
-                    reason = "not defined as a recipe requirement"
-                elif package_requires[comp_require].private and package_requires[
-                    comp_require].override:
-                    reason = "it was defined as an overridden private recipe requirement"
-                elif package_requires[comp_require].private:
-                    reason = "it was defined as a private recipe requirement"
-                elif package_requires[comp_require].override:
-                    reason = "it was defined as an overridden recipe requirement"
-
-                if reason is not None:
-                    raise ConanException("Package require '%s' declared in components requires "
-                                         "but %s" % (comp_require, reason))
-
-        if self.components:
-            # Raise on component name
-            for comp_name, comp in self.components.items():
-                if comp_name == package_name:
-                    raise ConanException(
-                        "Component name cannot be the same as the package name: '%s'"
-                        % comp_name)
-
-            # check that requires are used in components and check that components exists in requires
-            requires_from_components = set()
-            for comp_name, comp in self.components.items():
-                requires_from_components.update(comp.requires)
-
-            _check_components_requires_instersection(requires_from_components)
-        else:
-            _check_components_requires_instersection(self.requires)
-
-
-class _BaseDepsCppInfo(_CppInfo):
-    def __init__(self):
-        super(_BaseDepsCppInfo, self).__init__()
-
-    def update(self, dep_cpp_info):
-        def merge_lists(seq1, seq2):
-            return [s for s in seq1 if s not in seq2] + seq2
-
-        self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
-        self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
-        self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
-        self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
-        self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
-        self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
-        self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
-        self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
-        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
-        self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
-        self.requires = merge_lists(self.requires, dep_cpp_info.requires)
-        self.rootpaths.append(dep_cpp_info.rootpath)
-
-        # Note these are in reverse order
-        self.defines = merge_lists(dep_cpp_info.defines, self.defines)
-        self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
-        self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
-        self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
-        self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-        if not self.sysroot:
-            self.sysroot = dep_cpp_info.sysroot
-
-    @property
-    def build_modules_paths(self):
-        return self.build_modules
-
-    @property
-    def include_paths(self):
-        return self.includedirs
-
-    @property
-    def lib_paths(self):
-        return self.libdirs
-
-    @property
-    def src_paths(self):
-        return self.srcdirs
-
-    @property
-    def bin_paths(self):
-        return self.bindirs
-
-    @property
-    def build_paths(self):
-        return self.builddirs
-
-    @property
-    def res_paths(self):
-        return self.resdirs
-
-    @property
-    def framework_paths(self):
-        return self.frameworkdirs
-
-
-class DepCppInfo(object):
-
-    def __init__(self, cpp_info):
-        self._cpp_info = cpp_info
-        self._libs = None
-        self._system_libs = None
-        self._frameworks = None
-        self._defines = None
-        self._cxxflags = None
-        self._cflags = None
-        self._sharedlinkflags = None
-        self._exelinkflags = None
+        self._sysroot = None
         self._requires = None
 
-        self._include_paths = None
-        self._lib_paths = None
-        self._bin_paths = None
-        self._build_paths = None
-        self._res_paths = None
-        self._src_paths = None
-        self._framework_paths = None
-        self._build_modules_paths = None
-        self._sorted_components = None
-        self._check_component_requires()
-
-    def __str__(self):
-        return str(self._cpp_info)
-
-    def __getattr__(self, item):
-        try:
-            attr = self._cpp_info.__getattribute__(item)
-        except AttributeError:  # item is not defined, get config (CppInfo)
-            attr = self._cpp_info.__getattr__(item)
-        return attr
-
-    def _aggregated_dict_values(self, item):
-        values = getattr(self, "_%s" % item)
-        if values is not None:
-            return values
-        if self._cpp_info.components:
-            values = {}
-            for component in self._get_sorted_components().values():
-                values = merge_dicts(values, getattr(component, item))
-        else:
-            values = getattr(self._cpp_info, item)
-        setattr(self, "_%s" % item, values)
-        return values
-
-    def _aggregated_list_values(self, item):
-        values = getattr(self, "_%s" % item)
-        if values is not None:
-            return values
-        if self._cpp_info.components:
-            values = []
-            for component in self._get_sorted_components().values():
-                values = merge_lists(values, getattr(component, item))
-        else:
-            values = getattr(self._cpp_info, item)
-        setattr(self, "_%s" % item, values)
-        return values
-
-    @staticmethod
-    def _filter_component_requires(requires):
-        return [r for r in requires if COMPONENT_SCOPE not in r]
-
-    def _check_component_requires(self):
-        for comp_name, comp in self._cpp_info.components.items():
-            missing_deps = [require for require in self._filter_component_requires(comp.requires)
-                            if require not in self._cpp_info.components]
-            if missing_deps:
-                raise ConanException("Component '%s' required components not found in this package: "
-                                     "%s" % (comp_name, ", ".join("'%s'" % d for d in missing_deps)))
-            bad_requires = [r for r in comp.requires if r.startswith(COMPONENT_SCOPE)]
-            if bad_requires:
-                msg = "Leading character '%s' not allowed in %s requires: %s. Omit it to require " \
-                      "components inside the same package." \
-                      % (COMPONENT_SCOPE, comp_name, bad_requires)
-                raise ConanException(msg)
-
-    def _get_sorted_components(self):
-        """
-        Sort Components from most dependent one first to the less dependent one last
-        :return: List of sorted components
-        """
-        if not self._sorted_components:
-            if any([[require for require in self._filter_component_requires(comp.requires)]
-                    for comp in self._cpp_info.components.values()]):
-                ordered = OrderedDict()
-                components = copy(self._cpp_info.components)
-                while len(ordered) != len(self._cpp_info.components):
-                    # Search next element to be processed
-                    for comp_name, comp in components.items():
-                        # Check if component is not required and can be added to ordered
-                        if comp_name not in [require for dep in components.values() for require in
-                                             self._filter_component_requires(dep.requires)]:
-                            ordered[comp_name] = comp
-                            del components[comp_name]
-                            break
-                    else:
-                        raise ConanException("There is a dependency loop in "
-                                             "'self.cpp_info.components' requires")
-                self._sorted_components = ordered
-            else:  # If components do not have requirements, keep them in the same order
-                self._sorted_components = self._cpp_info.components
-        return self._sorted_components
+        # LEGACY 1.X fields, can be removed in 2.X
+        self.names = {}
+        self.filenames = {}
 
     @property
-    def build_modules_paths(self):
-        return self._aggregated_dict_values("build_modules_paths")
+    def includedirs(self):
+        if self._includedirs is None:
+            self._includedirs = []
+        return self._includedirs
+
+    @includedirs.setter
+    def includedirs(self, value):
+        self._includedirs = value
 
     @property
-    def include_paths(self):
-        return self._aggregated_list_values("include_paths")
+    def srcdirs(self):
+        if self._srcdirs is None:
+            self._srcdirs = []
+        return self._srcdirs
+
+    @srcdirs.setter
+    def srcdirs(self, value):
+        self._srcdirs = value
 
     @property
-    def lib_paths(self):
-        return self._aggregated_list_values("lib_paths")
+    def libdirs(self):
+        if self._libdirs is None:
+            self._libdirs = []
+        return self._libdirs
+
+    @libdirs.setter
+    def libdirs(self, value):
+        self._libdirs = value
 
     @property
-    def src_paths(self):
-        return self._aggregated_list_values("src_paths")
+    def resdirs(self):
+        if self._resdirs is None:
+            self._resdirs = []
+        return self._resdirs
+
+    @resdirs.setter
+    def resdirs(self, value):
+        self._resdirs = value
 
     @property
-    def bin_paths(self):
-        return self._aggregated_list_values("bin_paths")
+    def bindirs(self):
+        if self._bindirs is None:
+            self._bindirs = []
+        return self._bindirs
+
+    @bindirs.setter
+    def bindirs(self, value):
+        self._bindirs = value
 
     @property
-    def build_paths(self):
-        return self._aggregated_list_values("build_paths")
+    def builddirs(self):
+        if self._builddirs is None:
+            self._builddirs = []
+        return self._builddirs
+
+    @builddirs.setter
+    def builddirs(self, value):
+        self._builddirs = value
 
     @property
-    def res_paths(self):
-        return self._aggregated_list_values("res_paths")
+    def frameworkdirs(self):
+        if self._frameworkdirs is None:
+            self._frameworkdirs = []
+        return self._frameworkdirs
 
-    @property
-    def framework_paths(self):
-        return self._aggregated_list_values("framework_paths")
-
-    @property
-    def libs(self):
-        return self._aggregated_list_values("libs")
+    @frameworkdirs.setter
+    def frameworkdirs(self, value):
+        self._frameworkdirs = value
 
     @property
     def system_libs(self):
-        return self._aggregated_list_values("system_libs")
+        if self._system_libs is None:
+            self._system_libs = []
+        return self._system_libs
+
+    @system_libs.setter
+    def system_libs(self, value):
+        self._system_libs = value
 
     @property
     def frameworks(self):
-        return self._aggregated_list_values("frameworks")
+        if self._frameworks is None:
+            self._frameworks = []
+        return self._frameworks
+
+    @frameworks.setter
+    def frameworks(self, value):
+        self._frameworks = value
+
+    @property
+    def libs(self):
+        if self._libs is None:
+            self._libs = []
+        return self._libs
+
+    @libs.setter
+    def libs(self, value):
+        self._libs = value
 
     @property
     def defines(self):
-        return self._aggregated_list_values("defines")
+        if self._defines is None:
+            self._defines = []
+        return self._defines
 
-    @property
-    def cxxflags(self):
-        return self._aggregated_list_values("cxxflags")
+    @defines.setter
+    def defines(self, value):
+        self._defines = value
 
     @property
     def cflags(self):
-        return self._aggregated_list_values("cflags")
+        if self._cflags is None:
+            self._cflags = []
+        return self._cflags
+
+    @cflags.setter
+    def cflags(self, value):
+        self._cflags = value
+
+    @property
+    def cxxflags(self):
+        if self._cxxflags is None:
+            self._cxxflags = []
+        return self._cxxflags
+
+    @cxxflags.setter
+    def cxxflags(self, value):
+        self._cxxflags = value
 
     @property
     def sharedlinkflags(self):
-        return self._aggregated_list_values("sharedlinkflags")
+        if self._sharedlinkflags is None:
+            self._sharedlinkflags = []
+        return self._sharedlinkflags
+
+    @sharedlinkflags.setter
+    def sharedlinkflags(self, value):
+        self._sharedlinkflags = value
 
     @property
     def exelinkflags(self):
-        return self._aggregated_list_values("exelinkflags")
+        if self._exelinkflags is None:
+            self._exelinkflags = []
+        return self._exelinkflags
+
+    @exelinkflags.setter
+    def exelinkflags(self, value):
+        self._exelinkflags = value
+
+    @property
+    def objects(self):
+        if self._objects is None:
+            self._objects = []
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        self._objects = value
+
+    @property
+    def sysroot(self):
+        if self._sysroot is None:
+            self._sysroot = ""
+        return self._sysroot
+
+    @sysroot.setter
+    def sysroot(self, value):
+        self._sysroot = value
 
     @property
     def requires(self):
-        return self._aggregated_list_values("requires")
+        if self._requires is None:
+            self._requires = []
+        return self._requires
 
-
-class DepsCppInfo(_BaseDepsCppInfo):
-    """ Build Information necessary to build a given conans. It contains the
-    flags, directories and options if its dependencies. The conans CONANFILE
-    should use these flags to pass them to the underlaying build system (Cmake, make),
-    so deps info is managed
-    """
-
-    def __init__(self):
-        super(DepsCppInfo, self).__init__()
-        self._dependencies = OrderedDict()
-        self._configs = {}
-
-    def __getattr__(self, config):
-        return self._configs.setdefault(config, _BaseDepsCppInfo())
+    @requires.setter
+    def requires(self, value):
+        self._requires = value
 
     @property
-    def configs(self):
-        return self._configs
+    def required_component_names(self):
+        """ Names of the required components of the same package (not scoped with ::)"""
+        if self.requires is None:
+            return []
+        return [r for r in self.requires if "::" not in r]
+
+    def set_property(self, property_name, value):
+        if self._generator_properties is None:
+            self._generator_properties = {}
+        self._generator_properties[property_name] = value
+
+    def get_property(self, property_name):
+        if self._generator_properties is None:
+            return None
+        try:
+            return self._generator_properties[property_name]
+        except KeyError:
+            pass
+
+    def get_init(self, attribute, default):
+        item = getattr(self, attribute)
+        if item is not None:
+            return item
+        setattr(self, attribute, default)
+        return default
+
+
+class CppInfo(object):
+
+    def __init__(self, set_defaults=False):
+        self.components = DefaultOrderedDict(lambda: _Component())
+        # Main package is a component with None key
+        self.components[None] = _Component()
+        if set_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.resdirs = ["res"]
+            self.bindirs = ["bin"]
+            self.builddirs = []
+            self.frameworkdirs = ["Frameworks"]
+
+        self._aggregated = None  # A _NewComponent object with all the components aggregated
+
+    def __getattr__(self, attr):
+        return getattr(self.components[None], attr)
+
+    def __setattr__(self, attr, value):
+        if attr == "components":
+            super(CppInfo, self).__setattr__(attr, value)
+        else:
+            setattr(self.components[None], attr, value)
 
     @property
-    def dependencies(self):
-        return self._dependencies.items()
+    def has_components(self):
+        return len(self.components) > 1
 
     @property
-    def deps(self):
-        return self._dependencies.keys()
+    def component_names(self):
+        return filter(None, self.components.keys())
 
-    def __getitem__(self, item):
-        return self._dependencies[item]
+    def merge(self, other, overwrite=False):
+        """Merge 'other' into self. 'other' can be an old cpp_info object
+        Used to merge Layout source + build cpp objects info (editables)
+        :type other: CppInfo
+        """
 
-    def add(self, pkg_name, cpp_info):
-        assert pkg_name == str(cpp_info), "'{}' != '{}'".format(pkg_name, cpp_info)
-        assert isinstance(cpp_info, (CppInfo, DepCppInfo))
-        self._dependencies[pkg_name] = cpp_info
-        super(DepsCppInfo, self).update(cpp_info)
-        for config, cpp_info in cpp_info.configs.items():
-            self._configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+        def merge_list(o, d):
+            d.extend(e for e in o if e not in d)
+
+        for varname in _ALL_NAMES:
+            other_values = getattr(other, varname)
+            if other_values is not None:
+                if not overwrite:
+                    current_values = self.components[None].get_init(varname, [])
+                    merge_list(other_values, current_values)
+                else:
+                    setattr(self, varname, other_values)
+        if not self.sysroot and other.sysroot:
+            self.sysroot = other.sysroot
+
+        if other.requires:
+            current_values = self.components[None].get_init("requires", [])
+            merge_list(other.requires, current_values)
+
+        if other._generator_properties:
+            current_values = self.components[None].get_init("_generator_properties", {})
+            current_values.update(other._generator_properties)
+
+        # COMPONENTS
+        for cname, c in other.components.items():
+            if cname is None:
+                continue
+            for varname in _ALL_NAMES:
+                other_values = getattr(c, varname)
+                if other_values is not None:
+                    if not overwrite:
+                        current_values = self.components[cname].get_init(varname, [])
+                        merge_list(other_values, current_values)
+                    else:
+                        setattr(self.components[cname], varname, other_values)
+            if c.requires:
+                current_values = self.components[cname].get_init("requires", [])
+                merge_list(c.requires, current_values)
+
+            if c._generator_properties:
+                current_values = self.components[cname].get_init("_generator_properties", {})
+                current_values.update(c._generator_properties)
+
+    def set_relative_base_folder(self, folder):
+        """Prepend the folder to all the directories"""
+        for component in self.components.values():
+            for varname in _DIRS_VAR_NAMES:
+                origin = getattr(component, varname)
+                if origin is not None:
+                    origin[:] = [os.path.join(folder, el) for el in origin]
+            if component._generator_properties is not None:
+                updates = {}
+                for prop_name, value in component._generator_properties.items():
+                    if prop_name == "cmake_build_modules":
+                        if isinstance(value, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in value]
+                        else:
+                            updates[prop_name] = os.path.join(folder, value)
+                component._generator_properties.update(updates)
+
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        for component in self.components.values():
+            for varname in _DIRS_VAR_NAMES:
+                origin = getattr(component, varname)
+                if origin is not None:
+                    new_ = []
+                    for el in origin:
+                        rel_path = os.path.relpath(el, package_folder)
+                        new_.append(os.path.join(deploy_folder, rel_path))
+                    origin[:] = new_
+                # TODO: Missing properties
+
+    def get_sorted_components(self):
+        """Order the components taking into account if they depend on another component in the
+        same package (not scoped with ::). First less dependant
+        return:  {component_name: component}
+        """
+        processed = []  # Names of the components ordered
+        # FIXME: Cache the sort
+        while (len(self.components) - 1) > len(processed):
+            for name, c in self.components.items():
+                if name is None:
+                    continue
+                req_processed = [n for n in c.required_component_names if n not in processed]
+                if not req_processed and name not in processed:
+                    processed.append(name)
+
+        return OrderedDict([(cname, self.components[cname]) for cname in processed])
+
+    def aggregated_components(self):
+        """Aggregates all the components as global values, returning a new CppInfo"""
+        if self._aggregated is None:
+            if self.has_components:
+                result = _Component()
+                for n in _ALL_NAMES:  # Initialize all values, from None => []
+                    setattr(result, n, [])  # TODO: This is a bit dirty
+                # Reversed to make more dependant first
+                for name, component in reversed(self.get_sorted_components().items()):
+                    for n in _ALL_NAMES:
+                        if getattr(component, n):
+                            dest = result.get_init(n, [])
+                            dest.extend([i for i in getattr(component, n) if i not in dest])
+
+                    # NOTE: The properties are not aggregated because they might refer only to the
+                    # component like "cmake_target_name" describing the target name FOR THE component
+                    # not the namespace.
+                    if component.requires:
+                        current_values = result.get_init("requires", [])
+                        current_values.extend(component.requires)
+
+                # FIXME: What to do about sysroot?
+                result._generator_properties = copy.copy(self._generator_properties)
+            else:
+                result = copy.copy(self.components[None])
+            self._aggregated = CppInfo()
+            self._aggregated.components[None] = result
+        return self._aggregated
+
+    def copy(self):
+        # Only used at the moment by layout() editable merging build+source .cpp data
+        ret = CppInfo()
+        ret._generator_properties = copy.copy(self._generator_properties)
+        ret.components = DefaultOrderedDict(lambda: _Component())
+        for comp_name in self.components:
+            ret.components[comp_name] = copy.copy(self.components[comp_name])
+        return ret
+
+    @property
+    def required_components(self):
+        """Returns a list of tuples with (require, component_name) required by the package
+        If the require is internal (to another component), the require will be None"""
+        # FIXME: Cache the value
+        ret = []
+        for key, comp in self.components.items():
+            ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
+            ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
+        return ret
+
+    def __str__(self):
+        ret = []
+        for cname, c in self.components.items():
+            for n in _ALL_NAMES:
+                ret.append("Component: '{}' "
+                           "Var: '{}' "
+                           "Value: '{}'".format(cname, n, getattr(c, n)))
+        return "\n".join(ret)

@@ -1,19 +1,161 @@
 import os
+import platform
 from collections import OrderedDict, defaultdict
 
+from jinja2 import Environment, FileSystemLoader
+
 from conan.tools.env.environment import ProfileEnvironment
-from conans.errors import ConanException, ConanV2Exception
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import EnvValues, unquote
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
+from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
-from conans.util.log import logger
 
 
-class ProfileParser(object):
+def _unquote(text):
+    text = text.strip()
+    if len(text) > 1 and (text[0] == text[-1]) and text[0] in "'\"":
+        return text[1:-1]
+    return text
+
+
+class ProfileLoader:
+    def __init__(self, cache):
+        self._cache = cache
+
+    def get_default_host(self):
+        cache = self._cache
+
+        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+        if default_profile is None:
+            default_profile = cache.new_config.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
+
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default host profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:host=<myprofile>'")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def get_default_build(self):
+        cache = self._cache
+        default_profile = cache.new_config.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default build profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:build=<myprofile>'")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def from_cli_args(self, profiles, settings, options, env, conf, cwd):
+        """ Return a Profile object, as the result of merging a potentially existing Profile
+        file and the args command-line arguments
+        """
+        result = Profile()
+        for p in profiles:
+            tmp = self.load_profile(p, cwd)
+            result.compose_profile(tmp)
+
+        args_profile = _profile_parse_args(settings, options, env, conf)
+        result.compose_profile(args_profile)
+        # Only after everything has been aggregated, try to complete missing settings
+        result.process_settings(self._cache)
+        return result
+
+    def load_profile(self, profile_name, cwd=None):
+        # TODO: This can be made private, only used in testing now
+        cwd = cwd or os.getcwd()
+        profile, _ = self._load_profile(profile_name, cwd)
+        return profile
+
+    def _load_profile(self, profile_name, cwd):
+        """ Will look for "profile_name" in disk if profile_name is absolute path,
+        in current folder if path is relative or in the default folder otherwise.
+        return: a Profile object
+        """
+
+        profile_path = self.get_profile_path(profile_name, cwd)
+        text = load(profile_path)
+
+        if profile_name.endswith(".jinja"):
+            base_path = os.path.dirname(profile_path)
+            context = {"platform": platform,
+                       "os": os,
+                       "profile_dir": base_path}
+            rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+            text = rtemplate.render(context)
+
+        try:
+            return self._recurse_load_profile(text, profile_path)
+        except ConanException as exc:
+            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+
+    def _recurse_load_profile(self, text, profile_path):
+        """ Parse and return a Profile object from a text config like representation.
+            cwd is needed to be able to load the includes
+        """
+        try:
+            inherited_profile = Profile()
+            cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
+            profile_parser = _ProfileParser(text)
+            # Iterate the includes and call recursive to get the profile and variables
+            # from parent profiles
+            for include in profile_parser.get_includes():
+                # Recursion !!
+                profile, included_vars = self._load_profile(include, cwd)
+                inherited_profile.compose_profile(profile)
+                profile_parser.update_vars(included_vars)
+
+            # Apply the automatic PROFILE_DIR variable
+            if cwd:
+                profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
+
+            # Replace the variables from parents in the current profile
+            profile_parser.apply_vars()
+
+            # Current profile before update with parents (but parent variables already applied)
+            inherited_profile = _ProfileValueParser.get_profile(profile_parser.profile_text,
+                                                                inherited_profile)
+            return inherited_profile, profile_parser.vars
+        except ConanException:
+            raise
+        except Exception as exc:
+            raise ConanException("Error parsing the profile text file: %s" % str(exc))
+
+    def get_profile_path(self, profile_name, cwd, exists=True):
+
+        def valid_path(_profile_path, _profile_name=None):
+            if exists and not os.path.isfile(_profile_path):
+                raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
+            return _profile_path
+
+        if os.path.isabs(profile_name):
+            return valid_path(profile_name)
+
+        if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+            return valid_path(profile_path, profile_name)
+
+        default_folder = self._cache.profiles_path
+        if not os.path.exists(default_folder):
+            mkdir(default_folder)
+        profile_path = os.path.join(default_folder, profile_name)
+        if exists:
+            if not os.path.isfile(profile_path):
+                profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+            if not os.path.isfile(profile_path):
+                raise ConanException("Profile not found: %s" % profile_name)
+        return profile_path
+
+
+class _ProfileParser(object):
 
     def __init__(self, text):
         """ divides the text in 3 items:
@@ -27,12 +169,13 @@ class ProfileParser(object):
         self.profile_text = ""
 
         for counter, line in enumerate(text.splitlines()):
-            if not line.strip() or line.strip().startswith("#"):
+            line = line.strip()
+            if not line or line.startswith("#"):
                 continue
-            elif line.strip().startswith("["):
+            if line.startswith("["):
                 self.profile_text = "\n".join(text.splitlines()[counter:])
                 break
-            elif line.strip().startswith("include("):
+            elif line.startswith("include("):
                 include = line.split("include(", 1)[1]
                 if not include.endswith(")"):
                     raise ConanException("Invalid include statement")
@@ -46,7 +189,7 @@ class ProfileParser(object):
                 name = name.strip()
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
-                value = unquote(value)
+                value = _unquote(value)
                 self.vars[name] = value
 
     def apply_vars(self):
@@ -81,180 +224,90 @@ class ProfileParser(object):
             self.profile_text = self.profile_text.replace("$%s" % k, v)
 
 
-def get_profile_path(profile_name, default_folder, cwd, exists=True):
-    def valid_path(_profile_path, _profile_name=None):
-        if exists and not os.path.isfile(_profile_path):
-            raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
-        return _profile_path
-
-    if os.path.isabs(profile_name):
-        return valid_path(profile_name)
-
-    if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
-        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        return valid_path(profile_path, profile_name)
-
-    if not os.path.exists(default_folder):
-        mkdir(default_folder)
-    profile_path = os.path.join(default_folder, profile_name)
-    if exists:
-        if not os.path.isfile(profile_path):
-            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        if not os.path.isfile(profile_path):
-            raise ConanException("Profile not found: %s" % profile_name)
-    return profile_path
-
-
-def read_profile(profile_name, cwd, default_folder):
-    """ Will look for "profile_name" in disk if profile_name is absolute path,
-    in current folder if path is relative or in the default folder otherwise.
-    return: a Profile object
+class _ProfileValueParser(object):
+    """ parses a "pure" or "effective" profile, with no includes, no variables,
+    as the one in the lockfiles, or once these things have been processed by ProfileParser
     """
-    if not profile_name:
-        return None, None
+    @staticmethod
+    def get_profile(profile_text, base_profile=None):
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+                                                         "settings", "env",
+                                                         "options", "conf", "buildenv"])
 
-    profile_path = get_profile_path(profile_name, default_folder, cwd)
-    logger.debug("PROFILE LOAD: %s" % profile_path)
-    text = load(profile_path)
+        # Parse doc sections into Conan model, Settings, Options, etc
+        settings, package_settings = _ProfileValueParser._parse_settings(doc)
+        options = Options.loads(doc.options) if doc.options else None
+        tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
-    try:
-        return _load_profile(text, profile_path, default_folder)
-    except ConanV2Exception:
-        raise
-    except ConanException as exc:
-        raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+        if doc.conf:
+            conf = ConfDefinition()
+            conf.loads(doc.conf, profile=True)
+        else:
+            conf = None
+        buildenv = ProfileEnvironment.loads(doc.buildenv) if doc.buildenv else None
 
+        # Create or update the profile
+        base_profile = base_profile or Profile()
+        base_profile.settings.update(settings)
+        for pkg_name, values_dict in package_settings.items():
+            base_profile.package_settings[pkg_name].update(values_dict)
+        for pattern, refs in tool_requires.items():
+            base_profile.tool_requires.setdefault(pattern, []).extend(refs)
+        if options is not None:
+            base_profile.options.update_options(options)
 
-def _load_profile(text, profile_path, default_folder):
-    """ Parse and return a Profile object from a text config like representation.
-        cwd is needed to be able to load the includes
-    """
-    try:
-        inherited_profile = Profile()
-        cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
-        profile_parser = ProfileParser(text)
-        # Iterate the includes and call recursive to get the profile and variables
-        # from parent profiles
-        for include in profile_parser.get_includes():
-            # Recursion !!
-            profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.compose(profile)
-            profile_parser.update_vars(included_vars)
+        if conf is not None:
+            base_profile.conf.update_conf_definition(conf)
+        if buildenv is not None:
+            base_profile.buildenv.update_profile_env(buildenv)
+        return base_profile
 
-        # Apply the automatic PROFILE_DIR variable
-        if cwd:
-            profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
+    @staticmethod
+    def _parse_tool_requires(doc):
+        result = OrderedDict()
+        if doc.tool_requires:
+            # FIXME CHECKS OF DUPLICATED?
+            for br_line in doc.tool_requires.splitlines():
+                tokens = br_line.split(":", 1)
+                if len(tokens) == 1:
+                    pattern, req_list = "*", br_line
+                else:
+                    pattern, req_list = tokens
+                refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
+                result.setdefault(pattern, []).extend(refs)
+        return result
 
-        # Replace the variables from parents in the current profile
-        profile_parser.apply_vars()
+    @staticmethod
+    def _parse_settings(doc):
+        def get_package_name_value(item):
+            """Parse items like package:name=value or name=value"""
+            packagename = None
+            if ":" in item:
+                tmp = item.split(":", 1)
+                packagename, item = tmp
 
-        # Current profile before update with parents (but parent variables already applied)
-        doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "options", "conf",
-                                           "buildenv"])
+            result_name, result_value = item.split("=", 1)
+            result_name = result_name.strip()
+            result_value = _unquote(result_value)
+            return packagename, result_name, result_value
 
-        # Merge the inherited profile with the readed from current profile
-        _apply_inner_profile(doc, inherited_profile)
-
-        return inherited_profile, profile_parser.vars
-    except ConanException:
-        raise
-    except Exception as exc:
-        raise ConanException("Error parsing the profile text file: %s" % str(exc))
-
-
-def _load_single_build_require(profile, line):
-
-    tokens = line.split(":", 1)
-    if len(tokens) == 1:
-        pattern, req_list = "*", line
-    else:
-        pattern, req_list = tokens
-    refs = [ConanFileReference.loads(reference.strip()) for reference in req_list.split(",")]
-    profile.build_requires.setdefault(pattern, []).extend(refs)
-
-
-def _apply_inner_profile(doc, base_profile):
-    """
-
-    :param doc: ConfigParser object from the current profile (excluding includes and vars,
-    and with values already replaced)
-    :param base_profile: Profile inherited, it's used as a base profile to modify it.
-    :return: None
-    """
-
-    def get_package_name_value(item):
-        """Parse items like package:name=value or name=value"""
-        packagename = None
-        if ":" in item:
-            tmp = item.split(":", 1)
-            packagename, item = tmp
-
-        result_name, result_value = item.split("=", 1)
-        result_name = result_name.strip()
-        result_value = unquote(result_value)
-        return packagename, result_name, result_value
-
-    for setting in doc.settings.splitlines():
-        setting = setting.strip()
-        if setting and not setting.startswith("#"):
+        package_settings = OrderedDict()
+        settings = OrderedDict()
+        for setting in doc.settings.splitlines():
+            setting = setting.strip()
+            if not setting or setting.startswith("#"):
+                continue
             if "=" not in setting:
                 raise ConanException("Invalid setting line '%s'" % setting)
             package_name, name, value = get_package_name_value(setting)
             if package_name:
-                base_profile.package_settings[package_name][name] = value
+                package_settings.setdefault(package_name, OrderedDict())[name] = value
             else:
-                base_profile.settings[name] = value
-
-    if doc.build_requires:
-        # FIXME CHECKS OF DUPLICATED?
-        for req in doc.build_requires.splitlines():
-            _load_single_build_require(base_profile, req)
-
-    if doc.options:
-        base_profile.options.update(OptionsValues.loads(doc.options))
-
-    # The env vars from the current profile (read in doc)
-    # are updated with the included profiles (base_profile)
-    # the current env values has priority
-    current_env_values = EnvValues.loads(doc.env)
-    current_env_values.update(base_profile.env_values)
-    base_profile.env_values = current_env_values
-
-    if doc.conf:
-        new_prof = ConfDefinition()
-        new_prof.loads(doc.conf, profile=True)
-        base_profile.conf.update_conf_definition(new_prof)
-
-    if doc.buildenv:
-        buildenv = ProfileEnvironment.loads(doc.buildenv)
-        base_profile.buildenv.compose(buildenv)
+                settings[name] = value
+        return settings, package_settings
 
 
-def profile_from_args(profiles, settings, options, env, cwd, cache):
-    """ Return a Profile object, as the result of merging a potentially existing Profile
-    file and the args command-line arguments
-    """
-    default_profile = cache.default_profile  # Ensures a default profile creating
-
-    if profiles is None:
-        result = default_profile
-    else:
-        result = Profile()
-        for p in profiles:
-            tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.compose(tmp)
-
-    args_profile = _profile_parse_args(settings, options, env)
-
-    if result:
-        result.compose(args_profile)
-    else:
-        result = args_profile
-    return result
-
-
-def _profile_parse_args(settings, options, envs):
+def _profile_parse_args(settings, options, envs, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -285,23 +338,16 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(_env, _package_env):
-        _env_values = EnvValues()
-        for name, value in _env:
-            _env_values.add(name, EnvValues.load_value(value))
-        for package, data in _package_env.items():
-            for name, value in data:
-                _env_values.add(name, EnvValues.load_value(value), package)
-        return _env_values
+    settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
-    options = _get_tuples_list_from_extender_arg(options)
-    result.options = OptionsValues(options)
-    env, package_env = _get_simple_and_package_tuples(envs)
-    env_values = _get_env_values(env, package_env)
-    result.env_values = env_values
-    settings, package_settings = _get_simple_and_package_tuples(settings)
+    result.options = Options.loads("\n".join(options or []))
     result.settings = OrderedDict(settings)
+    if conf:
+        result.conf = ConfDefinition()
+        result.conf.loads("\n".join(conf))
+
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
+
     return result

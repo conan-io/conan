@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 
 info_text = '''[settings]
@@ -31,25 +33,12 @@ info_text = '''[settings]
     bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641
     zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3
 
-[full_options]
-    fPIC=True
-    header_only=False
-    shared=False
-    bzip2:fPIC=True
-    bzip2:shared=False
-    zlib:shared=False
-
-[recipe_hash]
-    asdasdasd
-
 [env]
-    A_OTHERVAR=OTHERVALUES
-    Z_OTHERVAR=OTHERVALUES
-    Aackage1:PATH=/PATH/TO
-    Package1:PATH=/PATH/TO
+
 '''
 
 
+@pytest.mark.xfail(reason="It is no longer possible to read a conaninfo.txt and execute over it")
 class ConanInfoTest(unittest.TestCase):
 
     def test_serialize(self):
@@ -59,7 +48,6 @@ class ConanInfoTest(unittest.TestCase):
                     ['bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641',
                      'zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3'],
                     'options': {'shared': 'False', 'fPIC': 'True', 'header_only': 'False'},
-                    'recipe_hash': "asdasdasd",
                     'settings': {'arch': 'x86_64', 'compiler.libcxx': 'libstdc++11',
                                  'compiler.version': '5.2', 'os': 'Linux',
                                  'build_type': 'Debug', 'compiler': 'gcc'}}

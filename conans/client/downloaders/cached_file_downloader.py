@@ -3,7 +3,7 @@ import shutil
 from contextlib import contextmanager
 from threading import Lock
 
-from six.moves.urllib_parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 
 from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException
@@ -16,10 +16,9 @@ from conans.util.sha import sha256 as sha256_sum
 class CachedFileDownloader(object):
     _thread_locks = {}  # Needs to be shared among all instances
 
-    def __init__(self, cache_folder, file_downloader, user_download=False):
+    def __init__(self, cache_folder, file_downloader):
         self._cache_folder = cache_folder
         self._file_downloader = file_downloader
-        self._user_download = user_download
 
     @contextmanager
     def _lock(self, lock_id):
@@ -39,7 +38,6 @@ class CachedFileDownloader(object):
         """
         checksum = sha256 or sha1 or md5
         # If it is a user download, it must contain a checksum
-        assert (not self._user_download) or (self._user_download and checksum)
         h = self._get_hash(url, checksum)
 
         with self._lock(h):
@@ -83,8 +81,6 @@ class CachedFileDownloader(object):
         """
         scheme, netloc, path, _, _ = urlsplit(url)
         # append empty query and fragment before unsplit
-        if not self._user_download:  # removes ?signature=xxx
-            url = urlunsplit((scheme, netloc, path, "", ""))
         if checksum is not None:
             url += checksum
         h = sha256_sum(url.encode())

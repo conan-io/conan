@@ -25,11 +25,14 @@ class LocalDB(object):
             return encrypt.decode(value, self.encryption_key)
         return value
 
-    def clean(self):
+    def clean(self, remote_url=None):
         with self._connect() as connection:
             try:
                 cursor = connection.cursor()
-                cursor.execute("DELETE FROM %s" % REMOTES_USER_TABLE)
+                query = "DELETE FROM %s" % REMOTES_USER_TABLE
+                if remote_url:
+                    query += ' WHERE remote_url="{}"'.format(remote_url)
+                cursor.execute(query)
                 try:
                     # https://github.com/ghaering/pysqlite/issues/109
                     connection.isolation_level = None

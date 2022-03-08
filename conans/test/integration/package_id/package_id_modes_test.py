@@ -1,8 +1,13 @@
-from conans.client.tools import environment_append
-from conans.test.utils.tools import GenConanfile, TestClient
+import textwrap
+
+import pytest
+
+from conans.util.env import environment_update
+from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="package id computation has changed")
 def test_recipe_modes():
     configs = []
     mode = "semver_mode"
@@ -31,33 +36,12 @@ def test_recipe_modes():
         client.run("create libb")
         client.run("create app")
 
-        assert "{}:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache".format(liba_ref) in client.out
+        assert "{}:{} - Cache".format(liba_ref, NO_SETTINGS_PACKAGE_ID) in client.out
         assert "libb/0.1:{} - Cache".format(package_id_arg) in client.out
 
     for package_id_mode, ref, package_id in configs:
-        client.run("config set general.default_package_id_mode={}".format(package_id_mode))
+        save(client.cache.new_config_path, f"core.package_id:default_mode={package_id_mode}")
         _assert_recipe_mode(ref, package_id)
 
     for package_id_mode, ref, package_id in configs:
-        with environment_append({"CONAN_DEFAULT_PACKAGE_ID_MODE": package_id_mode}):
-            _assert_recipe_mode(ref, package_id)
-
-
-def test_package_revision_mode():
-    client = TestClient()
-    # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
-    save(client.cache.settings_path, "")
-    save(client.cache.default_profile_path, "")
-
-    client.run("config set general.default_package_id_mode=package_revision_mode")
-
-    client.save({"liba/conanfile.py": GenConanfile("liba", "0.1.1"),
-                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1.1"),
-                 "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})
-
-    client.run("create liba")
-    client.run("create libb")
-    client.run("create app")
-
-    assert "liba/0.1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
-    assert "libb/0.1:f2431acdad185a6626b90ee1dffb06445f887cbb - Cache" in client.out
+        _assert_recipe_mode(ref, package_id)

@@ -2,45 +2,22 @@ import os
 import re
 from collections import OrderedDict
 from fnmatch import translate
+from typing import Dict
 
-from conans.errors import ConanException, RecipeNotFoundException
+from conans.cli.api.model import PkgConfiguration
+from conans.errors import ConanException
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_outdated(packages_infos, recipe_hash):
-    if not recipe_hash:
-        return packages_infos
-    result = OrderedDict()
-    for package_id, info in packages_infos.items():
-        try:  # Existing package_info of old package might not have recipe_hash
-            if info["recipe_hash"] != recipe_hash:
-                result[package_id] = info
-        except KeyError:
-            pass
-    return result
-
-
-def filter_by_revision(metadata, packages_infos):
-    ok = OrderedDict()
-    recipe_revision = metadata.recipe.revision
-    for package_id, info in packages_infos.items():
-        try:
-            rec_rev = metadata.packages[package_id].recipe_revision
-            if rec_rev == recipe_revision:
-                ok[package_id] = info
-        except KeyError:
-            pass
-    return ok
-
-
-def filter_packages(query, package_infos):
+def filter_packages(query, results: Dict[PkgReference, PkgConfiguration]):
     if query is None:
-        return package_infos
+        return results
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
@@ -48,15 +25,15 @@ def filter_packages(query, package_infos):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
-        for package_id, info in package_infos.items():
-            if _evaluate_postfix_with_info(postfix, info):
-                result[package_id] = info
+        for pref, data in results.items():
+            if _evaluate_postfix_with_info(postfix, data):
+                result[pref] = data
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: PkgConfiguration):
 
     # Evaluate conaninfo with the expression
 
@@ -70,7 +47,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info):
+def _evaluate(prop_name, prop_value, conan_vars_info: PkgConfiguration):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -79,9 +56,9 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
     def compatible_prop(setting_value, _prop_value):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
-    info_settings = conan_vars_info.get("settings", [])
-    info_options = conan_vars_info.get("options", [])
-    properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
+    info_settings = conan_vars_info.settings
+    info_options = conan_vars_info.options
+    properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
         return any(_prop_name.startswith(setting + '.') for setting in properties)
@@ -95,7 +72,7 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
 def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
-        if isinstance(pattern, ConanFileReference):
+        if isinstance(pattern, RecipeReference):
             pattern = repr(pattern)
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
@@ -103,8 +80,12 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = cache.all_refs()
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, repr(r))]
-    refs = sorted(refs)
+        _refs = []
+        for r in refs:
+            match_ref = str(r) if not r.revision else repr(r)
+            if _partial_match(pattern, match_ref):
+                _refs.append(r)
+        refs = _refs
     return refs
 
 
@@ -123,42 +104,31 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(package_layout, query):
-    """ Return a dict like this:
-
-            {package_ID: {name: "OpenCV",
-                           version: "2.14",
-                           settings: {os: Windows}}}
+def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguration]:
+    """
     param package_layout: Layout for the given reference
     """
-    if not os.path.exists(package_layout.base_folder()) or (
-            package_layout.ref.revision and
-            package_layout.recipe_revision() != package_layout.ref.revision):
-        raise RecipeNotFoundException(package_layout.ref, print_rev=True)
-    infos = _get_local_infos_min(package_layout)
-    return filter_packages(query, infos)
 
-
-def _get_local_infos_min(package_layout):
     result = OrderedDict()
 
-    package_ids = package_layout.package_ids()
-    for package_id in package_ids:
+    package_layouts = []
+    for pref in prefs:
+        latest_prev = cache.get_latest_package_reference(pref)
+        package_layouts.append(cache.pkg_layout(latest_prev))
+
+    for pkg_layout in package_layouts:
         # Read conaninfo
-        pref = PackageReference(package_layout.ref, package_id)
-        info_path = os.path.join(package_layout.package(pref), CONANINFO)
+        info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 
         info = ConanInfo.loads(conan_info_content)
-        if package_layout.ref.revision:
-            metadata = package_layout.load_metadata()
-            recipe_revision = metadata.packages[package_id].recipe_revision
-            if recipe_revision and recipe_revision != package_layout.ref.revision:
-                continue
         conan_vars_info = info.serialize_min()
-        result[package_id] = conan_vars_info
+        pref = pkg_layout.reference
+        # The key shoudln't have the latest package revision, we are asking for package configs
+        pref.revision = None
+        result[pkg_layout.reference] = conan_vars_info
 
     return result

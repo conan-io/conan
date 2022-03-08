@@ -1,12 +1,10 @@
-import os
-import json
+from conan.tools.files.files import load_toolchain_args
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conans.util.files import load
 
 class Bazel(object):
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
+        self._namespace = namespace
         self._get_bazel_project_configuration()
 
     def configure(self, args=None):
@@ -40,10 +38,7 @@ class Bazel(object):
         self._conanfile.run(command)
 
     def _get_bazel_project_configuration(self):
-        self._bazel_config = None
-        self._bazelrc_path = None
-
-        if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
-            conan_toolchain_args = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))
-            self._bazel_config = conan_toolchain_args.get("bazel_config", None)
-            self._bazelrc_path = conan_toolchain_args.get("bazelrc_path", None)
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
+                                                     namespace=self._namespace)
+        self._bazel_config = toolchain_file_content.get("bazel_config")
+        self._bazelrc_path = toolchain_file_content.get("bazelrc_path")

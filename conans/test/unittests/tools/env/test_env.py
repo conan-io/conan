@@ -7,9 +7,11 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.tools import chdir
+from conan.tools.microsoft.subsystems import WINDOWS
+from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conans.util.env import environment_update
+from conans.util.files import save, chdir
 
 
 def test_compose():
@@ -27,12 +29,27 @@ def test_compose():
     env2.unset("MyVar4")
     env2.define("MyVar5", "MyNewValue5")
 
-    env.compose(env2)
-    assert env.value("MyVar") == "MyValue"
-    assert env.value("MyVar2") == 'MyValue2'
-    assert env.value("MyVar3") == 'MyValue3'
-    assert env.value("MyVar4") == "MyValue4"
-    assert env.value("MyVar5") == ''
+    env.compose_env(env2)
+    env = env.vars(ConanFileMock())
+    assert env.get("MyVar") == "MyValue"
+    assert env.get("MyVar2") == 'MyValue2'
+    assert env.get("MyVar3") == 'MyValue3'
+    assert env.get("MyVar4") == "MyValue4"
+    assert env.get("MyVar5") == ''
+
+
+def test_define_append():
+    env = Environment()
+    env.define("MyVar", "MyValue")
+    env.append("MyVar", "MyValue1")
+    env.append("MyVar", ["MyValue2", "MyValue3"])
+    assert env.vars(ConanFileMock()).get("MyVar") == "MyValue MyValue1 MyValue2 MyValue3"
+
+    env = Environment()
+    env.append("MyVar", "MyValue")
+    env.append("MyVar", "MyValue1")
+    env.define("MyVar", "MyValue2")
+    assert env.vars(ConanFileMock()).get("MyVar") == "MyValue2"
 
 
 @pytest.mark.parametrize("op1, v1, s1, op2, v2, s2, result",
@@ -53,8 +70,8 @@ def test_compose():
                           ("unset", "", " ", "prepend", "Val2", " ", ""),
                           ("unset", "", " ", "unset", "", " ", ""),
                           # different separators
-                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar-Val2+Val1"),
-                          ("append", "Val1", "+", "prepend", "Val2", "-", "Val2-MyVar+Val1"),
+                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar+Val2+Val1"),
+                          ("append", "Val1", "+", "prepend", "Val2", "-", "Val2+MyVar+Val1"),
                           ("unset", "", " ", "append", "Val2", "+", ""),
                           ("unset", "", " ", "prepend", "Val2", "+", ""),
                           ])
@@ -69,8 +86,11 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
         getattr(env2, op2)("MyVar", v2, s2)
     else:
         env2.unset("MyVar")
-    env.compose(env2)
-    assert env.value("MyVar") == result
+    env.compose_env(env2)
+    env = env.vars(ConanFileMock())
+    with environment_update({"MyVar": "MyVar"}):
+        assert env.get("MyVar") == result
+    assert env._values["MyVar"].get_str("{name}", None, None) == result
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
@@ -102,14 +122,15 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
         getattr(env2, op2+"_path")("MyVar", v2)
     else:
         env2.unset("MyVar")
-    env.compose(env2)
-    assert env.value("MyVar", pathsep=":") == result
+    env.compose_env(env2)
+    env = env.vars(ConanFileMock())
+    assert env._values["MyVar"].get_str("{name}", None, pathsep=":") == result
 
 
 def test_profile():
     myprofile = textwrap.dedent("""
         # define
-        MyVar1=MyValue1
+        MyVar1 =MyValue1
         #  append
         MyVar2+=MyValue2
         #  multiple append works
@@ -138,180 +159,122 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_env("")
-    assert env.value("MyVar1") == "MyValue1"
-    assert env.value("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
-    assert env.value("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
-    assert env.value("MyVar4") == ""
-    assert env.value("MyVar5") == ''
+    env = profile_env.get_profile_env("")
+    env = env.vars(ConanFileMock())
+    with environment_update({"MyVar1": "$MyVar1",
+                             "MyVar2": "$MyVar2",
+                             "MyVar3": "$MyVar3",
+                             "MyVar4": "$MyVar4"}):
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
+        assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
+        assert env.get("MyVar4") == ""
+        assert env.get("MyVar5") == ''
 
-    env = profile_env.get_env("mypkg1/1.0")
-    assert env.value("MyVar1") == "MyValue1"
-    assert env.value("MyVar2", "$MyVar2") == 'MyValue2'
-
-
-def test_env_files():
-    env = Environment()
-    env.define("MyVar", "MyValue")
-    env.define("MyVar1", "MyValue1")
-    env.append("MyVar2", "MyValue2")
-    env.prepend("MyVar3", "MyValue3")
-    env.unset("MyVar4")
-    env.define("MyVar5", "MyValue5 With Space5=More Space5;:More")
-    env.append("MyVar6", "MyValue6")  # Append, but previous not existing
-    env.define_path("MyPath1", "/Some/Path1/")
-    env.append_path("MyPath2", ["/Some/Path2/", "/Other/Path2/"])
-    env.prepend_path("MyPath3", "/Some/Path3/")
-    env.unset("MyPath4")
-    folder = temp_folder()
-
-    prevenv = {"MyVar1": "OldVar1",
-               "MyVar2": "OldVar2",
-               "MyVar3": "OldVar3",
-               "MyVar4": "OldVar4",
-               "MyPath1": "OldPath1",
-               "MyPath2": "OldPath2",
-               "MyPath3": "OldPath3",
-               "MyPath4": "OldPath4",
-               }
-
-    display_bat = textwrap.dedent("""\
-        @echo off
-        echo MyVar=%MyVar%!!
-        echo MyVar1=%MyVar1%!!
-        echo MyVar2=%MyVar2%!!
-        echo MyVar3=%MyVar3%!!
-        echo MyVar4=%MyVar4%!!
-        echo MyVar5=%MyVar5%!!
-        echo MyVar6=%MyVar6%!!
-        echo MyPath1=%MyPath1%!!
-        echo MyPath2=%MyPath2%!!
-        echo MyPath3=%MyPath3%!!
-        echo MyPath4=%MyPath4%!!
-        """)
-
-    display_sh = textwrap.dedent("""\
-        echo MyVar=$MyVar!!
-        echo MyVar1=$MyVar1!!
-        echo MyVar2=$MyVar2!!
-        echo MyVar3=$MyVar3!!
-        echo MyVar4=$MyVar4!!
-        echo MyVar5=$MyVar5!!
-        echo MyVar6=$MyVar6!!
-        echo MyPath1=$MyPath1!!
-        echo MyPath2=$MyPath2!!
-        echo MyPath3=$MyPath3!!
-        echo MyPath4=$MyPath4!!
-        """)
-
-    def check(cmd_):
-        out, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  env=prevenv, shell=True).communicate()
-        out = out.decode()
-        assert "MyVar=MyValue!!" in out
-        assert "MyVar1=MyValue1!!" in out
-        assert "MyVar2=OldVar2 MyValue2!!" in out
-        assert "MyVar3=MyValue3 OldVar3!!" in out
-        assert "MyVar4=!!" in out
-        assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
-        assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
-        assert "MyPath1=/Some/Path1/!!" in out
-        assert "MyPath2=OldPath2:/Some/Path2/:/Other/Path2/!!" in out
-        assert "MyPath3=/Some/Path3/:OldPath3!!" in out
-        assert "MyPath4=!!" in out
-
-        # This should be output when deactivated
-        assert "MyVar=!!" in out
-        assert "MyVar1=OldVar1!!" in out
-        assert "MyVar2=OldVar2!!" in out
-        assert "MyVar3=OldVar3!!" in out
-        assert "MyVar4=OldVar4!!" in out
-        assert "MyVar5=!!" in out
-        assert "MyVar6=!!" in out
-        assert "MyPath1=OldPath1!!" in out
-        assert "MyPath2=OldPath2!!" in out
-        assert "MyPath3=OldPath3!!" in out
-        assert "MyPath4=OldPath4!!" in out
-
-    with chdir(folder):
-        if platform.system() == "Windows":
-            env.save_bat("test.bat", pathsep=":", generate_deactivate=True)
-            save("display.bat", display_bat)
-            cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-            check(cmd)
-            # FIXME: Powershell still not working
-            # env.save_ps1("test.ps1", pathsep=":")
-            # cmd = 'powershell.exe -ExecutionPolicy ./test.ps1; gci env:'
-            # shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # (stdout, stderr) = shell.communicate()
-            # stdout, stderr = decode_text(stdout), decode_text(stderr)
-            # check(cmd)
-        else:
-            env.save_sh("test.sh", generate_deactivate=True)
-            save("display.sh", display_sh)
-            os.chmod("display.sh", 0o777)
-            cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
-            check(cmd)
+        env = profile_env.get_profile_env("mypkg1/1.0")
+        env = env.vars(ConanFileMock())
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_windows_case_insensitive():
+@pytest.fixture
+def env():
     # Append and define operation over the same variable in Windows preserve order
     env = Environment()
     env.define("MyVar", "MyValueA")
     env.define("MYVAR", "MyValueB")
     env.define("MyVar1", "MyValue1A")
     env.append("MYVAR1", "MyValue1B")
-    folder = temp_folder()
+    env.define("MyVar2", "MyNewValue2")
 
-    display_bat = textwrap.dedent("""\
-        @echo off
-        echo MyVar=%MyVar%!!
-        echo MyVar1=%MyVar1%!!
-        """)
+    env = env.vars(ConanFileMock())
+    env._subsystem = WINDOWS
 
-    with chdir(folder):
-        env.save_bat("test.bat", generate_deactivate=True)
-        save("display.bat", display_bat)
-        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  shell=True).communicate()
+    return env
 
-    out = out.decode()
+
+def check_command_output(cmd, prevenv):
+    result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 env=prevenv, shell=True).communicate()
+    out = result.decode()
+
     assert "MyVar=MyValueB!!" in out
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
+    assert "MyVar2=MyNewValue2!!" in out
+    assert "MyVar2=OldValue2!!" in out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_bat(env):
+    display = textwrap.dedent("""\
+        @echo off
+        echo MyVar=%MyVar%!!
+        echo MyVar1=%MyVar1%!!
+        echo MyVar2=%MyVar2%!!
+        """)
+
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+
+    with chdir(temp_folder()):
+        env.save_bat("test.bat")
+        save("display.bat", display)
+        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        check_command_output(cmd, prevenv)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_ps1(env):
+    display = textwrap.dedent("""\
+        echo "MyVar=$env:MyVar!!"
+        echo "MyVar1=$env:MyVar1!!"
+        echo "MyVar2=$env:MyVar2!!"
+        """)
+
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+    prevenv.update(dict(os.environ.copy()))
+
+    with chdir(temp_folder()):
+        env.save_ps1("test.ps1")
+        save("display.ps1", display)
+        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        check_command_output(cmd, prevenv)
 
 
 def test_dict_access():
     env = Environment()
     env.append("MyVar", "MyValue", separator="@")
-    ret = env.items()
-    assert dict(ret) == {"MyVar": "@MyValue"}
+    ret = env.vars(ConanFileMock()).items()
+    assert dict(ret) == {"MyVar": "MyValue"}
 
     env = Environment()
     env.prepend("MyVar", "MyValue", separator="@")
-    ret = env.items()
-    assert dict(ret) == {"MyVar": "MyValue@"}
-    assert env["MyVar"] == "MyValue@"
+    env_vars = env.vars(ConanFileMock())
+    assert dict(env_vars.items()) == {"MyVar": "MyValue"}
+    assert env_vars["MyVar"] == "MyValue"
 
     env2 = Environment()
     env2.define("MyVar", "MyValue2")
-    env.compose(env2)
-    ret = env.items()
-    assert dict(ret) == {"MyVar": "MyValue@MyValue2"}
+    env.compose_env(env2)
+    env_vars = env.vars(ConanFileMock())
+    assert dict(env_vars.items()) == {"MyVar": "MyValue@MyValue2"}
 
     with pytest.raises(KeyError):
-        _ = env["Missing"]
+        _ = env_vars["Missing"]
 
     # With previous values in the environment
     env = Environment()
     env.prepend("MyVar", "MyValue", separator="@")
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
+    env_vars = env.vars(ConanFileMock())
     try:
-        assert env["MyVar"] == "MyValue@PreviousValue"
+        assert env_vars["MyVar"] == "MyValue@PreviousValue"
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -320,15 +283,132 @@ def test_dict_access():
     env.append_path("MyVar", "MyValue")
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
+    env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
     try:
-        assert env["MyVar"] == "PreviousValue{}MyValue".format(os.pathsep)
-        with env.apply():
-            assert os.getenv("MyVar") == "PreviousValue{}MyValue".format(os.pathsep)
+        assert env_vars["MyVar"] == "PreviousValue;MyValue"
+        with env_vars.apply():
+            assert os.getenv("MyVar") == "PreviousValue;MyValue"
     finally:
         os.environ.clear()
         os.environ.update(old_env)
 
-    assert list(env.keys()) == ["MyVar"]
-    assert dict(env.items()) == {"MyVar": "{}MyValue".format(os.pathsep)}
+    assert list(env_vars.keys()) == ["MyVar"]
+    assert dict(env_vars.items()) == {"MyVar": "MyValue"}
 
 
+def test_env_win_bash():
+    conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Windows"})
+    conanfile.win_bash = True
+    conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
+    folder = temp_folder()
+    conanfile.folders.generators = folder
+    env = Environment()
+    env.define("MyVar", "MyValue")
+    env.define_path("MyPath", "c:/path/to/something")
+    env.append("MyPath", "D:/Otherpath")
+    env_vars = env.vars(conanfile)
+    env_vars.save_script("foo")
+    content = open(os.path.join(folder, "foo.sh")).read()
+    assert 'MyVar="MyValue"' in content
+    # Note the unit letter is lowercase
+    assert 'MyPath="/c/path/to/something:/d/otherpath"' in content
+
+
+def test_public_access():
+    env = Environment()
+    env.define("MyVar", "MyValue")
+    env.append("MyVar", "MyValue2")
+    env.define_path("MyPath", "c:/path/to/something")
+    env.append_path("MyPath", "D:/Otherpath")
+    env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
+    for name, values in env_vars.items():
+        if name == "MyVar":
+            assert values == "MyValue MyValue2"
+        if name == "MyPath":
+            assert values == "c:/path/to/something;D:/Otherpath"
+
+    env.remove("MyPath", "D:/Otherpath")
+    assert env_vars.get("MyPath") == "c:/path/to/something"
+
+
+class TestProfileEnvRoundTrip:
+
+    def test_define(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1=MyValue1
+            MyPath1 = (path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=MyValue1
+            MyPath1=(path)/my/path1
+            """)
+
+    def test_append(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1+=MyValue1
+            MyPath1 +=(path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1+=MyValue1
+            MyPath1+=(path)/my/path1
+            """)
+
+    def test_prepend(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1=+MyValue1
+            MyPath1=+(path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue1
+            MyPath1=+(path)/my/path1
+            """)
+
+    def test_combined(self):
+        myprofile = textwrap.dedent("""
+            MyVar1=+MyValue11
+            MyVar1+=MyValue12
+            MyPath1=+(path)/my/path11
+            MyPath1+=(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue11
+            MyVar1+=MyValue12
+            MyPath1=+(path)/my/path11
+            MyPath1+=(path)/my/path12
+            """)
+
+    def test_combined2(self):
+        myprofile = textwrap.dedent("""
+            MyVar1+=MyValue11
+            MyVar1=+MyValue12
+            MyPath1+=(path)/my/path11
+            MyPath1=+(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        # NOTE: This is reversed order compared to origin, prepend always first
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue12
+            MyVar1+=MyValue11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path11
+            """)

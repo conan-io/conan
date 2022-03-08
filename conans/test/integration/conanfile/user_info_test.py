@@ -13,55 +13,42 @@ class UserInfoTest(unittest.TestCase):
 
         def export_lib(name, requires, infolines):
             base = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
 
                 class MyConanfile(ConanFile):
                     name = "%s"
                     version = "0.1"
-                    requires = "%s"
+                    requires = %s
 
                     def package_info(self):
                         %s
                     """)
+            requires = "'{}'".format(requires) if requires else "None"
             client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            client.run("export . lasote/stable")
+            client.run("export . --user=lasote --channel=stable")
 
-        export_lib("LIB_A", "", "self.user_info.VAR1=2")
-        export_lib("LIB_B", "LIB_A/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
+        export_lib("lib_a", "", "self.user_info.VAR1=2")
+        export_lib("lib_b", "lib_a/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
                                                        "self.user_info.VAR2=3")
-        export_lib("LIB_C", "LIB_B/0.1@lasote/stable", "self.user_info.VAR1=2")
-        export_lib("LIB_D", "LIB_C/0.1@lasote/stable", "self.user_info.var1=2")
+        export_lib("lib_c", "lib_b/0.1@lasote/stable", "self.user_info.VAR1=2")
+        export_lib("lib_d", "lib_c/0.1@lasote/stable", "self.user_info.var1=2")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConanfile(ConanFile):
-                requires = "LIB_D/0.1@lasote/stable"
+                requires = "lib_d/0.1@lasote/stable"
 
                 def build(self):
-                    assert(self.deps_user_info["LIB_A"].VAR1=="2")
-                    assert(self.deps_user_info["LIB_B"].VAR1=="2")
-                    assert(self.deps_user_info["LIB_B"].VAR2=="3")
-                    assert(self.deps_user_info["LIB_C"].VAR1=="2")
-                    assert(self.deps_user_info["LIB_D"].var1=="2")
-                    # Idiomatic way to check for attribute existence
-                    # https://github.com/conan-io/conan/issues/7130
-                    assert(hasattr(self.deps_user_info["LIB_A"], "VAR1"))
-                    assert(not hasattr(self.deps_user_info["LIB_A"], "NONEXIST"))
-                    assert(getattr(self.deps_user_info["LIB_A"], "VAR1"))
-                    assert(not getattr(self.deps_user_info["LIB_A"], "NONEXIST", None))
+                    assert self.dependencies["lib_a"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_b"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_b"].user_info.VAR2=="3"
+                    assert self.dependencies["lib_c"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_c"].user_info.VAR1=="2"
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export . reuse/0.1@lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build -g txt')
-
-        # Assert generator TXT
-        txt_contents = client.load("conanbuildinfo.txt")
-        self.assertIn("[USER_LIB_A]%sVAR1=2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_B]%sVAR1=2%sVAR2=3" % (os.linesep, os.linesep), txt_contents)
-        self.assertIn("[USER_LIB_C]%sVAR1=2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_D]%svar1=2" % os.linesep, txt_contents)
-
+        client.run("export . --name=reuse --version=0.1 --user=lasote --channel=stable")
+        client.run('install --requires=reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')
         client.run("build .")

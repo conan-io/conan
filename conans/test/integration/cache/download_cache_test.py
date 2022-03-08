@@ -6,13 +6,11 @@ from collections import Counter
 from threading import Thread
 
 from bottle import static_file, request
-import pytest
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.env_reader import get_env
 from conans.util.files import load, save, set_dirty
 
 
@@ -21,92 +19,49 @@ class DownloadCacheTest(unittest.TestCase):
     def test_download_skip(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
         cache_folder = temp_folder()
-        log_trace_file = os.path.join(temp_folder(), "mylog.txt")
-        client.run('config set storage.download_cache="%s"' % cache_folder)
-        client.run('config set log.trace_file="%s"' % log_trace_file)
-        client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(6, content.count('"_action": "DOWNLOAD"'))
-        # 6 files cached, plus "locks" folder = 7
-        self.assertEqual(7, len(os.listdir(cache_folder)))
+        #client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
-        os.remove(log_trace_file)
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
-        self.assertIn("DOWNLOADED_RECIPE", content)
-        self.assertIn("DOWNLOADED_PACKAGE", content)
+        client.run("install --requires=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
+
+        client.run("remove * -f")
+        client.run("install --requires=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
 
         # removing the config downloads things
-        client.run('config rm storage.download_cache')
-        os.remove(log_trace_file)
         client.run("remove * -f")
-        client.run('config set log.trace_file="%s"' % log_trace_file)
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        # Not cached uses 7, because it downloads twice conaninfo.txt
-        self.assertEqual(7, content.count('"_action": "DOWNLOAD"'))
-
+        client.run("install --requires=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
         # restoring config cache works again
-        os.remove(log_trace_file)
-        client.run('config set storage.download_cache="%s"' % cache_folder)
-        client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
+        # client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_corrupted_cache(self):
-        # This test only works without revisions, because v1 has md5 file checksums, but v2 nop
-        client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports = "*"
-                def package(self):
-                    self.copy("*")
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
-        cache_folder = temp_folder()
-        client.run('config set storage.download_cache="%s"' % cache_folder)
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        for f in os.listdir(cache_folder):
-            f = os.path.join(cache_folder, f)
-            if not os.path.isfile(f):
-                continue
-            save(f, load(f) + "a")
-        client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        self.assertIn("mypkg/0.1@user/testing: Downloaded package", client.out)
+        client.run("install --requires=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_dirty_download(self):
         # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
-        client.run('config set storage.download_cache="%s"' % cache_folder)
+
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
-        client.run("create . pkg/0.1@")
-        client.run("upload * --all -c")
+        client.run("create . --name=pkg --version=0.1")
+        client.run("upload * -c -r default")
         client.run("remove * -f")
-        client.run("install pkg/0.1@")
+        client.run("install --requires=pkg/0.1@")
         for f in os.listdir(cache_folder):
             # damage the file
             path = os.path.join(cache_folder, f)
@@ -115,10 +70,10 @@ class DownloadCacheTest(unittest.TestCase):
                 set_dirty(path)
 
         client.run("remove * -f")
-        client.run("install pkg/0.1@")
+        client.run("install --requires=pkg/0.1@")
         assert "pkg/0.1: Downloaded package" in client.out
 
-    def test_user_downloads_cached(self):
+    def test_user_downloads_cached_newtools(self):
         http_server = StoppableThreadBottle()
 
         file_path = os.path.join(temp_folder(), "myfile.txt")
@@ -135,13 +90,14 @@ class DownloadCacheTest(unittest.TestCase):
 
         client = TestClient()
         cache_folder = temp_folder()
-        client.run('config set storage.download_cache="%s"' % cache_folder)
+        save(client.cache.new_config_path, "tools.files.download:download_cache=%s" % cache_folder)
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
-           from conans import ConanFile, tools
+           from conan import ConanFile
+           from conan.tools.files import download
            class Pkg(ConanFile):
                def source(self):
-                   tools.download("http://localhost:%s/myfile.txt", "myfile.txt", md5="kk")
+                   download(self, "http://localhost:%s/myfile.txt", "myfile.txt", md5="kk")
            """ % http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
@@ -153,13 +109,14 @@ class DownloadCacheTest(unittest.TestCase):
 
         # This is the right checksum
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, tools
+            from conan import ConanFile
+            from conan.tools.files import download
             class Pkg(ConanFile):
                 def source(self):
                     md5 = "9893532233caff98cd083a116b013c0b"
                     md5_2 = "0dc8a17658b1c7cfa23657780742a353"
-                    tools.download("http://localhost:{0}/myfile.txt", "myfile.txt", md5=md5)
-                    tools.download("http://localhost:{0}/myfile.txt?q=2", "myfile2.txt", md5=md5_2)
+                    download(self, "http://localhost:{0}/myfile.txt", "myfile.txt", md5=md5)
+                    download(self, "http://localhost:{0}/myfile.txt?q=2", "myfile2.txt", md5=md5_2)
             """).format(http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
@@ -188,46 +145,60 @@ class DownloadCacheTest(unittest.TestCase):
         # disabling cache will make it fail
         os.remove(local_path)
         os.remove(local_path2)
-        client.run("config rm storage.download_cache")
+        save(client.cache.new_config_path, "")
         client.run("source .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in source() method, line 8", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                        reason="Hybrid test with both v1 and v2")
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
-        client.run("config set general.revisions_enabled=False")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy, load
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def package(self):
-                    self.copy("*")
-                def deploy(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
+                def package_info(self):
+                    content = load(self, os.path.join(self.package_folder, "header.h"))
+                    self.output.warning("CONTENT=>{}#".format(content))
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers)
-        client2.run("config set general.revisions_enabled=True")
         cache_folder = temp_folder()
-        client2.run('config set storage.download_cache="%s"' % cache_folder)
-        client2.run("install mypkg/0.1@user/testing")
-        self.assertEqual("header", client2.load("header.h"))
+
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            download_cache = {}
+            [log]
+            """.format(cache_folder))
+        client2.save({"conan.conf": conan_conf}, path=client2.cache.cache_folder)
+
+        client2.run("install --requires=mypkg/0.1@user/testing")
+
+        def get_value_from_output(output):
+            tmp = str(output).split("CONTENT=>")[1]
+            return tmp.split("#")[0]
+
+        self.assertEqual("header", get_value_from_output(client2.out))
 
         # modify non-revisioned pkg
         client.save({"conanfile.py": conanfile,
                      "header.h": "header2"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client.run("upload * --confirm -r default")
 
         client2.run("remove * -f")
-        client2.run("install mypkg/0.1@user/testing")
-        self.assertEqual("header2", client2.load("header.h"))
+        client2.run("install --requires=mypkg/0.1@user/testing")
+
+        self.assertEqual("header2", get_value_from_output(client2.out))
 
 
 class CachedDownloaderUnitTest(unittest.TestCase):

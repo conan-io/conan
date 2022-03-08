@@ -34,9 +34,9 @@ class _ArtifactoryServerStore(object):
     @staticmethod
     def _pref_index(pref):
         tmp = _ArtifactoryServerStore._root_recipe(pref.ref)
-        return "{}/{}/package/{}/index.json".format(tmp, pref.ref.revision, pref.id)
+        return "{}/{}/package/{}/index.json".format(tmp, pref.ref.revision, pref.package_id)
 
-    def get_recipe_revisions(self, ref):
+    def get_recipe_revisions_references(self, ref):
         time.sleep(0.1)  # Index appears to not being updated immediately after a remove
         url = "{}/{}".format(self._repo_url, self._ref_index(ref))
         response = requests.get(url, auth=self._auth)
@@ -47,7 +47,7 @@ class _ArtifactoryServerStore(object):
         tmp = [_RevisionEntry(i["revision"], i["time"]) for i in the_json["revisions"]]
         return tmp
 
-    def get_package_revisions(self, pref):
+    def get_package_revisions_references(self, pref):
         time.sleep(0.1)  # Index appears to not being updated immediately
         url = "{}/{}".format(self._repo_url, self._pref_index(pref))
         response = requests.get(url, auth=self._auth)
@@ -59,11 +59,11 @@ class _ArtifactoryServerStore(object):
         return tmp
 
     def get_last_revision(self, ref):
-        revisions = self.get_recipe_revisions(ref)
+        revisions = self.get_recipe_revisions_references(ref)
         return revisions[0]
 
     def get_last_package_revision(self, ref):
-        revisions = self.get_package_revisions(ref)
+        revisions = self.get_package_revisions_references(ref)
         return revisions[0]
 
 
@@ -90,14 +90,14 @@ class ArtifactoryServer(object):
         return "{}/api/conan/{}".format(self._url, self._repo_name)
 
     def recipe_revision_time(self, ref):
-        revs = self.server_store.get_recipe_revisions(ref)
+        revs = self.server_store.get_recipe_revisions_references(ref)
         for r in revs:
             if r.revision == ref.revision:
                 return r.time
         return None
 
     def package_revision_time(self, pref):
-        revs = self.server_store.get_package_revisions(pref)
+        revs = self.server_store.get_package_revisions_references(pref)
         for r in revs:
             if r.revision == pref.revision:
                 return r.time
@@ -111,7 +111,7 @@ class ArtifactoryServer(object):
 
     def package_exists(self, pref):
         try:
-            revisions = self.server_store.get_package_revisions(pref)
+            revisions = self.server_store.get_package_revisions_references(pref)
             if pref.revision:
                 for r in revisions:
                     if pref.revision == r.revision:
@@ -123,7 +123,7 @@ class ArtifactoryServer(object):
 
     def recipe_exists(self, ref):
         try:
-            revisions = self.server_store.get_recipe_revisions(ref)
+            revisions = self.server_store.get_recipe_revisions_references(ref)
             if ref.revision:
                 for r in revisions:
                     if ref.revision == r.revision:

@@ -4,22 +4,24 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="layout files will be removed and conan-info command output changes")
 class InfoCommandTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads('lib/version@user/name')
-        self.ref_child = ConanFileReference.loads('child/version@user/name')
+        self.ref = RecipeReference.loads('lib/version@user/name')
+        self.ref_child = RecipeReference.loads('child/version@user/name')
 
         self.t = TestClient(path_with_spaces=False)
         self.t.save({'conanfile.py': GenConanfile()})
-        self.t.run('create . parent/version@user/name')
+        self.t.run('create . --name=parent --version=version --user=user --channel=name')
 
         lib_folder = os.path.join(self.t.current_folder, 'lib')
         conan_package_layout = textwrap.dedent("""\
@@ -45,8 +47,7 @@ class InfoCommandTest(unittest.TestCase):
 
         self.t.run('info {}'.format(project_name))
         revision = "    Revision: None\n"\
-                   "    Package revision: None\n" \
-                   if self.t.cache.config.revisions_enabled else ""
+                   "    Package revision: None\n"
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
@@ -71,10 +72,3 @@ class InfoCommandTest(unittest.TestCase):
                              sorted(["lib/version@user/name",
                                      "parent/version@user/name",
                                      str(project_name)]))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_paths(self, use_local_path):
-        args = "." if use_local_path else self.ref_child
-        self.t.run('info {} --paths'.format(args), assert_error=True)
-        self.assertIn("ERROR: Operation not allowed on a package installed as editable", self.t.out)
-        # TODO: Cannot show paths for a linked/editable package... what to do here?

@@ -1,8 +1,9 @@
 import os
 import unittest
 
-from conans.client.tools.files import rename, chdir
+from conan.tools.files import rename
 from conans.test.utils.tools import TestClient
+from conans.util.files import chdir
 
 
 class RenameTest(unittest.TestCase):
@@ -55,13 +56,13 @@ class RenameTest(unittest.TestCase):
         self.verify_dir(os.path.join(tmpdir, sub_space_dir))
 
         with chdir(tmpdir):
-            rename(sub_space_dir, "dst dir")
+            rename(None, sub_space_dir, "dst dir")
             self.verify_dir(os.path.join(tmpdir, "dst dir"))
 
-            rename("dst dir", "subdir")
+            rename(None,"dst dir", "subdir")
             self.verify_dir(os.path.join(tmpdir, "subdir"))
 
-            rename(os.path.join("subdir", "1.txt"), "t.txt")
+            rename(None, os.path.join("subdir", "1.txt"), "t.txt")
             self.assertTrue(os.path.isfile(os.path.join(tmpdir, "t.txt")))
             self.assertFalse(os.path.isfile(os.path.join(tmpdir, "subdir", "1.txt")))
 
@@ -70,6 +71,6 @@ class RenameTest(unittest.TestCase):
         old_folder = os.path.join(client.current_folder, "old_folder")
         os.mkdir(old_folder)
         new_folder = os.path.join(client.current_folder, "new_folder")
-        rename(old_folder, new_folder)
+        rename(None, old_folder, new_folder)
         self.assertFalse(os.path.exists(old_folder))
         self.assertTrue(os.path.exists(new_folder))

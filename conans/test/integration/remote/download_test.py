@@ -1,17 +1,15 @@
 import unittest
 
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer
-from conans.client.cache.remote_registry import Remotes
+from requests import Response
+
+from conans.test.utils.tools import TestClient, TestServer, TestRequester
 
 myconan1 = """
-from conans import ConanFile
+from conan import ConanFile
 import platform
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2.1"
 """
 
@@ -22,45 +20,28 @@ class DownloadTest(unittest.TestCase):
         test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         servers = {"default": test_server}
 
-        class Response(object):
-            ok = None
-            status_code = None
-            charset = None
-            text = ""
-            headers = {}
-            content = ""
-
-            def __init__(self, ok, status_code):
-                self.ok = ok
-                self.status_code = status_code
-
-        class BuggyRequester(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
-
+        class BuggyRequester(TestRequester):
             def get(self, *args, **kwargs):
-                return Response(False, 404)
+                resp = Response()
+                resp.status_code = 404
+                resp._content = b''
+                return resp
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
-        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        proxy = client2.proxy
-
-        remotes = Remotes()
-        remotes.add("remotename", "url")
-        with self.assertRaises(NotFoundException):
-            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
+        client2.run("remote add remotename url")
+        client2.run("install --requires=foo/bar@ -r remotename", assert_error=True)
+        assert "Package 'foo/bar' not resolved: Unable to find 'foo/bar' in remotes" in client2.out
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
-                return Response(False, 500)
+                resp = Response()
+                resp.status_code = 500
+                resp._content = b'This server is under maintenance'
+                return resp
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        proxy = client2.proxy
-
-        try:
-            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
-        except NotFoundException:
-            self.assertFalse(True)  # Shouldn't capture here
-        except ConanException:
-            pass
+        client2.run("remote add remotename url")
+        client2.run("install --requires=foo/bar@ -r remotename", assert_error=True)
+        assert "ERROR: Package 'foo/bar' not resolved" in client2.out
+        assert "This server is under maintenance" in client2.out
+        assert "not found" not in client2.out

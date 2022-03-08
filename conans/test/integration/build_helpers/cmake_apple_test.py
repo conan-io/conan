@@ -4,12 +4,12 @@ from parameterized import parameterized
 
 import pytest
 
-from conans.client.build.cmake import CMake
 from conans.client.conf import get_default_settings_yml
 from conans.model.settings import Settings
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
+@pytest.mark.xfail(reason="Migrate this test to new CMakeToolchain")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleTest(unittest.TestCase):
     @parameterized.expand([('x86', 'Macos', 'i386', 'MacOSX.platform'),

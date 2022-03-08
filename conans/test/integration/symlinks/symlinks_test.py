@@ -5,24 +5,25 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import load, mkdir, save
 
 conanfile = """
-from conans import ConanFile
-from conans.util.files import save
+from conan import ConanFile
+from conan.tools.files import save, copy
 import os
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*"
 
     def build(self):
-        save("file1.txt", "Hello1")
+        save(self, "file1.txt", "hello1")
         os.symlink("file1.txt", "file1.txt.1")
-        save("version1/file2.txt", "Hello2")
+        save(self, "version1/file2.txt", "Hello2")
         os.symlink("version1", "latest")
         os.symlink("latest", "edge")
         os.symlink("empty_folder", "broken_link")
@@ -30,33 +31,35 @@ class HelloConan(ConanFile):
         os.symlink("other_empty_folder", "other_link")
 
     def package(self):
-        self.copy("*.txt*", links=True)
-        self.copy("*.so*", links=True)
+        copy(self, "*.txt*", self.build_folder, self.package_folder)
+        copy(self, "*.so*", self.build_folder, self.package_folder)
 """
 
 test_conanfile = """[requires]
-Hello/0.1@lasote/stable
+hello/0.1@lasote/stable
 
 [imports]
 ., * -> .
 """
 
 
+@pytest.mark.xfail(reason="cache2.0 revisit test")
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
-    def _check(self, client, ref, build=True):
-        folders = [client.cache.package_layout(ref.ref).package(ref), client.current_folder]
+    def _check(self, client, pref, build=True):
+        pkg_layout = client.get_latest_pkg_layout(pref)
+        folders = [pkg_layout.package(), client.current_folder]
         if build:
-            folders.append(client.cache.package_layout(ref.ref).build(ref))
+            folders.append(pkg_layout.build())
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
             self.assertEqual(os.readlink(link), "file1.txt")
             file1 = load(filepath)
-            self.assertEqual("Hello1", file1)
+            self.assertEqual("hello1", file1)
             file1 = load(link)
-            self.assertEqual("Hello1", file1)
+            self.assertEqual("hello1", file1)
             # Save any different string, random, or the base path
             save(filepath, base)
             self.assertEqual(load(link), base)
@@ -74,9 +77,9 @@ class SymLinksTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref)
 
@@ -86,13 +89,15 @@ class SymLinksTest(unittest.TestCase):
     def test_package_files(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
+from conan.tools.files import copy
+
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def package(self):
-        self.copy("*", symlinks=True)
+        copy(self, "*", self.build_folder, self.package_folder)
     """
         client.save({"recipe/conanfile.py": conanfile})
         file1 = os.path.join(client.current_folder, "file1.txt")
@@ -100,13 +105,13 @@ class TestConan(ConanFile):
         file11 = os.path.join(client.current_folder, "file1.txt.1")
         latest = os.path.join(client.current_folder, "latest")
         edge = os.path.join(client.current_folder, "edge")
-        save(file1, "Hello1")
+        save(file1, "hello1")
         os.symlink("file1.txt", file11)
         save(file2, "Hello2")
         os.symlink("version1", latest)
         os.symlink("latest", edge)
-        client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        client.run("export-pkg  ./recipe  --name=hello --version=0.1 --user=lasote --channel=stable")
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)
 
@@ -123,20 +128,18 @@ class TestConan(ConanFile):
         pre_export_link = os.path.join(client.current_folder, link_name)
         os.symlink(lib_name, pre_export_link)
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
-        client.run("copy Hello/0.1@lasote/stable team/testing --all")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        team_pref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
 
-        for folder in [client.cache.package_layout(ref).export(),
-                       client.cache.package_layout(ref).source(),
-                       client.cache.package_layout(ref).build(pref),
-                       client.cache.package_layout(ref).package(pref),
-                       client.cache.package_layout(team_ref).export(),
-                       client.cache.package_layout(team_ref).package(team_pref)]:
+        pkg_layout = client.get_latest_pkg_layout(pref)
+        ref_layout = client.get_latest_ref_layout(ref)
+
+        for folder in [ref_layout.export(),
+                       ref_layout.source(),
+                       pkg_layout.build(),
+                       pkg_layout.package()]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)
@@ -149,23 +152,23 @@ class TestConan(ConanFile):
     def test_upload(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
 
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload Hello/0.1@lasote/stable --all")
+        client.run("upload hello/0.1@lasote/stable -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")
         self._check(client, pref, build=False)
 
     def test_export_pattern(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"
     version = "3.0.0"
@@ -184,9 +187,9 @@ class ConanSymlink(ConanFile):
             self.assertFalse(os.path.exists(symlink_path))
             self.assertTrue(os.path.exists(symlinked_path))
             os.symlink(symlinked_path, symlink_path)
-            client.run("export . danimtb/testing")
-            ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-            export_sources = client.cache.package_layout(ref).export_sources()
+            client.run("export . --user=danimtb --channel=testing")
+            ref = RecipeReference("ConanSymlink", "3.0.0", "danimtb", "testing")
+            export_sources = client.get_latest_ref_layout(ref).export_sources()
             cache_other_dir = os.path.join(export_sources, "another_other_directory")
             cache_src = os.path.join(export_sources, "src")
             cache_main = os.path.join(cache_src, "main.cpp")
@@ -197,13 +200,13 @@ class ConanSymlink(ConanFile):
             self.assertTrue(os.path.exists(cache_cmake))
 
     def test_export_ignore_case(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"
     version = "3.0.0"
     exports_sources = ["*"]
     def package(self):
-        self.copy("*NOT_TO_COPY.TXT", ignore_case=%s)
+        copy(self, "*NOT_TO_COPY.TXT", self.source_folder, self.package_folder, ignore_case=%s)
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile % "False",
@@ -218,18 +221,18 @@ class ConanSymlink(ConanFile):
         self.assertTrue(os.path.exists(symlinked_path))
         os.symlink(symlinked_path, symlink_path)
         client.run("create . danimtb/testing")
-        ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-        cache_file = os.path.join(client.cache.package_layout(ref).export_sources(),
+        ref = RecipeReference("ConanSymlink", "3.0.0", "danimtb", "testing")
+        cache_file = os.path.join(client.get_latest_ref_layout(ref).export_sources(),
                                   "another_directory", "not_to_copy.txt")
         self.assertTrue(os.path.exists(cache_file))
-        cache_other_dir = os.path.join(client.cache.package_layout(ref).export_sources(),
+        cache_other_dir = os.path.join(client.get_latest_ref_layout(ref).export_sources(),
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_file = os.path.join(client.cache.package_layout(pref.ref).package(pref),
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_file = os.path.join(client.get_latest_pkg_layout(pref).package(),
                                     "another_directory", "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))
-        package_other_dir = os.path.join(client.cache.package_layout(pref.ref).package(pref),
+        package_other_dir = os.path.join(client.get_latest_pkg_layout(pref).package(),
                                          "another_other_directory")
         self.assertFalse(os.path.exists(package_other_dir))
         client.save({"conanfile.py": conanfile % "True"})
@@ -240,7 +243,7 @@ class ConanSymlink(ConanFile):
     def test_create_keep_folder_symlink(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             class ConanSymlink(ConanFile):
                 name = "ConanSymlink"
                 version = "3.0.0"
@@ -260,8 +263,8 @@ class ConanSymlink(ConanFile):
         # Verify that the symlink is created correctly
         self.assertEqual(os.path.realpath(symlink_path), real_dir_path)
 
-        ref = ConanFileReference.loads("ConanSymlink/3.0.0@user/channel")
-        package_layout = client.cache.package_layout(ref)
+        ref = RecipeReference.loads("ConanSymlink/3.0.0@user/channel")
+        package_layout = client.get_latest_ref_layout(ref)
         # Export the recipe and check that the symlink is still there
         client.export(ref, conanfile=conanfile)
         sf = package_layout.export_sources()
@@ -278,7 +281,7 @@ class ConanSymlink(ConanFile):
         self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
 
         # Assert that the symlink is preserved when copy to build folder
-        bf = client.cache.package_layout(pref.ref).build(pref)
+        bf = client.get_latest_pkg_layout(pref).build()
         bf_symlink = os.path.join(bf, "debug")
         self.assertTrue(os.path.islink(bf_symlink))
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
@@ -287,7 +290,7 @@ class ConanSymlink(ConanFile):
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymlinkExportSources(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conan import ConanFile
 
         class SymlinksConan(ConanFile):
             name = "symlinks"
@@ -317,10 +320,10 @@ class SymlinkExportSources(unittest.TestCase):
         self.assertEqual(os.path.realpath(local_content),
                          os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
-        t.run("create . user/channel")
+        t.run("create . --user=user --channel=channel")
 
         # Check that things are in place (in the cache): exists and points to 'source' directory
-        layout = t.cache.package_layout(ConanFileReference.loads("symlinks/1.0.0@user/channel"))
+        layout = t.get_latest_ref_layout(RecipeReference.loads("symlinks/1.0.0@user/channel"))
         cache_content = os.path.join(layout.source(), relpath_content)
         self.assertTrue(os.path.exists(cache_content))
         self.assertEqual(os.path.realpath(cache_content),

@@ -1,42 +1,43 @@
 import os
 import platform
+import subprocess
 import textwrap
 
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.utils.tools import TestClient
-from conans.util.files import save
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 @pytest.fixture()
 def client():
     openssl = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
-        from conans.tools import save, chdir
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
+            package_type = "shared-library"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
-                    save("bin/myopenssl.bat", echo)
-                    save("bin/myopenssl.sh", echo)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
             """)
 
     cmake = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
-        from conans.tools import save, chdir
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             requires = "openssl/1.0"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
-                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
-                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    save(self, "mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save(self, "mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
@@ -47,29 +48,29 @@ def client():
 
     gtest = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
-        from conans.tools import save, chdir
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             def package(self):
-                with chdir(self.package_folder):
-                    echo = "@echo off\necho MYGTEST={}!!".format(self.settings.os)
-                    save("bin/mygtest.bat", echo)
-                    save("bin/mygtest.sh", echo)
+                with chdir(self, self.package_folder):
+                    prefix = "@echo off\n" if self.settings.os == "Windows" else ""
+                    echo = "{}echo MYGTEST={}!!".format(prefix, self.settings.os)
+                    save(self, "bin/mygtest.bat", echo)
+                    save(self, "bin/mygtest.sh", echo)
                     os.chmod("bin/mygtest.sh", 0o777)
 
             def package_info(self):
                 self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
             """)
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"cmake/conanfile.py": cmake,
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export openssl openssl/1.0@")
-    client.run("export cmake mycmake/1.0@")
-    client.run("export gtest mygtest/1.0@")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export cmake --name=mycmake --version=1.0")
+    client.run("export gtest --name=mygtest --version=1.0")
 
     myrunner_bat = "@echo off\necho MYGTESTVAR=%MYGTESTVAR%!!\n"
     myrunner_sh = "echo MYGTESTVAR=$MYGTESTVAR!!\n"
@@ -79,61 +80,67 @@ def client():
     return client
 
 
-def test_complete(client):
+@pytest.mark.parametrize("gtest_run_true", [True, False])
+def test_complete(client, gtest_run_true):
+    """By default, a test require has the run=False trait, so the PATH to the bat cannot be
+    accessed"""
     conanfile = textwrap.dedent("""
-        import platform
-        from conans import ConanFile
+        import os
+        from conan import ConanFile
+
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_requires = "mycmake/1.0"
-            apply_env = False
+            tool_requires = "mycmake/1.0"
 
             def build_requirements(self):
-                self.build_requires("mygtest/1.0", force_host_context=True)
+                {}
 
             def build(self):
-                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
-                self.run(mybuild_cmd)
-                mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
-                self.run(mytest_cmd, env="conanrunenv")
+                self.run("mycmake.bat", env="conanbuildenv")
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.sh"))
        """)
+    if gtest_run_true:
+        test_require = 'self.test_requires("mygtest/1.0", run=True)'
+    else:
+        test_require = 'self.test_requires("mygtest/1.0")'
 
+    conanfile = conanfile.format(test_require)
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
-    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycmake.{}".format(ext),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
+    if platform.system() == "Windows":
+        cmd = environment_wrap_command("conanbuildenv", "mycmake.bat",
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command("conanrunenv",
-                                   "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
-                                                                                  sep=os.sep),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYGTEST=Linux!!" in client.out
-    assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+    if platform.system() != "Windows":
+        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
+                                       cwd=client.current_folder)
+        client.run_command(cmd, assert_error=not gtest_run_true)
+        if gtest_run_true:
+            assert "MYGTEST=Linux!!" in client.out
+            assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
-    client.run("build .")
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
-    assert "MYGTEST=Linux!!" in client.out
+    if platform.system() == "Windows":
+        client.run("build . -s:h os=Linux")
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
 
 def test_profile_included_multiple():
     client = TestClient()
     conanfile = textwrap.dedent("""\
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                buildenv = self.buildenv
-                self.output.info("MYVAR1: {}!!!".format(buildenv.value("MYVAR1")))
-                self.output.info("MYVAR2: {}!!!".format(buildenv.value("MYVAR2")))
-                self.output.info("MYVAR3: {}!!!".format(buildenv.value("MYVAR3")))
+                buildenv = self.buildenv.vars(self)
+                self.output.info("MYVAR1: {}!!!".format(buildenv.get("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(buildenv.get("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(buildenv.get("MYVAR3")))
         """)
 
     myprofile = textwrap.dedent("""
@@ -166,16 +173,13 @@ def test_profile_included_multiple():
 
 def test_profile_buildenv():
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     conanfile = textwrap.dedent("""\
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                if platform.system() == "Windows":
-                    self.buildenv.save_bat("pkgenv.bat")
-                else:
-                    self.buildenv.save_sh("pkgenv.sh")
+                self.buildenv.vars(self).save_script("pkgenv")
+                if platform.system() != "Windows":
                     os.chmod("pkgenv.sh", 0o777)
 
         """)
@@ -213,32 +217,37 @@ def test_profile_buildenv():
     assert "MYPATH=" in client.out
 
     # Now with pkg-specific env-var
-    client.run("install . mypkg/1.0@  -pr=myprofile")
+    client.run("install . --name=mypkg --version=1.0 -pr=myprofile")
     client.run_command(cmd)
     assert "MYCOMPILER2!!" in client.out
     assert "MYPATH2=" in client.out
 
 
 def test_transitive_order():
+    # conanfile.py -(br)-> cmake -> openssl (unknown=static)
+    #     \                    \-(br)-> gcc
+    #      \--------(br)-> gcc
+    #       \---------------------> openssl
     gcc = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyGCCValue")
         """)
     openssl = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
-            build_requires = "gcc/1.0"
+            tool_requires = "gcc/1.0"
+            package_type = "shared-library"
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
         """)
     cmake = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_requires = "gcc/1.0"
+            tool_requires = "gcc/1.0"
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyCMakeRunValue")
                 self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
@@ -248,32 +257,38 @@ def test_transitive_order():
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export gcc gcc/1.0@")
-    client.run("export openssl openssl/1.0@")
-    client.run("export cmake cmake/1.0@")
+    client.run("export gcc --name=gcc --version=1.0")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export cmake --name=cmake --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
-        from conan.tools.env import VirtualEnv
+        from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_requires = "cmake/1.0", "gcc/1.0"
+            tool_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
-                env = VirtualEnv(self)
-                buildenv = env.build_environment()
-                self.output.info("BUILDENV: {}!!!".format(buildenv.value("MYVAR")))
-                runenv = env.run_environment()
-                self.output.info("RUNENV: {}!!!".format(runenv.value("MYVAR")))
+                buildenv = VirtualBuildEnv(self).vars()
+                self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
+                runenv = VirtualRunEnv(self).vars()
+                self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+    client.run("install . -s:b os=Windows -s:h os=Linux --build")
+    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
+           "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
+    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
+
+    # Even if the generator is duplicated in command line (it used to fail due to bugs)
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualRunEnv -g VirtualBuildEnv")
+    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
+           "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
+    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
 
 def test_buildenv_from_requires():
     openssl = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def package_info(self):
@@ -281,7 +296,7 @@ def test_buildenv_from_requires():
                                           "MyOpenSSL{}Value".format(self.settings.os))
         """)
     poco = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             settings = "os"
@@ -292,29 +307,29 @@ def test_buildenv_from_requires():
     client.save({"poco/conanfile.py": poco,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export openssl openssl/1.0@")
-    client.run("export poco poco/1.0@")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export poco --name=poco --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
-        from conan.tools.env import VirtualEnv
+        from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv
         class Pkg(ConanFile):
             requires = "poco/1.0"
             def generate(self):
-                env = VirtualEnv(self)
-                buildenv = env.build_environment()
-                self.output.info("BUILDENV POCO: {}!!!".format(buildenv.value("Poco_ROOT")))
-                self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.value("OpenSSL_ROOT")))
+                buildenv = VirtualBuildEnv(self).vars()
+                self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
+                self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV POCO: Poco_ROOT MyPocoLinuxValue!!!" in client.out
-    assert "BUILDENV OpenSSL: OpenSSL_ROOT MyOpenSSLLinuxValue!!!" in client.out
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualBuildEnv")
+    assert "BUILDENV POCO: MyPocoLinuxValue!!!" in client.out
+    assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
 
+@pytest.mark.xfail(reason="The VirtualEnv generator is not fully complete")
 def test_diamond_repeated():
     pkga = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
                 self.runenv_info.define("MYVAR1", "PkgAValue1")
@@ -323,7 +338,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgAValue4")
         """)
     pkgb = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkga/1.0"
             def package_info(self):
@@ -333,7 +348,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgBValue4")
         """)
     pkgc = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkga/1.0"
             def package_info(self):
@@ -343,7 +358,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgCValue4")
         """)
     pkgd = textwrap.dedent(r"""
-       from conans import ConanFile
+       from conan import ConanFile
        class Pkg(ConanFile):
            requires = "pkgb/1.0", "pkgc/1.0"
            def package_info(self):
@@ -353,17 +368,17 @@ def test_diamond_repeated():
                self.runenv_info.define("MYVAR4", "PkgDValue4")
        """)
     pkge = textwrap.dedent(r"""
-       from conans import ConanFile
-       from conan.tools.env import VirtualEnv
+       from conan import ConanFile
+       from conan.tools.env import VirtualRunEnv
        class Pkg(ConanFile):
            requires = "pkgd/1.0"
            def generate(self):
-                env = VirtualEnv(self)
-                runenv = env.run_environment()
-                self.output.info("MYVAR1: {}!!!".format(runenv.value("MYVAR1")))
-                self.output.info("MYVAR2: {}!!!".format(runenv.value("MYVAR2")))
-                self.output.info("MYVAR3: {}!!!".format(runenv.value("MYVAR3")))
-                self.output.info("MYVAR4: {}!!!".format(runenv.value("MYVAR4")))
+                env = VirtualRunEnv(self)
+                runenv = env.vars(scope="run")
+                self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))
+                self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
        """)
     client = TestClient()
     client.save({"pkga/conanfile.py": pkga,
@@ -372,13 +387,188 @@ def test_diamond_repeated():
                  "pkgd/conanfile.py": pkgd,
                  "pkge/conanfile.py": pkge})
 
-    client.run("export pkga pkga/1.0@")
-    client.run("export pkgb pkgb/1.0@")
-    client.run("export pkgc pkgc/1.0@")
-    client.run("export pkgd pkgd/1.0@")
+    client.run("export pkga --name=pkga --version=1.0")
+    client.run("export pkgb --name=pkgb --version=1.0")
+    client.run("export pkgc --name=pkgc --version=1.0")
+    client.run("export pkgd --name=pkgd --version=1.0")
 
-    client.run("install pkge --build")
+    client.run("install --requires=pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
-    assert "MYVAR2: MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
-    assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 MYVAR3!!!" in client.out
+    assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
+    assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+
+@pytest.mark.parametrize("require_run", [True, False])
+def test_environment_scripts_generated_envvars(require_run):
+    """If the regular require doesn't declare the 'run' trait, the conanrunenv won't be there,
+    unless for example, the require_pkg has the pkg_type to Application"""
+    consumer_pkg = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
+        class Pkg(ConanFile):
+            settings = "os"
+            requires = "require_pkg/1.0"
+            tool_requires = "build_require_pkg/1.0"
+            generators = "VirtualRunEnv", "VirtualBuildEnv"
+        """)
+
+    client = TestClient()
+    conanfile_br = (GenConanfile().with_package_file("bin/myapp", "myexe")
+                                  .with_package_file("lib/mylib", "mylibcontent")
+                                  .with_settings("os"))
+    conanfile_require = (GenConanfile().with_package_file("bin/myapp", "myexe")
+                    .with_package_file("lib/mylib", "mylibcontent")
+                    .with_settings("os"))
+    if require_run:
+        conanfile_require.with_package_type("application")
+    client.save({"build_require_pkg/conanfile.py": conanfile_br,
+                 "require_pkg/conanfile.py": conanfile_require,
+                 "consumer_pkg/conanfile.py": consumer_pkg})
+
+    client.run("export build_require_pkg --name=build_require_pkg --version=1.0")
+    client.run("export require_pkg --name=require_pkg --version=1.0")
+
+    client.run("install consumer_pkg --build")
+    if platform.system() == "Windows":
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        if require_run:
+            conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+            assert "LD_LIBRARY_PATH" not in conanbuildenv
+            assert "LD_LIBRARY_PATH" not in conanrunenv
+        else:
+            assert not os.path.exists("consumer_pkg/conanrunenv.bat")
+    else:
+        if require_run:
+            conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+            conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+            assert "LD_LIBRARY_PATH" in conanbuildenv
+            assert "LD_LIBRARY_PATH" in conanrunenv
+        else:
+            assert not os.path.exists("consumer_pkg/conanrunenv.sh")
+
+    if require_run:
+        # Build context LINUX - Host context LINUX
+        client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+        assert "LD_LIBRARY_PATH" in conanbuildenv
+        assert "LD_LIBRARY_PATH" in conanrunenv
+
+        # Build context WINDOWS - Host context WINDOWS
+        client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+        assert "LD_LIBRARY_PATH" not in conanbuildenv
+        assert "LD_LIBRARY_PATH" not in conanrunenv
+
+        # Build context LINUX - Host context WINDOWS
+        client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+        assert "LD_LIBRARY_PATH" in conanbuildenv
+        assert "LD_LIBRARY_PATH" not in conanrunenv
+
+        # Build context WINDOWS - Host context LINUX
+        client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
+        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+        assert "LD_LIBRARY_PATH" not in conanbuildenv
+        assert "LD_LIBRARY_PATH" in conanrunenv
+
+
+def test_multiple_deactivate():
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def generate(self):
+                e1 = Environment()
+                e1.define("VAR1", "Value1")
+                e1.vars(self).save_script("mybuild1")
+                e2 = Environment()
+                e2.define("VAR2", "Value2")
+                e2.vars(self).save_script("mybuild2")
+        """)
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo VAR1=%VAR1%!!
+        echo VAR2=%VAR2%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo VAR1=$VAR1!!
+        echo VAR2=$VAR2!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install .")
+
+    if platform.system() == "Windows":
+        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+    else:
+        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "VAR1=Value1!!" in out
+    assert "VAR2=Value2!!" in out
+    assert 2 == str(out).count("Restoring environment")
+    assert "VAR1=!!" in out
+    assert "VAR2=!!" in out
+
+
+def test_profile_build_env_spaces():
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo VAR1=%VAR1%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo VAR1=$VAR1!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.txt": "",
+                 "profile": "[buildenv]\nVAR1 = VALUE1",
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install . -g VirtualBuildEnv -pr=profile")
+
+    if platform.system() == "Windows":
+        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+    else:
+        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "VAR1= VALUE1!!" in out
+    assert  "Restoring environment" in out
+    assert "VAR1=!!" in out
+
+
+def test_deactivate_location():
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define("FOO", "BAR")
+        """)
+    client = TestClient()
+    client.save({"pkg.py": conanfile})
+    client.run("create pkg.py --name pkg --version 1.0")
+    client.run("install --requires pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
+
+    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
+    cmd = "{}conanbuild{}".format(source_cmd, script_ext)
+
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                     cwd=client.current_folder).communicate()
+
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
+
+    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
+                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))

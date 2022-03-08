@@ -2,18 +2,19 @@ import os
 import shutil
 import time
 import traceback
+from collections import OrderedDict
+from typing import List
 
 from requests.exceptions import ConnectionError
 
-from conans import DEFAULT_REVISION_V1
+from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    NoRestV2Available, PackageNotFoundException
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
-from conans.search.search import filter_packages
-from conans.util import progress_bar
-from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum
+    PackageNotFoundException
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.files import mkdir, tar_extract, touch_folder, rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -34,7 +35,7 @@ def _headers_for_info(info):
         settings = ['{}={}'.format(*it) for it in settings]
         r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})
 
-    options = info.options.as_list()
+    options = info.options._package_options.items()  # FIXME
     if options:
         options = filter(lambda u: u[0] in ['shared', 'fPIC', 'header_only'], options)
         options = ['{}={}'.format(*it) for it in options]
@@ -45,9 +46,8 @@ def _headers_for_info(info):
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
-    def __init__(self, cache, auth_manager, output, hook_manager):
+    def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
-        self._output = output
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
@@ -58,37 +58,15 @@ class RemoteManager(object):
         assert ref.revision, "get_recipe_snapshot requires revision"
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
-    def get_package_snapshot(self, pref, remote):
-        assert pref.ref.revision, "get_package_snapshot requires RREV"
-        assert pref.revision, "get_package_snapshot requires PREV"
-        return self._call_remote(remote, "get_package_snapshot", pref)
-
-    def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload, deleted, remote):
+        assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
-        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
-                          retry, retry_wait)
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted)
 
-    def upload_package(self, pref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
-        self._call_remote(remote, "upload_package", pref,
-                          files_to_upload, deleted, retry, retry_wait)
-
-    def get_recipe_manifest(self, ref, remote):
-        ref = self._resolve_latest_ref(ref, remote)
-        return self._call_remote(remote, "get_recipe_manifest", ref), ref
-
-    def get_package_manifest(self, pref, remote):
-        pref = self._resolve_latest_pref(pref, remote, headers=None)
-        return self._call_remote(remote, "get_package_manifest", pref), pref
-
-    def get_package_info(self, pref, remote, info=None):
-        """ Read a package ConanInfo from remote
-        """
-        headers = _headers_for_info(info)
-        pref = self._resolve_latest_pref(pref, remote, headers=headers)
-        # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
-        return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
+        self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote):
         """
@@ -97,43 +75,37 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
 
+        assert ref.revision, "get_recipe without revision specified"
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        package_layout = self._cache.package_layout(ref)
-        package_layout.export_remove()
 
-        ref = self._resolve_latest_ref(ref, remote)
+        layout = self._cache.get_or_create_ref_layout(ref)
+        layout.export_remove()
 
         t1 = time.time()
-        download_export = package_layout.download_export()
+        download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
+        remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
+        ref_time = remote_refs[0].timestamp
+        ref.timestamp = ref_time
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        recipe_checksums = calc_files_checksum(zipped_files)
-
-        export_folder = package_layout.export()
+        export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, output=self._output)
+            uncompress_file(tgz_file, export_folder)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
         # Make sure that the source dir is deleted
-        rm_conandir(package_layout.source())
+        rmdir(layout.source())
         touch_folder(export_folder)
-        conanfile_path = package_layout.conanfile()
-
-        with package_layout.update_metadata() as metadata:
-            metadata.recipe.revision = ref.revision
-            metadata.recipe.checksums = recipe_checksums
-            metadata.recipe.remote = remote.name
+        conanfile_path = layout.conanfile()
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
-
-        return ref
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
@@ -151,132 +123,125 @@ class RemoteManager(object):
 
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
-        uncompress_file(tgz_file, export_sources_folder, output=self._output)
+        uncompress_file(tgz_file, export_sources_folder)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, pref, layout, remote, output, recorder):
-        conanfile_path = layout.conanfile()
+    def get_package(self, conanfile, pref, remote):
+        ref_layout = self._cache.ref_layout(pref.ref)
+        conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote,
+                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
                                    conanfile=conanfile)
 
-        output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        layout.package_remove(pref)  # Remove first the destination folder
-        with layout.set_dirty_context_manager(pref):
+        conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
+                                                                           remote.name))
+
+        assert pref.revision is not None
+
+        pkg_layout = self._cache.get_or_create_pkg_layout(pref)
+        pkg_layout.package_remove()  # Remove first the destination folder
+        with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
-            self._get_package(layout, pref, remote, output, recorder, info=info)
+            self._get_package(pkg_layout, pref, remote, conanfile.output, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote,
+                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, output, recorder, info):
+    def _get_package(self, layout, pref, remote, scoped_output, info):
         t1 = time.time()
         try:
-            headers = _headers_for_info(info)
-            pref = self._resolve_latest_pref(pref, remote, headers=headers)
-            snapshot = self._call_remote(remote, "get_package_snapshot", pref)
-            if not is_package_snapshot_complete(snapshot):
-                raise PackageNotFoundException(pref)
+            if pref.revision is None:
+                pref = self.get_latest_package_reference(pref, remote, info=info)
 
-            download_pkg_folder = layout.download_package(pref)
+            download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
-
-            # Compute and update the package metadata
-            package_checksums = calc_files_checksum(zipped_files)
-            with layout.update_metadata() as metadata:
-                metadata.packages[pref.id].revision = pref.revision
-                metadata.packages[pref.id].recipe_revision = pref.ref.revision
-                metadata.packages[pref.id].checksums = package_checksums
-                metadata.packages[pref.id].remote = remote.name
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
-            package_folder = layout.package(pref)
+            package_folder = layout.package()
             if tgz_file:  # This must happen always, but just in case
                 # TODO: The output could be changed to the package one, but
-                uncompress_file(tgz_file, package_folder, output=self._output)
+                uncompress_file(tgz_file, package_folder)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
-
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(package_folder)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
-            recorder.package_downloaded(pref, remote.url)
-            output.success('Package installed %s' % pref.id)
-            output.info("Downloaded package revision %s" % pref.revision)
+
+            scoped_output.success('Package installed %s' % pref.package_id)
+            scoped_output.info("Downloaded package revision %s" % pref.revision)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         except BaseException as e:
-            output.error("Exception while getting package: %s" % str(pref.id))
-            output.error("Exception: %s %s" % (type(e), str(e)))
+            scoped_output.error("Exception while getting package: %s" % str(pref.package_id))
+            scoped_output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
-    def search_recipes(self, remote, pattern=None, ignorecase=True):
-        """
-        returns (dict str(ref): {packages_info}
-        """
-        return self._call_remote(remote, "search", pattern, ignorecase)
+    def search_recipes(self, remote, pattern):
+        return self._call_remote(remote, "search", pattern)
 
-    def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
-        packages = filter_packages(query, packages)
-        return packages
+    def search_packages(self, remote, ref):
+        infos = self._call_remote(remote, "search_packages", ref)
+        ret = OrderedDict()
+        for package_id, data in infos.items():
+            # FIXME: we don't have the package reference, it uses the latest, we could check
+            #        here doing N requests or improve the Artifactory API.
+            if not data.get("recipe_hash"):  # To filter out Conan 1.X packages in same repo
+                ret[PkgReference(ref, package_id)] = data
+        return ret
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)
 
-    def remove_packages(self, ref, remove_ids, remote):
-        return self._call_remote(remote, "remove_packages", ref, remove_ids)
+    def remove_packages(self, prefs, remote):
+        return self._call_remote(remote, "remove_packages", prefs)
 
-    def get_recipe_path(self, ref, path, remote):
-        return self._call_remote(remote, "get_recipe_path", ref, path)
+    def remove_all_packages(self, ref, remote):
+        return self._call_remote(remote, "remove_all_packages", ref)
 
-    def get_package_path(self, pref, path, remote):
-        return self._call_remote(remote, "get_package_path", pref, path)
+    def get_recipe_file(self, ref, path, remote):
+        return self._call_remote(remote, "get_recipe_file", ref, path)
+
+    def get_package_file(self, pref, path, remote):
+        return self._call_remote(remote, "get_package_file", pref, path)
 
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
 
-    def get_recipe_revisions(self, ref, remote):
-        return self._call_remote(remote, "get_recipe_revisions", ref)
+    def get_recipe_revisions_references(self, ref, remote):
+        assert ref.revision is None, "get_recipe_revisions_references of a reference with revision"
+        return self._call_remote(remote, "get_recipe_revisions_references", ref)
 
-    def get_package_revisions(self, pref, remote):
-        revisions = self._call_remote(remote, "get_package_revisions", pref)
-        return revisions
+    def get_package_revisions_references(self, pref, remote, headers=None) -> List[PkgReference]:
+        assert pref.revision is None, "get_package_revisions_references of a reference with revision"
+        return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
 
-    def get_latest_recipe_revision(self, ref, remote):
-        revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
-        return revision
+    def get_latest_recipe_reference(self, ref, remote):
+        assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
+        return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_revision(self, pref, remote, headers=None):
-        revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
-        return revision
+    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
+        assert pref.revision is None, "get_latest_package_reference of a reference with revision"
+        headers = _headers_for_info(info) if info else None
+        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
 
-    def _resolve_latest_ref(self, ref, remote):
-        if ref.revision is None:
-            try:
-                ref = self.get_latest_recipe_revision(ref, remote)
-            except NoRestV2Available:
-                ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        return ref
+    def get_recipe_revision_reference(self, ref, remote) -> bool:
+        assert ref.revision is not None, "recipe_exists needs a revision"
+        return self._call_remote(remote, "get_recipe_revision_reference", ref)
 
-    def _resolve_latest_pref(self, pref, remote, headers):
-        if pref.revision is None:
-            try:
-                pref = self.get_latest_package_revision(pref, remote, headers=headers)
-            except NoRestV2Available:
-                pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
-        return pref
+    def get_package_revision_reference(self, pref, remote) -> bool:
+        assert pref.revision is not None, "get_package_revision_reference needs a revision"
+        return self._call_remote(remote, "get_package_revision_reference", pref)
 
     def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))
+        if remote.disabled:
+            raise ConanException("Remote '%s' is disabled" % remote.name)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
@@ -293,18 +258,6 @@ class RemoteManager(object):
             raise ConanException(exc, remote=remote)
 
 
-def calc_files_checksum(files):
-    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
-            for file_name, path in files.items()}
-
-
-def is_package_snapshot_complete(snapshot):
-    for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
-        if not any(keyword in key for key in snapshot):
-            return False
-    return True
-
-
 def check_compressed_files(tgz_name, files):
     bare_name = os.path.splitext(tgz_name)[0]
     for f in files:
@@ -315,14 +268,15 @@ def check_compressed_files(tgz_name, files):
                                  "Please upgrade conan client." % f)
 
 
-def uncompress_file(src_path, dest_folder, output):
+def uncompress_file(src_path, dest_folder):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
-            src_path)) as file_handler:
+        ConanOutput().info("Decompressing %s" % os.path.basename(src_path))
+        with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
-        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
+        error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
+                    % (src_path, dest_folder, str(e))
         # try to remove the files
         try:
             if os.path.exists(dest_folder):

@@ -1,10 +1,11 @@
 from collections import OrderedDict
 
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
 RECIPE_UPDATED = "Updated"
+RECIPE_INCACHE_DATE_UPDATED = "Cache (Updated date)"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
@@ -12,6 +13,7 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
+RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -20,43 +22,20 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
-BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
+BINARY_ERROR = "ConfigurationError"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
-class _NodeOrderedDict(object):
+class TransitiveRequirement:
+    def __init__(self, require, node):
+        self.require = require
+        self.node = node
 
-    def __init__(self):
-        self._nodes = OrderedDict()
-
-    @staticmethod
-    def _key(node):
-        return node.name, node.context
-
-    def add(self, node):
-        key = self._key(node)
-        self._nodes[key] = node
-
-    def get(self, name, context):
-        return self._nodes.get((name, context))
-
-    def pop(self, name, context):
-        return self._nodes.pop((name, context))
-
-    def sort(self, key_fn):
-        sorted_nodes = sorted(self._nodes.items(), key=lambda n: key_fn(n[1]))
-        self._nodes = OrderedDict(sorted_nodes)
-
-    def assign(self, other):
-        assert isinstance(other, _NodeOrderedDict), "Unexpected type: {}".format(type(other))
-        self._nodes = other._nodes.copy()
-
-    def __iter__(self):
-        for _, item in self._nodes.items():
-            yield item
+    def __repr__(self):
+        return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
 
 
 class Node(object):
@@ -65,39 +44,121 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
-        conanfile._conan_node = self  # Reference to self, to access data
+        self.pref_timestamp = None
+        if conanfile is not None:
+            conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
-        self.dependencies = []  # Ordered Edges
-        self.dependants = set()  # Edges
+
         self.binary = None
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None
-        self.revision_pinned = False  # The revision has been specified by the user
         self.context = context
 
-        # A subset of the graph that will conflict by package name
-        self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
-        # all the public deps only in the closure of this node
-        # The dependencies that will be part of deps_cpp_info, can't conflict
-        self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
-        # The dependencies of this node that will be propagated to consumers when they depend
-        # on this node. It includes regular (not private and not build requires) dependencies
-        self._transitive_closure = OrderedDict()
-        self.inverse_closure = set()  # set of nodes that have this one in their public
-        self._ancestors = _NodeOrderedDict()  # set{ref.name}
-        self._id = None  # Unique ID (uuid at the moment) of a node in the graph
-        self.graph_lock_node = None  # the locking information can be None
-        self.id_direct_prefs = None
-        self.id_indirect_prefs = None
+        # real graph model
+        self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
+        self.dependencies = []  # Ordered Edges
+        self.dependants = []  # Edges
+        self.error = None
 
-    @property
-    def id(self):
-        return self._id
+    def __lt__(self, other):
+        """
 
-    @id.setter
-    def id(self, id_):
-        self._id = id_
+        @type other: Node
+        """
+        # TODO: Remove this order, shouldn't be necessary
+        return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
+
+    def propagate_closing_loop(self, require, prev_node):
+        self.propagate_downstream(require, prev_node)
+        # List to avoid mutating the dict
+        for transitive in list(prev_node.transitive_deps.values()):
+            # TODO: possibly optimize in a bulk propagate
+            prev_node.propagate_downstream(transitive.require, transitive.node, self)
+
+    def propagate_downstream(self, require, node, src_node=None):
+        # print("  Propagating downstream ", self, "<-", require)
+        assert node is not None
+        # This sets the transitive_deps node if it was None (overrides)
+        # Take into account that while propagating we can find RUNTIME shared conflicts we
+        # didn't find at check_downstream_exist, because we didn't know the shared/static
+        existing = self.transitive_deps.get(require)
+        if existing is not None and existing.require is not require:
+            if existing.node is not None and existing.node.ref != node.ref:
+                # print("  +++++Runtime conflict!", require, "with", node.ref)
+                return True
+            require.aggregate(existing.require)
+
+        # TODO: Might need to move to an update() for performance
+        self.transitive_deps.pop(require, None)
+        self.transitive_deps[require] = TransitiveRequirement(require, node)
+
+        # Check if need to propagate downstream
+        if not self.dependants:
+            return
+
+        if src_node is not None:  # This happens when closing a loop, and we need to know the edge
+            d = [d for d in self.dependants if d.src is src_node][0]  # TODO: improve ugly
+        else:
+            assert len(self.dependants) == 1
+            d = self.dependants[0]
+
+        down_require = d.require.transform_downstream(self.conanfile.package_type, require,
+                                                      node.conanfile.package_type)
+        if down_require is None:
+            return
+
+        return d.src.propagate_downstream(down_require, node)
+
+    def check_downstream_exists(self, require):
+        # First, a check against self, could be a loop-conflict
+        # This is equivalent as the Requirement hash and eq methods
+        # TODO: Make self.ref always exist, but with name=None if name not defined
+        if self.ref is not None and require.ref.name == self.ref.name:
+            if require.build and require.ref.version != self.ref.version:
+                pass  # Allow bootstrapping
+            else:
+                return None, self, self  # First is the require, as it is a loop => None
+
+        # First do a check against the current node dependencies
+        prev = self.transitive_deps.get(require)
+        # print("    Transitive deps", self.transitive_deps)
+        # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
+        # Overrides: The existing require could be itself, that was just added
+        if prev and (prev.require is not require or prev.node is not None):
+            return prev.require, prev.node, self
+
+        # Check if need to propagate downstream
+        # Then propagate downstream
+
+        # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
+        # at any given time
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        dependant = self.dependants[0]
+
+        # TODO: Implement an optimization where the requires is checked against a graph global
+        # print("    Lets check_downstream one more")
+        down_require = dependant.require.transform_downstream(self.conanfile.package_type,
+                                                              require, None)
+
+        if down_require is None:
+            # print("    No need to check downstream more")
+            return
+
+        source_node = dependant.src
+        return source_node.check_downstream_exists(down_require)
+
+    def check_loops(self, new_node):
+        if self.ref == new_node.ref:
+            return self
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        dependant = self.dependants[0]
+        source_node = dependant.src
+        return source_node.check_loops(new_node)
 
     @property
     def package_id(self):
@@ -115,109 +176,37 @@ class Node(object):
     @property
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
-        return PackageReference(self.ref, self.package_id, self.prev)
-
-    @property
-    def public_deps(self):
-        return self._public_deps
-
-    @property
-    def public_closure(self):
-        return self._public_closure
-
-    @property
-    def transitive_closure(self):
-        return self._transitive_closure
-
-    @property
-    def ancestors(self):
-        return self._ancestors
-
-    def partial_copy(self):
-        # Used for collapse_graph
-        result = Node(self.ref, self.conanfile, self.context, self.recipe, self.path)
-        result.dependants = set()
-        result.dependencies = []
-        result.binary = self.binary
-        result.remote = self.remote
-        result.binary_remote = self.binary_remote
-        return result
+        return PkgReference(self.ref, self.package_id, self.prev, self.pref_timestamp)
 
     def add_edge(self, edge):
         if edge.src == self:
-            if edge not in self.dependencies:
-                self.dependencies.append(edge)
+            assert edge not in self.dependencies
+            self.dependencies.append(edge)
         else:
-            self.dependants.add(edge)
+            self.dependants.append(edge)
 
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private]
-
-    def connect_closure(self, other_node):
-        # When 2 nodes of the graph become connected, their closures information has
-        # has to remain consistent. This method manages this.
-        self.public_closure.add(other_node)
-        self.public_deps.add(other_node)
-        other_node.inverse_closure.add(self)
-
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
-
-    def __eq__(self, other):
-        return (self.ref == other.ref and
-                self.conanfile == other.conanfile and
-                self.context == other.context)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.ref, self.conanfile, self.context))
 
     def __repr__(self):
         return repr(self.conanfile)
 
-    def __cmp__(self, other):
-        if other is None:
-            return -1
-        elif self.ref is None:
-            return 0 if other.ref is None else -1
-        elif other.ref is None:
-            return 1
-
-        if self.ref == other.ref:
-            return 0
-
-        # Cannot compare None with str
-        if self.ref.revision is None and other.ref.revision is not None:
-            return 1
-
-        if self.ref.revision is not None and other.ref.revision is None:
-            return -1
-
-        if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-            return 1
-        if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-            return -1
-        if self.ref < other.ref:
-            return -1
-
-        return 1
-
-    def __gt__(self, other):
-        return self.__cmp__(other) == 1
-
-    def __lt__(self, other):
-        return self.__cmp__(other) == -1
-
-    def __le__(self, other):
-        return self.__cmp__(other) in [0, -1]
-
-    def __ge__(self, other):
-        return self.__cmp__(other) in [0, 1]
+    def serialize(self):
+        result = OrderedDict()
+        result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
+        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
+        result["recipe"] = self.recipe
+        result["package_id"] = self.package_id
+        from conans.client.installer import build_id
+        result["build_id"] = build_id(self.conanfile)
+        result["binary"] = self.binary
+        result.update(self.conanfile.serialize())
+        result["context"] = self.context
+        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
+        return result
 
 
 class Edge(object):
@@ -226,38 +215,23 @@ class Edge(object):
         self.dst = dst
         self.require = require
 
-    @property
-    def private(self):
-        return self.require.private
-
-    @property
-    def build_require(self):
-        return self.require.build_require
-
-    def __eq__(self, other):
-        return self.src == self.src and self.dst == other.dst
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.src, self.dst))
-
 
 class DepsGraph(object):
-    def __init__(self, initial_node_id=None):
-        self.nodes = set()
-        self.root = None
+    def __init__(self):
+        self.nodes = []
         self.aliased = {}
-        self._node_counter = initial_node_id if initial_node_id is not None else -1
+        self.resolved_ranges = {}
+        self.error = False
+
+    def __repr__(self):
+        return "\n".join((repr(n) for n in self.nodes))
+
+    @property
+    def root(self):
+        return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
-        if node.id is None:
-            self._node_counter += 1
-            node.id = str(self._node_counter)
-        if not self.nodes:
-            self.root = node
-        self.nodes.add(node)
+        self.nodes.append(node)
 
     def add_edge(self, src, dst, require):
         assert src in self.nodes and dst in self.nodes
@@ -265,103 +239,28 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def ordered_iterate(self, nodes_subset=None):
-        ordered = self.by_levels(nodes_subset)
+    def ordered_iterate(self):
+        ordered = self.by_levels()
         for level in ordered:
             for node in level:
                 yield node
 
-    def _inverse_closure(self, references):
-        closure = set()
-        current = [n for n in self.nodes if str(n.ref) in references or "ALL" in references]
-        closure.update(current)
-        while current:
-            new_current = set()
-            for n in current:
-                closure.add(n)
-                new_neighs = n.inverse_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
-            current = new_current
-        return closure
-
-    def collapse_graph(self):
-        """Computes and return a new graph, that doesn't have duplicated nodes with the same
-        PackageReference. This is the case for build_requires and private requirements
-        """
-        result = DepsGraph()
-        result.add_node(self.root.partial_copy())
-        unique_nodes = {}  # {PackageReference: Node (result, unique)}
-        nodes_map = {self.root: result.root}  # {Origin Node: Result Node}
-        # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
-        # without Edges
-        for node in self.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            pref = PackageReference(node.ref, node.package_id)
-            if pref not in unique_nodes:
-                result_node = node.partial_copy()
-                result.add_node(result_node)
-                unique_nodes[pref] = result_node
-            else:
-                result_node = unique_nodes[pref]
-            nodes_map[node] = result_node
-
-        # Compute the new edges of the graph
-        for node in self.nodes:
-            result_node = nodes_map[node]
-            for dep in node.dependencies:
-                src = result_node
-                dst = nodes_map[dep.dst]
-                result.add_edge(src, dst, dep.require)
-            for dep in node.dependants:
-                src = nodes_map[dep.src]
-                dst = result_node
-                result.add_edge(src, dst, dep.require)
-
-        return result
-
-    def build_order(self, references):
-        new_graph = self.collapse_graph()
-        levels = new_graph.inverse_levels()
-        closure = new_graph._inverse_closure(references)
-        result = []
-        for level in reversed(levels):
-            new_level = [n.ref for n in level
-                         if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
-            if new_level:
-                result.append(new_level)
-        return result
-
-    def nodes_to_build(self):
-        ret = []
-        for node in self.ordered_iterate():
-            if node.binary == BINARY_BUILD:
-                if node.ref.copy_clear_rev() not in ret:
-                    ret.append(node.ref.copy_clear_rev())
-        return ret
-
-    def by_levels(self, nodes_subset=None):
-        return self._order_levels(True, nodes_subset)
-
-    def inverse_levels(self):
-        return self._order_levels(False)
-
-    def _order_levels(self, direct, nodes_subset=None):
+    def by_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = nodes_subset if nodes_subset is not None else self.nodes
+        opened = set(self.nodes)
         while opened:
             current_level = []
             for o in opened:
-                o_neighs = o.neighbors() if direct else o.inverse_neighbors()
+                o_neighs = o.neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
 
+            # TODO: SORTING seems only necessary for test order
             current_level.sort()
             result.append(current_level)
             # now initialize new level
@@ -369,45 +268,21 @@ class DepsGraph(object):
 
         return result
 
-    def mark_private_skippable(self, nodes_subset=None, root=None):
-        """ check which nodes are reachable from the root, mark the non reachable as BINARY_SKIP.
-        Used in the GraphBinaryAnalyzer"""
-        public_nodes = set()
-        root = root if root is not None else self.root
-        nodes = nodes_subset if nodes_subset is not None else self.nodes
-        current = [root]
-        while current:
-            new_current = set()
-            public_nodes.update(current)
-            for n in current:
-                if n.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
-                    # Might skip deps
-                    to_add = [d.dst for d in n.dependencies if not d.private]
-                else:
-                    # sure deps doesn't skip
-                    to_add = set(n.neighbors()).difference(public_nodes)
-                new_current.update(to_add)
-            current = new_current
-
-        for node in nodes:
-            if node not in public_nodes:
-                node.binary_non_skip = node.binary
-                node.binary = BINARY_SKIP
-
     def build_time_nodes(self):
         """ return all the nodes in the graph that are build-requires (either directly or
         transitively). Nodes that are both in requires and build_requires will not be returned.
         This is used just for output purposes, printing deps, HTML graph, etc.
         """
-        public_nodes = set()
-        current = [self.root]
-        while current:
-            new_current = set()
-            public_nodes.update(current)
-            for n in current:
-                # Might skip deps
-                to_add = [d.dst for d in n.dependencies if not d.build_require]
-                new_current.update(to_add)
-            current = new_current
+        return [n for n in self.nodes if n.context == CONTEXT_BUILD]
 
-        return [n for n in self.nodes if n not in public_nodes]
+    def report_graph_error(self):
+        if self.error:
+            raise self.error
+
+    def serialize(self):
+        for i, n in enumerate(self.nodes):
+            n.id = i
+        result = OrderedDict()
+        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        return result

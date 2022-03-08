@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 resp = Response()
 resp._content = b'{"results": []}'
 resp.status_code = 200
-resp.headers = {"Content-Type": "application/json"}
+resp.headers = {"Content-Type": "application/json", "X-Conan-Server-Capabilities": "revisions"}
 
 
 class RequesterMockTrue(object):
@@ -35,11 +35,11 @@ class VerifySSLTest(unittest.TestCase):
     def test_verify_ssl(self):
 
         self.client = TestClient(requester_class=RequesterMockTrue)
-        self.client.run("remote add myremote https://localhost False")
+        self.client.run("remote add myremote https://localhost --insecure")
         self.client.run("remote list")
         self.assertIn("Verify SSL: False", self.client.out)
 
-        self.client.run("remote update myremote https://localhost True")
+        self.client.run("remote update myremote --url https://localhost --secure")
         self.client.run("remote list")
         self.assertIn("Verify SSL: True", self.client.out)
 
@@ -53,5 +53,5 @@ class VerifySSLTest(unittest.TestCase):
 
         # Verify that SSL is not checked in requests
         self.client = TestClient(requester_class=RequesterMockFalse)
-        self.client.run("remote add myremote https://localhost False")
+        self.client.run("remote add myremote https://localhost --insecure")
         self.client.run("search op* -r myremote")

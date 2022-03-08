@@ -1,5 +1,4 @@
 from conans.errors import ConanException
-from conans.util.sha import sha1
 
 
 class Values(object):
@@ -45,17 +44,11 @@ class Values(object):
     def __bool__(self):
         return self._value.lower() not in ["false", "none", "0", "off", ""]
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def __str__(self):
         return self._value
 
     def __eq__(self, other):
         return str(other) == self.__str__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     @classmethod
     def loads(cls, text):
@@ -106,11 +99,11 @@ class Values(object):
 
     @property
     def sha(self):
-        result = []
+        result = ["[settings]"]
         for (name, value) in self.as_list(list_all=False):
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
             if value != "None":
                 result.append("%s=%s" % (name, value))
-        return sha1('\n'.join(result).encode())
+        return '\n'.join(result)

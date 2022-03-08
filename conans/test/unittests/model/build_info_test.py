@@ -2,129 +2,14 @@ import os
 import unittest
 from collections import defaultdict, namedtuple
 
-from conans.client.generators import TXTGenerator
-from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvInfo
-from conans.model.user_info import DepsUserInfo
+import pytest
+
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.model.build_info import BuildModulesDict, CppInfo, DepCppInfo, dict_to_abs_paths
 
 
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class BuildInfoTest(unittest.TestCase):
-
-    def test_parse(self):
-        text = """[includedirs]
-F:/ChildrenPath
-G:/mylib_path
-H:/otherlib_path
-I:/my_component_lib
-J:/my-component-tool
-
-[name_Boost]
-Boost
-[rootpath_Boost]
-F:/
-[includedirs_Boost]
-F:/ChildrenPath
-
-[name_My_Lib]
-My_Lib
-[rootpath_My_Lib]
-G:/
-[includedirs_My_Lib]
-G:/mylib_path
-
-[name_My_Other_Lib]
-My_Other_Lib
-[rootpath_My_Other_Lib]
-H:/
-[includedirs_My_Other_Lib]
-H:/otherlib_path
-
-[name_My.Component.Lib]
-My.Component.Lib
-[rootpath_My.Component.Lib]
-I:/
-[includedirs_My.Component.Lib]
-I:/my_component_lib
-
-[name_My-Component-Tool]
-My-Component-Tool
-[rootpath_My-Component-Tool]
-J:/
-[includedirs_My-Component-Tool]
-J:/my-component-tool
-        """
-        deps_cpp_info, _, _, _ = TXTGenerator.loads(text)
-
-        def assert_cpp(deps_cpp_info_test):
-            self.assertEqual(deps_cpp_info_test.includedirs,
-                             ['F:/ChildrenPath', 'G:/mylib_path', 'H:/otherlib_path',
-                              'I:/my_component_lib', 'J:/my-component-tool'])
-            self.assertEqual(deps_cpp_info_test["Boost"].includedirs, ['ChildrenPath'])
-            self.assertEqual(deps_cpp_info_test["My_Lib"].includedirs, ['mylib_path'])
-            self.assertEqual(deps_cpp_info_test["My_Other_Lib"].includedirs, ['otherlib_path'])
-            self.assertEqual(deps_cpp_info_test["My-Component-Tool"].includedirs, ['my-component-tool'])
-
-        assert_cpp(deps_cpp_info)
-        # Now adding env_info
-        text2 = text + """
-[ENV_LIBA]
-VAR2=23
-"""
-        deps_cpp_info, _, deps_env_info, _ = TXTGenerator.loads(text2)
-        assert_cpp(deps_cpp_info)
-        self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
-
-        # Now only with user info
-        text3 = text + """
-[USER_LIBA]
-VAR2=23
-"""
-        deps_cpp_info, deps_user_info, _, _ = TXTGenerator.loads(text3)
-        assert_cpp(deps_cpp_info)
-        self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
-
-        # Now with all
-        text4 = text + """
-[USER_LIBA]
-VAR2=23
-
-[ENV_LIBA]
-VAR2=23
-"""
-        deps_cpp_info, deps_user_info, deps_env_info, _ = TXTGenerator.loads(text4)
-        assert_cpp(deps_cpp_info)
-        self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
-        self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
-
-    def test_help(self):
-        deps_env_info = DepsEnvInfo()
-        deps_cpp_info = DepsCppInfo()
-
-        child = CppInfo("Boost", "F:")
-        child.filter_empty = False
-        child.includedirs.append("ChildrenPath")
-        child.cxxflags.append("cxxmyflag")
-        deps_cpp_info.add("Boost", DepCppInfo(child))
-
-        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
-        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
-        deps_cpp_info2, _, _, _ = TXTGenerator.loads(output)
-        self.assertEqual(deps_cpp_info.configs, deps_cpp_info2.configs)
-        self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
-        self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
-        self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)
-        self.assertEqual(deps_cpp_info.libs, deps_cpp_info2.libs)
-        self.assertEqual(len(deps_cpp_info._dependencies),
-                         len(deps_cpp_info2._dependencies))
-        self.assertEqual(deps_cpp_info["Boost"].includedirs,
-                         deps_cpp_info2["Boost"].includedirs)
-        self.assertEqual(deps_cpp_info["Boost"].cxxflags,
-                         deps_cpp_info2["Boost"].cxxflags)
-        self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
-
     def test_BuildModulesDict(self):
         build_modules = BuildModulesDict({"cmake": ["whatever.cmake"]})
         build_modules.extend(["hello.cmake"])
@@ -137,63 +22,6 @@ VAR2=23
                                  "cmake_multi": ["this.cmake"],
                                  "cmake_find_package": ["this.cmake"],
                                  "cmake_find_package_multi": ["this.cmake"]}
-
-    def test_configs(self):
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.filter_empty = False
-        child = CppInfo("Boost", "F:/")
-        child.filter_empty = False
-        child.version = "<version>"
-        child.includedirs.append("ChildrenPath")
-        child.debug.includedirs.append("ChildrenDebugPath")
-        child.cxxflags.append("cxxmyflag")
-        child.debug.cxxflags.append("cxxmydebugflag")
-        child.libs.extend(["math"])
-        child.debug.libs.extend(["debug_Lib"])
-        deps_cpp_info.add("Boost", DepCppInfo(child))
-
-        deps_env_info = DepsEnvInfo()
-        env_info_lib1 = EnvInfo()
-        env_info_lib1.var = "32"
-        env_info_lib1.othervar.append("somevalue")
-        deps_env_info.update(env_info_lib1, "LIB1")
-
-        deps_user_info = DepsUserInfo()
-        deps_user_info["LIB2"].myuservar = "23"
-
-        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
-        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, deps_user_info, {}, defaultdict(dict))).content
-
-        deps_cpp_info2, _, deps_env_info2, _ = TXTGenerator.loads(output, filter_empty=False)
-        self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
-        self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
-        self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)
-        self.assertEqual(deps_cpp_info.libs, deps_cpp_info2.libs)
-        self.assertEqual(len(deps_cpp_info._dependencies),
-                         len(deps_cpp_info2._dependencies))
-        self.assertEqual(deps_cpp_info["Boost"].includedirs,
-                         deps_cpp_info2["Boost"].includedirs)
-        self.assertEqual(deps_cpp_info["Boost"].cxxflags,
-                         deps_cpp_info2["Boost"].cxxflags)
-        self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
-
-        self.assertEqual(deps_cpp_info.debug.includedirs, deps_cpp_info2.debug.includedirs)
-        self.assertEqual(deps_cpp_info.debug.includedirs, ['F:/include', 'F:/ChildrenDebugPath'])
-
-        self.assertEqual(deps_cpp_info.debug.libs, deps_cpp_info2.debug.libs)
-        self.assertEqual(deps_cpp_info.debug.libs, ["debug_Lib"])
-
-        self.assertEqual(deps_cpp_info["Boost"].debug.includedirs,
-                         deps_cpp_info2["Boost"].debug.includedirs)
-        self.assertEqual(deps_cpp_info["Boost"].debug.includedirs, ['include', 'ChildrenDebugPath'])
-        self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags,
-                         deps_cpp_info2["Boost"].debug.cxxflags)
-        self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags, ["cxxmydebugflag"])
-
-        self.assertEqual(deps_env_info["LIB1"].var, "32")
-        self.assertEqual(deps_env_info["LIB1"].othervar, ["somevalue"])
-
-        self.assertEqual(deps_user_info["LIB2"].myuservar, "23")
 
     def test_cpp_info(self):
         folder = temp_folder()
@@ -284,5 +112,4 @@ VAR2=23
         self.assertEqual({}, info.configs)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
-        self.assertEqual([], info.public_deps)
         self.assertEqual([], info.sharedlinkflags)

@@ -7,22 +7,23 @@ from conans.errors import ConanException
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, require, conanfile):
+    def __init__(self, cmakedeps, require, conanfile, find_module_mode=False):
         self.cmakedeps = cmakedeps
         self.require = require
         self.conanfile = conanfile
+        self.find_module_mode = find_module_mode
 
     @property
     def pkg_name(self):
         return self.conanfile.ref.name + self.suffix
 
     @property
-    def target_namespace(self):
-        return get_target_namespace(self.conanfile) + self.suffix
+    def root_target_name(self):
+        return self.get_root_target_name(self.conanfile, self.suffix)
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile) + self.suffix
+        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):
@@ -74,29 +75,36 @@ class CMakeDepsFileTemplate(object):
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_target_namespace(self):
-        return get_target_namespace(self.conanfile)
-
     def get_file_name(self):
-        return get_file_name(self.conanfile)
+        return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
+    @staticmethod
+    def _get_target_default_name(req, component_name="", suffix=""):
+        return "{name}{suffix}::{cname}{suffix}".format(cname=component_name or req.ref.name,
+                                                        name=req.ref.name, suffix=suffix)
 
-def get_target_namespace(req):
-    ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
-    return ret or req.ref.name
+    def get_root_target_name(self, req, suffix=""):
+        if self.find_module_mode:
+            ret = req.cpp_info.get_property("cmake_module_target_name")
+            if ret:
+                return ret
+        ret = req.cpp_info.get_property("cmake_target_name")
+        return ret or self._get_target_default_name(req, suffix=suffix)
 
-
-def get_component_alias(req, comp_name):
-    if comp_name not in req.new_cpp_info.components:
-        # foo::foo might be referencing the root cppinfo
-        if req.ref.name == comp_name:
-            return get_target_namespace(req)
-        raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                             "package requirement".format(name=req.ref.name, cname=comp_name))
-    ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
-                                                          default_name=False)
-    return ret or comp_name
+    def get_component_alias(self, req, comp_name):
+        if comp_name not in req.cpp_info.components:
+            # foo::foo might be referencing the root cppinfo
+            if req.ref.name == comp_name:
+                return self.get_root_target_name(req)
+            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                                 "package requirement".format(name=req.ref.name, cname=comp_name))
+        if self.find_module_mode:
+            ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name")
+            if ret:
+                return ret
+        ret = req.cpp_info.components[comp_name].get_property("cmake_target_name")
+        # If we don't specify the `cmake_target_name` property for the component it will
+        # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name
+        # property because that is also an absolute name (Greetings::Greetings), it is not a namespace
+        # and we don't want to split and do tricks.
+        return ret or self._get_target_default_name(req, component_name=comp_name)

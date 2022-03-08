@@ -5,17 +5,17 @@ import tempfile
 import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
-from conans.client.output import Color
-from conans.client.tools import detected_os, detected_architecture
-from conans.client.tools.win import latest_visual_studio_version_installed
+from conans.cli.output import Color, ConanOutput
+from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import save
-from conans.util.runners import detect_runner
+from conans.util.runners import detect_runner, check_output_runner
 
 
-def _get_compiler_and_version(output, compiler_exe):
+def _get_compiler_and_version(compiler_exe):
+    output = ConanOutput()
     compiler_id = detect_compiler_id(compiler_exe)
     if compiler_id.name == LLVM_GCC:
         output.error("%s detected as a frontend using apple-clang. "
@@ -27,7 +27,7 @@ def _get_compiler_and_version(output, compiler_exe):
     return None
 
 
-def _gcc_compiler(output, compiler_exe="gcc"):
+def _gcc_compiler(compiler_exe="gcc"):
 
     try:
         if platform.system() == "Darwin":
@@ -46,13 +46,13 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _clang_compiler(output, compiler_exe="clang"):
+def _clang_compiler(compiler_exe="clang"):
     try:
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
@@ -63,13 +63,13 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "clang"
         installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _sun_cc_compiler(output, compiler_exe="cc"):
+def _sun_cc_compiler(compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
@@ -79,13 +79,13 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         else:
             installed_version = re.search(r"([0-9]+\.[0-9]+)", out).group()
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _get_default_compiler(output):
+def _get_default_compiler():
     """
     find the default compiler on the build machine
     search order and priority:
@@ -96,6 +96,7 @@ def _get_default_compiler(output):
     5. gcc executable
     6. clang executable
     """
+    output = ConanOutput()
     v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
@@ -103,40 +104,40 @@ def _get_default_compiler(output):
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if v2_mode:
-            compiler = _get_compiler_and_version(output, command)
+            compiler = _get_compiler_and_version(command)
             if compiler:
                 return compiler
         else:
+            if "clang" in command.lower():
+                return _clang_compiler(command)
             if "gcc" in command:
-                gcc = _gcc_compiler(output, command)
+                gcc = _gcc_compiler(command)
                 if platform.system() == "Darwin" and gcc is None:
                     output.error("%s detected as a frontend using apple-clang. "
                                  "Compiler not supported" % command)
                 return gcc
-            if "clang" in command.lower():
-                return _clang_compiler(output, command)
             if platform.system() == "SunOS" and command.lower() == "cc":
-                return _sun_cc_compiler(output, command)
+                return _sun_cc_compiler(command)
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
     vs = cc = sun_cc = None
-    if detected_os() == "Windows":
-        version = latest_visual_studio_version_installed(output)
+    if platform.system() == "Windows":
+        version = latest_visual_studio_version_installed()
         vs = ('Visual Studio', version) if version else None
 
     if v2_mode:
-        cc = _get_compiler_and_version(output, "cc")
-        gcc = _get_compiler_and_version(output, "gcc")
-        clang = _get_compiler_and_version(output, "clang")
+        cc = _get_compiler_and_version("cc")
+        gcc = _get_compiler_and_version("gcc")
+        clang = _get_compiler_and_version("clang")
     else:
-        gcc = _gcc_compiler(output)
-        clang = _clang_compiler(output)
+        gcc = _gcc_compiler()
+        clang = _clang_compiler()
         if platform.system() == "SunOS":
-            sun_cc = _sun_cc_compiler(output)
+            sun_cc = _sun_cc_compiler()
 
-    if detected_os() == "Windows":
+    if platform.system() == "Windows":
         return vs or cc or gcc or clang
     elif platform.system() == "Darwin":
         return clang or cc or gcc
@@ -146,45 +147,32 @@ def _get_default_compiler(output):
         return cc or gcc or clang
 
 
-def _get_profile_compiler_version(compiler, version, output):
-    tokens = version.split(".")
+def _get_profile_compiler_version(compiler, version):
+    output = ConanOutput()
+    tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0
-    if compiler == "clang" and int(major) >= 8:
+    if compiler == "clang" and major >= 8:
         output.info("clang>=8, using the major as version")
         return major
-    elif compiler == "gcc" and int(major) >= 5:
+    elif compiler == "gcc" and major >= 5:
         output.info("gcc>=5, using the major as version")
         return major
     elif compiler == "Visual Studio":
         return major
-    elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
+    elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
+    elif compiler == "msvc":
+        return major
+
     return version
 
 
-def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
+def _detect_gcc_libcxx(version):
+    output = ConanOutput()
     # Assumes a working g++ executable
-    new_abi_available = Version(version) >= Version("5.1")
+    new_abi_available = version >= "5.1"
     if not new_abi_available:
-        return "libstdc++"
-
-    if not get_env(CONAN_V2_MODE_ENVVAR, False):
-        msg = textwrap.dedent("""
-            Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
-            'libstdc++' for backwards compatibility.
-            Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
-
-            If you want Conan to use the new ABI for the {profile} profile, run:
-
-                $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
-
-            Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
-            """.format(profile=profile_name, profile_path=profile_path))
-        output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
-                       "***********************\n %s\n************************************"
-                       "************************************************\n\n\n" % msg,
-                       Color.BRIGHT_RED)
         return "libstdc++"
 
     main = textwrap.dedent("""
@@ -200,14 +188,15 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
     old_path = os.getcwd()
     os.chdir(t)
     try:
+        executable = "g++"
         error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
             if "using libstdc++" in out_str:
                 output.info("gcc C++ standard library: libstdc++")
                 return "libstdc++"
             # Other error, but can't know, lets keep libstdc++11
-            output.warn("compiler.libcxx check error: %s" % out_str)
-            output.warn("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+            output.warning("compiler.libcxx check error: %s" % out_str)
+            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
         else:
             output.info("gcc C++ standard library: libstdc++11")
         return "libstdc++11"
@@ -215,24 +204,25 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
         os.chdir(old_path)
 
 
-def _detect_compiler_version(result, output, profile_path):
+def _detect_compiler_version(result):
     try:
-        compiler, version = _get_default_compiler(output)
+        compiler, version = _get_default_compiler()
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        ConanOutput().info("No compiler was detected (one may not be needed)")
         return
 
+    version = Version(version)
+
     result.append(("compiler", compiler))
-    result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))
+    result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
 
     # Get compiler C++ stdlib
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
-        profile_name = os.path.basename(profile_path)
-        libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
+        libcxx = _detect_gcc_libcxx(version)
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -245,28 +235,127 @@ def _detect_compiler_version(result, output, profile_path):
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
-        result.append(("compiler.base", "gcc"))  # do the same for Intel?
-        result.append(("compiler.base.libcxx", "libstdc++"))
-        version = Version(version)
-        if version >= "1.24":
-            result.append(("compiler.base.version", "7.3"))
-        elif version >= "1.23":
-            result.append(("compiler.base.version", "5.5"))
-        elif version >= "1.21":
-            result.append(("compiler.base.version", "4.8"))
-        else:
-            result.append(("compiler.base.version", "4.4"))
+        result.append(("compiler.libcxx", "libstdc++"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
+
+    if compiler != "msvc":
+        cppstd = _cppstd_default(compiler, version)
+        result.append(("compiler.cppstd", cppstd))
 
 
-def _detect_os_arch(result, output):
+def _get_solaris_architecture():
+    # under intel solaris, platform.machine()=='i86pc' so we need to handle
+    # it early to suport 64-bit
+    processor = platform.processor()
+    kernel_bitness, elf = platform.architecture()
+    if "sparc" in processor:
+        return "sparcv9" if kernel_bitness == "64bit" else "sparc"
+    elif "i386" in processor:
+        return "x86_64" if kernel_bitness == "64bit" else "x86"
+
+
+def _get_aix_conf(options=None):
+    options = " %s" % options if options else ""
+    try:
+        ret = check_output_runner("getconf%s" % options).strip()
+        return ret
+    except Exception:
+        return None
+
+
+def _get_aix_architecture():
+    processor = platform.processor()
+    if "powerpc" in processor:
+        kernel_bitness = _get_aix_conf("KERNEL_BITMODE")
+        if kernel_bitness:
+            return "ppc64" if kernel_bitness == "64" else "ppc32"
+    elif "rs6000" in processor:
+        return "ppc32"
+
+
+def _get_e2k_architecture():
+    return {
+        "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
+        "E2C+": "e2k-v2",  # Elbrus 2CM
+        "E2C+DSP": "e2k-v2",  # Elbrus 2C+
+        "E2C3": "e2k-v6",  # Elbrus 2C3
+        "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
+        "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
+        "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
+        "E12C": "e2k-v6",  # Elbrus 12C
+        "E16C": "e2k-v6",  # Elbrus 16C
+        "E32C": "e2k-v7",  # Elbrus 32C
+    }.get(platform.processor())
+
+
+def _detected_architecture():
+    # FIXME: Very weak check but not very common to run conan in other architectures
+    machine = platform.machine()
+    arch = None
+    system = platform.system()
+
+    # special detectors
+    if system == "SunOS":
+        arch = _get_solaris_architecture()
+    elif system == "AIX":
+        arch = _get_aix_architecture()
+    if arch:
+        return arch
+
+    if "ppc64le" in machine:
+        return "ppc64le"
+    elif "ppc64" in machine:
+        return "ppc64"
+    elif "ppc" in machine:
+        return "ppc32"
+    elif "mips64" in machine:
+        return "mips64"
+    elif "mips" in machine:
+        return "mips"
+    elif "sparc64" in machine:
+        return "sparcv9"
+    elif "sparc" in machine:
+        return "sparc"
+    elif "aarch64" in machine:
+        return "armv8"
+    elif "arm64" in machine:
+        return "armv8"
+    elif "64" in machine:
+        return "x86_64"
+    elif "86" in machine:
+        return "x86"
+    elif "armv8" in machine:
+        return "armv8"
+    elif "armv7" in machine:
+        return "armv7"
+    elif "arm" in machine:
+        return "armv6"
+    elif "s390x" in machine:
+        return "s390x"
+    elif "s390" in machine:
+        return "s390"
+    elif "sun4v" in machine:
+        return "sparc"
+    elif "e2k" in machine:
+        return _get_e2k_architecture()
+
+    return None
+
+
+def _detect_os_arch(result):
     from conans.client.conf import get_default_settings_yml
     from conans.model.settings import Settings
 
-    the_os = detected_os()
+    the_os = platform.system()
+    if the_os == "Darwin":
+        the_os = "Macos"
     result.append(("os", the_os))
-    result.append(("os_build", the_os))
 
-    arch = detected_architecture()
+    arch = _detected_architecture()
 
     if arch:
         if arch.startswith('arm'):
@@ -279,22 +368,59 @@ def _detect_os_arch(result, output):
                     arch = a
                     break
             else:
-                output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
-                             "Please check your conan.conf and settings.yml files" % arch)
+                ConanOutput().error("Your ARM '%s' architecture is probably not defined in "
+                                    "settings.yml\n Please check your conan.conf and settings.yml "
+                                    "files" % arch)
 
         result.append(("arch", arch))
-        result.append(("arch_build", arch))
 
 
-def detect_defaults_settings(output, profile_path):
+def detect_defaults_settings():
     """ try to deduce current machine values without any constraints at all
-    :param output: Conan Output instance
-    :param profile_path: Conan profile file path
     :return: A list with default settings
     """
     result = []
-    _detect_os_arch(result, output)
-    _detect_compiler_version(result, output, profile_path)
+    _detect_os_arch(result)
+    _detect_compiler_version(result)
     result.append(("build_type", "Release"))
 
     return result
+
+
+def _cppstd_default(compiler, compiler_version):
+    assert isinstance(compiler_version, Version)
+    default = {"gcc": _gcc_cppstd_default(compiler_version),
+               "clang": _clang_cppstd_default(compiler_version),
+               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
+               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
+    return default
+
+
+def _clang_cppstd_default(compiler_version):
+    # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _gcc_cppstd_default(compiler_version):
+    if compiler_version >= "11":
+        return "gnu17"
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _visual_cppstd_default(compiler_version):
+    if compiler_version >= "14":  # VS 2015 update 3 only
+        return "14"
+    return None
+
+
+def _intel_visual_cppstd_default(_):
+    return None
+
+
+def _intel_gcc_cppstd_default(_):
+    return "gnu98"
+
+
+def _mcst_lcc_cppstd_default(compiler_version):
+    return "gnu14" if compiler_version >= "1.24" else "gnu98"

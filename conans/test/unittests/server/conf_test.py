@@ -2,8 +2,6 @@ import os
 import unittest
 from datetime import timedelta
 
-import six
-
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf import ConanServerConfigParser
@@ -62,7 +60,7 @@ var=walker
         self.assertEqual(conf.two, "other=var")
         self.assertEqual(conf.three, "var")
         self.assertEqual(conf.moon, "var=walker")
-        with six.assertRaisesRegex(self, ConanException, "Unrecognized field 'NOEXIST'"):
+        with self.assertRaisesRegex(ConanException, "Unrecognized field 'NOEXIST'"):
             conf.NOEXIST
 
         # IF an old config file is readed but the section is in the list, just return it empty
@@ -86,7 +84,7 @@ text=value
         self.assertEqual(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
         self.assertEqual(config.host_name, "localhost")
         self.assertEqual(config.public_port, 12345)
-        self.assertEqual(config.public_url, "https://localhost:12345/v1")
+        self.assertEqual(config.public_url, "https://localhost:12345/v2")
 
         # Now check with environments
         tmp_storage = temp_folder()
@@ -111,4 +109,4 @@ text=value
         self.assertEqual(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
         self.assertEqual(config.host_name, "remotehost")
         self.assertEqual(config.public_port, 33333)
-        self.assertEqual(config.public_url, "http://remotehost:33333/v1")
+        self.assertEqual(config.public_url, "http://remotehost:33333/v2")

@@ -1,20 +1,20 @@
 import os
 import tempfile
-from six import StringIO
+from io import StringIO
 
-from conans.client.runner import ConanRunner
 from conans.model.version import Version
-
+from conans.util.files import rmdir
 
 GCC = "gcc"
 LLVM_GCC = "llvm-gcc"  # GCC frontend with LLVM backend
 CLANG = "clang"
 APPLE_CLANG = "apple-clang"
 SUNCC = "suncc"
-MSVC = "Visual Studio"
+VISUAL_STUDIO = "Visual Studio"
 INTEL = "intel"
 QCC = "qcc"
 MCST_LCC = "mcst-lcc"
+MSVC = "msvc"
 
 
 class CompilerId(object):
@@ -62,9 +62,6 @@ class CompilerId(object):
     def __eq__(self, other):
         return self.name == other.name and self._version == other._version
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
 
 UNKNOWN_COMPILER = CompilerId(None, None, None, None)
 
@@ -98,7 +95,10 @@ MSVC_TO_VS_VERSION = {800: (1, 0),
                       1924: (16, 4),
                       1925: (16, 5),
                       1926: (16, 6),
-                      1927: (16, 7)}
+                      1927: (16, 7),
+                      1928: (16, 8),
+                      1929: (16, 10),
+                      1930: (17, 0)}
 
 
 def _parse_compiler_version(defines):
@@ -132,13 +132,28 @@ def _parse_compiler_version(defines):
             patch = version & 0xF
         # MSVC goes after Clang and Intel, as they may define _MSC_VER
         elif '_MSC_VER' in defines:
-            compiler = MSVC
             version = int(defines['_MSC_VER'])
-            # map _MSC_VER into conan-friendly Visual Studio version
-            # currently, conan uses major only, but here we store minor for the future as well
-            # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
-            major, minor = MSVC_TO_VS_VERSION.get(version)
-            patch = 0
+            full_version = 0
+            if '_MSC_FULL_VER' in defines:
+                full_version = int(defines['_MSC_FULL_VER'])
+            # Visual Studio 2022 onwards, detect as a new compiler "msvc"
+            if version >= 1930:
+                compiler = MSVC
+                major = int(version / 100)
+                minor = int(version % 100)
+                patch = int(full_version % 100000)
+            else:
+                compiler = VISUAL_STUDIO
+                # map _MSC_VER into conan-friendly Visual Studio version
+                # currently, conan uses major only, but here we store minor for the future as well
+                # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
+                major, minor = MSVC_TO_VS_VERSION.get(version)
+                # special cases 19.8 and 19.9, 19.10 and 19.11
+                if (major, minor) == (16, 8) and full_version >= 192829500:
+                    major, minor = 16, 9
+                if (major, minor) == (16, 10) and full_version >= 192930100:
+                    major, minor = 16, 11
+                patch = 0
         # GCC must be the last try, as other compilers may define __GNUC__ for compatibility
         elif '__GNUC__' in defines:
             if '__llvm__' in defines:
@@ -162,13 +177,13 @@ def _parse_compiler_version(defines):
 
 
 def detect_compiler_id(executable, runner=None):
-    runner = runner or ConanRunner()
     # use a temporary file, as /dev/null might not be available on all platforms
-    tmpname = tempfile.mktemp(suffix=".c")
+    tmpdir = tempfile.mkdtemp()
+    tmpname = os.path.join(tmpdir, "temp.c")
     with open(tmpname, "wb") as f:
         f.write(b"\n")
 
-    cmd = tempfile.mktemp(suffix=".cmd")
+    cmd = os.path.join(tmpdir, "file.cmd")
     with open(cmd, "wb") as f:
         f.write(b"echo off\nset MSC_CMD_FLAGS\n")
 
@@ -222,5 +237,7 @@ def detect_compiler_id(executable, runner=None):
                 return compiler
         return UNKNOWN_COMPILER
     finally:
-        os.unlink(tmpname)
-        os.unlink(cmd)
+        try:
+            rmdir(tmpdir)
+        except OSError:
+            pass

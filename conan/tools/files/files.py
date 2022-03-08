@@ -1,23 +1,32 @@
+import configparser
 import errno
+import gzip
 import os
 import platform
+import shutil
 import subprocess
+import sys
+from contextlib import contextmanager
+from fnmatch import fnmatch
+from shutil import which
 
+
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
+from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
-from conans.client.tools.files import unzip, which
 from conans.errors import ConanException
-from conans.util.files import decode_text, to_file_bytes
+from conans.util.sha import check_with_algorithm_sum
+from conans.util.files import rmdir
 
 
-def load(conanfile, path, binary=False, encoding="auto"):
+def load(conanfile, path, encoding="utf-8"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        # TODO: Get rid of encoding auto-detection
-        return tmp if binary else decode_text(tmp, encoding)
+        return tmp.decode(encoding)
 
 
-def save(conanfile, path, content, append=False):
+def save(conanfile, path, content, append=False, encoding="utf-8"):
     if append:
         mode = "ab"
         try:
@@ -38,7 +47,9 @@ def save(conanfile, path, content, append=False):
                 raise
 
     with open(path, mode) as handle:
-        handle.write(to_file_bytes(content, encoding="utf-8"))
+        if not isinstance(content, bytes):
+            content = bytes(content, encoding=encoding)
+        handle.write(content)
 
 
 def mkdir(conanfile, path):
@@ -48,13 +59,11 @@ def mkdir(conanfile, path):
     os.makedirs(path)
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
-        pattern=None, verify=True, retry=None, retry_wait=None,
-        overwrite=False, auth=None, headers=None, strip_root=False):
+def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+        keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
+        auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    requester = conanfile._conan_requester
-    output = conanfile.output
     if not filename:  # deduce filename from the URL
         url_base = url[0] if isinstance(url, (list, tuple)) else url
         if "?" in url_base or "=" in url_base:
@@ -62,16 +71,19 @@ def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename=""
                                  "parameter.".format(url_base))
         filename = os.path.basename(url_base)
 
-    download(url, filename, out=output, requester=requester, verify=verify,
-             retry=retry, retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
+    download(conanfile, url, filename, verify=verify,
+             retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
-    unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern,
-          output=output, strip_root=strip_root)
+    unzip(conanfile, filename, destination=destination, keep_permissions=keep_permissions,
+          pattern=pattern, strip_root=strip_root)
     os.unlink(filename)
 
 
 def ftp_download(conanfile, ip, filename, login='', password=''):
+    # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
+    # this has been requested by some users, but the signature is a bit divergent
     import ftplib
+    ftp = None
     try:
         ftp = ftplib.FTP(ip)
         ftp.login(login, password)
@@ -87,56 +99,52 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
             pass
         raise ConanException("Error in FTP download from %s\n%s" % (ip, str(e)))
     finally:
-        try:
+        if ftp:
             ftp.quit()
-        except Exception:
-            pass
 
 
-def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
-             auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
+             auth=None, headers=None, md5='', sha1='', sha256=''):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
 
+    :param conanfile:
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
                 the follow URLs will be used as mirror in case of download error.
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
-    :param out: An object with a write() method can be passed to get the output. stdout will use if
-                not specified
     :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
-                  conan.conf file or an env variable CONAN_RETRY
+                  conan.conf file
     :param retry_wait: Seconds to wait between download attempts. Default is overriden by
-                       general.retry_wait in the conan.conf file or an env variable CONAN_RETRY_WAIT
-    :param overwrite: When True, Conan will overwrite the destination file if exists. Otherwise it
-                      will raise an exception
+                       general.retry_wait in the conan.conf file
     :param auth: A tuple of user and password to use HTTPBasic authentication
     :param headers: A dictionary with additional headers
-    :param requester: HTTP requests instance
     :param md5: MD5 hash code to check the downloaded file
     :param sha1: SHA-1 hash code to check the downloaded file
     :param sha256: SHA-256 hash code to check the downloaded file
     :return: None
     """
     # TODO: Add all parameters to the new conf
-    out = conanfile.output
     requester = conanfile._conan_requester
     config = conanfile.conf
+    out = ConanOutput()
+    overwrite = True
 
-    # It might be possible that users provide their own requester
-    retry = retry if retry is not None else int(config["tools.files.download:retry"])
-    retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download:retry_wait"])
-    retry_wait = retry_wait if retry_wait is not None else 5
+    config_retry = config.get("tools.files.download:retry", check_type=int, default=None)
+    retry = config_retry if config_retry is not None else retry if retry is not None else 2
+    config_retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=None)
+    retry_wait = config_retry_wait if config_retry_wait is not None \
+        else retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
+    download_cache = config["tools.files.download:download_cache"] if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, config=config,
-                       user_download=True, use_cache=bool(config and checksum), url=file_url,
-                       file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
+        run_downloader(requester=requester, verify=verify, download_cache=download_cache,
+                       url=file_url, overwrite=overwrite,
+                       file_path=filename, retry=retry, retry_wait=retry_wait,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
@@ -149,7 +157,7 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
                 break
             except Exception as error:
                 message = "Could not download from the URL {}: {}.".format(url_it, str(error))
-                out.warn(message + " Trying another mirror.")
+                out.warning(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
 
@@ -181,3 +189,292 @@ def rename(conanfile, src, dst):
             os.rename(src, dst)
         except Exception as err:
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
+
+
+def load_toolchain_args(generators_folder=None, namespace=None):
+    """
+    Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
+    :param namespace: `str` namespace to be prepended to the filename.
+    :return: <class 'configparser.SectionProxy'>
+    """
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
+    toolchain_config = configparser.ConfigParser()
+    toolchain_file = toolchain_config.read(args_file)
+    if not toolchain_file:
+        raise ConanException("The file %s does not exist. Please, make sure that it was not"
+                             " generated in another folder." % args_file)
+    try:
+        return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
+    except KeyError:
+        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
+                             " as the default one of all your configuration variables." %
+                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
+
+
+def save_toolchain_args(content, generators_folder=None, namespace=None):
+    """
+    Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param content: `dict` all the information to be saved into the toolchain file.
+    :param namespace: `str` namespace to be prepended to the filename.
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
+    """
+    # Let's prune None values
+    content_ = {k: v for k, v in content.items() if v is not None}
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
+    toolchain_config = configparser.ConfigParser()
+    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+    with open(args_file, "w") as f:
+        toolchain_config.write(f)
+
+
+@contextmanager
+def chdir(conanfile, newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
+
+
+def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
+          strip_root=False):
+    """
+    Unzip a zipped file
+    :param filename: Path to the zip file
+    :param destination: Destination folder (or file for .gz files)
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be
+    dangerous if the zip was not created in a NIX system, the bits could
+    produce undefined permission schema. Use this option only if you are sure
+    that the zip was created correctly.
+    :param pattern: Extract only paths matching the pattern. This should be a
+    Unix shell-style wildcard, see fnmatch documentation for more details.
+    :param flat: If all the contents are in a single dir, flat that directory.
+    :return:
+    """
+
+    output = conanfile.output
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar")):
+        return untargz(filename, destination, pattern, strip_root)
+    if filename.endswith(".gz"):
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(conanfile, target_name, file_content)
+        return
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        return untargz(filename, destination, pattern, strip_root)
+
+    import zipfile
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        def print_progress(the_size, uncomp_size):
+            the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
+            txt_msg = "Unzipping %d %%"
+            if the_size > print_progress.last_size + 1:
+                output.rewrite_line(txt_msg % the_size)
+                print_progress.last_size = the_size
+                if int(the_size) == 99:
+                    output.rewrite_line(txt_msg % 100)
+    else:
+        def print_progress(_, __):
+            pass
+
+    with zipfile.ZipFile(filename, "r") as z:
+        zip_info = z.infolist()
+        if pattern:
+            zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if strip_root:
+            names = [n.replace("\\", "/") for n in z.namelist()]
+            common_folder = os.path.commonprefix(names).split("/", 1)[0]
+            if not common_folder and len(names) > 1:
+                raise ConanException("The zip file contains more than 1 folder in the root")
+            if len(names) == 1 and len(names[0].split("/", 1)) == 1:
+                raise ConanException("The zip file contains a file in the root")
+            # Remove the directory entry if present
+            # Note: The "zip" format contains the "/" at the end if it is a directory
+            zip_info = [m for m in zip_info if m.filename != (common_folder + "/")]
+            for member in zip_info:
+                name = member.filename.replace("\\", "/")
+                member.filename = name.split("/", 1)[1]
+
+        uncompress_size = sum((file_.file_size for file_ in zip_info))
+        if uncompress_size > 100000:
+            output.info("Unzipping %s, this can take a while" % _human_size(uncompress_size))
+        else:
+            output.info("Unzipping %s" % _human_size(uncompress_size))
+        extracted_size = 0
+
+        print_progress.last_size = -1
+        if platform.system() == "Windows":
+            for file_ in zip_info:
+                extracted_size += file_.file_size
+                print_progress(extracted_size, uncompress_size)
+                try:
+                    z.extract(file_, full_path)
+                except Exception as e:
+                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+        else:  # duplicated for, to avoid a platform check for each zipped file
+            for file_ in zip_info:
+                extracted_size += file_.file_size
+                print_progress(extracted_size, uncompress_size)
+                try:
+                    z.extract(file_, full_path)
+                    if keep_permissions:
+                        # Could be dangerous if the ZIP has been created in a non nix system
+                        # https://bugs.python.org/issue15795
+                        perm = file_.external_attr >> 16 & 0xFFF
+                        os.chmod(os.path.join(full_path, file_.filename), perm)
+                except Exception as e:
+                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+        output.writeln("")
+
+
+def untargz(filename, destination=".", pattern=None, strip_root=False):
+    # NOT EXPOSED at `conan.tools.files` but used in tests
+    import tarfile
+    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
+        if not pattern and not strip_root:
+            tarredgzippedFile.extractall(destination)
+        else:
+            members = tarredgzippedFile.getmembers()
+
+            if strip_root:
+                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
+                common_folder = os.path.commonprefix(names).split("/", 1)[0]
+                if not common_folder and len(names) > 1:
+                    raise ConanException("The tgz file contains more than 1 folder in the root")
+                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
+                    raise ConanException("The tgz file contains a file in the root")
+                # Remove the directory entry if present
+                members = [m for m in members if m.name != common_folder]
+                for member in members:
+                    name = member.name.replace("\\", "/")
+                    member.name = name.split("/", 1)[1]
+                    member.path = member.name
+            if pattern:
+                members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                      tarredgzippedFile.getmembers()))
+            tarredgzippedFile.extractall(destination, members=members)
+
+
+def _human_size(size_bytes):
+    """
+    format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
+    Note that bytes will be reported in whole numbers but KB and above will have
+    greater precision.  e.g. 43 B, 443 KB, 4.3 MB, 4.43 GB, etc
+    """
+    UNIT_SIZE = 1000.0
+
+    suffixes_table = [('B', 0), ('KB', 1), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+
+    num = float(size_bytes)
+    the_precision = None
+    the_suffix = None
+    for suffix, precision in suffixes_table:
+        the_precision = precision
+        the_suffix = suffix
+        if num < UNIT_SIZE:
+            break
+        num /= UNIT_SIZE
+
+    if the_precision == 0:
+        formatted_size = "%d" % num
+    else:
+        formatted_size = str(round(num, ndigits=the_precision))
+
+    return "%s%s" % (formatted_size, the_suffix)
+
+
+def check_sha1(conanfile, file_path, signature):
+    check_with_algorithm_sum("sha1", file_path, signature)
+
+
+def check_md5(conanfile, file_path, signature):
+    check_with_algorithm_sum("md5", file_path, signature)
+
+
+def check_sha256(conanfile, file_path, signature):
+    check_with_algorithm_sum("sha256", file_path, signature)
+
+
+def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
+    """
+    :param conanfile: Conanfile instance
+    :param file_path: Path to the file
+    :param search: Pattern to search
+    :param replace: string to replace the matches
+    :param strict: Raise in case "search" is not found in the file contents
+    :return:
+    """
+    output = conanfile.output
+    content = load(conanfile, file_path, encoding=encoding)
+    if -1 == content.find(search):
+        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
+        if strict:
+            raise ConanException(message)
+        else:
+            output.warning(message)
+            return False
+    content = content.replace(search, replace)
+    save(conanfile, file_path, content, encoding=encoding)
+
+
+def collect_libs(conanfile, folder=None):
+    if not conanfile.package_folder:
+        return []
+    if folder:
+        lib_folders = [os.path.join(conanfile.package_folder, folder)]
+    else:
+        lib_folders = [os.path.join(conanfile.package_folder, folder)
+                       for folder in conanfile.cpp_info.libdirs]
+    result = []
+    for lib_folder in lib_folders:
+        if not os.path.exists(lib_folder):
+            conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
+                                     "{0}".format(lib_folder))
+            continue
+        files = os.listdir(lib_folder)
+        for f in files:
+            name, ext = os.path.splitext(f)
+            if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
+                if ext != ".lib" and name.startswith("lib"):
+                    name = name[3:]
+                if name in result:
+                    conanfile.output.warning("Library '%s' was either already found in a previous "
+                                             "'conanfile.cpp_info.libdirs' folder or appears several "
+                                             "times with a different file extension" % name)
+                else:
+                    result.append(name)
+    result.sort()
+    return result
+
+
+# TODO: Do NOT document this yet. It is unclear the interface, maybe should be split
+def swap_child_folder(parent_folder, child_folder):
+    """ replaces the current folder contents with the contents of one child folder. This
+    is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder
+    to replace the whole cloned git repo
+    """
+    for f in os.listdir(parent_folder):
+        if f != child_folder:
+            path = os.path.join(parent_folder, f)
+            if os.path.isfile(path):
+                os.remove(path)
+            else:
+                rmdir(path)
+    child = os.path.join(parent_folder, child_folder)
+    for f in os.listdir(child):
+        shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))

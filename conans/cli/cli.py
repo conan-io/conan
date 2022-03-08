@@ -3,42 +3,43 @@ import os
 import pkgutil
 import signal
 import sys
+import textwrap
 from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
-from colorama import Style
-
 from conans import __version__ as client_version
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.client.api.conan_api import Conan
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
+from conans.cli.output import ConanOutput, cli_out_write, Color
+from conans.client.cache.cache import ClientCache
+from conans.errors import ConanInvalidSystemRequirements
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
-class Cli(object):
+class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
-            type(conan_api))
+        assert isinstance(conan_api, ConanAPIV2), \
+            "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
-        self._out = conan_api.out
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
         for module in pkgutil.iter_modules([conan_commands_path]):
             module_name = module[1]
             self._add_command("conans.cli.commands.{}".format(module_name), module_name)
-        user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
-        sys.path.append(user_commands_path)
-        for module in pkgutil.iter_modules([user_commands_path]):
+        custom_commands_path = ClientCache(conan_api.cache_folder).custom_commands_path
+        sys.path.append(custom_commands_path)
+        for module in pkgutil.iter_modules([custom_commands_path]):
             module_name = module[1]
             if module_name.startswith("cmd_"):
                 self._add_command(module_name, module_name.replace("cmd_", ""))
@@ -61,80 +62,113 @@ class Cli(object):
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
 
-    @property
-    def conan_api(self):
-        return self._conan_api
-
-    @property
-    def commands(self):
-        return self._commands
-
-    @property
-    def groups(self):
-        return self._groups
-
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
         """
+        output = ConanOutput()
         matches = get_close_matches(
-            word=command, possibilities=self.commands.keys(), n=5, cutoff=0.75)
+            word=command, possibilities=self._commands.keys(), n=5, cutoff=0.75)
 
         if len(matches) == 0:
             return
 
         if len(matches) > 1:
-            self._out.info("The most similar commands are")
+            output.info("The most similar commands are")
         else:
-            self._out.info("The most similar command is")
+            output.info("The most similar command is")
 
         for match in matches:
-            self._out.info("    %s" % match)
+            output.info("    %s" % match)
 
-        self._out.info("")
+        output.writeln("")
 
-    def help_message(self):
-        self.commands["help"].method(self.conan_api, self.commands["help"].parser,
-                                     commands=self.commands, groups=self.groups)
+    def _output_help_cli(self):
+        """
+        Prints a summary of all commands.
+        """
+        max_len = max((len(c) for c in self._commands)) + 1
+        line_format = '{{: <{}}}'.format(max_len)
+
+        for group_name, comm_names in self._groups.items():
+            cli_out_write(group_name, Color.BRIGHT_MAGENTA)
+            for name in comm_names:
+                # future-proof way to ensure tabular formatting
+                cli_out_write(line_format.format(name), Color.GREEN, endline="")
+
+                # Help will be all the lines up to the first empty one
+                docstring_lines = self._commands[name].doc.split('\n')
+                start = False
+                data = []
+                for line in docstring_lines:
+                    line = line.strip()
+                    if not line:
+                        if start:
+                            break
+                        start = True
+                        continue
+                    data.append(line)
+
+                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
+                cli_out_write(txt)
+
+        cli_out_write("")
+        cli_out_write('Conan commands. Type "conan help <command>" for help', Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
         methods
         """
-        version = sys.version_info
-        if version.major == 2 or version.minor <= 4:
-            raise ConanException(
-                "Unsupported Python version. Minimum required version is Python 3.5")
+        output = ConanOutput()
+        try:
+            try:
+                command_argument = args[0][0]
+            except IndexError:  # No parameters
+                self._output_help_cli()
+                return SUCCESS
+            try:
+                command = self._commands[command_argument]
+            except KeyError as exc:
+                if command_argument in ["-v", "--version"]:
+                    cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
+                    return SUCCESS
+
+                if command_argument in ["-h", "--help"]:
+                    self._output_help_cli()
+                    return SUCCESS
+
+                output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+                output.info("")
+                self._print_similar(command_argument)
+                raise ConanException("Unknown command %s" % str(exc))
+        except ConanException as exc:
+            output.error(exc)
+            return ERROR_GENERAL
 
         try:
-            command_argument = args[0][0]
-        except IndexError:  # No parameters
-            self.help_message()
-            return SUCCESS
-        try:
-            command = self.commands[command_argument]
-        except KeyError as exc:
-            if command_argument in ["-v", "--version"]:
-                self._out.info("Conan version %s" % client_version)
-                return SUCCESS
+            command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
+            exit_error = SUCCESS
+        except SystemExit as exc:
+            if exc.code != 0:
+                logger.error(exc)
+                output.error("Exiting with code: %d" % exc.code)
+            exit_error = exc.code
+        except ConanInvalidConfiguration as exc:
+            exit_error = ERROR_INVALID_CONFIGURATION
+            output.error(exc)
+        except ConanInvalidSystemRequirements as exc:
+            exit_error = ERROR_INVALID_SYSTEM_REQUIREMENTS
+            output.error(exc)
+        except ConanException as exc:
+            exit_error = ERROR_GENERAL
+            output.error(exc)
+        except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
+            exit_error = ERROR_GENERAL
+            msg = exception_message_safe(exc)
+            output.error(msg)
 
-            if command_argument in ["-h", "--help"]:
-                self.help_message()
-                return SUCCESS
-
-            self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
-            self._out.info("")
-            self._print_similar(command_argument)
-            raise ConanException("Unknown command %s" % str(exc))
-
-        command.run(self.conan_api, self.commands[command_argument].parser,
-                    args[0][1:], commands=self.commands, groups=self.groups)
-
-        return SUCCESS
-
-
-def cli_out_write(data, fg=None, bg=None):
-    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
-    sys.stdout.write(data)
+        return exit_error
 
 
 def main(args):
@@ -151,8 +185,9 @@ def main(args):
         5: SIGTERM
         6: Invalid configuration (done)
     """
+
     try:
-        conan_api = Conan(quiet=False)
+        conan_api = ConanAPIV2()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
@@ -177,25 +212,7 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    try:
-        cli = Cli(conan_api)
-        exit_error = cli.run(args)
-    except SystemExit as exc:
-        if exc.code != 0:
-            logger.error(exc)
-            conan_api.out.error("Exiting with code: %d" % exc.code)
-        exit_error = exc.code
-    except ConanInvalidConfiguration as exc:
-        exit_error = ERROR_INVALID_CONFIGURATION
-        conan_api.out.error(exc)
-    except ConanException as exc:
-        exit_error = ERROR_GENERAL
-        conan_api.out.error(exc)
-    except Exception as exc:
-        import traceback
-        print(traceback.format_exc())
-        exit_error = ERROR_GENERAL
-        msg = exception_message_safe(exc)
-        conan_api.out.error(msg)
+    cli = Cli(conan_api)
+    exit_error = cli.run(args)
 
     sys.exit(exit_error)

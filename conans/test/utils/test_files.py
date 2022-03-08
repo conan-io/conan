@@ -1,3 +1,4 @@
+import copy
 import os
 import platform
 import shutil
@@ -5,10 +6,10 @@ import tarfile
 import tempfile
 
 import time
-from six import BytesIO
+from io import BytesIO
 
-from conans.client.tools.files import untargz
-from conans.client.tools.win import get_cased_path
+from conan.tools.files.files import untargz
+from conan.tools.microsoft.subsystems import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER
@@ -48,8 +49,10 @@ def temp_folder(path_with_spaces=True, create_dir=True):
 
 def uncompress_packaged_files(paths, pref):
     rev = paths.get_last_revision(pref.ref).revision
-    prev = paths.get_last_package_revision(pref.copy_with_revs(rev, None)).revision
-    pref = pref.copy_with_revs(rev, prev)
+    _tmp = copy.copy(pref)
+    _tmp.revision = None
+    prev = paths.get_last_package_revision(_tmp).revision
+    pref.revision = prev
 
     package_path = paths.package(pref)
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
@@ -73,9 +76,9 @@ def scan_folder(folder):
     return sorted(scanned_files)
 
 
-def tgz_with_contents(files):
+def tgz_with_contents(files, output_path=None):
     folder = temp_folder()
-    file_path = os.path.join(folder, "myfile.tar.gz")
+    file_path = output_path or os.path.join(folder, "myfile.tar.gz")
 
     with open(file_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps("myfile.tar.gz", mode="w", fileobj=tgz_handle)

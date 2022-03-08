@@ -1,18 +1,13 @@
 import os
-import sys
-from collections import Counter, defaultdict, namedtuple
+from collections import namedtuple
+from io import StringIO
 
-
-import six
-from six import StringIO
-
-from conans import ConanFile, Options
-from conans.client.output import ConanOutput
-from conans.client.userio import UserIO
-from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
-from conans.model.layout import Folders
-from conans.model.options import PackageOptions
-from conans.model.user_info import DepsUserInfo
+from conan import ConanFile
+from conans.cli.output import ConanOutput
+from conans.model.conf import ConfDefinition, Conf
+from conans.model.layout import Folders, Infos
+from conans.model.options import Options
+from conans.util.log import logger
 
 
 class LocalDBMock(object):
@@ -34,47 +29,23 @@ class LocalDBMock(object):
         self.refresh_token = refresh_token
 
 
-class MockedUserIO(UserIO):
+class RedirectedInputStream:
     """
     Mock for testing. If get_username or get_password is requested will raise
     an exception except we have a value to return.
     """
 
-    def __init__(self, logins, ins=sys.stdin, out=None):
-        """
-        logins is a dict of {remote: list(user, password)}
-        will return sequentially
-        """
-        assert isinstance(logins, dict)
-        self.logins = logins
-        self.login_index = Counter()
-        UserIO.__init__(self, ins, out)
+    def __init__(self, answers: list):
+        self.answers = answers
 
-    def get_username(self, remote_name):
-        username_env = self._get_env_username(remote_name)
-        if username_env:
-            return username_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        if len(sub_dict) - 1 < index:
-            raise Exception("Bad user/password in testing framework, "
-                            "provide more tuples or input the right ones")
-        return sub_dict[index][0]
-
-    def get_password(self, remote_name):
-        """Overridable for testing purpose"""
-        password_env = self._get_env_password(remote_name)
-        if password_env:
-            return password_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        tmp = sub_dict[index][1]
-        self.login_index.update([remote_name])
-        return tmp
+    def readline(self):
+        if not self.answers:
+            raise Exception("\n\n**********\n\nClass MockedInputStream: "
+                            "There are no more inputs to be returned.\n"
+                            "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
+        ret = self.answers.pop(0)
+        logger.info("Testing: Reading fake input={}".format(ret))
+        return ret
 
 
 class MockSettings(object):
@@ -93,51 +64,24 @@ class MockCppInfo(object):
         self.include_paths = []
         self.libs = []
         self.cflags = []
-        self.cppflags = []
-        self.defines = []
-        self.frameworks = []
-        self.framework_paths = []
-
-
-class MockDepsCppInfo(defaultdict):
-
-    def __init__(self):
-        super(MockDepsCppInfo, self).__init__(MockCppInfo)
-        self.include_paths = []
-        self.lib_paths = []
-        self.libs = []
-        self.defines = []
-        self.cflags = []
         self.cxxflags = []
-        self.sharedlinkflags = []
-        self.exelinkflags = []
-        self.sysroot = ""
+        self.defines = []
         self.frameworks = []
         self.framework_paths = []
-        self.system_libs = []
-
-    @property
-    def deps(self):
-        return self.keys()
 
 
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.display_name = ""
+        self._conan_node = None
         self.folders = Folders()
-        self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
+        self.settings_build = settings
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
-        self.output = TestBufferConanOutput()
-
-        self.should_configure = True
-        self.should_build = True
-        self.should_install = True
-        self.should_test = True
-
-        self.package_folder = None
+        self.conf = Conf()
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -147,40 +91,30 @@ class MockConanfile(ConanFile):
 
 class ConanFileMock(ConanFile):
 
-    def __init__(self, shared=None, options=None, options_values=None):
-        options = options or ""
+    def __init__(self, shared=None, ):
+        self.display_name = ""
+        self._conan_node = None
         self.command = None
         self.path = None
         self.settings = None
-        self.options = Options(PackageOptions.loads(options))
-        if options_values:
-            for var, value in options_values.items():
-                self.options._data[var] = value
-        self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
-        self.deps_cpp_info.sysroot = "/path/to/sysroot"
-        self.output = TestBufferConanOutput()
-        self.in_local_cache = False
+        self.settings_build = MockSettings({})
+        self.options = Options()
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
-        self.should_configure = True
-        self.should_build = True
-        self.should_install = True
-        self.should_test = True
         self.generators = []
         self.captured_env = {}
-        self.deps_env_info = DepsEnvInfo()
-        self.env_info = EnvInfo()
-        self.deps_user_info = DepsUserInfo()
-        self._conan_env_values = EnvValues()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")
-        self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
+        self.cpp = Infos()
         self._conan_user = None
         self._conan_channel = None
+        self.env_scripts = {}
+        self.win_bash = None
+        self.conf = ConfDefinition().get_conanfile_conf(None)
 
-    def run(self, command, win_bash=False, subsystem=None, env=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command
@@ -191,38 +125,14 @@ class ConanFileMock(ConanFile):
 MockOptions = MockSettings
 
 
-class TestBufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        # FIXME: I'm sure there is a better approach. Look at six docs.
-        if six.PY2:
-            return str(self._stream.getvalue().encode("ascii", "ignore"))
-        else:
-            return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
-
-
 class RedirectedTestOutput(StringIO):
     def __init__(self):
         # Chage to super() for Py3
         StringIO.__init__(self)
+
+    def clear(self):
+        self.seek(0)
+        self.truncate(0)
 
     def __repr__(self):
         return self.getvalue()
@@ -232,9 +142,6 @@ class RedirectedTestOutput(StringIO):
 
     def __eq__(self, value):
         return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
 
     def __contains__(self, value):
         return value in self.__repr__()

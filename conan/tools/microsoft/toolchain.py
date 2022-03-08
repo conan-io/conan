@@ -2,57 +2,11 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
-from conans.client.tools import intel_compilervars_command
+from conan.tools.build import build_jobs
+from conan.tools.intel.intel_cc import IntelCC
+from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
-
-
-CONAN_VCVARS_FILE = "conanvcvars.bat"
-
-
-def write_conanvcvars(conanfile):
-    """
-    write a conanvcvars.bat file with the good args from settings
-    """
-    os_ = conanfile.settings.get_safe("os")
-    if os_ != "Windows":
-        return
-
-    compiler = conanfile.settings.get_safe("compiler")
-    cvars = None
-    if compiler == "intel":
-        cvars = intel_compilervars_command(conanfile)
-    elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = vs_ide_version(conanfile)
-        vcvarsarch = vcvars_arch(conanfile)
-        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                               winsdk_version=None, vcvars_ver=None)
-    if cvars:
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(cvars))
-        save(os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE), content)
-
-
-def vs_ide_version(conanfile):
-    compiler = conanfile.settings.get_safe("compiler")
-    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
-                        conanfile.settings.get_safe("compiler.version"))
-    if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
-        if toolset_override:
-            visual_version = toolset_override
-        else:
-            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
-            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
-                        '19.1': '15',
-                        '19.2': '16'}
-            visual_version = _visuals[version]
-    else:
-        visual_version = compiler_version
-    return visual_version
 
 
 class MSBuildToolchain(object):
@@ -66,7 +20,7 @@ class MSBuildToolchain(object):
         self.configuration = conanfile.settings.build_type
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
-        self.toolset = self._msvs_toolset(conanfile.settings)
+        self.toolset = self._msvs_toolset(conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
@@ -83,26 +37,29 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        write_conanvcvars(self._conanfile)
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
+        else:
+            VCVars(self._conanfile).generate()
 
     @staticmethod
-    def _msvs_toolset(settings):
+    def _msvs_toolset(conanfile):
+        settings = conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         if compiler == "msvc":
-            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
-            toolsets = {'19.0': 'v140',  # TODO: This is common to CMake, refactor
-                        '19.1': 'v141',
-                        '19.2': 'v142'}
-            return toolsets[version]
-        if compiler == "intel":
-            compiler_version = compiler_version if "." in compiler_version else \
-                "%s.0" % compiler_version
-            return "Intel C++ Compiler " + compiler_version
+            toolsets = {'190': 'v140',  # TODO: This is common to CMake, refactor
+                        '191': 'v141',
+                        '192': 'v142',
+                        "193": 'v143'}
+            return toolsets[compiler_version]
+        if compiler == "intel-cc":
+            return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":
             toolset = settings.get_safe("compiler.toolset")
             if not toolset:
-                toolsets = {"16": "v142",
+                toolsets = {"17": "v143",
+                            "16": "v142",
                             "15": "v141",
                             "14": "v140",
                             "12": "v120",
@@ -117,7 +74,7 @@ class MSBuildToolchain(object):
     def _runtime_library(settings):
         compiler = settings.compiler
         runtime = settings.get_safe("compiler.runtime")
-        if compiler == "msvc":
+        if compiler == "msvc" or compiler == "intel-cc":
             build_type = settings.get_safe("build_type")
             if build_type != "Debug":
                 runtime_library = {"static": "MultiThreaded",
@@ -146,8 +103,13 @@ class MSBuildToolchain(object):
                      {};%(PreprocessorDefinitions)
                   </PreprocessorDefinitions>
                   <RuntimeLibrary>{}</RuntimeLibrary>
-                  <LanguageStandard>{}</LanguageStandard>{}
+                  <LanguageStandard>{}</LanguageStandard>{}{}
                 </ClCompile>
+                <ResourceCompile>
+                  <PreprocessorDefinitions>
+                     {};%(PreprocessorDefinitions)
+                  </PreprocessorDefinitions>
+                </ResourceCompile>
               </ItemDefinitionGroup>
               <PropertyGroup Label="Configuration">
                 <PlatformToolset>{}</PlatformToolset>
@@ -160,14 +122,20 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
-        if compile_options is not None:
-            compile_options = eval(compile_options)
-            self.compile_options.update(compile_options)
+        compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
+                                                   default={}, check_type=dict)
+        self.compile_options.update(compile_options)
+        parallel = ""
+        njobs = build_jobs(self._conanfile)
+        if njobs:
+            parallel = "".join(
+                ["\n      <MultiProcessorCompilation>True</MultiProcessorCompilation>",
+                 "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
-                                             compile_options, toolset)
+                                             parallel, compile_options, preprocessor_definitions,
+                                             toolset)
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)

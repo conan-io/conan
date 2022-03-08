@@ -8,11 +8,11 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture
 def client():
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        class Pkg(ConanFile):
            def generate(self):
                for var in (1, 2):
-                   v = self.buildenv.value("MyVar{}".format(var))
+                   v = self.buildenv.vars(self).get("MyVar{}".format(var))
                    self.output.info("MyVar{}={}!!".format(var, v))
        """)
     profile1 = textwrap.dedent("""

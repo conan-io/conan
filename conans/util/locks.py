@@ -65,7 +65,7 @@ class Lock(object):
         except IOError:
             return 0
         except (UnicodeEncodeError, ValueError):
-            self._output.warn("%s does not contain a number!" % self._count_file)
+            self._output.warning("%s does not contain a number!" % self._count_file)
             return 0
 
 

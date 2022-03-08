@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.build import build_jobs
 from conans import tools
 from conans.errors import ConanException
 
@@ -24,7 +25,7 @@ class Qbs(object):
         self.profile = 'conan_toolchain_profile'
         self._conanfile = conanfile
         self._set_project_file(project_file)
-        self.jobs = tools.cpu_count()
+        self.jobs = build_jobs(conanfile)
         self._configuration = dict()
 
     def _set_project_file(self, project_file):

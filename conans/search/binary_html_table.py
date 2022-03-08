@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 from conans.util.files import save
 from conans import __version__ as client_version
 
@@ -20,10 +20,6 @@ class RowResult(object):
     def package_id(self):
         return self._data['id']
 
-    @property
-    def outdated(self):
-        return self._data['outdated']
-
     def row(self, headers):
         """ Returns package data according to headers """
         assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
@@ -38,7 +34,7 @@ class RowResult(object):
         for it in headers.options:
             yield self._data['options'].get(it, None)
         if headers.requires:
-            prefs = [PackageReference.loads(it) for it in self._data['requires']]
+            prefs = [PkgReference.loads(it) for it in self._data['requires']]
             yield ', '.join(map(str, [it.ref for it in prefs]))
 
 
@@ -133,7 +129,7 @@ class Results(object):
         self.options = list(_options)
         self.remotes = list(_remotes)
 
-    def get_headers(self, keys=('remote', 'reference', 'outdated', 'package_id')):
+    def get_headers(self, keys=('remote', 'reference', 'package_id')):
         return Headers(self.settings, self.options, self.requires, keys=keys)
 
     def packages(self):

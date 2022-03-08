@@ -10,11 +10,11 @@ class OptimizeConanFileLoadTest(unittest.TestCase):
         should be read and interpreted just once, then instance 2 different ConanFile
         objects. The module global value "mycounter" is global to all instances, this
         should be discouraged to use as if it was an instance value.
-        In this test there are 2 nodes "Build/0.1" as it is a build-requires of both the
+        In this test there are 2 nodes "build/0.1" as it is a build-requires of both the
         conanfile.py and the test_package/conanfile.py
         """
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 mycounter = 0
 class Pkg(ConanFile):
     mycounter2 = 0
@@ -26,11 +26,18 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
 
-        client.run("create . Build/0.1@user/testing")
+        client.run("create . --name=build --version=0.1 --user=user --channel=testing")
 
+        test_conanfile = conanfile + """
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def test(self):
+        pass
+        """
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": conanfile + "    def test(self): pass",
-                     "myprofile": "[build_requires]\nBuild/0.1@user/testing"})
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": "[tool_requires]\nbuild/0.1@user/testing"})
 
-        client.run("create . Pkg/0.1@user/testing -pr=myprofile")
-        self.assertIn("Build/0.1@user/testing: MyCounter1 2, MyCounter2 1", client.out)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
+        self.assertIn("build/0.1@user/testing: MyCounter1 2, MyCounter2 1", client.out)

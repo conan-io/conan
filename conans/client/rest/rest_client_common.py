@@ -6,7 +6,7 @@ from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -60,12 +60,11 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
+    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
                  artifacts_properties=None, matrix_params=False):
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
-        self._output = output
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
@@ -208,11 +207,11 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload, deleted):
         if files_to_upload:
-            self._upload_recipe(ref, files_to_upload, retry, retry_wait)
+            self._upload_recipe(ref, files_to_upload)
         if deleted:
-            self._remove_conanfile_files(ref, deleted)
+            self._remove_recipe_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
         # this method is used only for UPLOADING, then it requires the credentials
@@ -221,20 +220,8 @@ class RestCommonMethods(object):
         snap = self._get_snapshot(url)
         return snap
 
-    def get_package_snapshot(self, pref):
-        # this method is also used to check the integrity of the package upstream
-        # while installing, so check_credentials is done in uploader.
-        url = self.router.package_snapshot(pref)
-        snap = self._get_snapshot(url)
-        return snap
-
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        if files_to_upload:
-            self._upload_package(pref, files_to_upload, retry, retry_wait)
-        if deleted:
-            raise Exception("This shouldn't be happening, deleted files "
-                            "in local package present in remote: %s.\n Please, report it at "
-                            "https://github.com/conan-io/conan/issues " % str(deleted))
+    def upload_package(self, pref, files_to_upload):
+        self._upload_package(pref, files_to_upload)
 
     def search(self, pattern=None, ignorecase=True):
         """
@@ -242,10 +229,19 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(reference) for reference in response]
+        # We need to filter the "_/_" user and channel from Artifactory
+        ret = []
+        for reference in response:
+            ref = RecipeReference.loads(reference)
+            if ref.user == "_":
+                ref.user = None
+            if ref.channel == "_":
+                ref.channel = None
+            ret.append(ref)
+        return ret
 
-    def search_packages(self, ref, query):
+    def search_packages(self, ref):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref, query)
+        url = self.router.search_packages(ref)
         package_infos = self.get_json(url)
         return package_infos

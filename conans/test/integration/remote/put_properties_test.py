@@ -2,7 +2,7 @@ import os
 import re
 import unittest
 
-from six.moves.urllib.parse import unquote
+from urllib.parse import unquote
 
 from conans import MATRIX_PARAMS
 from conans.test.assets.genconanfile import GenConanfile
@@ -14,8 +14,8 @@ class PutPropertiesTest(unittest.TestCase):
 
     def test_create_empty_property_file(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
-        client.run("export . lasote/stable")
+        client.save({"conanfile.py": GenConanfile("hello", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
 
@@ -47,12 +47,12 @@ class PutPropertiesTest(unittest.TestCase):
                 return super(RequesterCheckArtifactProperties, self_requester).put(url, **kwargs)
 
         client = TestClient(requester_class=RequesterCheckArtifactProperties,
-                            servers=servers, users={"default": [("lasote", "mypass")]})
+                            servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        client.run("export . lasote/stable")
-        client.run("upload Hello0/0.1@lasote/stable -c")
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
+        client.run("upload hello0/0.1@lasote/stable -c -r default --only-recipe")
 
     def test_matrix_params(self):
         test_server = TestServer(server_capabilities=[MATRIX_PARAMS, ])
@@ -87,12 +87,12 @@ class PutPropertiesTest(unittest.TestCase):
                 return super(RequesterCheckArtifactProperties, self_requester).put(url, **kwargs)
 
         client = TestClient(requester_class=RequesterCheckArtifactProperties,
-                            servers=servers, users={"default": [("lasote", "mypass")]})
+                            servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        client.run("export . lasote/stable")
-        client.run("upload Hello0/0.1@lasote/stable -c")
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
+        client.run("upload hello0/0.1@lasote/stable -c -r default --only-recipe")
 
 
 def _create_property_files(client, values):

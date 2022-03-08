@@ -4,16 +4,19 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import os
-import re
-# To use a consistent encoding
-from codecs import open
-from os import path
-
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
+import os
+import re
+from os import path
+
+
+# The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
+excluded_test_packages = ["conans.test.{}*".format(d)
+                         for d in os.listdir(os.path.join(here, "conans/test"))
+                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
 
 
 def get_requires(filename):
@@ -23,15 +26,6 @@ def get_requires(filename):
             if not line.strip().startswith("#"):
                 requirements.append(line)
     return requirements
-
-
-project_requirements = get_requires("conans/requirements.txt")
-project_requirements.extend(get_requires("conans/requirements_server.txt"))
-dev_requirements = get_requires("conans/requirements_dev.txt")
-# The tests utils are used by conan-package-tools
-exclude_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
 
 
 def load_version():
@@ -50,6 +44,11 @@ def generate_long_description_file():
         long_description = f.read()
     return long_description
 
+project_requirements = get_requires("conans/requirements.txt")
+dev_requirements = get_requires("conans/requirements_dev.txt")
+excluded_server_packages = ["conans.server*"]
+exclude = excluded_test_packages + excluded_server_packages
+
 
 setup(
     name='conan',
@@ -64,6 +63,11 @@ setup(
 
     # The project's main homepage.
     url='https://conan.io',
+    project_urls={
+        'Documentation': 'https://docs.conan.io',
+        'Source': 'https://github.com/conan-io/conan',
+        'Tracker': 'https://github.com/conan-io/conan/issues',
+    },
 
     # Author details
     author='JFrog LTD',
@@ -90,7 +94,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=exclude_test_packages),
+    packages=find_packages(exclude=exclude),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -130,8 +134,6 @@ setup(
     entry_points={
         'console_scripts': [
             'conan=conans.conan:run',
-            'conan_server=conans.conan_server:run',
-            'conan_build_info=conans.build_info.command:run'
         ],
     },
 )

@@ -19,7 +19,7 @@ def source_helper(output):
     '''
 
         if scope_imports:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 from myhelper import build_helper
 from myhelpers.other import source_helper
 
@@ -33,7 +33,7 @@ class ConanFileToolsTest(ConanFile):
         build_helper(self.output)
 '''
         else:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 import myhelper
 from myhelpers import other
 
@@ -55,9 +55,9 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         client.save(files(1))
-        client.run("export . test/1.9@user/testing")
+        client.run("export . --name=test --version=1.9 --user=user --channel=testing")
         client.save(files(2), clean_first=True)
-        client.run("export . test2/2.3@user/testing")
+        client.run("export . --name=test2 --version=2.3 --user=user --channel=testing")
 
         files = {"conanfile.txt": """[requires]
                                     test/1.9@user/testing\n

@@ -9,7 +9,7 @@ class CppStdMinimumVersionTests(unittest.TestCase):
 
     CONANFILE = dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import check_min_cppstd, valid_min_cppstd
 
         class Fake(ConanFile):
@@ -39,13 +39,13 @@ class CppStdMinimumVersionTests(unittest.TestCase):
     def test_cppstd_from_settings(self, cppstd):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile":  profile})
-        self.client.run("create . user/channel -pr myprofile")
+        self.client.run("create . --user=user --channel=channel -pr myprofile")
         self.assertIn("valid standard", self.client.out)
 
     @parameterized.expand(["11", "gnu11"])
     def test_invalid_cppstd_from_settings(self, cppstd):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile", assert_error=True)
+        self.client.run("create . --user=user --channel=channel -pr myprofile", assert_error=True)
         self.assertIn("Invalid configuration: Current cppstd (%s) is lower than the required C++ "
                       "standard (17)." % cppstd, self.client.out)

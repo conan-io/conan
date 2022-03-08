@@ -3,43 +3,48 @@ import textwrap
 
 import pytest
 
-from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
+from conan.tools.apple.apple import to_apple_arch
+from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = ConanFileReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class FooLib(ConanFile):
+            name = "foolib"
+            version = "1.0"
+
             def package_info(self):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
 
     t = TestClient()
     t.save({'conanfile.py': lib_conanfile})
-    t.run("create . {}@".format(lib_ref))
+    t.run("create .")
     return t
 
 
 app_conanfile = textwrap.dedent("""
-    from conans import ConanFile, CMake
+    from conan import ConanFile
+    from conan.tools.cmake import CMake
 
     class App(ConanFile):
         requires = "foolib/1.0"
         generators = "CMakeDeps", "CMakeToolchain"
-        settings = "build_type",  # cmake_multi doesn't work without build_type
+        settings = "build_type", "os", "arch"
 
         def build(self):
             cmake = CMake(self)
             cmake.configure()
 """)
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -51,17 +56,15 @@ def test_apple_framework_xcode(client):
 
     client.save({'conanfile.py': app_conanfile,
                  'CMakeLists.txt': app_cmakelists})
-    with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
-        client.run("install . -s build_type=Release")
-        client.run("install . -s build_type=Debug")
-        client.run("build .")
-        assert "/System/Library/Frameworks/Foundation.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
+
+    client.run("build . -c tools.cmake.cmaketoolchain:generator=Xcode")
+    assert "/System/Library/Frameworks/Foundation.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
 
 
 conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans import tools
             from conan.tools.cmake import CMake, CMakeToolchain
 
@@ -72,9 +75,12 @@ conanfile = textwrap.dedent("""
                 name = "mylibrary"
                 version = "1.0"
 
+                def layout(self):
+                    self.folders.source = "src"
+
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure()
                     cmake.build()
                     cmake.install()
                     self.run("otool -L '%s/hello.framework/hello'" % self.build_folder)
@@ -185,11 +191,13 @@ timer_cpp = textwrap.dedent("""
     }
     """)
 
+
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
-                         [('',),
-                          ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+         [('',),
+          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -204,22 +212,38 @@ def test_apple_own_framework_cross_build(settings):
     """)
 
     test_conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools
-        from conan.tools.cmake import CMake, CMakeToolchain
+        import os
+        from conan import ConanFile, tools
+        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
+        from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
 
+            def layout(self):
+                cmake_layout(self)
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.tool_requires(self.tested_reference_str)
+
+            def generate(self):
+                cmake = CMakeDeps(self)
+                cmake.build_context_activated = ["mylibrary"]
+                cmake.build_context_suffix = {"mylibrary": "_BUILD"}
+                cmake.generate()
+
             def build(self):
-                self.output.warn("Building test package at: {}".format(self.build_folder))
+                self.output.warning("Building test package at: {}".format(self.build_folder))
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
 
             def test(self):
-                if not tools.cross_building(self):
-                    self.run("timer", run_environment=True)
+                if not cross_building(self):
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "timer")
+                    self.run(cmd, env="conanrunenv")
         """)
 
     client.save({'conanfile.py': conanfile,
@@ -235,8 +259,9 @@ def test_apple_own_framework_cross_build(settings):
         assert "Hello World Release!" in client.out
 
 
+@pytest.mark.xfail(reason="run_environment=True no longer works")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
@@ -253,16 +278,25 @@ def test_apple_own_framework_cmake_deps():
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestPkg(ConanFile):
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
             name = "app"
             version = "1.0"
             requires = "mylibrary/1.0"
             exports_sources = "CMakeLists.txt", "timer.cpp"
-            settings = "build_type",
+            settings = "os", "arch", "compiler", "build_type"
+
+            def requirements(self):
+                self.tool_requires(self.tested_reference_str)
+
+            def generate(self):
+                cmake = CMakeDeps(self)
+                cmake.build_context_activated = ["mylibrary"]
+                cmake.build_context_suffix = {"mylibrary": "_BUILD"}
+                cmake.generate()
 
             def layout(self):
                 self.folders.build = str(self.settings.build_type)
@@ -273,16 +307,16 @@ def test_apple_own_framework_cmake_deps():
                 cmake.build()
 
             def test(self):
-                self.run(os.path.join(str(self.settings.build_type), "timer"), run_environment=True)
+                self.run(os.path.join(str(self.settings.build_type), "timer"), env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
                  "src/hello.h": hello_h,
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
-    client.run("export . mylibrary/1.0@")
-    client.run("create . mylibrary/1.0@ -s build_type=Debug")
-    client.run("create . mylibrary/1.0@ -s build_type=Release")
+    client.run("export . --name=mylibrary --version=1.0")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Debug")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Release")
 
     profile = textwrap.dedent("""
         include(default)
@@ -298,10 +332,11 @@ def test_apple_own_framework_cmake_deps():
     client.run("install . -s build_type=Release -pr=profile")
     client.run("test . mylibrary/1.0@  -pr=profile")
     assert "Hello World Release!" in client.out
-    client.run("test . mylibrary/1.0@ -s build_type=Debug  -pr=profile")
+    client.run("test . mylibrary/1.0@ -s:b build_type=Debug  -pr=profile")
     assert "Hello World Debug!" in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
@@ -319,16 +354,21 @@ def test_apple_own_framework_cmake_find_package_multi():
     """)
 
     test_conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
-            settings = "build_type",
+            settings = "build_type", "os", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
             def test(self):
-                self.run("bin/timer", run_environment=True)
+                self.run("bin/timer", env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
@@ -341,10 +381,13 @@ def test_apple_own_framework_cmake_find_package_multi():
     client.run("create .")
     assert "Hello World Release!" in client.out
 
+
+@pytest.mark.tool("cmake", "3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
-from conans import ConanFile, CMake, tools
+from conan import ConanFile, tools
+from conan.tools.cmake import CMake
 
 
 class HelloConan(ConanFile):
@@ -366,10 +409,12 @@ class HelloConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-
+        self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
         self.cpp_info.components["libhello"].libs = ["hello"]
+        # We need to add the information about the lib/include directories to be able to find them
+        self.cpp_info.components["libhello"].libdirs = ["lib"]
+        self.cpp_info.components["libhello"].includedirs = ["include"]
+
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
     hello_cpp = textwrap.dedent("""
@@ -403,11 +448,24 @@ install(TARGETS ${PROJECT_NAME}
         """)
     test_conanfile_py = textwrap.dedent("""
 import os
-from conans import ConanFile, CMake, tools
+from conan import ConanFile, tools
+from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+from conan.tools.build import cross_building
+
 
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeDeps", "CMakeToolchain"
+    generators = "CMakeToolchain"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+        self.tool_requires(self.tested_reference_str)
+
+    def generate(self):
+        cmake = CMakeDeps(self)
+        cmake.build_context_activated = ["hello"]
+        cmake.build_context_suffix = {"hello": "_BUILD"}
+        cmake.generate()
 
     def build(self):
         cmake = CMake(self)
@@ -415,8 +473,8 @@ class TestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("test_package", run_environment=True)
+        if not cross_building(self):
+            self.run("./test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"
@@ -443,4 +501,78 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
-    t.run("create . hello/1.0@")
+    t.run("create . --name=hello --version=1.0")
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_m1():
+    xcrun = XCRun(None, sdk='iphoneos')
+    cflags = " -isysroot " + xcrun.sdk_path
+    cflags += " -arch " + to_apple_arch('armv8')
+    cxxflags = cflags
+    ldflags = cflags
+
+    profile = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=12.0
+        os.sdk=iphoneos
+        arch=armv8
+        [env]
+        CC={cc}
+        CXX={cxx}
+        CFLAGS={cflags}
+        CXXFLAGS={cxxflags}
+        LDFLAGS={ldflags}
+    """).format(cc=xcrun.cc, cxx=xcrun.cxx, cflags=cflags, cxxflags=cxxflags, ldflags=ldflags)
+
+    client = TestClient(path_with_spaces=False)
+    client.save({"m1": profile}, clean_first=True)
+    client.run("new cmake_lib -d name=hello -d version=0.1")
+    client.run("create . --profile:build=default --profile:host=m1 -tf None")
+
+    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
+    #        cmake_prefix_path to point only to the Frameworks of the system. The only fix found
+    #        would require to introduce something like "set (mylibrary_DIR "${CMAKE_BINARY_DIR}")"
+    #        at the toolchain (but it would require the toolchain to know about the deps)
+    #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(MyApp CXX)
+    set(hello_DIR "${CMAKE_BINARY_DIR}")
+    find_package(hello)
+    add_executable(main main.cpp)
+    target_link_libraries(main hello::hello)
+    """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class TestConan(ConanFile):
+            requires = "hello/0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt", "main.cpp"
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "main.cpp": main,
+                 "m1": profile}, clean_first=True)
+    client.run("install . --profile:build=default --profile:host=m1")
+    client.run("build . --profile:build=default --profile:host=m1")
+    main_path = "./main.app/main"
+    client.run_command(main_path, assert_error=True)
+    assert "Bad CPU type in executable" in client.out
+    client.run_command("lipo -info {}".format(main_path))
+    assert "Non-fat file" in client.out
+    assert "is architecture: arm64" in client.out
