@@ -32,9 +32,9 @@ def test_options():
     client.run("export ffmepg --name=ffmpeg --version=1.0")
     client.run("export variant --name=nano --version=1.0")
 
-    client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
+    client.run("lock create --requires=nano/1.0@ --build --lockfile-out=conan.lock")
 
-    client.run("graph build-order --reference=nano/1.0@ "
+    client.run("graph build-order --requires=nano/1.0@ "
                "--lockfile=conan.lock --lockfile-out=conan.lock --build=missing "
                "--format=json", redirect_stdout="build_order.json")
 
@@ -44,6 +44,6 @@ def test_options():
     ref = ffmpeg["ref"]
     options = " ".join(f"-o {option}" for option in ffmpeg["packages"][0]["options"])
 
-    cmd = "install --reference={} --build={} {} --lockfile=conan.lock".format(ref, ref, options)
+    cmd = "install --requires={} --build={} {} --lockfile=conan.lock".format(ref, ref, options)
     client.run(cmd)
     assert "ffmpeg/1.0: Variation nano!!" in client.out

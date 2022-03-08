@@ -90,7 +90,7 @@ class UploadTest(unittest.TestCase):
 
         if platform.system() == "Linux":
             client.run("remove '*' -f")
-            client.run("install --reference={}".format(ref))
+            client.run("install --requires={}".format(ref))
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
@@ -428,7 +428,7 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password",
                                                              "lasote", "mypass"])
 
-        client2.run("install --reference=pkg/0.1@user/testing")
+        client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
@@ -501,7 +501,7 @@ class UploadTest(unittest.TestCase):
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing -r server1")
         client.run("remove * --force")
-        client.run("install --reference=hello0/1.2.1@user/testing -r server1")
+        client.run("install --requires=hello0/1.2.1@user/testing -r server1")
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)

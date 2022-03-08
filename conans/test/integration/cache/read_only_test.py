@@ -52,14 +52,14 @@ class MyPkg(ConanFile):
     def test_upload(self):
         self.client.run("upload * --confirm -r default")
         self.client.run("remove pkg* -f")
-        self.client.run("install --reference=pkg/0.1@lasote/channel")
+        self.client.run("install --requires=pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
         self.client.run("upload * --confirm -r default")
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
-        client.run("install --reference=pkg/0.1@lasote/channel")
+        client.run("install --requires=pkg/0.1@lasote/channel")
         pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
                                                         NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")

@@ -116,7 +116,7 @@ def test_package_with_symlinks(package_files):
     client.run("upload '*' -c -r default")
 
     # Client 2 install
-    client2.run("install --reference lib/1.0@")
+    client2.run("install --requires lib/1.0@")
     # Check package files are there
     package_folder = client2.get_latest_pkg_layout(pref).package()
     assert_folder_symlinks(package_folder)

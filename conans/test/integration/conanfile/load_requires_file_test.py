@@ -27,7 +27,7 @@ class Test(ConanFile):
                          "reqs.txt": reqs})
             client.run("create . --name=hello%s --version=0.1 --user=user --channel=channel" % (i + 1))
 
-        client.run("install --reference=hello3/0.1@user/channel")
+        client.run("install --requires=hello3/0.1@user/channel")
         client.assert_listed_require({"hello0/0.1@user/channel": "Cache",
                                       "hello1/0.1@user/channel": "Cache",
                                       "hello2/0.1@user/channel": "Cache",

@@ -123,14 +123,14 @@ def test_deploy_reference():
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi")})
     c.run("create .")
 
-    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
     header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
     assert "hi" in header
 
     # Testing that we can deploy to the current folder too
     c.save({}, clean_first=True)
-    c.run("install  --reference=pkg/1.0 --deploy=full_deploy")
+    c.run("install  --requires=pkg/1.0 --deploy=full_deploy")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
     header = c.load("host/pkg/1.0/None/None/include/hi.h")
     assert "hi" in header
@@ -143,14 +143,14 @@ def test_deploy_overwrite():
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi")})
     c.run("create .")
 
-    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
     assert "hi" in header
 
     # modify the package
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "bye")})
     c.run("create .")
-    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
     assert "bye" in header
 
@@ -165,7 +165,7 @@ def test_deploy_editable():
             "src/include/hi.h": "hi"})
     c.run("editable add . pkg/1.0")
 
-    c.run("install  --reference=pkg/1.0 --deploy=full_deploy --output-folder=output")
+    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     header = c.load("output/host/pkg/1.0/None/None/src/include/hi.h")
     assert "hi" in header
 
@@ -178,8 +178,8 @@ def test_deploy_single_package():
             "consumer/conanfile.txt": "[requires]\npkg/1.0"})
     c.run("create .")
 
-    # if we deploy one --reference, we get that package
-    c.run("install  --reference=pkg/1.0 --deploy=direct_deploy --output-folder=output")
+    # if we deploy one --requires, we get that package
+    c.run("install  --requires=pkg/1.0 --deploy=direct_deploy --output-folder=output")
     header = c.load("output/pkg/include/hi.h")
     assert "hi" in header
 

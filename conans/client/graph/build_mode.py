@@ -35,7 +35,7 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    # Remove the @ at the end, to match for "conan install --reference=pkg/0.1@ --build=pkg/0.1@"
+                    # Remove the @ at the end, to match for "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
                     clean_pattern = param[:-1] if param.endswith("@") else param
                     clean_pattern = clean_pattern.replace("@#", "#")
                     if clean_pattern and clean_pattern[0] == "!":

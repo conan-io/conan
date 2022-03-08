@@ -19,10 +19,10 @@ def test_info_options():
 
     # in cache
     client.run("export .")
-    client.run("graph info --reference=my-package/1.3")
+    client.run("graph info --requires=my-package/1.3")
     assert "shared: False" in client.out
-    client.run("graph info --reference=my-package/1.3 -o shared=True")
+    client.run("graph info --requires=my-package/1.3 -o shared=True")
     assert "shared: True" in client.out
-    client.run("graph info --reference=my-package/1.3 -o my-package:shared=True")
+    client.run("graph info --requires=my-package/1.3 -o my-package:shared=True")
     assert "shared: True" in client.out
 

@@ -24,7 +24,7 @@ class Pkg(ConanFile):
 
         # Exported recipe gets binary from default remote
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server1)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
@@ -33,7 +33,7 @@ class Pkg(ConanFile):
         # Explicit remote also defines the remote
         client.run("remove * -f")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-        client.run("install --reference=pkg/0.1@lasote/testing -r=server2")
+        client.run("install --requires=pkg/0.1@lasote/testing -r=server2")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
@@ -43,7 +43,7 @@ class Pkg(ConanFile):
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
-        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
@@ -52,7 +52,7 @@ class Pkg(ConanFile):
         # Download recipe and binary from the remote2 by iterating
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
-        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
@@ -77,18 +77,18 @@ class Pkg(ConanFile):
         client.run("remove * -p -f")
 
         # recipe is cached, takes binary from server2
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2")
+        client.run("install --requires=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2")
         client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
         self.assertIn(f"pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2 -u")
+        client.run("install --requires=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2 -u")
         client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Cache")})
 
         # Build missing
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3 -r=server2", assert_error=True)
+        client.run("install --requires=pkg/0.1@lasote/testing -o pkg:opt=3 -r=server2", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
 
-        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3", assert_error=True)
+        client.run("install --requires=pkg/0.1@lasote/testing -o pkg:opt=3", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)

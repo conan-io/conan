@@ -24,7 +24,7 @@ def test_shared_cmake_toolchain():
     client.run("remove * -f")
 
     client = TestClient(servers=client.servers)
-    client.run("install --reference=app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
+    client.run("install --requires=app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command("conanrun", "app", cwd=client.current_folder)

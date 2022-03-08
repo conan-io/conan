@@ -40,9 +40,9 @@ def graph_build_order(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--reference")
+                             "--requires")
 
     deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
 
@@ -89,9 +89,9 @@ def graph_info(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.reference and (args.name or args.version or args.user or args.channel):
+    if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--reference")
+                             "--requires")
 
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")

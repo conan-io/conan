@@ -94,7 +94,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install --reference={}/0.1 -g CMakeToolchain {}".format(package, settings))
+    client.run("install --requires={}/0.1 -g CMakeToolchain {}".format(package, settings))
 
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
@@ -103,7 +103,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
     # But it is still possible to include(owncmake)
-    client.run("install --reference={}/0.1 -g CMakeToolchain -g CMakeDeps {}".format(package, settings))
+    client.run("install --requires={}/0.1 -g CMakeToolchain -g CMakeDeps {}".format(package, settings))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
@@ -177,7 +177,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
         """)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install --reference=hello/0.1 -g CMakeToolchain {}".format(settings))
+    client.run("install --requires=hello/0.1 -g CMakeToolchain {}".format(settings))
 
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
@@ -186,7 +186,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
     # But it is still possible to include(owncmake)
-    client.run("install --reference=hello/0.1 -g CMakeToolchain -g CMakeDeps {}".format(settings))
+    client.run("install --requires=hello/0.1 -g CMakeToolchain -g CMakeDeps {}".format(settings))
 
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
@@ -298,7 +298,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
         endif()
     """)
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install --reference hello/0.1 -g CMakeToolchain {}".format(settings))
+    client.run("install --requires hello/0.1 -g CMakeToolchain {}".format(settings))
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found file hello.h" in client.out

@@ -33,14 +33,14 @@ class OnlySourceTest(unittest.TestCase):
         assert "Use 'conan search hello0/0.0@lasote/stable --table=table.html" in client.out
 
         # We generate the package for hello0/0.0
-        client.run("install --reference=hello0/0.0@lasote/stable --build hello0")
+        client.run("install --requires=hello0/0.0@lasote/stable --build hello0")
 
         # Still missing hello1/1.1
         client.run("create . --user=lasote --channel=stable", assert_error=True)
         self.assertIn("Or try to build locally from sources with '--build=hello1'", client.out)
 
         # We generate the package for hello1/1.1
-        client.run("install --reference=hello1/1.1@lasote/stable --build hello1")
+        client.run("install --requires=hello1/1.1@lasote/stable --build hello1")
 
         # Now Hello2 should be built and not fail
         client.run("create . --user=lasote --channel=stable")
@@ -72,7 +72,7 @@ class MyPackage(ConanFile):
         files = {CONANFILE: conanfile}
         client.save(files, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=test/1.9@lasote/stable")
+        client.run("install --requires=test/1.9@lasote/stable")
         self.assertIn("Getting sources", client.out)
         self.assertIn("Building sources", client.out)
         self.assertIn("Packaging this test package", client.out)
@@ -88,11 +88,11 @@ class MyPackage(ConanFile):
         client.run("export . --user=lasote --channel=stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
-        client.run("install --reference=hello0/1.0@lasote/stable")
+        client.run("install --requires=hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
 
         # Try to do it again, now we have the package, so no build is done
-        client.run("install --reference=hello0/1.0@lasote/stable")
+        client.run("install --requires=hello0/1.0@lasote/stable")
         self.assertNotIn("Building", client.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
@@ -104,13 +104,13 @@ class MyPackage(ConanFile):
         client.run("export . --user=lasote --channel=stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
-        client.run("install --reference=hello0/1.0@lasote/stable")
+        client.run("install --requires=hello0/1.0@lasote/stable")
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
         self.assertIn("Building", client.out)
 
         # Try to do it again, now we have the package, but we build again
-        client.run("install --reference=hello0/1.0@lasote/stable")
+        client.run("install --requires=hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
@@ -124,7 +124,7 @@ class MyPackage(ConanFile):
         ref = RecipeReference.loads("hello0/0.1@lasote/stable")
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=%s --build missing" % str(ref))
+        client.run("install --requires=%s --build missing" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
@@ -134,21 +134,21 @@ class MyPackage(ConanFile):
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --reference=%s --build missing" % str(ref))
+        other_client.run("install --requires=%s --build missing" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --reference=%s --build" % str(ref))
+        other_client.run("install --requires=%s --build" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Use an invalid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --reference=%s --build HelloInvalid" % str(ref))
+        other_client.run("install --requires=%s --build HelloInvalid" % str(ref))
 
         # pref = client.get_latest_package_reference(ref)
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
@@ -156,12 +156,12 @@ class MyPackage(ConanFile):
 
         # Use another valid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers)
-        other_client.run("install --reference=%s --build HelloInvalid -b hello" % str(ref))
+        other_client.run("install --requires=%s --build HelloInvalid -b hello" % str(ref))
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
 
         # Now even if the package is in local store, check that's rebuilded
-        other_client.run("install --reference=%s -b hello*" % str(ref))
+        other_client.run("install --requires=%s -b hello*" % str(ref))
         self.assertIn("Copying sources to build folder", other_client.out)
 
-        other_client.run("install --reference=%s" % str(ref))
+        other_client.run("install --requires=%s" % str(ref))
         self.assertNotIn("Copying sources to build folder", other_client.out)

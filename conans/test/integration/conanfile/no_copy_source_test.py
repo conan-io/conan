@@ -35,7 +35,7 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "file.h": "myfile.h contents"})
         client.run("export . --user=lasote --channel=testing")
-        client.run("install --reference=pkg/0.1@lasote/testing --build")
+        client.run("install --requires=pkg/0.1@lasote/testing --build")
         self.assertIn("Source files: myfile.h contents", client.out)
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 

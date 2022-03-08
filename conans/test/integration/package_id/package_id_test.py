@@ -78,7 +78,7 @@ def test_value_parse():
     assert "arch: kk=kk" in client.out
     client.run("upload test/0.1@danimtb/testing -r default")
     client.run("remove test/0.1@danimtb/testing --force")
-    client.run("install --reference=test/0.1@danimtb/testing")
+    client.run("install --requires=test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
 
@@ -138,7 +138,7 @@ def test_build_type_remove_windows():
                '-s compiler.version=14 -s build_type=Release')
     client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be",
                                              "Build")})
-    client.run('install --reference=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+    client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Debug')
     client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be", "Cache")})
 
