@@ -27,7 +27,6 @@ REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
-GENERATORS_EXTENSION_FOLDER = "generators"
 DEPLOYERS_EXTENSION_FOLDER = "deploy"
 CUSTOM_COMMANDS_FOLDER = "commands"
 
@@ -222,10 +221,6 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
-    def generators_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, GENERATORS_EXTENSION_FOLDER)
-
-    @property
     def custom_commands_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
 
@@ -261,17 +256,6 @@ class ClientCache(object):
             if os.path.isfile(hook_name) and hook_name.endswith(".py"):
                 hooks.append(hook_name[:-3])
         return hooks
-
-    @property
-    def generators(self):
-        """Returns a list of generator paths inside the generators folder"""
-        generators = []
-        if os.path.exists(self.generators_path):
-            for path in os.listdir(self.generators_path):
-                generator = os.path.join(self.generators_path, path)
-                if os.path.isfile(generator) and generator.endswith(".py"):
-                    generators.append(generator)
-        return generators
 
     def initialize_config(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

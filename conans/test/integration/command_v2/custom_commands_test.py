@@ -40,6 +40,51 @@ class TestCustomCommands:
         client.run("mycommand -f json")
         assert f'{{"cache_folder": "{foldername}"}}' in client.out
 
+    def test_command_layer(self):
+        myhello = textwrap.dedent("""
+            from conans.cli.output import ConanOutput
+            from conans.cli.command import conan_command
+
+            @conan_command(group="custom commands")
+            def hello(conan_api, parser, *args, **kwargs):
+                '''
+                My Hello doc
+                '''
+                ConanOutput().info("Hello {}!")
+            """)
+        mybye = textwrap.dedent("""
+            from conans.cli.output import ConanOutput
+            from conans.cli.command import conan_command, conan_subcommand
+
+            @conan_command(group="custom commands")
+            def bye(conan_api, parser, *args, **kwargs):
+                '''
+                My Bye doc
+                '''
+
+            @conan_subcommand()
+            def bye_say(conan_api, parser, *args, **kwargs):
+                '''
+                My bye say doc
+                '''
+                ConanOutput().info("Bye!")
+            """)
+
+        client = TestClient()
+        layer_path = os.path.join(client.cache_folder, 'extensions', 'commands')
+        client.save({os.path.join(layer_path, 'cmd_hello.py'): myhello.format("world"),
+                     os.path.join(layer_path, "greet", 'cmd_hello.py'): myhello.format("moon"),
+                     os.path.join(layer_path, "greet", 'cmd_bye.py'): mybye})
+        # Test that the root "hello" without subfolder still works and no conflict
+        client.run("hello")
+        assert "Hello world!" in client.out
+        client.run("greet:hello")
+        assert "Hello moon!" in client.out
+        client.run("greet:bye say")
+        assert "Bye!" in client.out
+        client.run("-h")
+        assert "greet:bye" in client.out
+
     def test_custom_command_with_subcommands(self):
         complex_command = textwrap.dedent("""
             import json
