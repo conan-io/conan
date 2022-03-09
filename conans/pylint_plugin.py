@@ -67,7 +67,7 @@ class ConanDeprecatedImportsChecker(BaseChecker):
     deprecated_imports_pattern = re.compile(r"(from|import)\s+conans[\.|\s].*")
     name = "conan_deprecated_imports"
     msgs = {
-        "W9000": (
+        "E9000": (
             "Using deprecated imports from 'conans'",
             "conan1.x-deprecated-imports",
             (
