@@ -4,7 +4,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
+from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -14,7 +14,6 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
-    from conan.tools.microsoft.subsystems import subsystem_path
     assert env_filenames
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs = [], []
@@ -131,7 +130,6 @@ class _EnvValue:
                     values.append(placeholder.format(name=self._name))
             else:
                 if self._path:
-                    from conan.tools.microsoft.subsystems import subsystem_path
                     v = subsystem_path(subsystem, v)
                 values.append(v)
         if self._path:

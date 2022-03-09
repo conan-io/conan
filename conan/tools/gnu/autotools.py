@@ -2,7 +2,7 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.files.files import load_toolchain_args
-from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
+from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 
 
