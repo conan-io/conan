@@ -9,7 +9,7 @@ from pylint.interfaces import IRawChecker
 
 def register(linter):
     """required method to auto register this checker"""
-    linter.register_checker(ConanImportsDeprecatedChecker(linter))
+    linter.register_checker(ConanDeprecatedImportsChecker(linter))
 
 
 def transform_conanfile(node):
@@ -57,7 +57,7 @@ def _python_requires_member():
 astroid.register_module_extender(astroid.MANAGER, "conans", _python_requires_member)
 
 
-class ConanImportsDeprecatedChecker(BaseChecker):
+class ConanDeprecatedImportsChecker(BaseChecker):
     """
     Check "from conans*" imports which disappears in Conan 2.x. Only "from conan*" is valid
     """
@@ -65,7 +65,7 @@ class ConanImportsDeprecatedChecker(BaseChecker):
     __implements__ = IRawChecker
 
     deprecated_imports_pattern = re.compile(r"(from|import)\s+conans[\.|\s].*")
-    name = "conan_imports"
+    name = "conan_deprecated_imports"
     msgs = {
         "W9000": (
             "Using deprecated imports from 'conans'",
