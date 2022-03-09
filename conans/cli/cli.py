@@ -39,6 +39,9 @@ class Cli:
             self._add_command("conans.cli.commands.{}".format(module_name), module_name)
 
         custom_commands_path = ClientCache(conan_api.cache_folder).custom_commands_path
+        if not os.path.isdir(custom_commands_path):
+            return
+
         sys.path.append(custom_commands_path)
         for module in pkgutil.iter_modules([custom_commands_path]):
             module_name = module[1]
