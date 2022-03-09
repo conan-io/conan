@@ -462,9 +462,7 @@ class ConanInfo(object):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
-        print("HASING ", text)
         package_id = sha1(text.encode())
-        print("RESULT ", package_id)
         return package_id
 
     def serialize_min(self):
