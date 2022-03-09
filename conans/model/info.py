@@ -67,18 +67,12 @@ class _VersionRepr:
         return self._version.build if self._version.build is not None else ""
 
 
-class RequirementInfo(object):
+class RequirementInfo:
 
-    def __init__(self, pref, default_package_id_mode, indirect=False):
-        self.package = pref
-        self.full_name = pref.ref.name
-        self.full_version = pref.ref.version
-        self.full_user = pref.ref.user
-        self.full_channel = pref.ref.channel
-        self.full_recipe_revision = pref.ref.revision
-        self.full_package_id = pref.package_id
-        self.full_package_revision = pref.revision
-        self._indirect = indirect
+    def __init__(self, pref, default_package_id_mode):
+        self._pref = pref
+        self.name = self.version = self.user = self.channel = self.package_id = None
+        self.recipe_revision = None
 
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
@@ -89,113 +83,75 @@ class RequirementInfo(object):
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self.package, "unrelated_mode")
-        for f in ("name", "version", "user", "channel", "recipe_revision", "package_id",
-                  "package_revision"):
-
-            setattr(result, f, getattr(self, f))
-            f = "full_%s" % f
+        result = RequirementInfo(self._pref, "unrelated_mode")
+        for f in ("name", "version", "user", "channel", "recipe_revision", "package_id"):
             setattr(result, f, getattr(self, f))
         return result
 
+    def pref(self):
+        ref = RecipeReference(self.name, self.version, self.user, self.channel, self.recipe_revision)
+        return PkgReference(ref, self.package_id)
+
     def dumps(self):
-        if not self.name:
-            return ""
-        result = ["%s/%s" % (self.name, self.version)]
-        if self.user or self.channel:
-            result.append("@%s/%s" % (self.user, self.channel))
-        if self.recipe_revision:
-            result.append("#%s" % self.recipe_revision)
-        if self.package_id:
-            result.append(":%s" % self.package_id)
-        if self.package_revision:
-            result.append("#%s" % self.package_revision)
-        return "".join(result)
-
-    @property
-    def sha(self):
-        ref = RecipeReference(self.name, self.version, self.user, self.channel,
-                                 self.recipe_revision)
-        pref = repr(ref)
-        if self.package_id:
-            pref += ":{}".format(self.package_id)
-            if self.package_revision:
-                pref += "#{}".format(self.package_revision)
-
-        return pref
+        return repr(self.pref())
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
-
-    def semver_direct_mode(self):
-        if self._indirect:
-            self.unrelated_mode()
-        else:
-            self.semver_mode()
+        self.recipe_revision = None
 
     def semver_mode(self):
-        self.name = self.full_name
-        self.version = _VersionRepr(self.full_version).stable()
+        self.name = self._pref.ref.name
+        self.version = _VersionRepr(self._pref.ref.version).stable()
         self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
-
-    semver = semver_mode  # Remove Conan 2.0
+        self.recipe_revision = None
 
     def full_version_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
+        self.name = self._pref.ref.name
+        self.version = self._pref.ref.version
         self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
+        self.recipe_revision = None
 
     def patch_mode(self):
-        self.name = self.full_name
-        self.version = _VersionRepr(self.full_version).patch()
+        self.name = self._pref.ref.name
+        self.version = _VersionRepr(self._pref.ref.version).patch()
         self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
-
-    def base_mode(self):
-        self.name = self.full_name
-        self.version = _VersionRepr(self.full_version).base
-        self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
+        self.recipe_revision = None
 
     def minor_mode(self):
-        self.name = self.full_name
-        self.version = _VersionRepr(self.full_version).minor()
+        self.name = self._pref.ref.name
+        self.version = _VersionRepr(self._pref.ref.version).minor()
         self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
+        self.recipe_revision = None
 
     def major_mode(self):
-        self.name = self.full_name
-        self.version = _VersionRepr(self.full_version).major()
+        self.name = self._pref.ref.name
+        self.version = _VersionRepr(self._pref.ref.version).major()
         self.user = self.channel = self.package_id = None
-        self.recipe_revision = self.package_revision = None
+        self.recipe_revision = None
 
     def full_recipe_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
+        self.name = self._pref.ref.name
+        self.version = self._pref.ref.version
+        self.user = self._pref.ref.user
+        self.channel = self._pref.ref.channel
         self.package_id = None
-        self.recipe_revision = self.package_revision = None
+        self.recipe_revision = None
 
     def full_package_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.package_id = self.full_package_id
-        self.recipe_revision = self.package_revision = None
+        self.name = self._pref.ref.name
+        self.version = self._pref.ref.version
+        self.user = self._pref.ref.user
+        self.channel = self._pref.ref.channel
+        self.package_id = self._pref.package_id
+        self.recipe_revision = None
 
     def recipe_revision_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.package_id = self.full_package_id
-        self.recipe_revision = self.full_recipe_revision
-        self.package_revision = None
+        self.name = self._pref.ref.name
+        self.version = self._pref.ref.version
+        self.user = self._pref.ref.user
+        self.channel = self._pref.ref.channel
+        self.package_id = self._pref.package_id
+        self.recipe_revision = self._pref.ref.revision
 
 
 class RequirementsInfo(UserRequirementsDict):
@@ -222,18 +178,6 @@ class RequirementsInfo(UserRequirementsDict):
     def pkg_names(self):
         return [r.ref.name for r in self._data.keys()]
 
-    @property
-    def sha(self):
-        result = []
-        for req_info in self._data.values():
-            s = req_info.sha
-            if s is None:
-                return None
-            result.append(s)
-        result.sort()  # Show always in alphabetical order
-        result.insert(0, "[requires]")
-        return '\n'.join(result)
-
     def dumps(self):
         result = []
         for req_info in self._data.values():
@@ -244,10 +188,6 @@ class RequirementsInfo(UserRequirementsDict):
 
     def unrelated_mode(self):
         self.clear()
-
-    def semver_direct_mode(self):
-        for r in self._data.values():
-            r.semver_direct_mode()
 
     def semver_mode(self):
         for r in self._data.values():
@@ -264,10 +204,6 @@ class RequirementsInfo(UserRequirementsDict):
     def major_mode(self):
         for r in self._data.values():
             r.major_mode()
-
-    def base_mode(self):
-        for r in self._data.values():
-            r.base_mode()
 
     def full_version_mode(self):
         for r in self._data.values():
@@ -513,9 +449,11 @@ class ConanInfo(object):
         options and settings
         """
         result = [self.settings.sha,
-                  self.options.sha]
-        requires_sha = self.requires.sha
-        result.append(requires_sha)
+                  self.options.sha,
+                  "[requires]"]
+        requires_dumps = self.requires.dumps()
+        if requires_dumps:
+            result.append(requires_dumps)
         if self.python_requires:
             result.append(self.python_requires.sha)
         if self.build_requires:
@@ -524,8 +462,9 @@ class ConanInfo(object):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
-        # print("HASING ", text)
+        print("HASING ", text)
         package_id = sha1(text.encode())
+        print("RESULT ", package_id)
         return package_id
 
     def serialize_min(self):
