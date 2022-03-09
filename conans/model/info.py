@@ -239,10 +239,8 @@ class PythonRequireInfo(object):
         else:
             func_package_id_mode()
 
-    @property
-    def sha(self):
-        ref = RecipeReference(self._name, self._version, self._user, self._channel,
-                              self._revision)
+    def dumps(self):
+        ref = RecipeReference(self._name, self._version, self._user, self._channel, self._revision)
         return repr(ref)
 
     def semver_mode(self):
@@ -311,11 +309,8 @@ class PythonRequiresInfo(object):
     def clear(self):
         self._refs = None
 
-    @property
-    def sha(self):
-        result = ['[python_requires]']
-        result.extend(r.sha for r in self._refs)
-        return '\n'.join(result)
+    def dumps(self):
+        return '\n'.join(r.dumps() for r in self._refs)
 
     def unrelated_mode(self):
         self._refs = None
@@ -349,13 +344,6 @@ class PythonRequiresInfo(object):
             r.recipe_revision_mode()
 
 
-class _PackageReferenceList(list):
-    @staticmethod
-    def loads(text):
-        return _PackageReferenceList([PkgReference.loads(package_reference)
-                                     for package_reference in text.splitlines()])
-
-
 class ConanInfo(object):
 
     def copy(self):
@@ -380,7 +368,6 @@ class ConanInfo(object):
         result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
         result.build_requires = build_requires_info
-        result.full_requires = _PackageReferenceList()
         result.vs_toolset_compatible()
         result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
@@ -388,13 +375,11 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
-        parser = ConfigParser(text, ["settings", "full_settings", "options",
-                                     "requires", "full_requires", "env"],
+        parser = ConfigParser(text, ["settings", "options", "requires"],
                               raise_unexpected_field=False)
         result = ConanInfo()
         result.invalid = None
         result.settings = Values.loads(parser.settings)
-        result.full_settings = Values.loads(parser.full_settings)
         result.options = Options.loads(parser.options)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
@@ -455,9 +440,11 @@ class ConanInfo(object):
         if requires_dumps:
             result.append(requires_dumps)
         if self.python_requires:
-            result.append(self.python_requires.sha)
+            result.append("[python_requires]")
+            result.append(self.python_requires.dumps())
         if self.build_requires:
-            result.append(self.build_requires.sha.replace("[requires]", "[build_requires]"))
+            result.append("[build_requires]")
+            result.append(self.build_requires.dumps())
         if hasattr(self, "conf"):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
@@ -469,7 +456,6 @@ class ConanInfo(object):
         """
         This info will be shown in search results.
         """
-        # Lets keep returning the legacy "full_requires" just in case some client uses it
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize())["options"],
                            "requires": self.requires.serialize()
