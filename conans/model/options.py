@@ -199,7 +199,7 @@ class Options:
                     if len(tokens) == 2:
                         package, option = tokens
                         if "/" not in package and "*" not in package:
-                            msg = "The usage of package names `{}` in 'default_options' is " \
+                            msg = "The usage of package names `{}` in options is " \
                                   "deprecated, use a pattern like `{}/*` or `{}*` " \
                                   "instead".format(k, package, package)
                             raise ConanException(msg)
