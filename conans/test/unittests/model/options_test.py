@@ -92,11 +92,9 @@ class TestOptions:
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
         assert "static=True" in self.sut.dumps()
 
-        # Removal of options with values should rais
-        with pytest.raises(ConanException) as e:
-            del self.sut.static
-        assert "Incorrect attempt to remove option 'static'" in str(e.value)
-        assert "static" in self.sut.dumps()
+        # Removal of options with values doesn't raise anymore
+        del self.sut.static
+        assert "static" not in self.sut.dumps()
 
         # Test None is possible to change
         sut2 = Options({"static": [True, False],
