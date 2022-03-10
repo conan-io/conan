@@ -1,4 +1,3 @@
-from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference, ref_matches
 
@@ -138,10 +137,9 @@ class _PackageOptions:
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
         current_value = self._data.get(field)
-        if self._freeze and current_value.value is not None:
-            raise ConanException(f"Incorrect attempt to remove option '{field}' "
-                                 f"with current value '{current_value}'")
-
+        # It is always possible to remove an option, even if it is frozen (freeze=True),
+        # and it got a value, because it is the only way an option could be removed
+        # conditionally to other option value (like fPIC if shared)
         self._ensure_exists(field)
         del self._data[field]
 
