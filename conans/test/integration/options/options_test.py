@@ -291,6 +291,10 @@ equal/1.0.0@user/testing:opt=a=b
         assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
 
     def test_del_options_configure(self):
+        """
+        this test was failing because Options was protecting against removal of options with
+        already assigned values. This has been relaxed, to make possible this case
+        """
         c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -312,3 +316,4 @@ equal/1.0.0@user/testing:opt=a=b
         c.save({"conanfile.py": GenConanfile("consumer", "1.0").with_requirement("pkg/0.1")},
                clean_first=True)
         c.run("install . -o pkg*:shared=True --build=missing")
+        assert "pkg/0.1" in c.out  # Real test is the above doesn't crash
