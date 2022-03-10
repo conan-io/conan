@@ -48,8 +48,19 @@ class AutotoolsToolchain:
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
-
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+
+        self.msvc_runtime_flag = None
+        if is_msvc(self._conanfile):
+            runtime_type = conanfile.settings.get_safe("compiler.runtime_type")
+            if runtime_type == "Release":
+                values = {"static": "MT", "dynamic": "MD"}
+            else:
+                values = {"static": "MTd", "dynamic": "MDd"}
+            runtime = values.get(conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                self.msvc_runtime_flag = "-{}".format(runtime)
+
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
