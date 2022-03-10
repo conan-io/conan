@@ -289,3 +289,26 @@ equal/1.0.0@user/testing:opt=a=b
         c.run("create . --name=pkg --version=0.1 -o pkg*:without_stacktrace=False")
         assert "pkg/0.1: without_stacktrace: False" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
+
+    def test_del_options_configure(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                options = {
+                    "shared": [True, False],
+                    "fPIC": [True, False],
+                }
+                default_options = {
+                    "shared": False,
+                    "fPIC": True,
+                }
+                def configure(self):
+                    if self.options.shared:
+                        del self.options.fPIC
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=pkg --version=0.1")
+        c.save({"conanfile.py": GenConanfile("consumer", "1.0").with_requirement("pkg/0.1")},
+               clean_first=True)
+        c.run("install . -o pkg*:shared=True --build=missing")
