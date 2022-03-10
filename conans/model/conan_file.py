@@ -98,7 +98,6 @@ class ConanFile:
                 result[a] = v
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
-        result["scm"] = getattr(self, "scm", None)
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result.update(self.options.serialize())  # FIXME: The options contain an "options" already

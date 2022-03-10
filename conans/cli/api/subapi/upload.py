@@ -62,12 +62,11 @@ class UploadAPI:
         preparator.prepare(upload_bundle)
 
     @api_method
-    def upload_bundle(self, upload_bundle, remote, force=False):
+    def upload_bundle(self, upload_bundle, remote):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes([remote])
 
         PackagePreparator(app).prepare(upload_bundle)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
-        executor.upload(upload_bundle, remote, force)
-
+        executor.upload(upload_bundle, remote)
