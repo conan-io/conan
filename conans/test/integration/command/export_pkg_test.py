@@ -462,6 +462,9 @@ def test_build_policy_never():
                  "src/header.h": "contents"})
     client.run("export-pkg . --name=pkg --version=1.0")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+    # check for https://github.com/conan-io/conan/issues/10736
+    client.run("export-pkg . --name=pkg --version=1.0")
+    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "pkg/1.0: Calling build()" not in client.out
