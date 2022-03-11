@@ -44,7 +44,11 @@ def test_msvc_runtime(runtime, runtime_type, expected):
     conanfile.settings = settings
     conanfile.settings_build = settings
     autotoolschain = AutotoolsToolchain(conanfile)
-    assert autotoolschain.msvc_runtime_flag == "-{}".format(expected)
+    expected_flag = "-{}".format(expected)
+    assert autotoolschain.msvc_runtime_flag == expected_flag
+    env = autotoolschain.environment().vars(conanfile)
+    assert expected_flag in env["CFLAGS"]
+    assert expected_flag in env["CXXFLAGS"]
 
 
 @pytest.mark.parametrize("runtime", ["MTd", "MT", "MDd", "MD"])
@@ -62,7 +66,11 @@ def test_visual_runtime(runtime):
     conanfile.settings = settings
     conanfile.settings_build = settings
     autotoolschain = AutotoolsToolchain(conanfile)
-    assert autotoolschain.msvc_runtime_flag == "-{}".format(runtime)
+    expected_flag = "-{}".format(runtime)
+    assert autotoolschain.msvc_runtime_flag == expected_flag
+    env = autotoolschain.environment().vars(conanfile)
+    assert expected_flag in env["CFLAGS"]
+    assert expected_flag in env["CXXFLAGS"]
 
 
 def test_get_gnu_triplet_for_cross_building_raise_error():

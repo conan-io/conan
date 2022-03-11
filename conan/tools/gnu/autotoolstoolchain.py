@@ -154,6 +154,10 @@ class AutotoolsToolchain:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
+        if self.msvc_runtime_flag:
+            self.cxxflags.append(self.msvc_runtime_flag)
+            self.cflags.append(self.msvc_runtime_flag)
+
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
