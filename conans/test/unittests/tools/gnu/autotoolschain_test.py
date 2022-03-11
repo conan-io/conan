@@ -29,7 +29,7 @@ def test_get_gnu_triplet_for_cross_building():
                           ("static", "Release", "MT"),
                           ("dynamic", "Debug", "MDd"),
                           ("dynamic", "Release", "MD")])
-def test_visual_runtime(runtime, runtime_type, expected):
+def test_msvc_runtime(runtime, runtime_type, expected):
     """
     Testing AutotoolsToolchain with the msvc compiler adjust the runtime
     """
@@ -45,6 +45,24 @@ def test_visual_runtime(runtime, runtime_type, expected):
     conanfile.settings_build = settings
     autotoolschain = AutotoolsToolchain(conanfile)
     assert autotoolschain.msvc_runtime_flag == "-{}".format(expected)
+
+
+@pytest.mark.parametrize("runtime", ["MTd", "MT", "MDd", "MD"])
+def test_visual_runtime(runtime):
+    """
+    Testing AutotoolsToolchain with the msvc compiler adjust the runtime
+    """
+    # Issue: https://github.com/conan-io/conan/issues/10139
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "Visual Studio",
+                             "compiler.runtime": runtime,
+                             "os": "Windows",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    assert autotoolschain.msvc_runtime_flag == "-{}".format(runtime)
 
 
 def test_get_gnu_triplet_for_cross_building_raise_error():

@@ -50,16 +50,7 @@ class AutotoolsToolchain:
         self.apple_arch_flag = self.apple_isysroot_flag = None
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
 
-        self.msvc_runtime_flag = None
-        if is_msvc(self._conanfile):
-            runtime_type = conanfile.settings.get_safe("compiler.runtime_type")
-            if runtime_type == "Release":
-                values = {"static": "MT", "dynamic": "MD"}
-            else:
-                values = {"static": "MTd", "dynamic": "MDd"}
-            runtime = values.get(conanfile.settings.get_safe("compiler.runtime"))
-            if runtime:
-                self.msvc_runtime_flag = "-{}".format(runtime)
+        self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
@@ -77,6 +68,24 @@ class AutotoolsToolchain:
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
         check_using_build_profile(self._conanfile)
+
+    def _get_msvc_runtime_flag(self):
+        msvc_runtime_flag = None
+        if self._conanfile.settings.get_safe("compiler") == "msvc":
+            runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+            if runtime_type == "Release":
+                values = {"static": "MT", "dynamic": "MD"}
+            else:
+                values = {"static": "MTd", "dynamic": "MDd"}
+            runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+        elif self._conanfile.settings.get_safe("compiler") == "Visual Studio":
+            runtime = self._conanfile.settings.get_safe("compiler.runtime")
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+
+        return msvc_runtime_flag
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
