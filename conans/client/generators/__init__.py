@@ -1,7 +1,7 @@
 import os
 import traceback
 
-from conan.tools.microsoft.subsystems import deduce_subsystem
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
 
@@ -132,7 +132,6 @@ def _receive_conf(conanfile):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed

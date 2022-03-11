@@ -6,7 +6,7 @@ import textwrap
 import pytest
 
 from conan.tools.env import Environment
-from conan.tools.microsoft.subsystems import WINDOWS
+from conans.client.subsystems import WINDOWS
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, chdir

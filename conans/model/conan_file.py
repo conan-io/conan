@@ -219,7 +219,7 @@ class ConanFile:
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
-                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                from conans.client.subsystems import run_in_windows_bash
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"
