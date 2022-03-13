@@ -401,7 +401,7 @@ def get_msbuild_lib_files(name, version, package_name="Pkg"):
     conanfile = Template(conanfile_sources_v2, keep_trailing_newline=True).render(d)
     test_d = {"name": "test_" + name, "version": version, "pkg_name": package_name,
               "type": "Application",
-              "dependencies": '<Import Project="generators/conandeps.props" />'}
+              "dependencies": '<Import Project="conan/conandeps.props" />'}
     test_sln = Template(sln_file, keep_trailing_newline=True).render(test_d)
     test_vcp = Template(vcxproj, keep_trailing_newline=True).render(test_d)
     test_conanfile = Template(test_conanfile_v2, keep_trailing_newline=True).render(test_d)
@@ -411,7 +411,7 @@ def get_msbuild_lib_files(name, version, package_name="Pkg"):
              "{}.sln".format(name): sln,
              "{}.vcxproj".format(name): vcp,
              "test_package/conanfile.py": test_conanfile,
-             "test_package/src/test_hello.cpp":
+             "test_package/src/test_{}.cpp".format(name):
                  Template(test_main, keep_trailing_newline=True).render({"name": name}),
              "test_package/test_{}.sln".format(name): test_sln,
              "test_package/test_{}.vcxproj".format(name): test_vcp

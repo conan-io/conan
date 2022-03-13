@@ -20,7 +20,7 @@ def vs_layout(conanfile):
         base = str(conanfile.settings.build_type)
 
     conanfile.folders.build = "."
-    conanfile.folders.generators = "generators"
+    conanfile.folders.generators = "conan"
     conanfile.folders.source = "."
     conanfile.cpp.build.libdirs = [base]
     conanfile.cpp.build.bindirs = [base]
