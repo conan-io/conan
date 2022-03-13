@@ -3,11 +3,12 @@ import platform
 import textwrap
 
 import pytest
+import six
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 @pytest.fixture
@@ -146,3 +147,149 @@ def test_error_no_build_type():
     client.save({"conanfile.py": conanfile})
     client.run('install .',  assert_error=True)
     assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out
+
+
+@pytest.mark.skipif(six.PY2, reason="only Py3")
+def test_cmake_layout_external_sources():
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        from conan.tools.cmake import cmake_layout
+        from conan.tools.files import save, copy, load
+        class Pkg(ConanFile):
+            settings = "os", "build_type"
+            exports_sources = "exported.txt"
+
+            def layout(self):
+                cmake_layout(self, src_folder="src")
+
+            def generate(self):
+                save(self, "generate.txt", "generate")
+
+            def source(self):
+                save(self, "source.txt", "foo")
+
+            def build(self):
+                c1 = load(self, os.path.join(self.source_folder, "source.txt"))
+                c2 = load(self, os.path.join(self.source_folder, "..", "exported.txt"))
+                save(self, "build.txt", c1 + c2)
+
+            def package(self):
+                copy(self, "build.txt", self.build_folder, os.path.join(self.package_folder, "res"))
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
+    client.run("create . foo/1.0@ -s os=Linux")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+    # Local flow
+    client.run("install . foo/1.0 -s os=Linux")
+    assert os.path.exists(os.path.join(client.current_folder, "cmake-build-release", "conan", "generate.txt"))
+    client.run("source .")
+    assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
+    client.run("build .")
+    contents = load(os.path.join(client.current_folder, "cmake-build-release", "build.txt"))
+    assert contents == "fooexported_contents"
+    client.run("export-pkg . foo/1.0@ --force")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+
+@pytest.mark.skipif(six.PY2, reason="only Py3")
+@pytest.mark.parametrize("with_build_type", [True, False])
+def test_basic_layout_external_sources(with_build_type):
+    conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            from conan.tools.layout import basic_layout
+            from conan.tools.files import save, load, copy
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch"{}
+                exports_sources = "exported.txt"
+
+                def layout(self):
+                    basic_layout(self, src_folder="src")
+
+                def generate(self):
+                    save(self, "generate.txt", "generate")
+
+                def source(self):
+                    save(self, "source.txt", "foo")
+
+                def build(self):
+                    c1 = load(self, os.path.join(self.source_folder, "source.txt"))
+                    c2 = load(self, os.path.join(self.source_folder, "..", "exported.txt"))
+                    save(self, "build.txt", c1 + c2)
+
+                def package(self):
+                    copy(self, "build.txt", self.build_folder, os.path.join(self.package_folder, "res"))
+            """)
+    if with_build_type:
+        conanfile = conanfile.format(', "build_type"')
+    else:
+        conanfile = conanfile.format("")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
+    client.run("create . foo/1.0@ -s os=Linux")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+    # Local flow
+    build_folder = "build-release" if with_build_type else "build"
+    client.run("install . foo/1.0 -s os=Linux")
+    assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
+    client.run("source .")
+    assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
+    client.run("build .")
+    contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
+    assert contents == "fooexported_contents"
+    client.run("export-pkg . foo/1.0@ --force")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+
+@pytest.mark.skipif(six.PY2, reason="only Py3")
+@pytest.mark.parametrize("with_build_type", [True, False])
+def test_basic_layout_no_external_sources(with_build_type):
+    conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            from conan.tools.layout import basic_layout
+            from conan.tools.files import save, load, copy
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch"{}
+                exports_sources = "exported.txt"
+
+                def layout(self):
+                    basic_layout(self)
+
+                def generate(self):
+                    save(self, "generate.txt", "generate")
+
+                def build(self):
+                    contents = load(self, os.path.join(self.source_folder, "exported.txt"))
+                    save(self, "build.txt", contents)
+
+                def package(self):
+                    copy(self, "build.txt", self.build_folder, os.path.join(self.package_folder,
+                                                                            "res"))
+            """)
+    if with_build_type:
+        conanfile = conanfile.format(', "build_type"')
+    else:
+        conanfile = conanfile.format("")
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
+    client.run("create . foo/1.0@ -s os=Linux")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+    # Local flow
+    client.run("install . foo/1.0 -s os=Linux")
+
+    build_folder = "build-release" if with_build_type else "build"
+    assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
+
+    client.run("build .")
+    contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
+    assert contents == "exported_contents"
+    client.run("export-pkg . foo/1.0@ --force")
+    assert "Packaged 1 '.txt' file: build.txt" in client.out

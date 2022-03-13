@@ -226,6 +226,8 @@ class RemoteManager(object):
 
     def search_packages(self, remote, ref, query):
         packages = self._call_remote(remote, "search_packages", ref, query)
+        # Filter packages without recipe_hash, those are 1.X packages, the 2.0 are disregarded
+        packages = {pid: data for pid, data in packages.items() if data.get("recipe_hash")}
         packages = filter_packages(query, packages)
         return packages
 

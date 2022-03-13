@@ -69,6 +69,7 @@ def test_foo():
         consumer.settings = MockSettings(
             {"build_type": "Release",
              "arch": "x86",
+             "os": "Macos",
              "compiler": "gcc",
              "compiler.libcxx": "libstdc++11",
              "compiler.version": "7.1",
@@ -95,6 +96,10 @@ def test_foo():
 
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
         assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
+        assert env["LIBS"] == "-ldep1_onelib -ldep1_twolib -ldep2_onelib -ldep2_twolib "\
+                              "-ldep1_onesystemlib -ldep1_twosystemlib "\
+                              "-ldep2_onesystemlib -ldep2_twosystemlib"
+
         folder = temp_folder()
         consumer.folders.set_base_install(folder)
         deps.generate()

@@ -3,11 +3,11 @@ import traceback
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
-from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
@@ -72,7 +72,7 @@ class GeneratorManager(object):
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                                 "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps"]
+                                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -143,6 +143,9 @@ class GeneratorManager(object):
         elif generator_name == "PremakeDeps":
             from conan.tools.premake import PremakeDeps
             return PremakeDeps
+        elif generator_name == "XcodeToolchain":
+            from conan.tools.apple import XcodeToolchain
+            return XcodeToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -261,7 +264,6 @@ def write_toolchain(conanfile, path, output):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed

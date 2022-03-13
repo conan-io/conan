@@ -247,12 +247,23 @@ class ConanFile(object):
     def new_cpp_info(self):
         if not self._conan_new_cpp_info:
             self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-            self._conan_new_cpp_info.set_relative_base_folder(self.package_folder)
+            # The new_cpp_info will be already absolute paths if layout() is defined
+            if self.package_folder is not None:  # to not crash when editable and layout()
+                self._conan_new_cpp_info.set_relative_base_folder(self.package_folder)
         return self._conan_new_cpp_info
 
     @property
     def source_folder(self):
         return self.folders.source_folder
+
+    @property
+    def base_source_folder(self):
+        """ returns the base_source folder, that is the containing source folder in the cache
+        irrespective of the layout() and where the final self.source_folder (computed with the
+        layout()) points.
+        This can be necessary in the source() or build() methods to locate where exported sources
+        are, like patches or entire files that will be used to complete downloaded sources"""
+        return self.folders._base_source
 
     @property
     def build_folder(self):
@@ -374,7 +385,7 @@ class ConanFile(object):
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
                 elif self.win_bash:  # New, Conan 2.0
-                    from conan.tools.microsoft.subsystems import run_in_windows_bash
+                    from conans.client.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"

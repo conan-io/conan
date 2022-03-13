@@ -3,7 +3,7 @@ import platform
 import shutil
 from collections import OrderedDict
 
-from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
+from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader, Template
 
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
@@ -106,8 +106,7 @@ class ClientCache(object):
             conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
             return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
-                                         conanfile_path, edited_ref.get("source_folder"),
-                                         edited_ref.get("output_folder"))
+                                         conanfile_path, edited_ref.get("output_folder"))
         else:
             _check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
@@ -170,7 +169,9 @@ class ClientCache(object):
         if self._new_config is None:
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):
-                self._new_config.loads(load(self.new_config_path))
+                text = load(self.new_config_path)
+                content = Template(text).render({"platform": platform, "os": os})
+                self._new_config.loads(content)
         return self._new_config
 
     @property

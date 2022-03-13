@@ -3,8 +3,8 @@ import os
 from conans.errors import ConanException
 
 
-def cmake_layout(conanfile, generator=None):
-    gen = conanfile.conf["tools.cmake.cmaketoolchain:generator"] or generator
+def cmake_layout(conanfile, generator=None, src_folder="."):
+    gen = conanfile.conf.get("tools.cmake.cmaketoolchain:generator", default=generator)
     if gen:
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
     else:
@@ -14,7 +14,7 @@ def cmake_layout(conanfile, generator=None):
         else:
             multi = False
 
-    conanfile.folders.source = "."
+    conanfile.folders.source = src_folder
     try:
         build_type = str(conanfile.settings.build_type)
     except ConanException:
@@ -27,7 +27,8 @@ def cmake_layout(conanfile, generator=None):
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
 
-    conanfile.cpp.source.includedirs = ["src"]
+    conanfile.cpp.source.includedirs = ["include"]
+
     if multi:
         conanfile.cpp.build.libdirs = ["{}".format(build_type)]
         conanfile.cpp.build.bindirs = ["{}".format(build_type)]

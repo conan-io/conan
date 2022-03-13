@@ -1,8 +1,10 @@
 from conans.assets.templates.new_v2_cmake import source_cpp, source_h, test_main
 
-conanfile_sources_v2 = """from conan import ConanFile
-from conan.tools.meson import MesonToolchain, Meson, meson_layout
-
+conanfile_sources_v2 = """import os
+from conan import ConanFile
+from conan.tools.meson import MesonToolchain, Meson
+from conan.tools.layout import basic_layout
+from conan.tools.files import copy
 
 class {package_name}Conan(ConanFile):
     name = "{name}"
@@ -21,7 +23,7 @@ class {package_name}Conan(ConanFile):
             del self.options.fPIC
 
     def layout(self):
-        meson_layout(self)
+        basic_layout(self)
 
     def generate(self):
         tc = MesonToolchain(self)
@@ -35,6 +37,11 @@ class {package_name}Conan(ConanFile):
     def package(self):
         meson = Meson(self)
         meson.install()
+        # Meson cannot install dll/so in "bin" and .a/.lib in "lib"
+        lib = os.path.join(self.package_folder, "lib")
+        bin = os.path.join(self.package_folder, "bin")
+        copy(self, "*.so", lib, bin)
+        copy(self, "*.dll", lib, bin)
 
     def package_info(self):
         self.cpp_info.libs = ["{name}"]
@@ -44,7 +51,8 @@ class {package_name}Conan(ConanFile):
 test_conanfile_v2 = """import os
 from conan import ConanFile
 from conans import tools
-from conan.tools.meson import MesonToolchain, Meson, meson_layout
+from conan.tools.meson import MesonToolchain, Meson
+from conan.tools.layout import basic_layout
 
 
 class {package_name}TestConan(ConanFile):
@@ -60,7 +68,7 @@ class {package_name}TestConan(ConanFile):
         meson.build()
 
     def layout(self):
-        meson_layout(self)
+        basic_layout(self)
 
     def test(self):
         if not tools.cross_building(self):

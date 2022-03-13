@@ -1,7 +1,5 @@
-import textwrap
 import os
-
-import pytest
+import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -54,7 +52,7 @@ def test_cross_build_user_toolchain():
         arch=armv8
         build_type=Release
         [conf]
-        tools.cmake.cmaketoolchain:user_toolchain=rpi_toolchain.cmake
+        tools.cmake.cmaketoolchain:user_toolchain+=rpi_toolchain.cmake
         """)
 
     client = TestClient(path_with_spaces=False)

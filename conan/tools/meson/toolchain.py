@@ -4,7 +4,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -38,9 +38,9 @@ class MesonToolchain(object):
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
-    {% if buildtype %}buildtype = {{buildtype}}{% endif %}
+    {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
-    {% if default_library %}default_library = {{default_library}}{% endif %}
+    {% if default_library %}default_library = '{{default_library}}'{% endif %}
     {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
@@ -66,9 +66,8 @@ class MesonToolchain(object):
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
-        self._backend = backend_conf or backend or 'ninja'
-
+        self._backend = conanfile.conf.get("tools.meson.mesontoolchain:backend",
+                                           default=backend or 'ninja')
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
                            "Release": "release",
@@ -154,7 +153,7 @@ class MesonToolchain(object):
             return
 
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf["tools.apple:sdk_path"]
+        sdk_path = conanfile.conf.get("tools.apple:sdk_path")
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
@@ -207,15 +206,15 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": to_meson_value(self._buildtype),
-            "default_library": to_meson_value(self._default_library),
+            "buildtype": self._buildtype,
+            "default_library": self._default_library,
             "backend": self._backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self._b_vscrt,
-            "b_staticpic": to_meson_value(self._b_staticpic),
-            "b_ndebug": to_meson_value(self._b_ndebug),
+            "b_staticpic": to_meson_value(self._b_staticpic),  # boolean
+            "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": to_meson_value(self._cpp_std),
+            "cpp_std": self._cpp_std,
             "c_args": to_meson_value(self.c_args.strip().split()),
             "c_link_args": to_meson_value(self.c_link_args.strip().split()),
             "cpp_args": to_meson_value(self.cpp_args.strip().split()),

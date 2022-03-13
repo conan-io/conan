@@ -467,12 +467,7 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
 
         if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_source(package_layout.source_folder or base_path)
-            conanfile.folders.set_base_build(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_generators(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_folders(base_path, package_layout.output_folder)
         else:
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(None)
@@ -675,11 +670,11 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     if hasattr(conanfile, "layout"):
-                        conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                         # Old cpp info without defaults (the defaults are in the new one)
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
+                            conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
