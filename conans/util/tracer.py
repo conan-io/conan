@@ -10,7 +10,6 @@ from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
 
 
 # FIXME: Conan 2.0 the traces should have all the revisions information also.
@@ -54,7 +53,7 @@ def _append_to_log(obj):
     """Add a new line to the log file locking the file to protect concurrent access"""
     if _get_tracer_file():
         filepath = _get_tracer_file()
-        with fasteners.InterProcessLock(filepath + ".lock", logger=logger):
+        with fasteners.InterProcessLock(filepath + ".lock"):
             with open(filepath, "a") as logfile:
                 logfile.write(json.dumps(obj, sort_keys=True) + "\n")
 
@@ -175,8 +174,6 @@ def log_command(name, kwargs):
         # FIXME: This is not doing anything because the password is not a kwarg anymore, is an arg
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
-    logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
-                                                       for k, v in parameters.items())))
 
 
 def log_exception(exc, message):
