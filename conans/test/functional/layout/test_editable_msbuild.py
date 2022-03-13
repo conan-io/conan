@@ -7,7 +7,6 @@ from conans.test.assets.pkg_cmake import pkg_cmake_app
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake(version="3.22")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 def test_editable_msbuild():
     c = TestClient()
