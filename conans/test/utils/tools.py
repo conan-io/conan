@@ -379,7 +379,8 @@ class TestClient(object):
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
-        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        # Adding the .conan2, so we know clearly while debugging this is a cache folder
+        self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
 

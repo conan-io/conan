@@ -3,7 +3,7 @@ from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_ERROR)
+                                       BINARY_INVALID, BINARY_ERROR, BINARY_EDITABLE_BUILD)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -152,13 +152,16 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_ERROR
             return
 
+        if node.recipe == RECIPE_EDITABLE:
+            if build_mode.editable or self._evaluate_build(node, build_mode):
+                node.binary = BINARY_EDITABLE_BUILD
+            else:
+                node.binary = BINARY_EDITABLE  # TODO: PREV?
+            return
+
         # If the CLI says this package needs to be built, it doesn't make sense to mark
         # it as invalid
         if self._evaluate_build(node, build_mode):
-            return
-
-        if node.recipe == RECIPE_EDITABLE:
-            node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
 
         # Obtain the cache_latest valid one, cleaning things if dirty
