@@ -99,4 +99,11 @@ def graph_info(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
     if not args.format:
         print_graph_info(deps_graph, args.filter, args.package_filter)
+
+    if args.lockfile_out:
+        lockfile_out = make_abs_path(args.lockfile_out, os.getcwd())
+        ConanOutput().info(f"Saving lockfile: {lockfile_out}")
+        lockfile.save(lockfile_out)
+
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")
+

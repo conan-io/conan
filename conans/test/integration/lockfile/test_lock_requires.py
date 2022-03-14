@@ -76,6 +76,9 @@ def test_conanfile_txt_strict(requires):
                assert_error=True)
     assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
 
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+    assert "pkg/1.2@user/testing" in client.out
+
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_os(requires):
