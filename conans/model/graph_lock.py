@@ -49,6 +49,9 @@ class _LockRequires:
         return result
 
     def add(self, ref, package_ids=None):
+        # In case we have an existing, incomplete thing
+        pop_ref = RecipeReference.loads(str(ref))
+        self._requires.pop(pop_ref, None)
         if package_ids is not None:
             self._requires.setdefault(ref, {}).update(package_ids)
         else:
@@ -65,6 +68,7 @@ class _LockRequires:
         """
         :type other: _LockRequires
         """
+        # TODO: What happens when merging incomplete refs? Probably str(ref) should be used
         for k, v in other._requires.items():
             if k in self._requires:
                 if v is not None:
@@ -139,6 +143,17 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+
+    def add(self, requires=None, build_requires=None, python_requires=None):
+        if requires:
+            for r in requires:
+                self._requires.add(r)
+        if build_requires:
+            for r in build_requires:
+                self._build_requires.add(r)
+        if python_requires:
+            for r in python_requires:
+                self._python_requires.add(r)
 
     @staticmethod
     def deserialize(data):

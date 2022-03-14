@@ -34,6 +34,7 @@ class GenConanfile(object):
         self._build_messages = None
         self._requires = None
         self._requirements = None
+        self._python_requires = None
         self._build_requires = None
         self._build_requirements = None
         self._tool_requires = None
@@ -120,6 +121,13 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = self._get_full_ref_str(ref)
             self._build_requires.append(ref_str)
+        return self
+
+    def with_python_requires(self, *refs):
+        self._python_requires = self._python_requires or []
+        for ref in refs:
+            ref_str = self._get_full_ref_str(ref)
+            self._python_requires.append(ref_str)
         return self
 
     def with_tool_requires(self, *refs):
@@ -302,6 +310,12 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _python_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._python_requires])
+        tmp = "python_requires = %s" % line
+        return tmp
+
+    @property
     def _tool_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._tool_requires])
         tmp = "tool_requires = %s" % line
@@ -451,7 +465,7 @@ class GenConanfile(object):
 
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "tool_requires", "test_requires", "requirements",
+                       "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines"
                        ):
