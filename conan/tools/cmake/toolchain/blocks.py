@@ -744,10 +744,8 @@ class GenericSystemBlock(Block):
 
         system_name, system_version, system_processor = self._get_cross_build()
 
-        cmake_make_program = None
-        if self.is_mingw() and self._conanfile.conf.get("tools.gnu:make_program", default=False):
-            cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program")
-
+        cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program",
+                                                      default=None) if self.is_mingw() else None
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
