@@ -1,10 +1,8 @@
 import copy
-import json
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
-from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference

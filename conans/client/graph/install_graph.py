@@ -265,7 +265,7 @@ def raise_missing(missing, out):
     if len(missing_prefs) >= 5:
         build_str = "--build=missing"
     else:
-        build_str = " ".join(list(sorted(["--build=%s" % pref.ref.name for pref in missing_prefs])))
+        build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
 
     raise ConanException(textwrap.dedent('''\
        Missing prebuilt package for '%s'

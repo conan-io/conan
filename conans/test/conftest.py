@@ -47,7 +47,7 @@ tools_locations = {
         "default": "0.28",
         "0.28": {
             "path": {
-                # Using chocolatey in Windows -> choco install --reference=pkgconfiglite --version 0.28
+                # Using chocolatey in Windows -> choco install --requires=pkgconfiglite --version 0.28
                 'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
             }
         }},
@@ -266,6 +266,9 @@ def pytest_runtest_teardown(item):
 def pytest_runtest_setup(item):
     tools_paths = []
     tools_env_vars = dict()
+    for mark in item.iter_markers():
+        if mark.name.startswith("tool_"):
+            raise Exception("Invalid decorator @pytest.mark.{}".format(mark.name))
 
     tools_params = [mark.args for mark in item.iter_markers(name="tool")]
     for tool_params in tools_params:

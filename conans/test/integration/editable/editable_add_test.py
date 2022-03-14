@@ -31,5 +31,5 @@ class TestEditablePackageTest:
         t.save({'othername.py': GenConanfile("lib", "version")})
         t.run('editable add ./othername.py lib/version@user/name')
         assert "Reference 'lib/version@user/name' in editable mode" in t.out
-        t.run('install --reference=lib/version@user/name')
+        t.run('install --requires=lib/version@user/name')
         t.assert_listed_require({"lib/version@user/name": "Editable"})

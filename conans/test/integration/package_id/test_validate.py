@@ -35,9 +35,9 @@ class TestValidate(unittest.TestCase):
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         self.assertIn("binary: Invalid", client.out)
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows --format=json")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows --format=json")
         myjson = json.loads(client.stdout)
         self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
 
@@ -70,7 +70,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         client.assert_listed_binary({"pkg/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb",
                                                  "Invalid")})
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
@@ -102,7 +102,7 @@ class TestValidate(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                                                  "Invalid")})
 
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         self.assertIn("package_id: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
     def test_validate_compatible_also_invalid(self):
@@ -130,7 +130,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Package '139ed6a9c0b2338ce5c491c593f88a5c328ea9e4' created",
                       client.out)
         # compatible_packges fallback works
-        client.run("install --reference=pkg/0.1@ -s os=Linux -s build_type=Debug")
+        client.run("install --requires=pkg/0.1@ -s os=Linux -s build_type=Debug")
         client.assert_listed_binary(
             {"pkg/0.1": ("139ed6a9c0b2338ce5c491c593f88a5c328ea9e4", "Cache")})
 
@@ -140,7 +140,7 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         assert "binary: Invalid" in client.out
 
     def test_validate_compatible_also_invalid_fail(self):
@@ -169,7 +169,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)
         # compatible_packges fallback works
-        client.run("install --reference=pkg/0.1@ -s os=Linux -s build_type=Debug")
+        client.run("install --requires=pkg/0.1@ -s os=Linux -s build_type=Debug")
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
         # Windows invalid configuration
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows -s build_type=Release",
@@ -177,13 +177,13 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
-        error = client.run("install --reference=pkg/0.1@ -s os=Windows -s build_type=Release",
+        error = client.run("install --requires=pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
         # Windows missing binary: INVALID
-        error = client.run("install --reference=pkg/0.1@ -s os=Windows -s build_type=Debug",
+        error = client.run("install --requires=pkg/0.1@ -s os=Windows -s build_type=Debug",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
@@ -194,9 +194,9 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
         # info
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         assert "binary: Invalid" in client.out
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows -s build_type=Debug")
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows -s build_type=Debug")
         assert "binary: Invalid" in client.out
 
     @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
@@ -207,7 +207,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])
                                                    .with_default_option("myoption", 1)})
         client.run("create . --name=dep --version=0.1")
-        client.run("create . --name=dep --version=0.1 -o dep:myoption=2")
+        client.run("create . --name=dep --version=0.1 -o dep/*:myoption=2")
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            from conans.errors import ConanErrorConfiguration
@@ -220,7 +220,7 @@ class TestValidate(unittest.TestCase):
            """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg1 --version=0.1 -o dep:myoption=1")
+        client.run("create . --name=pkg1 --version=0.1 -o dep/*:myoption=1")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")
                                                    .with_default_option("dep:myoption", 2)})

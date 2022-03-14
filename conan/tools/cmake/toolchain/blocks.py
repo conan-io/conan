@@ -443,9 +443,9 @@ class UserToolchain(Block):
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
-        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
-        return {"paths": toolchains if toolchains else []}
+        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
+                                                  default=[], check_type=list)
+        return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
 
 
 class CMakeFlagsInitBlock(Block):

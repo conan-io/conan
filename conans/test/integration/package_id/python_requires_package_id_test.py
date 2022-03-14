@@ -102,7 +102,7 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
                       client2.out)
 
         client.run("create . --name=tool --version=1.1.2")
-        client2.run("install --reference=pkg/0.1@ -pr=myprofile", assert_error=True)
+        client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
         self.assertIn("ERROR: Missing binary: pkg/0.1:0fdcb8439123abfc619b4221353d9fabb87d8fba",
                       client2.out)
         self.assertIn("tool/1.1.2", client2.out)

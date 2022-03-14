@@ -52,8 +52,9 @@ class AutotoolsToolchain:
         os_sdk = get_apple_sdk_fullname(conanfile)
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
-
         self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
+
+        self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
@@ -75,6 +76,24 @@ class AutotoolsToolchain:
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+
+    def _get_msvc_runtime_flag(self):
+        msvc_runtime_flag = None
+        if self._conanfile.settings.get_safe("compiler") == "msvc":
+            runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+            if runtime_type == "Release":
+                values = {"static": "MT", "dynamic": "MD"}
+            else:
+                values = {"static": "MTd", "dynamic": "MDd"}
+            runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+        elif self._conanfile.settings.get_safe("compiler") == "Visual Studio":
+            runtime = self._conanfile.settings.get_safe("compiler.runtime")
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+
+        return msvc_runtime_flag
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -121,6 +140,10 @@ class AutotoolsToolchain:
         if self.fpic:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
+
+        if self.msvc_runtime_flag:
+            self.cxxflags.append(self.msvc_runtime_flag)
+            self.cflags.append(self.msvc_runtime_flag)
 
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")

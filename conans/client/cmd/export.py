@@ -9,7 +9,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
-from conans.util.log import logger
 from conans.util.runners import check_output_runner
 
 
@@ -22,8 +21,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
-    if str(ref) != str(ref).lower():
-        raise ConanException(f"Conan packages names '{ref}' must be all lowercase")
+    ref.validate_ref()
 
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
@@ -33,7 +31,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref)
-    logger.debug("EXPORT: %s" % conanfile_path)
 
     scoped_output.highlight("Exporting package recipe")
 

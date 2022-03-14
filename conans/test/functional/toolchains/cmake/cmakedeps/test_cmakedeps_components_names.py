@@ -160,7 +160,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
             generators = "CMakeDeps", "CMakeToolchain"
             exports_sources = "src/*"
             requires = "greetings/0.0.1"
-            default_options = {{"greetings:components": "{}"}}
+            default_options = {{"greetings*:components": "{}"}}
 
             def build(self):
                 cmake = CMake(self)
@@ -552,7 +552,7 @@ class TestComponentsCMakeGenerators:
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=world --version=0.0.1")
-        client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+        client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
@@ -609,7 +609,7 @@ class TestComponentsCMakeGenerators:
             """)
             client.save({"conanfile.py": conanfile})
             client.run("create . --name=world --version=0.0.1")
-            client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+            client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
             assert ("Component 'greetings::non-existent' not found in 'greetings' "
                     "package requirement" in client.out)
 

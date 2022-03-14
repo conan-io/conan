@@ -4,7 +4,7 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
-    add_lockfile_args, add_reference_args
+    add_lockfile_args, add_reference_args, scope_options
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -32,13 +32,15 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                                   lockfile=lockfile)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
-    root_node = conan_api.graph.load_root_virtual_conanfile(ref, profile_host)
+    scope_options(profile_host, requires=[ref], tool_requires=None)
+    root_node = conan_api.graph.load_root_virtual_conanfile(requires=[ref],
+                                                            profile_host=profile_host)
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
                                             remotes=None,
                                             update=None)
-    conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name])
+    conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()
 
     conan_api.export.export_pkg(deps_graph, path)

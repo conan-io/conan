@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 class TestOtherCommands:
 
-    def test_creation(self):
+    def test_commands_not_blocked(self):
         """ there is no reason to really block commands and operations over editable packages
         except for others doing an install that depends on the editable
         """
@@ -73,7 +73,7 @@ class TestOtherCommands:
         t.run("list recipes *")
         assert "lib/0.1" in t.out  # Because the create actually exports, TODO: avoid exporting?
 
-        t.run("install consumer --build")
+        t.run("install consumer --build=*")
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                                             "EditableBuild")})

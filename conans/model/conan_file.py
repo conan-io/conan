@@ -71,6 +71,7 @@ class ConanFile:
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None),
                                      getattr(self, "tool_requires", None))
+
         self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
@@ -97,7 +98,6 @@ class ConanFile:
                 result[a] = v
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
-        result["scm"] = getattr(self, "scm", None)
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result.update(self.options.serialize())  # FIXME: The options contain an "options" already
@@ -138,9 +138,8 @@ class ConanFile:
         # Lazy computation of the package buildenv based on the profileone
         from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
-            # TODO: missing user/channel
-            ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(self.ref,
+                                                                        self._conan_is_consumer)
         return self._conan_buildenv
 
     @property
@@ -220,7 +219,7 @@ class ConanFile:
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
-                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                from conans.client.subsystems import run_in_windows_bash
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"

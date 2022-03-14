@@ -159,10 +159,21 @@ def test_build_require_conanfile_text(client):
 
 
 def test_build_require_command_line_build_context(client):
-    client.run("install --reference=mycmake/1.0@ --build-require -g VirtualBuildEnv -pr:b=default")
+    client.run("install --tool-requires=mycmake/1.0@ -g VirtualBuildEnv -pr:b=default")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
     cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
     assert "MYOPENSSL={}!!".format(system) in client.out
+
+
+def test_install_multiple_tool_requires_cli():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=zlib --version=1.1")
+    c.run("create . --name=cmake --version=0.1")
+    c.run("create . --name=gcc --version=0.2")
+    c.run("install --tool-requires=cmake/0.1 --tool-requires=gcc/0.2 --requires=zlib/1.1")
+    c.assert_listed_require({"cmake/0.1": "Cache", "gcc/0.2": "Cache"}, build=True)
+    c.assert_listed_require({"zlib/1.1": "Cache"})

@@ -458,7 +458,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=mypkg --version=0.1")
-        client.run("install --reference=mypkg/0.1@ -g MSBuildDeps")
+        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
         # https://github.com/conan-io/conan/issues/8163
         props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
@@ -497,7 +497,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=mypkg --version=0.1")
-        client.run("install --reference=mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
+        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
         self.assertIn("The 'msbuild' generator requires a 'build_type' setting value", client.out)
 
     def test_custom_configuration(self):

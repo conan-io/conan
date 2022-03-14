@@ -47,7 +47,7 @@ class TestRequester:
         client = TestClient(requester_class=MyRequester)
         client.save({"global.conf": "core.net.http:timeout=invalid"}, path=client.cache.cache_folder)
         with pytest.raises(Exception) as e:
-            client.run("install --reference=Lib/1.0@conan/stable")
+            client.run("install --requires=Lib/1.0@conan/stable")
         assert "Conf 'core.net.http:timeout' value 'invalid' must be" in str(e.value)
 
     def test_no_request_timeout(self):

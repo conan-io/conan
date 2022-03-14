@@ -2,6 +2,7 @@ import os
 
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
+from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.loader import load_python_file
@@ -78,9 +79,9 @@ def _find_deployer(d, cache_deploy_folder):
 
 def _do_deploys(conan_api, graph, deploy, output_folder):
     # Handle the deploys
-    cache_deploy_folder = os.path.join(conan_api.cache_folder, "extensions", "deploy")
+    cache = ClientCache(conan_api.cache_folder)
     for d in deploy or []:
-        deployer = _find_deployer(d, cache_deploy_folder)
+        deployer = _find_deployer(d, cache.deployers_path)
         # IMPORTANT: Use always kwargs to not break if it changes in the future
         conanfile = graph.root.conanfile
         deployer(conanfile=conanfile, output_folder=output_folder)
@@ -121,7 +122,7 @@ def direct_deploy(conanfile, output_folder):
     import shutil
 
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
-    # If the argument is --reference, the current conanfile is a virtual one with 1 single
+    # If the argument is --requires, the current conanfile is a virtual one with 1 single
     # dependency, the "reference" package. If the argument is a local path, then all direct
     # dependencies
     for dep in conanfile.dependencies.filter({"direct": True}).values():

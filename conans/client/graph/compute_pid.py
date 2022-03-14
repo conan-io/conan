@@ -23,18 +23,20 @@ def compute_package_id(node, new_config):
     data = OrderedDict()
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
-        dep_package_id = require.package_id_mode
+        dep_package_id_mode = require.package_id_mode  # the package_id_mode defined as Require trait
         dep_node = transitive.node
-        require.deduce_package_id_mode(node.conanfile.package_type,
-                                       dep_node.conanfile.package_type)
+
         if require.build:
-            if dep_package_id:
-                req_info = RequirementInfo(dep_node.pref, dep_package_id)
+            if dep_package_id_mode:
+                req_info = RequirementInfo(dep_node.pref, dep_package_id_mode)
                 build_data[require] = req_info
         else:
-            if dep_package_id is None:  # Automatically deducing package_id
-                dep_package_id = default_package_id_mode
-            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
+            if dep_package_id_mode is None:
+                require.deduce_package_id_mode(node.conanfile.package_type,
+                                               dep_node.conanfile.package_type)
+                dep_package_id_mode = require.package_id_mode
+            dep_package_id_mode = dep_package_id_mode or default_package_id_mode
+            req_info = RequirementInfo(dep_node.pref, dep_package_id_mode)
             data[require] = req_info
 
     reqs_info = RequirementsInfo(data)

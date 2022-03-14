@@ -5,6 +5,7 @@ from fnmatch import translate
 from typing import Dict
 
 from conans.cli.api.model import PkgConfiguration
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
@@ -12,7 +13,6 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
-from conans.util.log import logger
 
 
 def filter_packages(query, results: Dict[PkgReference, PkgConfiguration]):
@@ -119,7 +119,7 @@ def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguratio
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            logger.error("There is no ConanInfo: %s" % str(info_path))
+            ConanOutput().error("There is no conaninfo.txt: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 

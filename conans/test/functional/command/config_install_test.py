@@ -478,7 +478,7 @@ class ConfigInstallTest(unittest.TestCase):
             self.client.run_command('git config user.email myname@mycompany.com')
             self.client.run_command('git commit -m "mymsg"')
             self.client.run_command('git checkout -b other_branch')
-            save(os.path.join(folder, "hooks", "cust", "cust.py"), "")
+            save(os.path.join(folder, "extensions", "hooks", "cust", "cust.py"), "")
             self.client.run_command('git add .')
             self.client.run_command('git commit -m "my file"')
 
@@ -490,7 +490,7 @@ class ConfigInstallTest(unittest.TestCase):
 
         # Add changes to that branch and update
         with self.client.chdir(folder):
-            save(os.path.join(folder, "hooks", "cust", "cust.py"), "new content")
+            save(os.path.join(folder, "extensions", "hooks", "cust", "cust.py"), "new content")
             self.client.run_command('git add .')
             self.client.run_command('git commit -m "my other file"')
             self.client.run_command('git checkout master')

@@ -3,11 +3,9 @@ from collections import namedtuple
 from io import StringIO
 
 from conan import ConanFile
-from conans.cli.output import ConanOutput
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.util.log import logger
 
 
 class LocalDBMock(object):
@@ -44,7 +42,6 @@ class RedirectedInputStream:
                             "There are no more inputs to be returned.\n"
                             "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
         ret = self.answers.pop(0)
-        logger.info("Testing: Reading fake input={}".format(ret))
         return ret
 
 
