@@ -45,7 +45,7 @@ class TestSubsystems:
         assert "'uname' is not recognized as an internal or external command" in client.out
 
 
-#@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:
 
     @staticmethod
@@ -93,7 +93,8 @@ class TestSubsystemsBuild:
     @pytest.mark.tool("mingw64")
     def test_mingw64_recipe(self):
         """
-        64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
+        A recipe with self.run_bash=True and msys2 configured, using mingw to build stuff with make
+        from the subsystem
         """
         client = TestClient()
         makefile = gen_makefile(apps=["app"])
@@ -129,12 +130,22 @@ class TestSubsystemsBuild:
                     def test(self):
                         self.run("app")
                 """)
+        profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash.exe
+        tools.gnu:make_program=mingw32-make.exe
+        """)
         client.save({"conanfile.py": conanfile,
                      "Makefile": makefile,
                      "app.cpp": main_cpp,
-                     "test_package/conanfile.py": test_conanfile})
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": profile})
 
-        client.run("create . --name foo --version 1.0")
+        client.run("create . --name foo --version 1.0 --profile:build myprofile")
+        assert "__MINGW64__" in client.out
+        assert "__CYGWIN__" not in client.out
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("mingw32")
