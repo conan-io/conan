@@ -612,6 +612,9 @@ class GenericSystemBlock(Block):
         {% if build_type %}
         set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
         {% endif %}
+        {% if cmake_make_program %}
+        set(CMAKE_MAKE_PROGRAM "{{ cmake_make_program }}")
+        {% endif %}
         """)
 
     def _get_toolset(self, generator):
@@ -723,6 +726,11 @@ class GenericSystemBlock(Block):
 
         return compiler_c, compiler_cpp, compiler_rc
 
+    def is_mingw(self):
+        is_win = self._conanfile.settings.get_safe("os") == "Windows"
+        is_gcc = self._conanfile.settings.get_safe("compiler") == "gcc"
+        return is_gcc and is_win
+
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
@@ -736,6 +744,10 @@ class GenericSystemBlock(Block):
 
         system_name, system_version, system_processor = self._get_cross_build()
 
+        cmake_make_program = None
+        if self.is_mingw() and self._conanfile.conf.get("tools.gnu:make_program", default=False):
+            cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program")
+
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
@@ -744,7 +756,8 @@ class GenericSystemBlock(Block):
                 "build_type": build_type,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
-                "cmake_system_processor": system_processor}
+                "cmake_system_processor": system_processor,
+                "cmake_make_program": cmake_make_program}
 
 
 class OutputDirsBlock(Block):
