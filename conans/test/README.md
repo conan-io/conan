@@ -103,6 +103,7 @@ To install mingw64 and mingw32 open a msys2 terminal and type:
 $ pacman -Syuu
 $ pacman -S mingw-w64-x86_64-toolchain
 $ pacman -S mingw-w64-i686-toolchain
+$ pacman -S base-devel gcc
 
 ```
 
