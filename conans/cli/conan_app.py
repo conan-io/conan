@@ -1,4 +1,3 @@
-import conans
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
@@ -10,7 +9,6 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.errors import ConanException
-from conans.util.log import configure_logger
 
 
 class ConanApp(object):
@@ -19,10 +17,6 @@ class ConanApp(object):
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder)
         self.config = self.cache.config
-
-        # Adjust CONAN_LOGGING_LEVEL with the env readed
-        conans.util.log.logger = configure_logger(self.config.logging_level,
-                                                  self.config.logging_file)
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
         # Wraps an http_requester to inject proxies, certs, etc

@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-import traceback
 from collections import OrderedDict
 from typing import List
 
@@ -15,7 +14,6 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract, touch_folder, rmdir
-from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
@@ -254,7 +252,6 @@ class RemoteManager(object):
             exc.remote = remote
             raise
         except Exception as exc:
-            logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
 
 

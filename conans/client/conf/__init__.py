@@ -1,4 +1,3 @@
-import logging
 import textwrap
 from configparser import ConfigParser, NoSectionError
 
@@ -19,7 +18,7 @@ os:
     Macos:
         version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
         subsystem: [None, catalyst]
-        sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1"]        
+        sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1"]
     Android:
         api_level: ANY
     iOS:
@@ -195,35 +194,3 @@ class ConanClientConfigParser(ConfigParser, object):
             except Exception:
                 hooks = []
         return hooks
-
-    @property
-    def logging_level(self):
-        try:
-            level = get_env("CONAN_LOGGING_LEVEL")
-            if level is None:
-                level = self.get_item("log.level")
-            try:
-                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
-                level = parsed_level if parsed_level is not None else int(level)
-            except Exception:
-                level = logging.CRITICAL
-            return level
-        except ConanException:
-            return logging.CRITICAL
-
-    @property
-    def logging_file(self):
-        return get_env('CONAN_LOGGING_FILE', None)
-
-    @staticmethod
-    def get_log_level_by_name(level_name):
-        levels = {
-            "critical": logging.CRITICAL,
-            "error": logging.ERROR,
-            "warning": logging.WARNING,
-            "warn": logging.WARNING,
-            "info": logging.INFO,
-            "debug": logging.DEBUG,
-            "notset": logging.NOTSET
-        }
-        return levels.get(str(level_name).lower())

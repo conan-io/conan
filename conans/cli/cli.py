@@ -18,7 +18,6 @@ from conans.client.cache.cache import ClientCache
 from conans.errors import ConanInvalidSystemRequirements
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
-from conans.util.log import logger
 
 
 class Cli:
@@ -165,7 +164,6 @@ class Cli:
             exit_error = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:
-                logger.error(exc)
                 output.error("Exiting with code: %d" % exc.code)
             exit_error = exc.code
         except ConanInvalidConfiguration as exc:

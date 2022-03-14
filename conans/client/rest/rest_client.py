@@ -1,7 +1,6 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.util.log import logger
 
 
 class RestApiClientFactory(object):
@@ -50,7 +49,6 @@ class RestApiClient(object):
                                 self._artifacts_properties)
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
-            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
         return capability in capabilities
 
     def _get_api(self):
