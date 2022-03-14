@@ -92,8 +92,6 @@ page](https://github.com/conan-io/conan#running-the-tests).
 
 Work in progress!
 
-In the ``conftest.py`` you can see the location of
-
 ### Windows msys2, mingw64 and mingw32
 
 Download msys2 (64 bit) from msys2.org
@@ -104,8 +102,7 @@ $ pacman -Syuu
 $ pacman -S mingw-w64-x86_64-toolchain
 $ pacman -S mingw-w64-i686-toolchain
 $ pacman -S base-devel gcc
+$ pacman -S autoconf-wrapper
+$ pacman -S automake
 
 ```
-
-
-
