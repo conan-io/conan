@@ -18,8 +18,7 @@ class GraphAPI:
     @api_method
     def load_root_consumer_conanfile(self, path, profile_host, profile_build,
                                      name=None, version=None, user=None, channel=None,
-                                     update=None, remotes=None, require_overrides=None,
-                                     lockfile=None):
+                                     update=None, remotes=None, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
         app.load_remotes(remotes, update=update)
@@ -30,8 +29,7 @@ class GraphAPI:
                                                  version=version,
                                                  user=user,
                                                  channel=channel,
-                                                 graph_lock=lockfile,
-                                                 require_overrides=require_overrides)
+                                                 graph_lock=lockfile)
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
@@ -40,7 +38,7 @@ class GraphAPI:
                 profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
-            conanfile = app.loader.load_conanfile_txt(path, require_overrides=require_overrides)
+            conanfile = app.loader.load_conanfile_txt(path)
             consumer_definer(conanfile, profile_host)
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
@@ -48,7 +46,7 @@ class GraphAPI:
 
     @api_method
     def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
-                                 update=None, remotes=None, require_overrides=None, lockfile=None):
+                                 update=None, remotes=None, lockfile=None):
         """
         create and initialize a root node from a test_package/conanfile.py consumer
         @param lockfile: Might be good to lock python-requires, build-requires
@@ -58,7 +56,6 @@ class GraphAPI:
         @param profile_build:
         @param update:
         @param remotes:
-        @param require_overrides:
         @return: a graph Node, recipe=RECIPE_CONSUMER
         """
 
@@ -72,7 +69,6 @@ class GraphAPI:
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
                                          channel=tested_reference.channel,
-                                         require_overrides=require_overrides,
                                          graph_lock=lockfile)
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
@@ -85,13 +81,11 @@ class GraphAPI:
         return root_node
 
     @api_method
-    def load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None,
-                                    require_overrides=None):
+    def load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
         app = ConanApp(self.conan_api.cache_folder)
-        conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires,
-                                            require_overrides=require_overrides)
+        conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires)
         consumer_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node

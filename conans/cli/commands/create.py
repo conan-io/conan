@@ -25,8 +25,6 @@ def create(conan_api, parser, *args):
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
-    parser.add_argument("--require-override", action="append",
-                        help="Define a requirement override")
     parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                         help='Working directory for the build of the test project.')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -63,19 +61,16 @@ def create(conan_api, parser, *args):
             raise ConanException("--build-require should not be specified, test_package does it")
         root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
                                                              profile_host, profile_build,
-                                                             require_overrides=args.require_override,
                                                              remotes=remotes,
                                                              update=args.update,
                                                              lockfile=lockfile)
     else:
-        req_override = args.require_override
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
-                                                                profile_host=profile_host,
-                                                                require_overrides=req_override)
+                                                                profile_host=profile_host)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False

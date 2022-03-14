@@ -135,7 +135,7 @@ class ConanFileLoader:
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
-                      channel=None, graph_lock=None, require_overrides=None):
+                      channel=None, graph_lock=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
@@ -147,11 +147,6 @@ class ConanFileLoader:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
         try:
-            if require_overrides is not None:
-                for req_override in require_overrides:
-                    req_override = RecipeReference.loads(req_override)
-                    conanfile.requires.override(req_override)
-
             conanfile._conan_is_consumer = True
             return conanfile
         except Exception as e:  # re-raise with file name
@@ -172,7 +167,7 @@ class ConanFileLoader:
         conanfile.channel = ref.channel
         return conanfile
 
-    def load_conanfile_txt(self, conan_txt_path, require_overrides=None):
+    def load_conanfile_txt(self, conan_txt_path):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
@@ -180,12 +175,6 @@ class ConanFileLoader:
         path, basename = os.path.split(conan_txt_path)
         display_name = basename
         conanfile = self._parse_conan_txt(contents, path, display_name)
-
-        if require_overrides is not None:
-            for req_override in require_overrides:
-                req_override = RecipeReference.loads(req_override)
-                conanfile.requires.override(req_override)
-
         conanfile._conan_is_consumer = True
         return conanfile
 
@@ -212,7 +201,7 @@ class ConanFileLoader:
 
         return conanfile
 
-    def load_virtual(self, requires=None, tool_requires=None, require_overrides=None):
+    def load_virtual(self, requires=None, tool_requires=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="virtual")
@@ -223,11 +212,6 @@ class ConanFileLoader:
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))
-
-        if require_overrides is not None:
-            for req_override in require_overrides:
-                req_override = RecipeReference.loads(req_override)
-                conanfile.requires.override(req_override)
 
         conanfile._conan_is_consumer = True
         conanfile.generators = []  # remove the default txt generator
