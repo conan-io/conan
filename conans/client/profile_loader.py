@@ -75,13 +75,13 @@ class ProfileLoader:
         profile, _ = self._load_profile(profile_name, cwd)
         return profile
 
-    def _load_profile(self, profile_name, cwd, root=True):
+    def _load_profile(self, profile_name, cwd):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
         """
 
-        profile_path = self.get_profile_path(profile_name, cwd, root=root)
+        profile_path = self.get_profile_path(profile_name, cwd)
         text = load(profile_path)
 
         if profile_name.endswith(".jinja"):
@@ -109,7 +109,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.get_includes():
                 # Recursion !!
-                profile, included_vars = self._load_profile(include, cwd, root=False)
+                profile, included_vars = self._load_profile(include, cwd)
                 inherited_profile.compose_profile(profile)
                 profile_parser.update_vars(included_vars)
 
@@ -129,14 +129,8 @@ class ProfileLoader:
         except Exception as exc:
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
-    def get_profile_path(self, profile_name, cwd, exists=True, root=True):
-        """
-        :param profile_name: The bare profile name, without path (can be absolute path too)
-        :param cwd: The current user working dir
-        :param exists: If the profile file must exist (can be False if profile creation)
-        :param root: True if this is the profile path specified by user in cli, Fale if include()
-        :return: The full path to the profile
-        """
+    def get_profile_path(self, profile_name, cwd, exists=True):
+
         def valid_path(_profile_path, _profile_name=None):
             if exists and not os.path.isfile(_profile_path):
                 raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
@@ -145,15 +139,9 @@ class ProfileLoader:
         if os.path.isabs(profile_name):
             return valid_path(profile_name)
 
-        if root:
-            if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
-                profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-                return valid_path(profile_path, profile_name)
-        else:
-            # cwd is relative to cwd first always, cwd can be the cache when include() from cache
+        if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-            if os.path.isfile(profile_path):
-                return profile_path
+            return valid_path(profile_path, profile_name)
 
         default_folder = self._cache.profiles_path
         if not os.path.exists(default_folder):
