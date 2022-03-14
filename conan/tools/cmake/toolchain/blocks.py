@@ -746,6 +746,9 @@ class GenericSystemBlock(Block):
 
         cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                       default=None) if self.is_mingw() else None
+        if cmake_make_program:
+            cmake_make_program = cmake_make_program.replace("\\", "/")
+
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,

@@ -36,16 +36,16 @@ def test_cmake_make_program(conanfile):
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
     assert 'set(CMAKE_MAKE_PROGRAM' not in content
-    conanfile.conf.define("tools.gnu:make_program", "mymake")
+    conanfile.conf.define("tools.gnu:make_program", "c:\\mymake")
 
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
-    assert 'set(CMAKE_MAKE_PROGRAM "mymake")' in content
+    assert 'set(CMAKE_MAKE_PROGRAM "c:/mymake")' in content
 
     conanfile.settings.os = "Linux"
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
-    assert 'set(CMAKE_MAKE_PROGRAM "mymake")' not in content
+    assert 'set(CMAKE_MAKE_PROGRAM' not in content
 
 
 def test_cmake_toolchain(conanfile):
