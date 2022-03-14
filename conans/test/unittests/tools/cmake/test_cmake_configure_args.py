@@ -1,7 +1,6 @@
-from unittest.mock import Mock
-
 import pytest
 from mock import mock
+from mock.mock import Mock
 
 from conan.tools.cmake import CMake
 from conan.tools.files.files import save_toolchain_args
