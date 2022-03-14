@@ -5,7 +5,7 @@
 
 from conan.tools.microsoft import is_msvc
 from conan.tools.apple.apple import is_apple_os
-from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
+from conans.client.subsystems import subsystem_path, deduce_subsystem
 
 
 class GnuDepsFlags(object):

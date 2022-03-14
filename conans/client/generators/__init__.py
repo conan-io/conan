@@ -3,11 +3,11 @@ import traceback
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
-from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
@@ -264,7 +264,6 @@ def write_toolchain(conanfile, path, output):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
