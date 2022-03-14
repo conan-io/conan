@@ -83,8 +83,13 @@ class CMake(object):
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
         if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
-            # It seems this doesn't work in the toolchain file, it needs to be here in command line
+            # It seems these don't work in the toolchain file, they need to be here in command line
             arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
+            cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program", default=None)
+            if cmake_make_program:
+                cmake_make_program = cmake_make_program.replace("\\", "/")
+                arg_list.append('-DCMAKE_MAKE_PROGRAM="{}"'.format(cmake_make_program))
+
         if variables:
             arg_list.extend(["-D{}={}".format(k, v) for k, v in variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
