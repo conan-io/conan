@@ -14,10 +14,10 @@ from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput, cli_out_write, Color
+from conans.client.cache.cache import ClientCache
 from conans.errors import ConanInvalidSystemRequirements
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
-from conans.util.log import logger
 
 
 class Cli:
@@ -36,20 +36,36 @@ class Cli:
         for module in pkgutil.iter_modules([conan_commands_path]):
             module_name = module[1]
             self._add_command("conans.cli.commands.{}".format(module_name), module_name)
-        user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
-        sys.path.append(user_commands_path)
-        for module in pkgutil.iter_modules([user_commands_path]):
+
+        custom_commands_path = ClientCache(conan_api.cache_folder).custom_commands_path
+        if not os.path.isdir(custom_commands_path):
+            return
+
+        sys.path.append(custom_commands_path)
+        for module in pkgutil.iter_modules([custom_commands_path]):
             module_name = module[1]
             if module_name.startswith("cmd_"):
                 self._add_command(module_name, module_name.replace("cmd_", ""))
+        # layers
+        for folder in os.listdir(custom_commands_path):
+            layer_folder = os.path.join(custom_commands_path, folder)
+            if not os.path.isdir(layer_folder):
+                continue
+            for module in pkgutil.iter_modules([layer_folder]):
+                module_name = module[1]
+                if module_name.startswith("cmd_"):
+                    self._add_command(f"{folder}.{module_name}", module_name.replace("cmd_", ""),
+                                      package=folder)
 
-    def _add_command(self, import_path, method_name):
+    def _add_command(self, import_path, method_name, package=None):
         try:
-            command_wrapper = getattr(importlib.import_module(import_path), method_name)
+            imported_module = importlib.import_module(import_path)
+            command_wrapper = getattr(imported_module, method_name)
             if command_wrapper.doc:
-                self._commands[command_wrapper.name] = command_wrapper
-                self._groups[command_wrapper.group].append(command_wrapper.name)
-            for name, value in getmembers(importlib.import_module(import_path)):
+                name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
+                self._commands[name] = command_wrapper
+                self._groups[command_wrapper.group].append(name)
+            for name, value in getmembers(imported_module):
                 if isinstance(value, ConanSubCommand):
                     if name.startswith("{}_".format(method_name)):
                         command_wrapper.add_subcommand(value)
@@ -148,7 +164,6 @@ class Cli:
             exit_error = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:
-                logger.error(exc)
                 output.error("Exiting with code: %d" % exc.code)
             exit_error = exc.code
         except ConanInvalidConfiguration as exc:

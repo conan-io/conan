@@ -5,11 +5,12 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_name
-from conan.tools.build import build_jobs, cross_building
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
+from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.build.cross_building import cross_building
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc
 from conans.errors import ConanException
@@ -301,7 +302,7 @@ class AppleSystemBlock(Block):
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
         host_architecture = to_apple_arch(arch, default=arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
-        host_sdk_name = get_apple_sdk_name(self._conanfile)
+        host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
 
         ctxt_toolchain = {}
         if host_sdk_name:
@@ -442,9 +443,9 @@ class UserToolchain(Block):
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
-        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
-        return {"paths": toolchains if toolchains else []}
+        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
+                                                  default=[], check_type=list)
+        return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
 
 
 class CMakeFlagsInitBlock(Block):
@@ -637,6 +638,40 @@ class GenericSystemBlock(Block):
                 "cmake_system_processor": system_processor}
 
 
+class OutputDirsBlock(Block):
+
+    @property
+    def template(self):
+        if not self._conanfile.package_folder:
+            return ""
+
+        return textwrap.dedent("""
+           set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
+           set(CMAKE_INSTALL_BINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_SBINDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBEXECDIR "{{default_bin}}")
+           set(CMAKE_INSTALL_LIBDIR "{{default_lib}}")
+           set(CMAKE_INSTALL_INCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_OLDINCLUDEDIR "{{default_include}}")
+           set(CMAKE_INSTALL_DATAROOTDIR "{{default_res}}")
+        """)
+
+    def _get_cpp_info_value(self, name):
+        # Why not taking cpp.build? because this variables are used by the "cmake install"
+        # that correspond to the package folder (even if the root is the build directory)
+        elements = getattr(self._conanfile.cpp.package, name)
+        return elements[0] if elements else None
+
+    def context(self):
+        if not self._conanfile.package_folder:
+            return {}
+        return {"package_folder": self._conanfile.package_folder.replace("\\", "/"),
+                "default_bin": self._get_cpp_info_value("bindirs"),
+                "default_lib": self._get_cpp_info_value("libdirs"),
+                "default_include": self._get_cpp_info_value("includedirs"),
+                "default_res": self._get_cpp_info_value("resdirs")}
+
+
 class ToolchainBlocks:
     def __init__(self, conanfile, toolchain, items=None):
         self._blocks = OrderedDict()
@@ -664,5 +699,3 @@ class ToolchainBlocks:
             if content:
                 result.append(content)
         return result
-
-

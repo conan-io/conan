@@ -9,7 +9,7 @@ import time
 from io import BytesIO
 
 from conan.tools.files.files import untargz
-from conan.tools.microsoft.subsystems import get_cased_path
+from conans.client.subsystems import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER

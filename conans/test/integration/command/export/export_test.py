@@ -79,7 +79,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "file2")
-        client.run("install --reference=hello/1.2@lasote/stable --build=missing")
+        client.run("install --requires=hello/1.2@lasote/stable --build=missing")
         self.assertIn("hello/1.2@lasote/stable: Generating the package", client.out)
 
         client.save({CONANFILE: conanfile,
@@ -95,7 +95,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
-        client.run("install --reference=hello/1.2@lasote/stable --build=hello")
+        client.run("install --requires=hello/1.2@lasote/stable --build=hello*")
         self.assertIn("hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
@@ -483,3 +483,16 @@ def test_export_casing():
     exports_folder = client.get_latest_ref_layout(ref).export()
     assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
     assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
+
+
+def test_export_invalid_refs():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=pkg% --version=0.1", assert_error=True)
+    assert "ERROR: Invalid package name 'pkg%'" in c.out
+    c.run("export . --name=pkg --version=0.1%", assert_error=True)
+    assert "ERROR: Invalid package version '0.1%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user%", assert_error=True)
+    assert "ERROR: Invalid package user 'user%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
+    assert "ERROR: Invalid package channel 'channel%'" in c.out

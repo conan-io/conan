@@ -63,7 +63,7 @@ class ConanFileToolsTest(ConanFile):
                                     test/1.9@user/testing\n
                                     test2/2.3@user/testing"""}
         client.save(files, clean_first=True)
-        client.run("install . --build")
+        client.run("install . --build='*'")
         self.assertIn("test/1.9@user/testing: Building 1!", client.out)
         self.assertIn("test/1.9@user/testing: Source 1!", client.out)
         self.assertIn("test2/2.3@user/testing: Building 2!", client.out)

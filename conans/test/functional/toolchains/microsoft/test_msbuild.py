@@ -560,7 +560,7 @@ class WinTest(unittest.TestCase):
             rmdir(build_test_folder)
             runtime = "MT" if build_type == "Release" else "MTd"
             client.run("create . --name=hello --version=0.1 %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
-                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
+                       " -o hello/*:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -573,7 +573,7 @@ class WinTest(unittest.TestCase):
         for build_type, arch, shared in configs:
             runtime = "MT" if build_type == "Release" else "MTd"
             client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
-                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
+                       " -o hello/*:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         vs_path = vs_installation_path(self.vs_version)
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")

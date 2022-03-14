@@ -2,9 +2,9 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
 from conan.tools.build.cross_building import cross_building
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    get_apple_sdk_name
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -38,9 +38,9 @@ class MesonToolchain(object):
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
-    {% if buildtype %}buildtype = {{buildtype}}{% endif %}
+    {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
-    {% if default_library %}default_library = {{default_library}}{% endif %}
+    {% if default_library %}default_library = '{{default_library}}'{% endif %}
     {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
@@ -158,7 +158,7 @@ class MesonToolchain(object):
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
-        os_sdk = get_apple_sdk_name(conanfile)
+        os_sdk = get_apple_sdk_fullname(conanfile)
         arch = to_apple_arch(conanfile.settings.get_safe("arch"))
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
@@ -206,15 +206,15 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": to_meson_value(self._buildtype),
-            "default_library": to_meson_value(self._default_library),
+            "buildtype": self._buildtype,
+            "default_library": self._default_library,
             "backend": self._backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self._b_vscrt,
-            "b_staticpic": to_meson_value(self._b_staticpic),
-            "b_ndebug": to_meson_value(self._b_ndebug),
+            "b_staticpic": to_meson_value(self._b_staticpic),  # boolean
+            "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": to_meson_value(self._cpp_std),
+            "cpp_std": self._cpp_std,
             "c_args": to_meson_value(self.c_args.strip().split()),
             "c_link_args": to_meson_value(self.c_link_args.strip().split()),
             "cpp_args": to_meson_value(self.cpp_args.strip().split()),

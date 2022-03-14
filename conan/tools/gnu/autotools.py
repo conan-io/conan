@@ -2,7 +2,7 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.files.files import load_toolchain_args
-from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
+from conans.client.subsystems import subsystem_path, deduce_subsystem
 
 
 def join_arguments(args):
@@ -31,7 +31,7 @@ class Autotools(object):
         configure_cmd = "{}/configure".format(source)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
         configure_cmd = subsystem_path(subsystem, configure_cmd)
-        cmd = "{} {}".format(configure_cmd, self._configure_args)
+        cmd = '"{}" {}'.format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
 

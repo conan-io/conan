@@ -8,7 +8,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_UPDATE
+    BINARY_UPDATE, BINARY_EDITABLE_BUILD
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -79,7 +79,6 @@ class _PackageBuilder(object):
 
     def _prepare_sources(self, conanfile, pref, recipe_layout):
         export_source_folder = recipe_layout.export_sources()
-        scm_sources_folder = recipe_layout.scm_sources()
         conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
@@ -90,8 +89,8 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        config_source(export_source_folder, scm_sources_folder, conanfile,
-                      conanfile_path, pref.ref, self._hook_manager, self._cache)
+        config_source(export_source_folder, conanfile,
+                      conanfile_path, pref.ref, self._hook_manager)
 
     @staticmethod
     def _copy_sources(conanfile, source_folder, build_folder):
@@ -261,7 +260,7 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference):
-        if package.binary == BINARY_EDITABLE:
+        if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
 
@@ -314,15 +313,15 @@ class BinaryInstaller(object):
 
         # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
-        conanfile.folders.set_base_package(output_folder or base_path)
-        conanfile.folders.set_base_source(base_path)
-        conanfile.folders.set_base_build(output_folder or base_path)
-        conanfile.folders.set_base_generators(output_folder or base_path)
+        conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
         write_generators(conanfile)
         call_system_requirements(conanfile)
+
+        if node.binary == BINARY_EDITABLE_BUILD:
+            run_build_method(conanfile, self._hook_manager)
 
         for node in install_node.nodes:
             # Get source of information
@@ -335,6 +334,7 @@ class BinaryInstaller(object):
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
+            # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
     def _handle_node_build(self, package, pkg_layout):
@@ -372,6 +372,7 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
                 if hasattr(conanfile, "layout") and is_editable:

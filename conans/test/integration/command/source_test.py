@@ -107,7 +107,7 @@ class ConanLib(ConanFile):
 
         client.run("install .")
         client.run("source .")
-        self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
+        self.assertIn("conanfile.py (hello/0.1): Calling source()", client.out)
         self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % client.current_folder, client.out)
 
     def test_local_source(self):
@@ -133,7 +133,7 @@ class ConanLib(ConanFile):
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Calling source() in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
 
@@ -156,7 +156,7 @@ class ConanLib(ConanFile):
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
         # download the sources from server0
-        client.run("install --reference=hello/0.1@ -r server0")
+        client.run("install --requires=hello/0.1@ -r server0")
         client.run("upload hello/0.1 -r server1")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
@@ -164,7 +164,7 @@ class ConanLib(ConanFile):
         # install from server1 that has the sources, upload to server1
         # Will not download sources, revision already in server
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server1")
+        client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
         assert f"hello/0.1#{rrev} already in server, skipping upload" in client.out
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
@@ -173,6 +173,6 @@ class ConanLib(ConanFile):
         # install from server0 and build
         # download sources from server0
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server0 --build")
+        client.run("install --requires=hello/0.1@ -r server0 --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)

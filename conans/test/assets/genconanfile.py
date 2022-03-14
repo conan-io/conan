@@ -32,9 +32,9 @@ class GenConanfile(object):
         self._package_files_env = None
         self._package_files_link = None
         self._build_messages = None
-        self._scm = None
         self._requires = None
         self._requirements = None
+        self._python_requires = None
         self._build_requires = None
         self._build_requirements = None
         self._tool_requires = None
@@ -72,10 +72,6 @@ class GenConanfile(object):
 
     def with_revision_mode(self, revision_mode):
         self._revision_mode = revision_mode
-        return self
-
-    def with_scm(self, scm):
-        self._scm = scm
         return self
 
     def with_generator(self, generator):
@@ -125,6 +121,13 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = self._get_full_ref_str(ref)
             self._build_requires.append(ref_str)
+        return self
+
+    def with_python_requires(self, *refs):
+        self._python_requires = self._python_requires or []
+        for ref in refs:
+            ref_str = self._get_full_ref_str(ref)
+            self._python_requires.append(ref_str)
         return self
 
     def with_tool_requires(self, *refs):
@@ -265,11 +268,6 @@ class GenConanfile(object):
         return "deprecated = {}".format(self._deprecated)
 
     @property
-    def _scm_render(self):
-        line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
-        return "scm = {%s}" % line
-
-    @property
     def _generators_render(self):
         line = ", ".join('"{}"'.format(generator) for generator in self._generators)
         return "generators = {}".format(line)
@@ -309,6 +307,12 @@ class GenConanfile(object):
     def _build_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
+        return tmp
+
+    @property
+    def _python_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._python_requires])
+        tmp = "python_requires = %s" % line
         return tmp
 
     @property
@@ -461,7 +465,7 @@ class GenConanfile(object):
 
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "tool_requires", "test_requires", "requirements", "scm",
+                       "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines"
                        ):

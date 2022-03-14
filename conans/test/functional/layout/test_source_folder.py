@@ -8,7 +8,6 @@ import pytest
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient, zipdir
 
 app_name = "Release/my_app.exe" if platform.system() == "Windows" else "my_app"
@@ -100,40 +99,6 @@ def test_exports_source_without_subfolder():
     client.run("create . ")
     assert "Created package revision" in client.out
 
-
-@pytest.mark.tool("cmake")
-def test_scm_with_source_layout():
-    """If we have the sources in git repository"""
-    conan_file = GenConanfile() \
-        .with_name("app").with_version("1.0") \
-        .with_settings("os", "arch", "build_type", "compiler") \
-        .with_scm({"type": "git", "revision": "auto", "url": "auto"})\
-        .with_cmake_build()
-
-    conan_file = str(conan_file)
-    conan_file += """
-    def layout(self):
-        self.folders.source = "my_src"
-        self.folders.build = "build_{}".format(self.settings.build_type)
-    """
-    cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"])
-    app = gen_function_cpp(name="main")
-
-    remote_path, _ = create_local_git_repo({"foo": "var"}, branch="my_release")
-
-    client = TestClient()
-
-    client.save({"conanfile.py": conan_file, "my_src/main.cpp": app,
-                 "my_src/CMakeLists.txt": cmake,
-                 ".gitignore": "build_*\n"})
-    client.init_git_repo()
-    client.run_command('git remote add origin "%s"' % remote_path.replace("\\", "/"))
-    client.run_command('git push origin master')
-
-    client.run("build .")
-    assert os.path.exists(os.path.join(client.current_folder, "build_Release", app_name))
-    client.run("create . ")
-    assert "Created package revision" in client.out
 
 @pytest.mark.tool("cmake")
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])

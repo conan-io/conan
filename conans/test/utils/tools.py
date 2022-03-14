@@ -42,8 +42,7 @@ from conans.test.conftest import default_profiles
 from conans.test.utils.artifactory import ArtifactoryServer
 from conans.test.utils.mocks import RedirectedInputStream
 from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
-    create_remote_svn_repo
+from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
@@ -380,7 +379,8 @@ class TestClient(object):
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
-        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        # Adding the .conan2, so we know clearly while debugging this is a cache folder
+        self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
 
@@ -620,42 +620,6 @@ class TestClient(object):
                                           origin_url=origin_url)
         return commit
 
-    @staticmethod
-    def _create_scm_info(data):
-        from collections import namedtuple
-
-        revision = None
-        scm_type = None
-        url = None
-        shallow = None
-        verify_ssl = None
-        if "scm" in data:
-            if "revision" in data["scm"]:
-                revision = data["scm"]["revision"]
-            if "type" in data["scm"]:
-                scm_type = data["scm"]["type"]
-            if "url" in data["scm"]:
-                url = data["scm"]["url"]
-            if "shallow" in data["scm"]:
-                shallow = data["scm"]["shallow"]
-            if "verify_ssl" in data["scm"]:
-                verify_ssl = data["scm"]["verify_ssl"]
-        SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
-        return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
-
-    def scm_info_cache(self, reference):
-        import yaml
-
-        if not isinstance(reference, RecipeReference):
-            reference = RecipeReference.loads(reference)
-        layout = self.get_latest_ref_layout(reference)
-        content = load(layout.conandata())
-        data = yaml.safe_load(content)
-        if ".conan" in data:
-            return self._create_scm_info(data[".conan"])
-        else:
-            return self._create_scm_info(dict())
-
     def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
         ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
@@ -733,7 +697,13 @@ class TestClient(object):
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)), str(self.out)).group(1)
+        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+                               str(self.out)).group(1)
+        return package_id
+
+    def created_package_revision(self, ref):
+        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
         return package_id
 
     def exported_recipe_revision(self):
@@ -846,13 +816,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_svn_repo(self, subpath, files=None, repo_url=None):
-        if not repo_url:
-            repo_url = create_remote_svn_repo(temp_folder())
-        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                           rel_project_path=subpath, delete_checkout=False)
-        return rev
 
 
 def get_free_port():

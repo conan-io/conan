@@ -90,7 +90,7 @@ class UploadTest(unittest.TestCase):
 
         if platform.system() == "Linux":
             client.run("remove '*' -f")
-            client.run("install --reference={}".format(ref))
+            client.run("install --requires={}".format(ref))
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
@@ -130,7 +130,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#a397", client.out)
+        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#2e1b", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
@@ -342,7 +342,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev2}:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#bec057b5076e89703450bb88d755dae8"
                       " already in server, skipping upload", client2.out)
 
         # first client tries to upload again
@@ -356,7 +356,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev}:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#bec057b5076e89703450bb88d755dae8"
                       " already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):
@@ -428,7 +428,7 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password",
                                                              "lasote", "mypass"])
 
-        client2.run("install --reference=pkg/0.1@user/testing")
+        client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
@@ -501,7 +501,7 @@ class UploadTest(unittest.TestCase):
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing -r server1")
         client.run("remove * --force")
-        client.run("install --reference=hello0/1.2.1@user/testing -r server1")
+        client.run("install --requires=hello0/1.2.1@user/testing -r server1")
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)

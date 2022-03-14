@@ -1,4 +1,3 @@
-import logging
 import textwrap
 from configparser import ConfigParser, NoSectionError
 
@@ -19,6 +18,7 @@ os:
     Macos:
         version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
         subsystem: [None, catalyst]
+        sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1"]
     Android:
         api_level: ANY
     iOS:
@@ -27,15 +27,22 @@ os:
                   "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
                   "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
         sdk: ["iphoneos", "iphonesimulator"]
+        sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                        "13.0", "13.1", "13.2", "13.4", "13.5", "13.6", "13.7",
+                        "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "15.0", "15.2"]
     watchOS:
         version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
                   "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
         sdk: ["watchos", "watchsimulator"]
+        sdk_version: [None, "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                        "7.0", "7.1", "7.2", "7.4", "8.0", "8.0.1", "8.3"]
     tvOS:
         version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                   "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
                   "15.0", "15.1"]
         sdk: ["appletvos", "appletvsimulator"]
+        sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                        "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2"]
     FreeBSD:
     SunOS:
     AIX:
@@ -187,35 +194,3 @@ class ConanClientConfigParser(ConfigParser, object):
             except Exception:
                 hooks = []
         return hooks
-
-    @property
-    def logging_level(self):
-        try:
-            level = get_env("CONAN_LOGGING_LEVEL")
-            if level is None:
-                level = self.get_item("log.level")
-            try:
-                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
-                level = parsed_level if parsed_level is not None else int(level)
-            except Exception:
-                level = logging.CRITICAL
-            return level
-        except ConanException:
-            return logging.CRITICAL
-
-    @property
-    def logging_file(self):
-        return get_env('CONAN_LOGGING_FILE', None)
-
-    @staticmethod
-    def get_log_level_by_name(level_name):
-        levels = {
-            "critical": logging.CRITICAL,
-            "error": logging.ERROR,
-            "warning": logging.WARNING,
-            "warn": logging.WARNING,
-            "info": logging.INFO,
-            "debug": logging.DEBUG,
-            "notset": logging.NOTSET
-        }
-        return levels.get(str(level_name).lower())

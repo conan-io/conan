@@ -14,7 +14,6 @@ from conans.model.package_ref import PkgReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
-from conans.util.log import logger
 
 
 class RestV2Methods(RestCommonMethods):
@@ -178,8 +177,6 @@ class RestV2Methods(RestCommonMethods):
         if failed:
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
-        else:
-            logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
@@ -213,8 +210,7 @@ class RestV2Methods(RestCommonMethods):
                 if not self.get_json(package_search_url):
                     return
             except Exception as e:
-                logger.warning("Unexpected error searching {} packages"
-                               " in remote {}: {}".format(ref, self.remote_url, e))
+                pass
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)
             response.charset = "utf-8"
@@ -249,7 +245,6 @@ class RestV2Methods(RestCommonMethods):
 
         for ref in refs:
             url = self.router.remove_recipe(ref)
-            logger.debug("REST: remove: %s" % url)
             response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                              verify=self.verify_ssl)
             if response.status_code == 404:

@@ -58,7 +58,7 @@ def client():
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_locally_build_linux(build_type, shared, client):
-    settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}".format(build_type,
+    settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type,
                                                                                        shared)
     client.run("install . {}".format(settings))
     client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
@@ -77,10 +77,10 @@ def test_locally_build_linux(build_type, shared, client):
     client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
-    client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
+    client.run(f"install --requires=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
     deploy_path = os.path.join(client.current_folder, "mydeploy", "host", "hello", "1.0",
                                build_type, "x86_64")
-    client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/myapp")
+    client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/bin/myapp")
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
 
@@ -89,7 +89,7 @@ def test_locally_build_linux(build_type, shared, client):
 @pytest.mark.tool("ninja")
 def test_locally_build_msvc(build_type, shared, client):
     msvc_version = "15"
-    settings = "-s build_type={} -o hello:shared={}".format(build_type, shared)
+    settings = "-s build_type={} -o hello/*:shared={}".format(build_type, shared)
     client.run("install . {}".format(settings))
 
     client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
@@ -111,8 +111,8 @@ def test_locally_build_msvc(build_type, shared, client):
     client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
-    client.run(f"install --reference=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
-    client.run_command(fr"mydeploy\host\hello\1.0\{build_type}\x86_64\myapp.exe")
+    client.run(f"install --requires=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
+    client.run_command(fr"mydeploy\host\hello\1.0\{build_type}\x86_64\bin\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 
@@ -159,7 +159,7 @@ def test_locally_build_gcc(build_type, shared, client):
     gcc = ("-s os=Windows -s compiler=gcc -s compiler.version=4.9 -s compiler.libcxx=libstdc++ "
            "-s arch=x86_64 -s build_type={}".format(build_type))
 
-    client.run("install . {} -o hello:shared={}".format(gcc, shared))
+    client.run("install . {} -o hello/*:shared={}".format(gcc, shared))
 
     client.run_command('cmake . -G "Ninja" '
                        '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
@@ -178,7 +178,7 @@ def test_locally_build_gcc(build_type, shared, client):
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_locally_build_macos(build_type, shared, client):
-    client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
+    client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello/*:shared={}'
                .format(build_type, shared))
     client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
                        .format(CMakeToolchain.filename))

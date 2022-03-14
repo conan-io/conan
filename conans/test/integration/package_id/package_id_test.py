@@ -42,7 +42,7 @@ def test_remove_option_setting():
     client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows")
     assert "pkg/0.1@user/testing: OPTION OPT=False" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
-    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux -o pkg:opt=True")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux -o pkg/*:opt=True")
     assert "pkg/0.1@user/testing: OPTION OPT=True" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
@@ -78,7 +78,7 @@ def test_value_parse():
     assert "arch: kk=kk" in client.out
     client.run("upload test/0.1@danimtb/testing -r default")
     client.run("remove test/0.1@danimtb/testing --force")
-    client.run("install --reference=test/0.1@danimtb/testing")
+    client.run("install --requires=test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
 
@@ -138,7 +138,7 @@ def test_build_type_remove_windows():
                '-s compiler.version=14 -s build_type=Release')
     client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be",
                                              "Build")})
-    client.run('install --reference=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+    client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Debug')
     client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be", "Cache")})
 

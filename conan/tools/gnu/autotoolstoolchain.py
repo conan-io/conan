@@ -1,8 +1,9 @@
 from conan.tools.build import args_to_string
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, get_apple_sdk_name
-from conan.tools.build.cross_building import cross_building
+from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.build.cross_building import cross_building
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
@@ -18,7 +19,7 @@ class AutotoolsToolchain:
 
         self.configure_args = []
         self.make_args = []
-        self.default_configure_install_args = False
+        self.default_configure_install_args = True
 
         # TODO: compiler.runtime for Visual studio?
         # defines
@@ -48,11 +49,12 @@ class AutotoolsToolchain:
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
 
-        os_sdk = get_apple_sdk_name(conanfile)
+        os_sdk = get_apple_sdk_fullname(conanfile)
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
-
         self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
+
+        self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
@@ -74,6 +76,24 @@ class AutotoolsToolchain:
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+
+    def _get_msvc_runtime_flag(self):
+        msvc_runtime_flag = None
+        if self._conanfile.settings.get_safe("compiler") == "msvc":
+            runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
+            if runtime_type == "Release":
+                values = {"static": "MT", "dynamic": "MD"}
+            else:
+                values = {"static": "MTd", "dynamic": "MDd"}
+            runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+        elif self._conanfile.settings.get_safe("compiler") == "Visual Studio":
+            runtime = self._conanfile.settings.get_safe("compiler.runtime")
+            if runtime:
+                msvc_runtime_flag = "-{}".format(runtime)
+
+        return msvc_runtime_flag
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -121,6 +141,10 @@ class AutotoolsToolchain:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
+        if self.msvc_runtime_flag:
+            self.cxxflags.append(self.msvc_runtime_flag)
+            self.cflags.append(self.msvc_runtime_flag)
+
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
@@ -154,16 +178,22 @@ class AutotoolsToolchain:
         configure_args = []
         configure_args.extend(self.configure_args)
 
-        if self.default_configure_install_args:
+        if self.default_configure_install_args and self._conanfile.package_folder:
+            def _get_cpp_info_value(name):
+                # Why not taking cpp.build? because this variables are used by the "cmake install"
+                # that correspond to the package folder (even if the root is the build directory)
+                elements = getattr(self._conanfile.cpp.package, name)
+                return elements[0] if elements else None
+
             # If someone want arguments but not the defaults can pass them in args manually
             configure_args.extend(
-                    ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
-                     "--bindir=${prefix}/bin",
-                     "--sbindir=${prefix}/bin",
-                     "--libdir=${prefix}/lib",
-                     "--includedir=${prefix}/include",
-                     "--oldincludedir=${prefix}/include",
-                     "--datarootdir=${prefix}/share"])
+                    ['--prefix=%s' % self._conanfile.package_folder.replace("\\", "/"),
+                     "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                     "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
+                     "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                     "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:

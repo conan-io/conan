@@ -1,7 +1,9 @@
 import copy
 import os
+import platform
 from typing import List
 
+from jinja2 import Template
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
@@ -23,9 +25,10 @@ CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
-HOOKS_FOLDER = "hooks"
-TEMPLATES_FOLDER = "templates"
-GENERATORS_FOLDER = "generators"
+EXTENSIONS_FOLDER = "extensions"
+HOOKS_EXTENSION_FOLDER = "hooks"
+DEPLOYERS_EXTENSION_FOLDER = "deploy"
+CUSTOM_COMMANDS_FOLDER = "commands"
 
 
 # TODO: Rename this to ClientHome
@@ -194,7 +197,9 @@ class ClientCache(object):
         if self._new_config is None:
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):
-                self._new_config.loads(load(self.new_config_path))
+                text = load(self.new_config_path)
+                content = Template(text).render({"platform": platform, "os": os})
+                self._new_config.loads(content)
         return self._new_config
 
     @property
@@ -216,8 +221,8 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
-    def generators_path(self):
-        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
+    def custom_commands_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
 
     @property
     def default_profile_path(self):
@@ -229,7 +234,11 @@ class ClientCache(object):
         """
         :return: Hooks folder in client cache
         """
-        return os.path.join(self.cache_folder, HOOKS_FOLDER)
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
+
+    @property
+    def deployers_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, DEPLOYERS_EXTENSION_FOLDER)
 
     @property
     def settings(self):
@@ -247,17 +256,6 @@ class ClientCache(object):
             if os.path.isfile(hook_name) and hook_name.endswith(".py"):
                 hooks.append(hook_name[:-3])
         return hooks
-
-    @property
-    def generators(self):
-        """Returns a list of generator paths inside the generators folder"""
-        generators = []
-        if os.path.exists(self.generators_path):
-            for path in os.listdir(self.generators_path):
-                generator = os.path.join(self.generators_path, path)
-                if os.path.isfile(generator) and generator.endswith(".py"):
-                    generators.append(generator)
-        return generators
 
     def initialize_config(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

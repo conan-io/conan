@@ -63,7 +63,7 @@ def test_shared_requires_static():
     c.save(pkg_cmake("liba", "0.1"))
     c.run("create .")
     c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+    c.run("create . -o libb/*:shared=True")
 
     conanfile = textwrap.dedent("""\
        from conan import ConanFile
@@ -71,7 +71,7 @@ def test_shared_requires_static():
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
@@ -103,7 +103,7 @@ def test_transitive_binary_skipped():
     c.save(pkg_cmake("liba", "0.1"))
     c.run("create .")
     c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+    c.run("create . -o libb/*:shared=True")
     # IMPORTANT: liba binary can be removed, no longer necessary
     c.run("remove liba* -p -f")
 
@@ -113,7 +113,7 @@ def test_transitive_binary_skipped():
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 

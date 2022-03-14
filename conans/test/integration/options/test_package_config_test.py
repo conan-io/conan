@@ -67,7 +67,7 @@ class TestPackageConfigTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create . --user=lasote --channel=stable -o conan_test_package:shared=True")
+        client.run("create . --user=lasote --channel=stable -o conan_test_package/*:shared=True")
         self.assertIn("conan_package/0.1@lasote/stable (test package): shared (configure): True",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable (test package): shared (requirements): True",
@@ -82,7 +82,7 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         #self.assertNotIn("False", client.out)
 
-        client.run("create . --user=lasote --channel=stable -o conan_test_package:shared=False")
+        client.run("create . --user=lasote --channel=stable -o conan_test_package/*:shared=False")
         self.assertIn("conan_package/0.1@lasote/stable (test package): shared (configure): False",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable (test package): shared (requirements): False",
@@ -101,7 +101,7 @@ class TestPackageConfigTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": create_conanfile})
-        client.run("create . --user=lasote --channel=stable -o conan_package:shared=True")
+        client.run("create . --user=lasote --channel=stable -o conan_package/*:shared=True")
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",

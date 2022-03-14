@@ -1,5 +1,3 @@
-from conans.util.log import logger
-
 
 def is_operator(el):
     return el in ["|", "&"]
@@ -111,9 +109,7 @@ def infix_to_postfix(exp):
         elif char == "(":
             stack.append("(")
         else:  # Parse an expression, in our case something like "compiler=gcc"
-            logger.debug("Parsing expression from : %s" % exp[i:])
             expr = _parse_expression(exp[i:])
-            logger.debug("Parsed expression: %s" % expr)
             i += len(expr) - 1
             output.append(expr)
 

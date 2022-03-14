@@ -106,7 +106,7 @@ def test_declared_generators_get_conf():
         from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
-                self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = "mytoolchain.cmake"
+                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain", "mytoolchain.cmake")
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=mytool --version=1.0")

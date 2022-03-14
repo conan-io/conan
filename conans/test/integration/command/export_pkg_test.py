@@ -92,7 +92,7 @@ class helloPythonConan(ConanFile):
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o hello:optionOne=123")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o hello/*:optionOne=123")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
@@ -462,8 +462,10 @@ def test_build_policy_never():
                  "src/header.h": "contents"})
     client.run("export-pkg . --name=pkg --version=1.0")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
-
-    client.run("install --reference=pkg/1.0@ --build")
+    # check for https://github.com/conan-io/conan/issues/10736
+    client.run("export-pkg . --name=pkg --version=1.0")
+    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+    client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "pkg/1.0: Calling build()" not in client.out
 
@@ -474,9 +476,8 @@ def test_build_policy_never_missing():
     client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
                  "consumer.txt": "[requires]\npkg/1.0"})
     client.run("export . --name=pkg --version=1.0")
-
-    client.run("install --reference=pkg/1.0@ --build", assert_error=True)
+    client.run("install --requires=pkg/1.0@ --build='*'", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out
 
-    client.run("install --reference=pkg/1.0@ --build=missing", assert_error=True)
+    client.run("install --requires=pkg/1.0@ --build=missing", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out

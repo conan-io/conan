@@ -160,7 +160,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
             generators = "CMakeDeps", "CMakeToolchain"
             exports_sources = "src/*"
             requires = "greetings/0.0.1"
-            default_options = {{"greetings:components": "{}"}}
+            default_options = {{"greetings*:components": "{}"}}
 
             def build(self):
                 cmake = CMake(self)
@@ -552,7 +552,7 @@ class TestComponentsCMakeGenerators:
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=world --version=0.0.1")
-        client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+        client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
@@ -609,7 +609,7 @@ class TestComponentsCMakeGenerators:
             """)
             client.save({"conanfile.py": conanfile})
             client.run("create . --name=world --version=0.0.1")
-            client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+            client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
             assert ("Component 'greetings::non-existent' not found in 'greetings' "
                     "package requirement" in client.out)
 
@@ -635,7 +635,7 @@ class TestComponentsCMakeGenerators:
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "CMakeDeps", "CMakeToolchain"
-                exports_sources = "src/*"
+                exports_sources = "src/*", "include/*"
 
                 def build(self):
                     cmake = CMake(self)
@@ -643,7 +643,7 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    copy(self, "*.h", src=join(self.source_folder, "src"),
+                    copy(self, "*.h", src=join(self.source_folder, "include"),
                                       dst=join(self.package_folder, "include"))
                     copy(self, "*.lib", src=self.build_folder,
                                         dst=join(self.package_folder, "lib"), keep_path=False)
@@ -665,6 +665,7 @@ class TestComponentsCMakeGenerators:
             project(middle CXX)
             cmake_minimum_required(VERSION 3.1)
             add_library({name} {name}.cpp)
+            target_include_directories({name} PUBLIC ../include)
             """)
         client = TestClient()
         for name in ["expected", "variant"]:

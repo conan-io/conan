@@ -18,7 +18,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Calling source() ", client.out)
         self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_test_only(self):
@@ -57,16 +57,16 @@ class TestPackageTest(unittest.TestCase):
         other_conanfile = GenConanfile().with_name("other").with_version("0.2")
         client.save({CONANFILE: other_conanfile})
         client.run("export . --user=user2 --channel=channel2")
-        client.run("install --reference=other/0.2@user2/channel2 --build")
+        client.run("install --requires=other/0.2@user2/channel2 --build='*'")
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        self.assertIn("hello/0.1@user/channel: Configuring sources", client.out)
+        self.assertIn("hello/0.1@user/channel: Calling source()", client.out)
         self.assertIn("hello/0.1@user/channel: Generated conaninfo.txt", client.out)
 
         # explicit override of user/channel works
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Calling source()", client.out)
         self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_test_with_path_errors(self):

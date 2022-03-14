@@ -1,11 +1,11 @@
-import fnmatch
 import os
 import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
+from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 
 
@@ -14,7 +14,6 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
-    from conan.tools.microsoft.subsystems import subsystem_path
     assert env_filenames
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs = [], []
@@ -131,7 +130,6 @@ class _EnvValue:
                     values.append(placeholder.format(name=self._name))
             else:
                 if self._path:
-                    from conan.tools.microsoft.subsystems import subsystem_path
                     v = subsystem_path(subsystem, v)
                 values.append(v)
         if self._path:
@@ -358,6 +356,7 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            value = value.replace('"', '\\"')
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -394,14 +393,14 @@ class ProfileEnvironment:
     def __bool__(self):
         return bool(self._environments)
 
-    def get_profile_env(self, ref):
+    def get_profile_env(self, ref, is_consumer=False):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
         result = Environment()
         for pattern, env in self._environments.items():
-            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+            if pattern is None or ref_matches(ref, pattern, is_consumer):
                 # Latest declared has priority, copy() necessary to not destroy data
                 result = env.copy().compose_env(result)
         return result

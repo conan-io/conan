@@ -4,7 +4,7 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    get_multiple_remotes
+    get_multiple_remotes, add_lockfile_args
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
@@ -24,6 +24,7 @@ def test(conan_api, parser, *args):
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
     _add_common_install_arguments(parser, build_help=False)  # Package must exist
+    add_lockfile_args(parser)
     parser.add_argument("--require-override", action="append",
                         help="Define a requirement override")
     args = parser.parse_args(*args)
@@ -32,7 +33,7 @@ def test(conan_api, parser, *args):
     ref = RecipeReference.loads(args.reference)
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -60,7 +61,8 @@ def test(conan_api, parser, *args):
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
-    conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")

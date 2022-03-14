@@ -71,8 +71,8 @@ def test_cmake_virtualenv():
 def test_complete():
     client = TestClient()
     client.run("new cmake_lib -d name=myopenssl -d version=1.0")
-    client.run("create . -o myopenssl:shared=True")
-    client.run("create . -o myopenssl:shared=True -s build_type=Debug")
+    client.run("create . -o myopenssl/*:shared=True")
+    client.run("create . -o myopenssl/*:shared=True -s build_type=Debug")
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
@@ -114,6 +114,14 @@ def test_complete():
     client.save({"conanfile.py": mycmake_conanfile,
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
+    client.run("create . --name=mycmake --version=1.0", assert_error=True)
+    assert "The usage of package names `myopenssl:shared` in options is deprecated, " \
+           "use a pattern like `myopenssl/*` or `myopenssl*` instead" in client.out
+
+    # Fix the default options and repeat the create
+    fixed_cf = mycmake_conanfile.replace('default_options = {"myopenssl:shared": True}',
+                                         'default_options = {"myopenssl*:shared": True}')
+    client.save({"conanfile.py": fixed_cf})
     client.run("create . --name=mycmake --version=1.0")
 
     mylib = textwrap.dedent(r"""
@@ -124,7 +132,7 @@ def test_complete():
             settings = "os", "compiler", "build_type", "arch"
             build_requires = "mycmake/1.0"
             requires = "myopenssl/1.0"
-            default_options = {"myopenssl:shared": True}
+            default_options = {"myopenssl/*:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
             generators = "CMakeDeps", "CMakeToolchain"
 

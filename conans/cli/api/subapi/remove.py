@@ -1,7 +1,6 @@
 from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -19,11 +18,6 @@ class RemoveAPI:
         if remote:
             app.remote_manager.remove_recipe(ref, remote)
         else:
-            if app.cache.installed_as_editable(ref):
-                msg = "Package '{r}' is installed as editable, remove it first using " \
-                      "command 'conan editable remove {r}'".format(r=ref)
-                raise ConanException(msg)
-
             self.all_recipe_packages(ref)
             recipe_layout = app.cache.ref_layout(ref)
             app.cache.remove_recipe_layout(recipe_layout)

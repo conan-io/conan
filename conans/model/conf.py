@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 
 from conans.errors import ConanException
-
+from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -33,7 +33,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
-    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchains at the beginning of conan_toolchain.cmake",
     "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
@@ -49,12 +49,16 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
+    "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
+    "tools.microsoft.bash:path": "The path to the shell to run when conanfile.win_bash==True",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
+    "tools.apple:sdk_path": "Path to the SDK to be used"
 }
 
 
@@ -82,6 +86,10 @@ class _ConfValue(object):
 
     @property
     def value(self):
+        if self._value_type is list and _ConfVarPlaceHolder in self._value:
+            v = self._value[:]
+            v.remove(_ConfVarPlaceHolder)
+            return v
         return self._value
 
     def copy(self):
@@ -365,14 +373,14 @@ class ConfDefinition:
             pattern, name = None, pattern_name
         return pattern, name
 
-    def get_conanfile_conf(self, ref):
+    def get_conanfile_conf(self, ref, is_consumer=False):
         """ computes package-specific Conf
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
-            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+            if pattern is None or ref_matches(ref, pattern, is_consumer):
                 # Latest declared has priority, copy() necessary to not destroy data
                 result = conf.copy().compose_conf(result)
         return result

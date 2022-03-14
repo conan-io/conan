@@ -15,7 +15,6 @@ from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.util.env import get_env
 from conans.util.files import mkdir, save, load
-from conans.util.log import logger
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
@@ -78,7 +77,6 @@ class ConanServerConfigParser(ConfigParser):
         except NoSectionError:
             raise ConanException("No section '%s' found" % section)
         except Exception as exc:
-            logger.debug(exc)
             raise ConanException("Invalid configuration, "
                                  "missing %s: %s" % (section, varname))
 

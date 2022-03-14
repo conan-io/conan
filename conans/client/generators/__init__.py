@@ -1,17 +1,15 @@
 import os
 import traceback
 
-from conan.tools.microsoft.subsystems import deduce_subsystem
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import save, mkdir
-from ..tools import chdir
-
+from conans.util.files import save, mkdir, chdir
 
 _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MSBuildDeps", "QbsToolchain",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps"]
+               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
 
 
 def _get_generator_class(generator_name):
@@ -69,6 +67,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "PremakeDeps":
         from conan.tools.premake import PremakeDeps
         return PremakeDeps
+    elif generator_name == "XcodeToolchain":
+        from conan.tools.apple import XcodeToolchain
+        return XcodeToolchain
     else:
         raise ConanException("Internal Conan error: Generator '{}' "
                              "not complete".format(generator_name))
@@ -131,7 +132,6 @@ def _receive_conf(conanfile):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
