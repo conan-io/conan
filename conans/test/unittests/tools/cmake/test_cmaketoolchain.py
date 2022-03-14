@@ -16,7 +16,7 @@ from conans.model.env_info import EnvValues
 def conanfile():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows", "Linux"],
+    c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]}), EnvValues())
@@ -30,22 +30,6 @@ def conanfile():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     return c
-
-
-def test_cmake_make_program(conanfile):
-    toolchain = CMakeToolchain(conanfile)
-    content = toolchain.content
-    assert 'set(CMAKE_MAKE_PROGRAM' not in content
-    conanfile.conf.define("tools.gnu:make_program", "c:\\mymake")
-
-    toolchain = CMakeToolchain(conanfile)
-    content = toolchain.content
-    assert 'set(CMAKE_MAKE_PROGRAM "c:/mymake")' in content
-
-    conanfile.settings.os = "Linux"
-    toolchain = CMakeToolchain(conanfile)
-    content = toolchain.content
-    assert 'set(CMAKE_MAKE_PROGRAM' not in content
 
 
 def test_cmake_toolchain(conanfile):
