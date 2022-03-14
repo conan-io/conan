@@ -7,7 +7,7 @@ from conan.tools.files.files import save_toolchain_args
 from conans import ConanFile, Settings
 from conans.model.conf import Conf
 from conans.model.env_info import EnvValues
-from tools import temp_folder
+from conans.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")
