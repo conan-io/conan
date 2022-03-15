@@ -159,4 +159,4 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("create . bar/0.1.0@user/testing")
         client.run("install bar/0.1.0@user/testing -g markdown")
-        assert "ERROR: 'join_list_sources' is undefined" not in client.out
+        assert "Generator markdown created bar.md" in client.out
