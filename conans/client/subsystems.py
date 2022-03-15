@@ -4,6 +4,7 @@ import re
 import subprocess
 
 from conans.errors import ConanException
+from conans.util.runners import conan_run
 
 WINDOWS = "windows"
 MSYS2 = 'msys2'
@@ -26,14 +27,15 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
         env_win = ["conanbuild.bat"]
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    shell_path = conanfile.conf.get("tools.microsoft.bash:path")
+    shell_path = conanfile.conf.get("tools.microsoft.bash:path", default="bash")
 
     if not platform.system() == "Windows":
         raise ConanException("Command only for Windows operating system")
 
     if not subsystem or not shell_path:
-        raise ConanException("The config 'tools.microsoft.bash:subsystem' and 'tools.microsoft.bash:path' are "
-                             "needed to run commands in a Windows subsystem")
+        raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
+                             "'tools.microsoft.bash:path' are needed to run commands in a "
+                             "Windows subsystem")
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
         msys2_mode_env = Environment()
@@ -71,7 +73,7 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
         wrapped_shell=wrapped_shell,
         inside_command=inside_command)
     conanfile.output.info('Running in windows bash: %s' % final_command)
-    return conanfile._conan_runner(final_command, output=conanfile.output, subprocess=True)
+    return conan_run(final_command)
 
 
 def escape_windows_cmd(command):
