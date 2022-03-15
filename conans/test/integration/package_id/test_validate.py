@@ -277,3 +277,5 @@ class TestValidate(unittest.TestCase):
         c.save({"conanfile.py": conanfile})
         c.run("install .")
         assert "conanfile.py: ERROR: Invalid ID: never ever" in c.out
+        assert "Trying to install dependencies, but this configuration will fail to build a package"\
+               in c.out
