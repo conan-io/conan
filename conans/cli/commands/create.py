@@ -104,33 +104,38 @@ def create(conan_api, parser, *args):
         lockfile.save(lockfile_out)
 
     if test_conanfile_path:
-        out.highlight("\n-------- Testing the package ----------")
-        if len(deps_graph.nodes) == 1:
-            raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
-                                 "use `self.tested_reference_str` to require the "
-                                 "package being created.".format(test_conanfile_path))
-        conanfile_folder = os.path.dirname(test_conanfile_path)
-        output_folder = os.path.join(conanfile_folder, "test_output")
-        shutil.rmtree(output_folder, ignore_errors=True)
-        mkdir(output_folder)
-        conan_api.install.install_consumer(deps_graph=deps_graph,
-                                           source_folder=conanfile_folder,
-                                           output_folder=output_folder)
-        conanfile = deps_graph.root.conanfile
-        conanfile.folders.set_base_build(output_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(output_folder)
-        conanfile.folders.set_base_generators(output_folder)
+        test_package(conan_api, deps_graph, test_conanfile_path)
 
-        out.highlight("\n-------- Testing the package: Building ----------")
-        app = ConanApp(conan_api.cache_folder)
-        run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
-        out.highlight("\n-------- Testing the package: Running test() ----------")
-        conanfile.output.highlight("Running test()")
-        with conanfile_exception_formatter(conanfile, "test"):
-            with chdir(conanfile.build_folder):
-                conanfile.test()
+def test_package(conan_api, deps_graph, test_conanfile_path):
+    out = ConanOutput()
+    out.highlight("\n-------- Testing the package ----------")
+    if len(deps_graph.nodes) == 1:
+        raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
+                             "use `self.tested_reference_str` to require the "
+                             "package being created.".format(test_conanfile_path))
+    conanfile_folder = os.path.dirname(test_conanfile_path)
+    output_folder = os.path.join(conanfile_folder, "test_output")
+    shutil.rmtree(output_folder, ignore_errors=True)
+    mkdir(output_folder)
+    conan_api.install.install_consumer(deps_graph=deps_graph,
+                                       source_folder=conanfile_folder,
+                                       output_folder=output_folder)
+    conanfile = deps_graph.root.conanfile
+    conanfile.folders.set_base_build(output_folder)
+    conanfile.folders.set_base_source(conanfile_folder)
+    conanfile.folders.set_base_package(output_folder)
+    conanfile.folders.set_base_generators(output_folder)
+
+    out.highlight("\n-------- Testing the package: Building ----------")
+    app = ConanApp(conan_api.cache_folder)
+    run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
+
+    out.highlight("\n-------- Testing the package: Running test() ----------")
+    conanfile.output.highlight("Running test()")
+    with conanfile_exception_formatter(conanfile, "test"):
+        with chdir(conanfile.build_folder):
+            conanfile.test()
 
 
 def _get_test_conanfile_path(tf, conanfile_path):
