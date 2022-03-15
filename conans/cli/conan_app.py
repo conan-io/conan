@@ -16,9 +16,8 @@ class ConanApp(object):
 
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder)
-        self.config = self.cache.config
 
-        self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
+        self.hook_manager = HookManager(self.cache.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(self.cache.new_config)
         # To handle remote connections

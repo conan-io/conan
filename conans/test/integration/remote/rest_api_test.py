@@ -50,7 +50,6 @@ class RestApiTest(unittest.TestCase):
                 localdb = LocalDBMock()
                 cache = Mock()
                 cache.localdb = localdb
-                cache.config.non_interactive = False
 
                 mocked_user_input = UserInput(non_interactive=False)
                 mocked_user_input.get_username = Mock(return_value="private_user")

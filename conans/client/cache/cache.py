@@ -9,7 +9,7 @@ from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
+from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -20,7 +20,6 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
 
-CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
@@ -178,13 +177,6 @@ class ClientCache(object):
             raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
-    def config(self):
-        if not self._config:
-            self.initialize_config()
-            self._config = ConanClientConfigParser(self.conan_conf_path)
-        return self._config
-
-    @property
     def new_config_path(self):
         return os.path.join(self.cache_folder, "global.conf")
 
@@ -207,10 +199,6 @@ class ClientCache(object):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
         encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
         return LocalDB.create(localdb_filename, encryption_key=encryption_key)
-
-    @property
-    def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
 
     @property
     def profiles_path(self):
@@ -247,20 +235,6 @@ class ClientCache(object):
         self.initialize_settings()
         content = load(self.settings_path)
         return Settings.loads(content)
-
-    @property
-    def hooks(self):
-        """Returns a list of hooks inside the hooks folder"""
-        hooks = []
-        for hook_name in os.listdir(self.hooks_path):
-            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
-                hooks.append(hook_name[:-3])
-        return hooks
-
-    def initialize_config(self):
-        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
-        if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, get_default_client_conf())
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

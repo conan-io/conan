@@ -21,9 +21,8 @@ valid_hook_methods = ["pre_export", "post_export",
 
 class HookManager(object):
 
-    def __init__(self, hooks_folder, hook_names):
+    def __init__(self, hooks_folder):
         self._hooks_folder = hooks_folder
-        self._hook_names = hook_names
         self.hooks = defaultdict(list)
         self._output = ConanOutput()
         self._mutex = Lock()
@@ -49,13 +48,14 @@ class HookManager(object):
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 
     def load_hooks(self):
-        for name in self._hook_names:
-            self._load_hook(name)
+        for root, dirs, files in os.walk(self._hooks_folder):
+            for f in files:
+                if f.startswith("hook_") and f.endswith(".py"):
+                    hook_path = os.path.join(root, f)
+                    name = os.path.relpath(hook_path, self._hooks_folder).replace("\\", "/")
+                    self._load_hook(hook_path, name)
 
-    def _load_hook(self, hook_name):
-        if not hook_name.endswith(".py"):
-            hook_name = "%s.py" % hook_name
-        hook_path = os.path.normpath(os.path.join(self._hooks_folder, hook_name))
+    def _load_hook(self, hook_path, hook_name):
         try:
             hook, _ = load_python_file(hook_path)
             for method in valid_hook_methods:
@@ -63,8 +63,7 @@ class HookManager(object):
                 if hook_method:
                     self.hooks[method].append((hook_name, hook_method))
         except NotFoundException:
-            self._output.warning("Hook '%s' not found in %s folder. Please remove hook from conan.conf "
-                             "or include it inside the hooks folder." % (hook_name,
-                                                                         self._hooks_folder))
+            self._output.warning("Hook '%s' not found in %s folder."
+                                 % (hook_name, self._hooks_folder))
         except Exception as e:
             raise ConanException("Error loading hook '%s': %s" % (hook_path, str(e)))
