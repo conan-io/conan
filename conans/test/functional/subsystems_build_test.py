@@ -134,8 +134,6 @@ class TestSubsystemsBuild:
         include(default)
         [conf]
         tools.microsoft.bash:subsystem=msys2
-        tools.microsoft.bash:path=bash.exe
-        tools.gnu:make_program=mingw32-make.exe
         """)
         client.save({"conanfile.py": conanfile,
                      "Makefile": makefile,
