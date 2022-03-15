@@ -1,17 +1,14 @@
 import os
 import shutil
 import stat
-import textwrap
 import unittest
 
 import pytest
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
-from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.errors import ConanException
 from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
@@ -101,41 +98,12 @@ class ConfigInstallTest(unittest.TestCase):
                             })
         return folder
 
-    def test_config_hooks(self):
-        # Make sure the conan.conf hooks information is appended
-        folder = temp_folder(path_with_spaces=False)
-        conan_conf = textwrap.dedent("""
-            [hooks]
-            foo
-            custom/custom
-            """)
-        save_files(folder, {"config/conan.conf": conan_conf})
-        client = TestClient()
-        client.run('config install "%s"' % folder)
-        self.assertIn("Processing conan.conf", client.out)
-        content = load(client.cache.conan_conf_path)
-        self.assertEqual(1, content.count("foo"))
-        self.assertEqual(1, content.count("custom/custom"))
-
-        config = ConanClientConfigParser(client.cache.conan_conf_path)
-        hooks = config.get_item("hooks")
-        self.assertIn("foo", hooks)
-        self.assertIn("custom/custom", hooks)
-        client.run('config install "%s"' % folder)
-        self.assertIn("Processing conan.conf", client.out)
-        content = load(client.cache.conan_conf_path)
-        self.assertEqual(1, content.count("foo"))
-        self.assertEqual(1, content.count("custom/custom"))
-
     def test_config_fails_no_storage(self):
         folder = temp_folder(path_with_spaces=False)
         save_files(folder, {"remotes.json": remotes})
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=1.0")
-        conf = load(client.cache.conan_conf_path)
-        conf = conf.replace("path = ./data", "")
-        save(client.cache.conan_conf_path, conf)
         client.run('config install "%s"' % folder)
         client.run("remote list")
         self.assertIn("myrepo1: https://myrepourl.net [Verify SSL: False, Enabled: True]",
@@ -179,13 +147,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
                                            "windows")).splitlines(),
                          win_profile.splitlines())
-        conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
-        self.assertEqual(conan_conf.get_item("log.level"), "10")
-        self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
-        with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
-            conan_conf.get_item("general.config_install")
-        self.assertEqual(conan_conf.get_item("proxies.https"), "None")
-        self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
                          load(os.path.join(self.client.cache_folder, "pylintrc")))
         self.assertEqual("",

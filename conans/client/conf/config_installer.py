@@ -81,9 +81,6 @@ def _process_file(directory, filename, config, cache, folder):
     if filename == "settings.yml":
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
-    elif filename == "conan.conf":
-        output.info("Processing conan.conf")
-        _handle_conan_conf(cache.config, os.path.join(directory, filename))
     elif filename == "remotes.json":
         output.info("Installing remotes.json")
         _filecopy(directory, filename, cache.cache_folder)

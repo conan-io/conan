@@ -9,7 +9,7 @@ from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
+from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -176,13 +176,6 @@ class ClientCache(object):
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
-
-    @property
-    def config(self):
-        if not self._config:
-            self.initialize_config()
-            self._config = ConanClientConfigParser(self.conan_conf_path)
-        return self._config
 
     @property
     def new_config_path(self):

@@ -357,7 +357,6 @@ class ProfileTest(unittest.TestCase):
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
-        self.client.cache.config  # Create the default conf
         save(os.path.join(self.client.cache.profiles_path, "p1"), p1)
         save(os.path.join(self.client.cache.profiles_path, "p2"), p2)
         # Change default profile to p1 => p2 => default
