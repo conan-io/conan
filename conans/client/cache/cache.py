@@ -20,7 +20,6 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
 
-CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
@@ -202,10 +201,6 @@ class ClientCache(object):
         return LocalDB.create(localdb_filename, encryption_key=encryption_key)
 
     @property
-    def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
-
-    @property
     def profiles_path(self):
         return os.path.join(self.cache_folder, PROFILES_FOLDER)
 
@@ -240,20 +235,6 @@ class ClientCache(object):
         self.initialize_settings()
         content = load(self.settings_path)
         return Settings.loads(content)
-
-    @property
-    def hooks(self):
-        """Returns a list of hooks inside the hooks folder"""
-        hooks = []
-        for hook_name in os.listdir(self.hooks_path):
-            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
-                hooks.append(hook_name[:-3])
-        return hooks
-
-    def initialize_config(self):
-        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
-        if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, get_default_client_conf())
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

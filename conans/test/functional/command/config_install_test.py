@@ -91,7 +91,6 @@ class ConfigInstallTest(unittest.TestCase):
                             "hooks/custom/custom.py": "#hook custom",
                             ".git/hooks/foo": "foo",
                             "hooks/.git/hooks/before_push": "before_push",
-                            "config/conan.conf": cache_conan_conf,
                             "pylintrc": "#Custom pylint",
                             "python/myfuncs.py": myfuncpy,
                             "python/__init__.py": ""
