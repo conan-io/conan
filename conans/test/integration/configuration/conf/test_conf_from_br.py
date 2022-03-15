@@ -106,7 +106,8 @@ def test_declared_generators_get_conf():
         from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
-                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain", "mytoolchain.cmake")
+                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain",
+                                      "mytoolchain.cmake")
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=mytool --version=1.0")
@@ -139,3 +140,38 @@ def test_declared_generators_get_conf():
     client.run("install . -pr:b=default")
     toolchain = client.load("conan_toolchain.cmake")
     assert 'include("mytoolchain.cmake")' in toolchain
+
+
+def test_propagate_conf_info():
+    """ test we can use the conf_info to propagate information from the dependencies
+    to the consumers. The propagation is explicit.
+    TO DISCUSS: Should conf be aggregated always from all requires?
+    TODO: Backport to Conan 1.X so UserInfo is not longer necessary in 1.X
+    """
+    # https://github.com/conan-io/conan/issues/9571
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.conf_info.define("user:myinfo1", "val1")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=dep1 --version=1.0")
+    client.run("create . --name=dep2 --version=1.0")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            requires = "dep1/1.0", "dep2/1.0"
+            def generate(self):
+                c1 = self.dependencies["dep1"].conf_info.get("user:myinfo1")
+                c2 = self.dependencies["dep2"].conf_info.get("user:myinfo1")
+                self.output.info("CONF1: {}".format(c1))
+                self.output.info("CONF2: {}".format(c2))
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("install . ")
+    assert "conanfile.py: CONF1: val1" in client.out
+    assert "conanfile.py: CONF2: val1" in client.out
