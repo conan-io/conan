@@ -56,6 +56,7 @@ class HookManager(object):
                     name = os.path.relpath(hook_path, self._hooks_folder).replace("\\", "/")
                     hooks[name] = hook_path
         # Load in alphabetical order, just in case the order is important there is a criteria
+        # This is difficult to test, apparently in most cases os.walk is alphabetical
         for name, hook_path in sorted(hooks.items()):
             self._load_hook(hook_path, name)
 
