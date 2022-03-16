@@ -43,6 +43,7 @@ BUILT_IN_CONFS = {
     # Flags configuration
     "tools.build:cxxflags": "TBD",
     "tools.build:cflags": "TBD",
+    "tools.build:cppflags": "TBD",
     "tools.build:ldflags": "TBD",
     "tools.build:sharedlinkflags": "TBD",
     "tools.build:exelinkflags": "TBD",
