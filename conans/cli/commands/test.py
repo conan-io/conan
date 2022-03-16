@@ -2,6 +2,7 @@ import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
+from conans.cli.commands.create import test_package
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     get_multiple_remotes, add_lockfile_args
@@ -70,26 +71,4 @@ def test(conan_api, parser, *args):
         out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)
 
-    out.highlight("\n-------- Testing the package ----------")
-
-    conanfile_folder = os.path.dirname(path)
-    conan_api.install.install_consumer(deps_graph=deps_graph,
-                                       source_folder=conanfile_folder,
-                                       output_folder=conanfile_folder)
-    conanfile = deps_graph.root.conanfile
-
-    # TODO: This will need to adapt if --build-folder is used
-    conanfile.folders.set_base_build(conanfile_folder)
-    conanfile.folders.set_base_source(conanfile_folder)
-    conanfile.folders.set_base_package(conanfile_folder)
-    conanfile.folders.set_base_generators(conanfile_folder)
-
-    out.highlight("\n-------- Testing the package: Building ----------")
-    app = ConanApp(conan_api.cache_folder)
-    run_build_method(conanfile, app.hook_manager, conanfile_path=path)
-
-    out.highlight("\n-------- Testing the package: Running test() ----------")
-    conanfile.output.highlight("Running test()")
-    with conanfile_exception_formatter(conanfile, "test"):
-        with chdir(conanfile.build_folder):
-            conanfile.test()
+    test_package(conan_api, deps_graph, path)
