@@ -336,46 +336,6 @@ def test_install_error_never(client):
     assert "ERROR: --build=never not compatible with other options" in client.out
 
 
-class TestCliOverride:
-
-    def test_install_cli_override(self, client):
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=zlib --version=1.0")
-        client.run("create . --name=zlib --version=2.0")
-        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
-        client.run("install . --require-override=zlib/2.0")
-        assert "zlib/2.0: Already installed" in client.out
-
-    def test_install_cli_override_in_conanfile_txt(self, client):
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=zlib --version=1.0")
-        client.run("create . --name=zlib --version=2.0")
-        client.save({"conanfile.txt": textwrap.dedent("""\
-        [requires]
-        zlib/1.0
-        """)}, clean_first=True)
-        client.run("install . --require-override=zlib/2.0")
-        assert "zlib/2.0: Already installed" in client.out
-
-    def test_install_ref_cli_override(self, client):
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=zlib --version=1.0")
-        client.run("create . --name=zlib --version=1.1")
-        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
-        client.run("create . --name=pkg --version=1.0")
-        client.run("install --requires=pkg/1.0@ --require-override=zlib/1.1")
-        assert "zlib/1.1: Already installed" in client.out
-
-    def test_create_cli_override(self, client):
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=zlib --version=1.0")
-        client.run("create . --name=zlib --version=2.0")
-        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
-                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . --name=pkg --version=0.1 --require-override=zlib/2.0")
-        assert "zlib/2.0: Already installed" in client.out
-
-
 def test_package_folder_available_consumer():
     """
     The package folder is not available when doing a consumer conan install "."

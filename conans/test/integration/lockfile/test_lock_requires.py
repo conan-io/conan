@@ -285,27 +285,6 @@ def test_conditional_compatible_range(requires):
     assert "dep/0.3" not in client.out
 
 
-def test_locking_require_override_version_ranges():
-    """
-    conanfile.txt locking it dependencies (with version ranges) and using a ``--require-override``
-    can work, because the locked version fits in the consumer range
-    """
-    client = TestClient()
-    client.save({"pkg/conanfile.py": GenConanfile(),
-                 "consumer/conanfile.txt": f"[requires]\npkg/[*]"})
-    client.run("create pkg --name=pkg --version=0.1")
-    client.run("create pkg --name=pkg --version=0.2")
-    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock "
-               "--require-override=pkg/0.1")
-    assert "pkg/0.1" in client.out
-    assert "pkg/0.2" not in client.out
-
-    # This work without override, it matches the range
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
-    assert "pkg/0.1" in client.out
-    assert "pkg/0.2" not in client.out
-
-
 def test_partial_lockfile():
     """
     make sure that a partial lockfile can be applied anywhere downstream without issues,

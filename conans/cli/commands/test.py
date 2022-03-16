@@ -25,8 +25,6 @@ def test(conan_api, parser, *args):
                         help='Provide a package reference to test')
     _add_common_install_arguments(parser, build_help=False)  # Package must exist
     add_lockfile_args(parser)
-    parser.add_argument("--require-override", action="append",
-                        help="Define a requirement override")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -46,7 +44,6 @@ def test(conan_api, parser, *args):
 
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
-                                                         require_overrides=args.require_override,
                                                          remotes=remotes,
                                                          update=args.update,
                                                          lockfile=lockfile)
