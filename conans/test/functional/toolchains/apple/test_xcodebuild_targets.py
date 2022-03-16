@@ -512,10 +512,12 @@ def test_shared_static_targets():
                  "test_package/conanfile.py": test,
                  "test_package/src/example.cpp": test_src,
                  "test_package/CMakeLists.txt": cmakelists})
-    client.run("create . -o *:shared=True")
+    client.run("create . -o *:shared=True -tf None")
     assert "Packaged 1 '.dylib' file: libhello.dylib" in client.out
-    assert "libhello.dylib" in client.out
+    client.run("test test_package hello/1.0@ -o *:shared=True")
+    assert "/build/Release/libhello.dylib" in client.out
 
-    client.run("create .")
+    client.run("create . -tf None")
     assert "Packaged 1 '.a' file: libhello.a" in client.out
-    assert "libhello.a" in client.out
+    client.run("test test_package hello/1.0@")
+    assert "/build/Release/libhello.a" in client.out
