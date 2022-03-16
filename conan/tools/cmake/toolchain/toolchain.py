@@ -8,8 +8,8 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import use_win_mingw
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
-    AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
-    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
+    AndroidSystemBlock, AppleSystemBlock, FPicBlock, GLibCXXBlock, VSRuntimeBlock, \
+    CppStdBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
     SharedLibBock, OutputDirsBlock
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
@@ -121,11 +121,9 @@ class CMakeToolchain(object):
                                        ("android_system", AndroidSystemBlock),
                                        ("apple_system", AppleSystemBlock),
                                        ("fpic", FPicBlock),
-                                       ("arch_flags", ArchitectureBlock),
                                        ("libcxx", GLibCXXBlock),
                                        ("vs_runtime", VSRuntimeBlock),
                                        ("cppstd", CppStdBlock),
-                                       ("parallel", ParallelBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
