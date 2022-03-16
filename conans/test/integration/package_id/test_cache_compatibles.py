@@ -77,18 +77,19 @@ def test_cppstd():
         """)
     save(os.path.join(client.cache.plugins_path, "binary_compatibility.py"), compatibles)
 
-    conanfile = GenConanfile("dep", "0.1").with_settings("compiler", "build_type", "arch")
+    conanfile = GenConanfile("dep", "0.1").with_settings("compiler", "build_type")
     client.save({"dep/conanfile.py": conanfile,
                  "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
 
-    client.run("create dep -s build_type=Release -s compiler.cppstd=14")
+    base_settings = "-s compiler=gcc -s compiler.version=7 -s compiler.libcxx=libstdc++11"
+    client.run(f"create dep {base_settings} -s build_type=Release -s compiler.cppstd=14")
     package_id = client.created_package_id("dep/0.1")
     assert f"dep/0.1: Package '{package_id}' created" in client.out
 
-    client.run("install consumer -s compiler.cppstd=17")
-    assert "dep/0.1: Main binary package '63849d441a65f7cee8b78a0f7befb593454f7a67' missing. "\
+    client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
+    assert "dep/0.1: Main binary package '24697c4fc0c8af2b85b468de52e6d5323c4b4f0d' missing. "\
            f"Using compatible package '{package_id}'" in client.out
 
-    client.run("install consumer -s build_type=Debug -s compiler.cppstd=17")
-    assert "dep/0.1: Main binary package '011637dca375658ceea32c294d1cad79fffdd2a6' missing. " \
+    client.run(f"install consumer {base_settings} -s build_type=Debug -s compiler.cppstd=17")
+    assert "dep/0.1: Main binary package 'c3d18617551d2975da867453ee96f409034f1365' missing. " \
            f"Using compatible package '{package_id}'" in client.out
