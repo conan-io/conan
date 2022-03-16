@@ -496,15 +496,23 @@ class UserToolchain(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
+        {% if cxxflags %}
         string(APPEND CMAKE_CXX_FLAGS_INIT " {{ cxxflags }}")
+        {% endif %}
+        {% if cflags %}
         string(APPEND CMAKE_C_FLAGS_INIT " {{ cflags }}")
+        {% endif %}
+        {% if sharedlinkflags %}
         string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " {{ sharedlinkflags }}")
+        {% endif %}
+        {% if exelinkflags %}
         string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " {{ exelinkflags }}")
+        {% endif %}
     """)
 
     def __init__(self, conanfile, toolchain):
         super(CMakeFlagsInitBlock, self).__init__(conanfile, toolchain)
-        # Load all the predefined Conan C, CXX, etc. flags
+        # Load all the predefined Conan C, CXX, etc. flags for CMakeToolchain
         self._conan_conf = Conf()
         self._process_conan_flags()
 
@@ -514,7 +522,7 @@ class CMakeFlagsInitBlock(Block):
         glib_flag = self._get_glib_flag()
 
         # Defining all the flags
-        self._conan_conf.define("tools.build:cxxflags", [glib_flag, arch_flag, mp_flag])
+        self._conan_conf.define("tools.build:cxxflags", [arch_flag, glib_flag, mp_flag])
         self._conan_conf.define("tools.build:cflags", [arch_flag, mp_flag])
         self._conan_conf.define("tools.build:sharedlinkflags", [arch_flag])
         self._conan_conf.define("tools.build:exelinkflags", [arch_flag])
@@ -561,10 +569,11 @@ class CMakeFlagsInitBlock(Block):
     def context(self):
         # Now, it's time to update the predefined flags with [conf] ones injected by the user
         self._conan_conf.compose_conf(self._conanfile.conf)
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        # Getting all the flags from [conf]
+        cxxflags = self._conan_conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conan_conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._conan_conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conan_conf.get("tools.build:exelinkflags", default=[], check_type=list)
         return {
             "cxxflags": " ".join(cxxflags),
             "cflags": " ".join(cflags),
