@@ -159,6 +159,16 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     threads: [None]
                     exceptions: [None]
 
+    # opt-in for stating which versions of compilers are compatible with other versions
+    # do not specify this as part of your recipe settings
+    #compiler_compatibility:
+    #    apple-clang:
+    #        "13.0": ["12.0", "11.0", "10.0"]
+    #    gcc:
+    #        "9": ["6", "4.8"]
+    #    Visual Studio:
+    #        "16": ["15", "14"]
+
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 

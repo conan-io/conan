@@ -353,7 +353,7 @@ class GraphBinariesAnalyzer(object):
         node.id_indirect_prefs.difference_update(node.id_direct_prefs)
         return node.id_direct_prefs, node.id_indirect_prefs
 
-    def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode):
+    def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode, profile_host):
         """
         Compute the binary package ID of this node
         :param node: the node to compute the package-ID
@@ -399,6 +399,17 @@ class GraphBinariesAnalyzer(object):
         if apple_clang_compatible:
             conanfile.compatible_packages.append(apple_clang_compatible)
 
+        # opt-in compiler compatibility
+        try:
+            compiler_name = conanfile.settings.compiler.value
+            compiler_version = conanfile.settings.compiler.version.value
+            for compat_version in getattr(profile_host.processed_settings.compiler_compatibility[compiler_name], compiler_version).values_range:
+                compat = conanfile.info.clone()
+                compat.settings.compiler.version = compat_version
+                conanfile.compatible_packages.append(compat)
+        except ConanException:
+            pass
+
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             with conan_v2_property(conanfile, 'cpp_info',
@@ -425,7 +436,7 @@ class GraphBinariesAnalyzer(object):
         info = conanfile.info
         node.package_id = info.package_id()
 
-    def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
+    def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None, profile_host=None):
         default_package_id_mode = self._cache.config.default_package_id_mode
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
@@ -441,7 +452,7 @@ class GraphBinariesAnalyzer(object):
                                                                     node.graph_lock_node.options,
                                                                     node.conanfile.options.values))
 
-            self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
+            self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode, profile_host)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
