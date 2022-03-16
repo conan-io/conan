@@ -576,10 +576,10 @@ class CMakeFlagsInitBlock(Block):
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         return {
-            "cxxflags": cxxflags,
-            "cflags": cflags,
-            "sharedlinkflags": sharedlinkflags,
-            "exelinkflags": exelinkflags,
+            "cxxflags": " ".join(cxxflags),
+            "cflags": " ".join(cflags),
+            "sharedlinkflags": " ".join(sharedlinkflags),
+            "exelinkflags": " ".join(exelinkflags),
         }
 
 
