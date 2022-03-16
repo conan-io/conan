@@ -120,9 +120,8 @@ def test_patch(mock_patch_ng):
 def test_patch_real(no_copy_source):
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile, load
-        from conans.tools import save
-        from conan.tools.files import patch
+        from conan import ConanFile
+        from conan.tools.files import patch, save, load
 
         class Pkg(ConanFile):
             name = "mypkg"
@@ -135,19 +134,19 @@ def test_patch_real(no_copy_source):
                 self.folders.build = "build"
 
             def source(self):
-                save("myfile.h", "//dummy contents")
+                save(self, "myfile.h", "//dummy contents")
                 patch(self, patch_file="../patches/mypatch_h", patch_type="security")
-                self.output.info("SOURCE: {}".format(load("myfile.h")))
+                self.output.info("SOURCE: {}".format(load(self, "myfile.h")))
 
             def build(self):
-                save("myfile.cpp", "//dummy contents")
+                save(self, "myfile.cpp", "//dummy contents")
                 if self.no_copy_source:
                     patch_file = os.path.join(self.source_folder, "../patches/mypatch_cpp")
                 else:
                     patch_file = "../patches/mypatch_cpp"
                 patch(self, patch_file=patch_file, patch_type="security",
                       base_path=self.build_folder)
-                self.output.info("BUILD: {}".format(load("myfile.cpp")))
+                self.output.info("BUILD: {}".format(load(self, "myfile.cpp")))
         """ % no_copy_source)
 
     client = TestClient()
