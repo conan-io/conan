@@ -2,7 +2,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path
+    apple_sdk_path, is_apple_os
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
@@ -76,7 +76,11 @@ class AutotoolFlags:
         elif compiler == "qcc":
             return "-Y _%s" % str(libcxx)
 
-    def _get_cross_building_flags(self):
+    def _get_apple_flags(self):
+        os_ = self._conanfile.settings.get_safe("os")
+        if not is_apple_os(os_):
+            return []
+
         apple_min_vflag = apple_min_version_flag(self._conanfile)
         apple_arch_flag = apple_isysroot_flag = None
 
@@ -107,12 +111,12 @@ class AutotoolFlags:
         libcxx = self._get_libcxx_flag()
         fpic = "-fPIC" if self._conanfile.options.get_safe("fPIC") else ""
         msvc_runtime_flag = self._get_msvc_runtime_flag()
-        cross_building_flags = self._get_cross_building_flags()
+        apple_flags = self._get_apple_flags()
 
         # Defining all the flags
-        self._conan_conf.define("tools.build:cxxflags", [libcxx, cppstd, arch_flag, btype_flags, fpic, msvc_runtime_flag] + cross_building_flags)
-        self._conan_conf.define("tools.build:cflags", [arch_flag, btype_flags, fpic, msvc_runtime_flag] + cross_building_flags)
-        self._conan_conf.define("tools.build:ldflags", [arch_flag, btype_lflags] + cross_building_flags)
+        self._conan_conf.define("tools.build:cxxflags", [libcxx, cppstd, arch_flag, btype_flags, fpic, msvc_runtime_flag] + apple_flags)
+        self._conan_conf.define("tools.build:cflags", [arch_flag, btype_flags, fpic, msvc_runtime_flag] + apple_flags)
+        self._conan_conf.define("tools.build:ldflags", [arch_flag, btype_lflags] + apple_flags)
         self._conan_conf.define("tools.build:cppflags", [ndebug, gcc_cxx11_abi])
 
     @staticmethod
@@ -141,7 +145,6 @@ class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
         self._namespace = namespace
-        is_cross_building = cross_building(self._conanfile)
 
         self.configure_args = []
         self.make_args = []
@@ -153,6 +156,7 @@ class AutotoolsToolchain:
         self._target = None
 
         os_build = None
+        is_cross_building = cross_building(self._conanfile)
         if is_cross_building:
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
@@ -160,8 +164,9 @@ class AutotoolsToolchain:
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
         check_using_build_profile(self._conanfile)
-        self._flags = AutotoolFlags(conanfile, is_apple_cross_building=all([is_cross_building,
-                                                                            os_build == "Macos"])).flags
+        # Get all the flags
+        is_apple_cross_building = all([is_cross_building, os_build == "Macos"])
+        self._flags = AutotoolFlags(conanfile, is_apple_cross_building=is_apple_cross_building).flags
 
     def environment(self):
         env = Environment()
