@@ -516,17 +516,6 @@ class CMakeFlagsInitBlock(Block):
         self._conan_conf = Conf()
         self._process_conan_flags()
 
-    def _process_conan_flags(self):
-        mp_flag = self._get_parallel_jobs_flags()
-        arch_flag = self._get_arch_flag()
-        glib_flag = self._get_glib_flag()
-
-        # Defining all the flags
-        self._conan_conf.define("tools.build:cxxflags", [arch_flag, glib_flag, mp_flag])
-        self._conan_conf.define("tools.build:cflags", [arch_flag, mp_flag])
-        self._conan_conf.define("tools.build:sharedlinkflags", [arch_flag])
-        self._conan_conf.define("tools.build:exelinkflags", [arch_flag])
-
     def _get_parallel_jobs_flags(self):
         compiler = self._conanfile.settings.get_safe("compiler")
         if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
@@ -566,10 +555,21 @@ class CMakeFlagsInitBlock(Block):
                 glib_flag = "-library={}".format(glib_flag)
         return glib_flag
 
+    def _process_conan_flags(self):
+        """Calculating all the flags predefined by Conan"""
+        mp_flag = self._get_parallel_jobs_flags()
+        arch_flag = self._get_arch_flag()
+        glib_flag = self._get_glib_flag()
+
+        # Defining all the flags
+        self._conan_conf.define("tools.build:cxxflags", [arch_flag, glib_flag, mp_flag])
+        self._conan_conf.define("tools.build:cflags", [arch_flag, mp_flag])
+        self._conan_conf.define("tools.build:sharedlinkflags", [arch_flag])
+        self._conan_conf.define("tools.build:exelinkflags", [arch_flag])
+
     def context(self):
         # Now, it's time to update the predefined flags with [conf] ones injected by the user
         self._conan_conf.compose_conf(self._conanfile.conf)
-        # Getting all the flags from [conf]
         cxxflags = self._conan_conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conan_conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conan_conf.get("tools.build:sharedlinkflags", default=[], check_type=list)

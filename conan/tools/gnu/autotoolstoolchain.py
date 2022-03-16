@@ -12,7 +12,7 @@ from conans.model.conf import Conf
 from conans.tools import args_to_string
 
 
-class AutotoolFlags:
+class _AutotoolFlags:
 
     def __init__(self, conanfile, is_apple_cross_building=False):
         self._conanfile = conanfile
@@ -95,6 +95,7 @@ class AutotoolFlags:
         return [apple_isysroot_flag, apple_arch_flag, apple_min_vflag]
 
     def _process_conan_flags(self):
+        """Calculating all the flags predefined by Conan"""
         # TODO: compiler.runtime for Visual studio?
         # Defines
         gcc_cxx11_abi = self._get_cxx11_abi_define()
@@ -113,21 +114,24 @@ class AutotoolFlags:
         msvc_runtime_flag = self._get_msvc_runtime_flag()
         apple_flags = self._get_apple_flags()
 
-        # Defining all the flags
-        self._conan_conf.define("tools.build:cxxflags", [libcxx, cppstd, arch_flag, btype_flags, fpic, msvc_runtime_flag] + apple_flags)
-        self._conan_conf.define("tools.build:cflags", [arch_flag, btype_flags, fpic, msvc_runtime_flag] + apple_flags)
-        self._conan_conf.define("tools.build:ldflags", [arch_flag, btype_lflags] + apple_flags)
-        self._conan_conf.define("tools.build:cppflags", [ndebug, gcc_cxx11_abi])
+        # Creating all the flags variables
+        cxxflags = [libcxx, cppstd, arch_flag, fpic, msvc_runtime_flag] + btype_flags + apple_flags
+        cflags = [arch_flag, fpic, msvc_runtime_flag] + btype_flags + apple_flags
+        ldflags = [arch_flag] + btype_lflags + apple_flags
+        cppflags = [ndebug, gcc_cxx11_abi]
+        # Saving them into the internal Conan conf
+        self._conan_conf.define("tools.build:cxxflags", cxxflags)
+        self._conan_conf.define("tools.build:cflags", cflags)
+        self._conan_conf.define("tools.build:ldflags", ldflags)
+        self._conan_conf.define("tools.build:cppflags", cppflags)
 
     @staticmethod
     def _filter_empty_list_fields(v):
         return list(filter(bool, v))
 
-    @property
-    def flags(self):
+    def context(self):
         # Now, it's time to update the predefined flags with [conf] ones injected by the user
         self._conan_conf.compose_conf(self._conanfile.conf)
-        # Getting all the flags from [conf]
         cxxflags = self._conan_conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conan_conf.get("tools.build:cflags", default=[], check_type=list)
         cppflags = self._conan_conf.get("tools.build:cppflags", default=[], check_type=list)
@@ -166,7 +170,7 @@ class AutotoolsToolchain:
         check_using_build_profile(self._conanfile)
         # Get all the flags
         is_apple_cross_building = all([is_cross_building, os_build == "Macos"])
-        self._flags = AutotoolFlags(conanfile, is_apple_cross_building=is_apple_cross_building).flags
+        self._autotool_flags = _AutotoolFlags(conanfile, is_apple_cross_building=is_apple_cross_building)
 
     def environment(self):
         env = Environment()
@@ -175,10 +179,11 @@ class AutotoolsToolchain:
             env.define("CXX", "cl")
             env.define("CC", "cl")
 
-        env.append("CPPFLAGS", self._flags["cppflags"])
-        env.append("CXXFLAGS", self._flags["cxxflags"])
-        env.append("CFLAGS", self._flags["cflags"])
-        env.append("LDFLAGS", self._flags["ldflags"])
+        flags = self._autotool_flags.context()
+        env.append("CPPFLAGS", flags["cppflags"])
+        env.append("CXXFLAGS", flags["cxxflags"])
+        env.append("CFLAGS", flags["cflags"])
+        env.append("LDFLAGS", flags["ldflags"])
         return env
 
     def vars(self):
