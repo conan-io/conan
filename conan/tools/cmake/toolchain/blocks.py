@@ -8,12 +8,13 @@ from jinja2 import Template
 from conan.tools._compilers import architecture_flag
 from conan.tools.apple.apple import is_apple_os
 from conan.tools.build import build_jobs
+from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.build.cross_building import cross_building
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.util.files import load
 
 
@@ -153,9 +154,6 @@ class FPicBlock(Block):
 
 class GLibCXXBlock(Block):
     template = textwrap.dedent("""
-        {% if set_libcxx %}
-        string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
-        {% endif %}
         {% if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
         {% endif %}
@@ -166,32 +164,14 @@ class GLibCXXBlock(Block):
         if not libcxx:
             return None
         compiler = self._conanfile.settings.get_safe("compiler")
-        lib = glib = None
-        if compiler == "apple-clang":
-            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-            lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang" or compiler == "intel-cc":
-            if libcxx == "libc++":
-                lib = "-stdlib=libc++"
-            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-                lib = "-stdlib=libstdc++"
-            # FIXME, something to do with the other values? Android c++_shared?
-        elif compiler == "sun-cc":
-            lib = {"libCstd": "Cstd",
-                   "libstdcxx": "stdcxx4",
-                   "libstlport": "stlport4",
-                   "libstdc++": "stdcpp"
-                   }.get(libcxx)
-            if lib:
-                lib = "-library={}".format(lib)
-
+        glib = None
         if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == "libstdc++":
                 glib = "0"
             elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi",
                                                                       check_type=bool):
                 glib = "1"
-        return {"set_libcxx": lib, "glibcxx": glib}
+        return {"glibcxx": glib}
 
 
 class SkipRPath(Block):
@@ -208,21 +188,6 @@ class SkipRPath(Block):
 
     def context(self):
         return {"skip_rpath": self.skip_rpath}
-
-
-class ArchitectureBlock(Block):
-    template = textwrap.dedent("""
-        string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
-        string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
-        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
-        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
-        """)
-
-    def context(self):
-        arch_flag = architecture_flag(self._conanfile.settings)
-        if not arch_flag:
-            return
-        return {"arch_flag": arch_flag}
 
 
 class CppStdBlock(Block):
@@ -259,24 +224,6 @@ class SharedLibBock(Block):
             return {"shared_libs": shared_libs}
         except ConanException:
             return None
-
-
-class ParallelBlock(Block):
-    template = textwrap.dedent("""
-        string(APPEND CONAN_CXX_FLAGS " /MP{{ parallel }}")
-        string(APPEND CONAN_C_FLAGS " /MP{{ parallel }}")
-        """)
-
-    def context(self):
-        # TODO: Check this conf
-
-        compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
-            return
-
-        jobs = build_jobs(self._conanfile)
-        if jobs:
-            return {"parallel": jobs}
 
 
 class AndroidSystemBlock(Block):
@@ -549,19 +496,91 @@ class UserToolchain(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        if(DEFINED CONAN_CXX_FLAGS)
-          string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
-        endif()
-        if(DEFINED CONAN_C_FLAGS)
-          string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
-        endif()
-        if(DEFINED CONAN_SHARED_LINKER_FLAGS)
-          string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
-        endif()
-        if(DEFINED CONAN_EXE_LINKER_FLAGS)
-          string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
-        endif()
-        """)
+        string(APPEND CMAKE_CXX_FLAGS_INIT " {{ cxxflags }}")
+        string(APPEND CMAKE_C_FLAGS_INIT " {{ cflags }}")
+        string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " {{ sharedlinkflags }}")
+        string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " {{ exelinkflags }}")
+    """)
+
+    conan_conf_template = textwrap.dedent("""
+        tools.build:cxxflags=["{cxxflags}"]
+        tools.build:cflags=["{cflags}"]
+        tools.build:sharedlinkflags=["{sharedlinkflags}"]
+        tools.build:exelinkflags=["{exelinkflags}"]
+    """)
+
+    def __init__(self, conanfile, toolchain):
+        super(CMakeFlagsInitBlock, self).__init__(conanfile, toolchain)
+        # Load all the predefined Conan C, CXX, etc. flags
+        self._conan_conf = ConfDefinition()
+        self._process_conan_flags()
+
+    def _process_conan_flags(self):
+        mp_flag = self._get_parallel_jobs_flags()
+        arch_flag = self._get_arch_flag()
+        glib_flag = self._get_glib_flag()
+
+        # Defining all the flags
+        flags = self.conan_conf_template.format(
+            cxxflags=" ".join([glib_flag, arch_flag, mp_flag]),
+            cflags=" ".join([arch_flag, mp_flag]),
+            sharedlinkflags=arch_flag,
+            exelinkflags=arch_flag
+        )
+        self._conan_conf.loads(flags)
+
+    def _get_parallel_jobs_flags(self):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
+            return ""
+        jobs = build_jobs(self._conanfile)
+        if jobs:
+            return "/MP{}".format(jobs)
+
+    def _get_arch_flag(self):
+        arch_flag = architecture_flag(self._conanfile.settings)
+        if not arch_flag:
+            return ""
+        return arch_flag
+
+    def _get_glib_flag(self):
+        libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
+        if not libcxx:
+            return ""
+
+        compiler = self._conanfile.settings.get_safe("compiler")
+        glib_flag = ""
+        if compiler == "apple-clang":
+            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
+            glib_flag = "-stdlib={}".format(libcxx)
+        elif compiler == "clang" or compiler == "intel-cc":
+            if libcxx == "libc++":
+                glib_flag = "-stdlib=libc++"
+            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
+                glib_flag = "-stdlib=libstdc++"
+            # FIXME, something to do with the other values? Android c++_shared?
+        elif compiler == "sun-cc":
+            glib_flag = {"libCstd": "Cstd",
+                         "libstdcxx": "stdcxx4",
+                         "libstlport": "stlport4",
+                         "libstdc++": "stdcpp"}.get(libcxx)
+            if glib_flag:
+                glib_flag = "-library={}".format(glib_flag)
+        return glib_flag
+
+    def context(self):
+        # now, it's time to update the predefined flags with [conf] ones injected by the user
+        self._conan_conf.update_conf_definition(self._conanfile.conf)
+        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        return {
+            "cxxflags": cxxflags,
+            "cflags": cflags,
+            "sharedlinkflags": sharedlinkflags,
+            "exelinkflags": exelinkflags,
+        }
 
 
 class TryCompileBlock(Block):

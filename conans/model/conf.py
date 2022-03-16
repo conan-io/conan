@@ -39,7 +39,13 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
-    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet"
+    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
+    # Flags configuration
+    "tools.build:cxxflags": "TBD",
+    "tools.build:cflags": "TBD",
+    "tools.build:ldflags": "TBD",
+    "tools.build:sharedlinkflags": "TBD",
+    "tools.build:exelinkflags": "TBD",
 }
 
 

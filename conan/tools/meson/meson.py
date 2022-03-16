@@ -3,6 +3,7 @@ import os
 from conan.tools.build import build_jobs
 from conan.tools.meson import MesonToolchain
 
+
 class Meson(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile

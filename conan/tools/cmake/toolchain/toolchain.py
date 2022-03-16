@@ -133,7 +133,6 @@ class CMakeToolchain(object):
                                        ("shared", SharedLibBock),
                                        ("output_dirs", OutputDirsBlock)])
 
-
         check_using_build_profile(self._conanfile)
 
     def _context(self):
