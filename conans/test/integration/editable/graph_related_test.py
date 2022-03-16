@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 conanfile_base = textwrap.dedent("""\
-    from conans import ConanFile
+    from conan import ConanFile
 
     class APck(ConanFile):
         {body}
@@ -79,7 +79,7 @@ class RelatedToGraphBehavior(object):
         ref_parent = RecipeReference.loads("parent/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(ref_parent))
-        self.t.run('upload {} --all -r default'.format(ref_parent))
+        self.t.run('upload {} -r default'.format(ref_parent))
         self.t.run('remove {} --force -r default'.format(ref_parent))
         self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder))
 
@@ -91,7 +91,7 @@ class RelatedToGraphBehavior(object):
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
-        self.t.run('install --reference={}{}'.format(self.ref, update))
+        self.t.run('install --requires={}{}'.format(self.ref, update))
         self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
@@ -105,7 +105,7 @@ class RelatedToGraphBehavior(object):
         ref_parent = RecipeReference.loads("parent/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(ref_parent))
-        self.t.run('upload {} --all'.format(ref_parent))
+        self.t.run('upload {}'.format(ref_parent))
         self.t.run('remove {} --force'.format(ref_parent))
         self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder()))
 

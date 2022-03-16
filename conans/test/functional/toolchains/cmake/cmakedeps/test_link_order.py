@@ -16,7 +16,9 @@ Check that the link order of libraries is preserved when using CMake generators
 
 
 conanfile = Template(textwrap.dedent("""
-    from conans import ConanFile
+    import os
+    from conan import ConanFile
+    from conan.tools.files import copy
 
     class Recipe(ConanFile):
         name = "{{ref.name}}"
@@ -43,8 +45,8 @@ conanfile = Template(textwrap.dedent("""
             {% endfor %}
 
         def package(self):
-            self.copy("*.a", dst="lib")
-            self.copy("*.lib", dst="lib")
+            copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"))
+            copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"))
 
         def package_info(self):
             self.cpp_info.includedirs = []
@@ -73,7 +75,7 @@ conanfile = Template(textwrap.dedent("""
 """))
 
 conanfile_headeronly = Template(textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class HeaderOnly(ConanFile):
         name = "{{ref.name}}"
@@ -314,7 +316,7 @@ def _run_and_get_lib_order(t, generator):
 
 
 @pytest.mark.parametrize("generator", [None, "Xcode"])
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_cmake_deps(client, generator):
     if generator == "Xcode" and platform.system() != "Darwin":
         pytest.skip("Xcode is needed")

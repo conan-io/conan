@@ -2,15 +2,14 @@ import textwrap
 import unittest
 
 from jinja2 import Template
-from parameterized import parameterized
 
-from conans.client.tools import save
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class TestPackageTestCase(unittest.TestCase):
     conanfile_tpl = Template(textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conan.tools.env import VirtualBuildEnv
 
@@ -51,9 +50,7 @@ class TestPackageTestCase(unittest.TestCase):
             Build:
     """)
 
-    @parameterized.expand([("create conanfile.py name/version@",),
-                           ("test test_package/conanfile.py name/version@",)])
-    def test_command(self, command):
+    def test_command(self):
         t = TestClient()
         save(t.cache.settings_path, self.settings_yml)
         t.save({'br.py': self.conanfile_br,
@@ -63,10 +60,9 @@ class TestPackageTestCase(unittest.TestCase):
                 'profile_build': '[settings]\nos=Build', })
         t.run("export br.py --name=br1 --version=version")
         t.run("export br.py --name=br2 --version=version")
-        t.run("export conanfile.py --name=name --version=version")
 
-        # Execute the actual command we are testing
-        t.run(command + " --build=missing --profile:host=profile_host --profile:build=profile_build")
+        t.run("create conanfile.py --name=name --version=version --build=missing"
+              " --profile:host=profile_host --profile:build=profile_build")
 
         # Build requires are built in the 'build' context:
         self.assertIn("br1/version: >> settings.os: Build", t.out)
@@ -82,3 +78,10 @@ class TestPackageTestCase(unittest.TestCase):
         # Test_package is executed with the same profiles as the package itself
         self.assertIn("name/version (test package): >> settings.os: Host", t.out)
         self.assertIn("name/version (test package): >> settings_build.os: Build", t.out)
+
+        t.run("test test_package/conanfile.py name/version@ "
+              "--profile:host=profile_host --profile:build=profile_build")
+
+        assert "name/version (test package): >> settings.os: Host" in t.out
+        assert "name/version (test package): >> settings_build.os: Build" in t.out
+        assert "name/version (test package): >> tools.get_env('INFO'): br2-Build" in t.out

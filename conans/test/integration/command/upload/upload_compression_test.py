@@ -16,8 +16,8 @@ def test_reuse_uploaded_tgz():
     files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
              "another_export_file.lib": "to compress"}
     client.save(files)
-    client.run("create . user/stable")
-    client.run("upload %s --all -r default" % str(ref))
+    client.run("create . --user=user --channel=stable")
+    client.run("upload %s -r default" % str(ref))
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
 
@@ -30,8 +30,8 @@ def test_reuse_downloaded_tgz():
     files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
              "another_export_file.lib": "to compress"}
     client.save(files)
-    client.run("create . user/stable")
-    client.run("upload hello0/0.1@user/stable --all -r default")
+    client.run("create . --user=user --channel=stable")
+    client.run("upload hello0/0.1@user/stable -r default")
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
 
@@ -39,8 +39,8 @@ def test_reuse_downloaded_tgz():
     # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
     # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
     other_client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    other_client.run("download hello0/0.1@user/stable")
-    other_client.run("upload hello0/0.1@user/stable --all -r default")
+    other_client.run("download hello0/0.1@user/stable -r default")
+    other_client.run("upload hello0/0.1@user/stable -r default")
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
 
@@ -52,14 +52,14 @@ def test_upload_only_tgz_if_needed():
                                                                                   "File")
     client.save({"conanfile.py": conanfile,
                  "file.txt": "contents"})
-    client.run("create . user/stable")
+    client.run("create . --user=user --channel=stable")
 
     # Upload conans
-    client.run("upload %s -r default" % str(ref))
+    client.run("upload %s -r default --only-recipe" % str(ref))
     assert "Compressing recipe" in client.out
 
     # Not needed to tgz again
-    client.run("upload %s -r default" % str(ref))
+    client.run("upload %s -r default --only-recipe" % str(ref))
     assert "Compressing recipe" not in client.out
 
     # Check that conans exists on server
@@ -72,17 +72,17 @@ def test_upload_only_tgz_if_needed():
     pref = package_ids[0]
 
     # Upload package
-    client.run("upload %s:%s -r default" % (str(ref), str(pref.package_id)))
+    client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
     assert "Compressing package" in client.out
 
     # Not needed to tgz again
-    client.run("upload %s:%s -r default" % (str(ref), str(pref.package_id)))
+    client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
     assert "Compressing package" not in client.out
 
     # If we install the package again will be removed and re tgz
-    client.run("install --reference=%s --build missing" % str(ref))
+    client.run("install --requires=%s --build missing" % str(ref))
     # Upload package
-    client.run("upload %s:%s -r default" % (str(ref), str(pref.package_id)))
+    client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
     assert "Compressing package" not in client.out
 
     # Check library on server

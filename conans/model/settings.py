@@ -87,7 +87,6 @@ class SettingsItem(object):
         child_setting = self._get_child(self._value)
         delattr(child_setting, item)
 
-
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)

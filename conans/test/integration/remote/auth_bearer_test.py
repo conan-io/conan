@@ -9,7 +9,7 @@ from conans.util.env import get_env
 from conans.util.files import save
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "hello"
@@ -63,7 +63,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . --user=lasote --channel=stable")
-        errors = client.run("upload hello/0.1@lasote/stable -r default")
+        errors = client.run("upload hello/0.1@lasote/stable -r default --only-recipe")
         self.assertFalse(errors)
 
         expected_calls = [('get_recipe_revisions_references', None),

@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
-from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanErrorConfiguration, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
@@ -14,8 +13,8 @@ def compute_package_id(node, new_config):
     """
     conanfile = node.conanfile
     # Todo: revise this default too. Should have been defined by requirement traits?
-    default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
-    default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
+    default_package_id_mode = new_config.get("core.package_id:default_mode", default="semver_mode")
+    default_python_requires_id_mode = new_config.get("core.package_id:python_default_mode", default="minor_mode")
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
@@ -24,18 +23,20 @@ def compute_package_id(node, new_config):
     data = OrderedDict()
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
-        dep_package_id = require.package_id_mode
+        dep_package_id_mode = require.package_id_mode  # the package_id_mode defined as Require trait
         dep_node = transitive.node
-        require.deduce_package_id_mode(node.conanfile.package_type,
-                                       dep_node.conanfile.package_type)
+
         if require.build:
-            if dep_package_id:
-                req_info = RequirementInfo(dep_node.pref, dep_package_id)
+            if dep_package_id_mode:
+                req_info = RequirementInfo(dep_node.pref, dep_package_id_mode)
                 build_data[require] = req_info
         else:
-            if dep_package_id is None:  # Automatically deducing package_id
-                dep_package_id = default_package_id_mode
-            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
+            if dep_package_id_mode is None:
+                require.deduce_package_id_mode(node.conanfile.package_type,
+                                               dep_node.conanfile.package_type)
+                dep_package_id_mode = require.package_id_mode
+            dep_package_id_mode = dep_package_id_mode or default_package_id_mode
+            req_info = RequirementInfo(dep_node.pref, dep_package_id_mode)
             data[require] = req_info
 
     reqs_info = RequirementsInfo(data)

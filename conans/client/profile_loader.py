@@ -7,13 +7,19 @@ from jinja2 import Environment, FileSystemLoader
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import unquote
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
+
+
+def _unquote(text):
+    text = text.strip()
+    if len(text) > 1 and (text[0] == text[-1]) and text[0] in "'\"":
+        return text[1:-1]
+    return text
 
 
 class ProfileLoader:
@@ -25,25 +31,25 @@ class ProfileLoader:
 
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+            default_profile = cache.new_config.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
-            msg = ("The default profile file doesn't exist:\n"
-                   "{}\n"
-                   "You need to create a default profile or specify your own profile")
+            msg = ("The default host profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:host=<myprofile>'")
             # TODO: Add detailed instructions when cli is improved
             raise ConanException(msg.format(default_profile))
         return default_profile
 
     def get_default_build(self):
         cache = self._cache
-        default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        default_profile = cache.new_config.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
-            msg = ("The default profile file doesn't exist:\n"
-                   "{}\n"
-                   "You need to create a default profile or specify your own profile")
+            msg = ("The default build profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:build=<myprofile>'")
             # TODO: Add detailed instructions when cli is improved
             raise ConanException(msg.format(default_profile))
         return default_profile
@@ -78,13 +84,13 @@ class ProfileLoader:
         profile_path = self.get_profile_path(profile_name, cwd)
         text = load(profile_path)
 
-        if profile_name.endswith(".jinja"):
-            base_path = os.path.dirname(profile_path)
-            context = {"platform": platform,
-                       "os": os,
-                       "profile_dir": base_path}
-            rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
-            text = rtemplate.render(context)
+        # All profiles will be now rendered with jinja2 as first pass
+        base_path = os.path.dirname(profile_path)
+        context = {"platform": platform,
+                   "os": os,
+                   "profile_dir": base_path}
+        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        text = rtemplate.render(context)
 
         try:
             return self._recurse_load_profile(text, profile_path)
@@ -183,7 +189,7 @@ class _ProfileParser(object):
                 name = name.strip()
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
-                value = unquote(value)
+                value = _unquote(value)
                 self.vars[name] = value
 
     def apply_vars(self):
@@ -282,7 +288,7 @@ class _ProfileValueParser(object):
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
-            result_value = unquote(result_value)
+            result_value = _unquote(result_value)
             return packagename, result_name, result_value
 
         package_settings = OrderedDict()

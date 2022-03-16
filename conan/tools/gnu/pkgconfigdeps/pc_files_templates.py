@@ -88,8 +88,8 @@ def _get_formatted_dirs(folders, prefix_path_):
 
 def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp_info=None):
     package_folder = dep.package_folder
-    version = dep.ref.version
     cpp_info = cpp_info or dep.cpp_info
+    version = cpp_info.get_property("component_version") or dep.ref.version
 
     prefix_path = package_folder.replace("\\", "/")
     libdirs = _get_formatted_dirs(cpp_info.libdirs, prefix_path)
@@ -110,7 +110,7 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
     }
     template = Template(_get_pc_file_template(), trim_blocks=True, lstrip_blocks=True,
                         undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)
 
 
 def get_alias_pc_filename_and_content(dep, name, requires, description):
@@ -122,4 +122,4 @@ def get_alias_pc_filename_and_content(dep, name, requires, description):
     }
     template = Template(_get_alias_pc_file_template(), trim_blocks=True,
                         lstrip_blocks=True, undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)

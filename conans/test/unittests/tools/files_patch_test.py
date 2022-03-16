@@ -6,13 +6,12 @@ from parameterized.parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, create_profile
+from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
 base_conanfile = '''
-from conans import ConanFile
-from conan.tools.files import patch
-from conans.tools import replace_in_file
+from conan import ConanFile
+from conan.tools.files import patch, replace_in_file
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -67,7 +66,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_new(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -86,7 +85,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -107,7 +106,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete_no_folder(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             class PatchConan(ConanFile):
                 def source(self):
@@ -129,8 +128,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
     def build(self):
-        from conans.tools import load, save
-        save("oldfile", "legacy code")
+        from conan.tools.files import load, save
+        save(self, "oldfile", "legacy code")
         assert(os.path.exists("oldfile"))
         patch_content = """--- /dev/null
 +++ b/newfile
@@ -144,12 +143,12 @@ class ToolsFilesPatchTest(unittest.TestCase):
 -legacy code
 """
         patch(self, patch_string=patch_content)
-        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("NEW FILE=%s" % load(self, "newfile"))
         self.output.info("OLD FILE=%s" % os.path.exists("oldfile"))
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
@@ -157,7 +156,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
     def test_patch_new_strip(self):
         conanfile = base_conanfile + '''
     def build(self):
-        from conans.tools import load, save
+        from conan.tools.files import load, save
         patch_content = """--- /dev/null
 +++ b/newfile
 @@ -0,0 +0,3 @@
@@ -166,11 +165,11 @@ class ToolsFilesPatchTest(unittest.TestCase):
 +New file!
 """
         patch(self, patch_string=patch_content, strip=1)
-        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("NEW FILE=%s" % load(self, "newfile"))
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
 
@@ -187,7 +186,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("build .", assert_error=True)
         self.assertIn("patch_ng: error: no patch data found!", client.out)
         self.assertIn("ERROR: conanfile.py (test/1.9.10): "
-                      "Error in build() method, line 13", client.out)
+                      "Error in build() method, line 12", client.out)
         self.assertIn("Failed to parse patch: string", client.out)
 
     def test_add_new_file(self):
@@ -195,7 +194,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         """
 
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             import os
 
@@ -272,6 +271,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
         loader = ConanFileLoader(None)
         ret = loader.load_consumer(file_path)
         curdir = os.path.abspath(os.curdir)
+        ret.folders.set_base_source(os.path.dirname(file_path))
         os.chdir(tmp_dir)
         try:
             ret.build()
@@ -283,7 +283,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
 
     def test_fuzzy_patch(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import patch
             import os
 

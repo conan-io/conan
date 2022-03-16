@@ -53,10 +53,6 @@ class MSBuildToolchain(object):
                         '192': 'v142',
                         "193": 'v143'}
             return toolsets[compiler_version]
-        if compiler == "intel":
-            compiler_version = compiler_version if "." in compiler_version else \
-                "%s.0" % compiler_version
-            return "Intel C++ Compiler " + compiler_version
         if compiler == "intel-cc":
             return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":
@@ -126,10 +122,9 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
-        if compile_options is not None:
-            compile_options = eval(compile_options)
-            self.compile_options.update(compile_options)
+        compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
+                                                   default={}, check_type=dict)
+        self.compile_options.update(compile_options)
         parallel = ""
         njobs = build_jobs(self._conanfile)
         if njobs:

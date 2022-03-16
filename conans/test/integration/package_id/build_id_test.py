@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
@@ -9,8 +10,10 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
-conanfile = """from conans import ConanFile
+conanfile = """import os
+from conan import ConanFile
 from conans.util.files import save
+from conan.tools.files import copy
 class MyTest(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -26,9 +29,11 @@ class MyTest(ConanFile):
     def package(self):
         self.output.info("Packaging %s!" % self.settings.build_type)
         if self.settings.build_type == "Debug":
-            self.copy("*", src="debug", keep_path=False)
+            copy(self, "*", os.path.join(self.build_folder, "debug"), self.package_folder,
+                 keep_path=False)
         else:
-            self.copy("*", src="release", keep_path=False)
+            copy(self, "*", os.path.join(self.build_folder, "release"), self.package_folder,
+                 keep_path=False)
 """
 
 consumer = """[requires]
@@ -37,7 +42,7 @@ pkg/0.1@user/channel
 ., * -> .
 """
 
-consumer_py = """from conans import ConanFile
+consumer_py = """from conan import ConanFile
 class MyTest(ConanFile):
     name = "mytest"
     version = "0.1"
@@ -46,8 +51,6 @@ class MyTest(ConanFile):
     def build_id(self):
         self.info_build.settings.build_type = "Any"
         self.info_build.requires.clear()
-    def imports(self):
-        self.copy("*")
 """
 
 package_id_windows_release = "e3ae2a66a27043e92d6c3a54fca88b876036e4cf"
@@ -102,26 +105,27 @@ class BuildIdTest(unittest.TestCase):
 
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/channel -s os=Windows -s build_type=Release")
+        client.run("create . --user=user --channel=channel -s os=Windows -s build_type=Release")
         self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
-        client.run("create . user/channel -s os=Windows -s build_type=Debug")
+        client.run("create . --user=user --channel=channel -s os=Windows -s build_type=Debug")
 
         self.assertNotIn("pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Packaging Debug!", client.out)
 
-        client.run("create . user/channel -s os=Linux -s build_type=Release")
+        client.run("create . --user=user --channel=channel -s os=Linux -s build_type=Release")
 
         self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
-        client.run("create . user/channel -s os=Linux -s build_type=Debug")
+        client.run("create . --user=user --channel=channel -s os=Linux -s build_type=Debug")
         self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Packaging Debug!", client.out)
         self._check_conaninfo(client)
 
     @parameterized.expand([(True, ), (False,)])
+    @pytest.mark.xfail(reason="Remove build folders not implemented yet")
     def test_basic(self, python_consumer):
         client = TestClient()
 
@@ -220,8 +224,8 @@ class BuildIdTest(unittest.TestCase):
     def test_remove_specific_builds(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run('create . user/channel -s os=Windows -s build_type=Debug')
-        client.run('create . user/channel -s os=Windows -s build_type=Release')
+        client.run('create . --user=user --channel=channel -s os=Windows -s build_type=Debug')
+        client.run('create . --user=user --channel=channel -s os=Windows -s build_type=Release')
         ref = RecipeReference.loads("pkg/0.1@user/channel")
 
         def _check_builds():
@@ -252,7 +256,7 @@ class BuildIdTest(unittest.TestCase):
     def test_failed_build(self):
         # Repeated failed builds keep failing
         fail_conanfile = textwrap.dedent("""\
-            from conans import ConanFile
+            from conan import ConanFile
             class MyTest(ConanFile):
                 settings = "os"
                 def build(self):
@@ -261,14 +265,14 @@ class BuildIdTest(unittest.TestCase):
         client = TestClient()
         # NORMAL case, every create fails
         client.save({"conanfile.py": fail_conanfile})
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         # now test with build_id
         client.save({"conanfile.py": fail_conanfile +
                      "    def build_id(self): self.info_build.settings.os = 'any'"})
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)

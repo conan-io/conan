@@ -8,26 +8,20 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 def test_package_python_files():
     client = TestClient(default_server_user=True)
-    conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    keep_python_files=True
-            """.format())
-    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
         """)
     client.save({"conanfile.py": conanfile,
                  "myfile.pyc": "",
                  "myfile.pyo": "",
                  ".DS_Store": ""})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     ref = RecipeReference.loads("pkg/0.1")
     ref_layout = client.get_latest_ref_layout(ref)
     export = ref_layout.export()
@@ -49,9 +43,9 @@ def test_package_python_files():
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
 
-    client.run("upload * --all -r=default --confirm")
+    client.run("upload * -r=default --confirm")
     client.run("remove * -f")
-    client.run("download pkg/0.1@")
+    client.run("download pkg/0.1#*:* -r default")
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))

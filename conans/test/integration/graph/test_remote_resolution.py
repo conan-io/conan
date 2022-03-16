@@ -12,13 +12,14 @@ def test_build_requires_ranges():
     # dependency to cmake/1.0
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . cmake/0.5@")
-    client.run("create . cmake/1.0@")
-    client.run("upload cmake/1.0* -c --all -r default")
+
+    client.run("create . --name=cmake --version=0.5")
+    client.run("create . --name=cmake --version=1.0")
+    client.run("upload cmake/1.0* -c -r default")
     client.run("remove cmake/1.0* -f")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             {}
             tool_requires = "cmake/{}"
@@ -36,7 +37,7 @@ def test_build_requires_ranges():
     client.run("export pkgb --name=pkgb --version=1.0")
     client.run("export pkga --name=pkga --version=1.0")
 
-    client.run("install --reference=pkga/1.0@ --build=missing")
+    client.run("install --requires=pkga/1.0@ --build=missing")
     assert "pkgc/1.0: REQUIRE cmake/0.5: cmake/0.5" in client.out
     assert "pkgc/1.0: CMAKEVER: 0.5!!" in client.out
     assert "pkgb/1.0: REQUIRE cmake/1.0: cmake/1.0" in client.out

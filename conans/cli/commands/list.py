@@ -140,12 +140,6 @@ def list_recipes(conan_api, parser, subparser, *args):
             result = CommandResult(remote=remote)
             try:
                 result.elements = conan_api.search.recipes(args.query, remote)
-            except (NotFoundException, PackageNotFoundException):
-                # This exception must be caught manually due to a server inconsistency:
-                # Artifactory API returns an empty result if the recipe doesn't exist, but
-                # Conan Server returns a 404. This probably should be fixed server side,
-                # but in the meantime we must handle it here
-                pass
             except Exception as e:
                 result.error = str(e)
             results.append(result)
@@ -185,16 +179,12 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             result["ref"] = ref
             try:
                 result.elements = conan_api.list.recipe_revisions(ref, remote=remote)
-            except (NotFoundException, PackageNotFoundException):
-                # This exception must be caught manually due to a server inconsistency:
-                # Artifactory API returns an empty result if the recipe doesn't exist, but
-                # Conan Server returns a 404. This probably should be fixed server side,
-                # but in the meantime we must handle it here
-                pass
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
-
             results.append(result)
+
     print_list_recipe_revisions(results)
     return results
 
@@ -225,6 +215,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = CommandResult()
         try:
             result.elements = conan_api.list.package_revisions(pref)
+        except NotFoundException:
+            result.elements = []
         except Exception as e:
             result.error = str(e)
 
@@ -236,12 +228,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             result = CommandResult(remote=remote)
             try:
                 result.elements = conan_api.list.package_revisions(pref, remote=remote)
-            except (NotFoundException, PackageNotFoundException):
-                # This exception must be caught manually due to a server inconsistency:
-                # Artifactory API returns an empty result if the recipe doesn't exist, but
-                # Conan Server returns a 404. This probably should be fixed server side,
-                # but in the meantime we must handle it here
-                pass
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
             results.append(result)
@@ -273,7 +261,15 @@ def list_packages(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         result = CommandResult()
         try:
-            result.elements = conan_api.list.packages_configurations(ref)
+            # This resolves "latest" or no revision
+            refs = conan_api.search.recipe_revisions(args.reference, args.remote)
+            if len(refs) == 0:
+                raise ConanException("There are no recipes matching the expression '{}'"
+                                     "".format(args.reference))
+            if len(refs) > 1:
+                raise ConanException("The expression '{}' resolved more "
+                                     "than one recipe".format(args.reference))
+            result.elements = conan_api.list.packages_configurations(refs[0])
         except Exception as e:
             result.error = str(e)
         results.append(result)
@@ -284,12 +280,8 @@ def list_packages(conan_api, parser, subparser, *args):
             result = CommandResult(remote=remote)
             try:
                 result.elements = conan_api.list.packages_configurations(ref, remote=remote)
-            except (NotFoundException, PackageNotFoundException):
-                # This exception must be caught manually due to a server inconsistency:
-                # Artifactory API returns an empty result if the recipe doesn't exist, but
-                # Conan Server returns a 404. This probably should be fixed server side,
-                # but in the meantime we must handle it here
-                pass
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
             results.append(result)

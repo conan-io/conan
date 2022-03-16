@@ -1,4 +1,6 @@
+import os
 import platform
+import shutil
 import textwrap
 
 import pytest
@@ -10,7 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.slow
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.fixture(scope="module")
 def setup_client_with_greetings():
     """
@@ -22,8 +24,10 @@ def setup_client_with_greetings():
     bye_cpp = gen_function_cpp(name="bye", includes=["bye"])
 
     conanfile_greetings = textwrap.dedent("""
-        from conans import ConanFile
+        from os.path import join
+        from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class GreetingsConan(ConanFile):
             name = "greetings"
@@ -40,9 +44,12 @@ def setup_client_with_greetings():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 def set_comp_default_dirs():
@@ -86,7 +93,7 @@ def setup_client_with_greetings():
 
     test_package_greetings_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class GreetingsTestConan(ConanFile):
@@ -141,8 +148,10 @@ def setup_client_with_greetings():
 
 def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from os.path import join
+        from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Chat(ConanFile):
             name = "chat"
@@ -151,7 +160,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
             generators = "CMakeDeps", "CMakeToolchain"
             exports_sources = "src/*"
             requires = "greetings/0.0.1"
-            default_options = {{"greetings:components": "{}"}}
+            default_options = {{"greetings*:components": "{}"}}
 
             def build(self):
                 cmake = CMake(self)
@@ -159,9 +168,12 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 {}
@@ -183,7 +195,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class WorldTestConan(ConanFile):
@@ -234,6 +246,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     assert "bye: Debug!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_standard_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -290,6 +303,7 @@ def test_standard_names(setup_client_with_greetings):
             assert "bye: Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_custom_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -336,6 +350,7 @@ def test_custom_names(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
+@pytest.mark.tool("cmake")
 def test_different_namespace(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -380,6 +395,7 @@ def test_different_namespace(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
+@pytest.mark.tool("cmake")
 def test_no_components(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -418,12 +434,14 @@ def test_no_components(setup_client_with_greetings):
 
 
 @pytest.mark.slow
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_same_names():
     client = TestClient()
     conanfile_greetings = textwrap.dedent("""
-        from conans import ConanFile
+        from os.path import join
+        from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class HelloConan(ConanFile):
             name = "hello"
@@ -438,9 +456,12 @@ def test_same_names():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", src=join(self.source_folder, "src"),
+                                  dst=join(self.package_folder, "include"))
+                copy(self, "*.lib", src=self.build_folder,
+                                    dst=join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", src=self.build_folder,
+                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
                 self.cpp_info.components["global"].name = "hello"
@@ -461,7 +482,7 @@ def test_same_names():
         """)
     test_package_greetings_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class HelloTestConan(ConanFile):
@@ -504,12 +525,12 @@ def test_same_names():
     assert "hello: Release!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class TestComponentsCMakeGenerators:
 
     def test_component_not_found(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class GreetingsConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["hello"].libs = ["hello"]
@@ -518,10 +539,10 @@ class TestComponentsCMakeGenerators:
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . greetings/0.0.1@")
+        client.run("create . --name=greetings --version=0.0.1")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class WorldConan(ConanFile):
                 requires = "greetings/0.0.1"
                 def package_info(self):
@@ -530,8 +551,8 @@ class TestComponentsCMakeGenerators:
                     self.cpp_info.components["helloworld"].includedirs = ["include"]
         """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . world/0.0.1@")
-        client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+        client.run("create . --name=world --version=0.0.1")
+        client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
@@ -549,7 +570,7 @@ class TestComponentsCMakeGenerators:
             .with_requirement(RecipeReference("final", "0.1", None, None))
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeDeps
             class HelloConan(ConanFile):
                 name = 'consumer'
@@ -568,7 +589,7 @@ class TestComponentsCMakeGenerators:
 
         def test_component_not_found(self):
             conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class GreetingsConan(ConanFile):
                     def package_info(self):
                         self.cpp_info.components["hello"].libs = ["hello"]
@@ -577,18 +598,18 @@ class TestComponentsCMakeGenerators:
             """)
             client = TestClient()
             client.save({"conanfile.py": conanfile})
-            client.run("create . greetings/0.0.1@")
+            client.run("create . --name=greetings --version=0.0.1")
 
             conanfile = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class WorldConan(ConanFile):
                     requires = "greetings/0.0.1"
                     def package_info(self):
                         self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
             """)
             client.save({"conanfile.py": conanfile})
-            client.run("create . world/0.0.1@")
-            client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
+            client.run("create . --name=world --version=0.0.1")
+            client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
             assert ("Component 'greetings::non-existent' not found in 'greetings' "
                     "package requirement" in client.out)
 
@@ -604,15 +625,17 @@ class TestComponentsCMakeGenerators:
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
-            from conans import ConanFile
+            from os.path import join
+            from conan import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.files import copy
 
             class Conan(ConanFile):
                 name = "{name}"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "CMakeDeps", "CMakeToolchain"
-                exports_sources = "src/*"
+                exports_sources = "src/*", "include/*"
 
                 def build(self):
                     cmake = CMake(self)
@@ -620,9 +643,12 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
+                    copy(self, "*.h", src=join(self.source_folder, "include"),
+                                      dst=join(self.package_folder, "include"))
+                    copy(self, "*.lib", src=self.build_folder,
+                                        dst=join(self.package_folder, "lib"), keep_path=False)
+                    copy(self, "*.a", src=self.build_folder,
+                                      dst=join(self.package_folder, "lib"), keep_path=False)
 
                 def package_info(self):
                     self.cpp_info.set_property("cmake_target_name", "nonstd::nonstd" )
@@ -639,13 +665,16 @@ class TestComponentsCMakeGenerators:
             project(middle CXX)
             cmake_minimum_required(VERSION 3.1)
             add_library({name} {name}.cpp)
+            target_include_directories({name} PUBLIC ../include)
             """)
         client = TestClient()
         for name in ["expected", "variant"]:
-            client.run("new {name}/1.0 -s".format(name=name))
+            client.run("new cmake_lib -d name={name} -d version=1.0 -f".format(name=name))
             client.save({"conanfile.py": conanfile_tpl.format(name=name),
                          "src/CMakeLists.txt": basic_cmake.format(name=name)})
-            client.run("create . {name}/1.0@".format(name=name))
+            shutil.rmtree(os.path.join(client.current_folder, "test_package"))
+            client.run("create .")
+
         middle_cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
@@ -662,8 +691,10 @@ class TestComponentsCMakeGenerators:
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
                                       calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from os.path import join
+            from conan import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.files import copy
 
             class Conan(ConanFile):
                 name = "middle"
@@ -679,21 +710,23 @@ class TestComponentsCMakeGenerators:
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
+                    copy(self, "*.h", src=join(self.source_folder, "src"),
+                                      dst=join(self.package_folder, "include"))
+                    copy(self, "*.lib", src=self.build_folder,
+                                        dst=join(self.package_folder, "lib"), keep_path=False)
+                    copy(self, "*.a", src=self.build_folder,
+                                      dst=join(self.package_folder, "lib"), keep_path=False)
 
                 def package_info(self):
                     self.cpp_info.libs = ["middle"]
             """)
         client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
                      "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
-        client.run("create . middle/1.0@")
+        client.run("create . --name=middle --version=1.0")
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
-            from conan.tools.cmake import CMake
-            from conan.tools.layout import cmake_layout
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -731,7 +764,7 @@ class TestComponentsCMakeGenerators:
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
-        client.run("create . consumer/1.0@")
+        client.run("create . --name=consumer --version=1.0")
 
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out
@@ -739,6 +772,7 @@ class TestComponentsCMakeGenerators:
         assert 'variant/1.0: Hello World Release!' in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("check_components_exist", [False, True, None])
 def test_targets_declared_in_build_modules(check_components_exist):
     """If a require is declaring the component targets in a build_module, CMakeDeps is
@@ -746,11 +780,13 @@ def test_targets_declared_in_build_modules(check_components_exist):
 
     client = TestClient()
     conanfile_hello = str(GenConanfile().with_name("hello").with_version("1.0")
-                          .with_exports_sources("*.cmake", "*.h"))
+                          .with_exports_sources("*.cmake", "*.h")
+                          .with_import("from conan.tools.files import copy")
+                          .with_import("from os.path import join"))
     conanfile_hello += """
     def package(self):
-        self.copy("*.h", dst="include")
-        self.copy("*.cmake", dst="cmake")
+         copy(self, "*.h", src=self.source_folder, dst=join(self.package_folder, "include"))
+         copy(self, "*.cmake", src=self.build_folder, dst=join(self.package_folder, "cmake"))
 
     def package_info(self):
         self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"])
@@ -766,7 +802,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeDeps
 
             class HelloConan(ConanFile):
@@ -829,7 +865,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
                                             in client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmakedeps_targets_no_namespace():
     """
     This test is checking that when we add targets with no namespace for the root cpp_info
@@ -838,7 +874,7 @@ def test_cmakedeps_targets_no_namespace():
     """
     client = TestClient()
     my_pkg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyPkg(ConanFile):
             name = "my_pkg"
             version = "0.1"
@@ -851,7 +887,7 @@ def test_cmakedeps_targets_no_namespace():
     client.run("create my_pkg")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class LibcurlConan(ConanFile):
             name = "libcurl"
             version = "0.1"
@@ -868,7 +904,7 @@ def test_cmakedeps_targets_no_namespace():
     client.run("create libcurl")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
         class Consumer(ConanFile):
             name = "consumer"

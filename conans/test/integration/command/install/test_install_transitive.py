@@ -1,5 +1,4 @@
 import os
-import re
 
 import pytest
 
@@ -32,13 +31,13 @@ def client():
 
 def test_install_combined(client):
     client.run("install . --build=missing")
-    client.run("install . --build=missing --build hello1")
+    client.run("install . --build=missing --build hello1/*")
     assert "hello0/0.1@lasote/stable: Already installed!" in client.out
     assert "hello1/0.1@lasote/stable: Forced build from source" in client.out
 
 
 def test_install_transitive_cache(client):
-    client.run("install --reference=hello2/0.1@lasote/stable --build=missing")
+    client.run("install --requires=hello2/0.1@lasote/stable --build=missing")
     assert "hello0/0.1@lasote/stable: Generating the package" in client.out
     assert "hello1/0.1@lasote/stable: Generating the package" in client.out
     assert "hello2/0.1@lasote/stable: Generating the package" in client.out
@@ -80,10 +79,10 @@ def test_reuse(client):
 
 
 def test_upper_option(client):
-    client.run("install conanfile.py -o hello2:language=1 -o hello1:language=0 "
-               "-o hello0:language=1 --build missing")
-    package_id = re.search(r"hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
-    package_id2 = re.search(r"hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    client.run("install conanfile.py -o hello2*:language=1 -o hello1*:language=0 "
+               "-o hello0*:language=1 --build missing")
+    package_id = client.created_package_id("hello0/0.1@lasote/stable")
+    package_id2 = client.created_package_id("hello1/0.1@lasote/stable")
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
     pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
@@ -100,9 +99,9 @@ def test_upper_option(client):
 
 
 def test_inverse_upper_option(client):
-    client.run("install . -o language=0 -o hello1:language=1 -o hello0:language=0 --build missing")
-    package_id = re.search(r"hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
-    package_id2 = re.search(r"hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    client.run("install . -o language=0 -o hello1*:language=1 -o hello0*:language=0 --build missing")
+    package_id = client.created_package_id("hello0/0.1@lasote/stable")
+    package_id2 = client.created_package_id("hello1/0.1@lasote/stable")
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
     pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
@@ -123,14 +122,14 @@ def test_upper_option_txt(client):
         hello1/0.1@lasote/stable
 
         [options]
-        hello0:language=1
-        hello1:language=0
+        hello0*:language=1
+        hello1*:language=0
         """}
     client.save(files, clean_first=True)
 
     client.run("install . --build missing")
-    package_id = re.search(r"hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
-    package_id2 = re.search(r"hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("hello0/0.1@lasote/stable")
+    package_id2 = client.created_package_id("hello1/0.1@lasote/stable")
     ref = RecipeReference.loads("hello0/0.1@lasote/stable")
     pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()

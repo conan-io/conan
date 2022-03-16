@@ -1,7 +1,6 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.util.log import logger
 
 
 class RestApiClientFactory(object):
@@ -50,7 +49,6 @@ class RestApiClient(object):
                                 self._artifacts_properties)
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
-            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
         return capability in capabilities
 
     def _get_api(self):
@@ -85,11 +83,11 @@ class RestApiClient(object):
     def get_package_file(self, pref, path):
         return self._get_api().get_package_file(pref, path)
 
-    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
-        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
+    def upload_recipe(self, ref, files_to_upload, deleted):
+        return self._get_api().upload_recipe(ref, files_to_upload, deleted)
 
-    def upload_package(self, pref, files_to_upload, retry, retry_wait):
-        return self._get_api().upload_package(pref, files_to_upload, retry, retry_wait)
+    def upload_package(self, pref, files_to_upload):
+        return self._get_api().upload_package(pref, files_to_upload)
 
     def authenticate(self, user, password):
         api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,

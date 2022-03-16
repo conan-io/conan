@@ -11,15 +11,16 @@ class UserChannelTestPackage(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/2501
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class SayConan(ConanFile):
     pass
 """
-        test = """from conans import ConanFile
+        test = """from conan import ConanFile
 class SayConan(ConanFile):
     def requirements(self):
         self.output.info("USER: %s!!" % self.user)
         self.output.info("CHANNEL: %s!!" % self.channel)
+        self.requires(self.tested_reference_str)
 
     def test(self):
         pass
@@ -27,7 +28,7 @@ class SayConan(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        client.run("create . pkg/0.1@conan/testing")
+        client.run("create . --name=pkg --version=0.1 --user=conan --channel=testing")
         self.assertIn("pkg/0.1@conan/testing (test package): USER: conan!!", client.out)
         self.assertIn("pkg/0.1@conan/testing (test package): CHANNEL: testing!!", client.out)
 
@@ -37,7 +38,7 @@ class SameUserChannelTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -52,7 +53,7 @@ class SayConan(ConanFile):
             self.client.run(f"export . --user={user} --channel={channel}")
 
         self.conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello"
@@ -72,7 +73,7 @@ class HelloConan(ConanFile):
                           "test/conanfile.py": self.test_conanfile})
 
     def test_create(self):
-        self.client.run("create . lasote/stable")
+        self.client.run("create . --user=lasote --channel=stable")
         self.assertIn("say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertIn("hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
@@ -80,7 +81,7 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
-        self.client.run("create . other/testing")
+        self.client.run("create . --user=other --channel=testing")
         self.assertIn("say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertIn("hello/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
@@ -101,7 +102,7 @@ class HelloConan(ConanFile):
         # Now use the default_ methods to declare user and channel
         self.client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -128,7 +129,7 @@ class BuildRequireUserChannelTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/2254
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     def build_requirements(self):

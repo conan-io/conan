@@ -4,66 +4,6 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.recipe_ref import RecipeReference
 
 
-def _split_pair(pair, split_char):
-    if not pair or pair == split_char:
-        return None, None
-    if split_char not in pair:
-        return None
-
-    words = pair.split(split_char)
-    if len(words) != 2:
-        raise ConanException("The reference has too many '{}'".format(split_char))
-    else:
-        return words
-
-
-def _noneize(text):
-    if not text or text == "_":
-        return None
-    return text
-
-
-def get_reference_fields(arg_reference, user_channel_input=False):
-    # FIXME: The partial references meaning user/channel should be disambiguated at 2.0
-    """
-    :param arg_reference: String with a complete reference, or
-        only user/channel (if user_channel_input)
-        only name/version (if not pattern_is_user_channel)
-    :param user_channel_input: Two items means user/channel or not.
-    :return: name, version, user and channel, in a tuple
-    """
-
-    if not arg_reference:
-        return None, None, None, None, None
-
-    revision = None
-
-    if "#" in arg_reference:
-        tmp = arg_reference.split("#", 1)
-        revision = tmp[1]
-        arg_reference = tmp[0]
-
-    if "@" in arg_reference:
-        name_version, user_channel = _split_pair(arg_reference, "@")
-        # FIXME: Conan 2.0
-        #  In conan now "xxx@conan/stable" means that xxx is the version, I would say it should
-        #  be the name
-        name, version = _split_pair(name_version, "/") or (None, name_version)
-        user, channel = _split_pair(user_channel, "/") or (user_channel, None)
-
-        return _noneize(name), _noneize(version), _noneize(user), _noneize(channel), \
-               _noneize(revision)
-    else:
-        if user_channel_input:
-            # x/y is user and channel
-            el1, el2 = _split_pair(arg_reference, "/") or (arg_reference, None)
-            return None, None, _noneize(el1), _noneize(el2), _noneize(revision)
-        else:
-            # x/y is name and version
-            el1, el2 = _split_pair(arg_reference, "/") or (arg_reference, None)
-            return _noneize(el1), _noneize(el2), None, None, _noneize(revision)
-
-
 def check_valid_ref(reference, strict_mode=True):
     # FIXME: Check if this is still/how necessary when the new commands
     """

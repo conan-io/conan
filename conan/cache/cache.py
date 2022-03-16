@@ -1,4 +1,3 @@
-import copy
 import hashlib
 import os
 import shutil
@@ -151,11 +150,11 @@ class DataCache:
     def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
         return self._db.get_recipe_revisions_references(ref, only_latest_rrev)
 
-    def get_package_references(self, ref: RecipeReference):
-        return self._db.get_package_references(ref)
+    def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
+        return self._db.get_package_references(ref, only_latest_prev)
 
-    def get_package_revisions_references(self, ref: PkgReference, only_latest_prev=False):
-        return self._db.get_package_revisions_references(ref, only_latest_prev)
+    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+        return self._db.get_package_revisions_references(pref, only_latest_prev)
 
     def get_matching_build_id(self, ref, build_id):
         return self._db.get_matching_build_id(ref, build_id)

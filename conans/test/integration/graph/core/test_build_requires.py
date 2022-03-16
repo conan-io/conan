@@ -563,7 +563,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "app"
                 version = "0.1"
@@ -629,13 +629,13 @@ def test_tool_requires():
 
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . tool1/1.0@")
-    client.run("create . tool2/1.0@")
-    client.run("create . tool3/1.0@")
-    client.run("create . tool4/1.0@")
+    client.run("create . --name=tool1 --version=1.0")
+    client.run("create . --name=tool2 --version=1.0")
+    client.run("create . --name=tool3 --version=1.0")
+    client.run("create . --name=tool4 --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             tool_requires = "tool2/1.0"
             build_requires = "tool3/1.0"
@@ -648,9 +648,8 @@ def test_tool_requires():
                 assert len(self.dependencies.build.values()) == 4
     """)
     client.save({"conanfile.py": consumer})
-    client.run("create . consumer/1.0@")
-    assert """Build requirements
-    tool1/1.0 from local cache - Cache
-    tool2/1.0 from local cache - Cache
-    tool3/1.0 from local cache - Cache
-    tool4/1.0 from local cache - Cache""" in client.out
+    client.run("create . --name=consumer --version=1.0")
+    client.assert_listed_require({"tool1/1.0": "Cache",
+                                  "tool2/1.0": "Cache",
+                                  "tool3/1.0": "Cache",
+                                  "tool4/1.0": "Cache"}, build=True)

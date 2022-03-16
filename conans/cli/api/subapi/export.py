@@ -16,10 +16,9 @@ class ExportAPI:
         self.conan_api = conan_api
 
     @api_method
-    def export(self, path, name, version, user, channel, lockfile=None, ignore_dirty=False):
+    def export(self, path, name, version, user, channel, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
-        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
-                          ignore_dirty=ignore_dirty)
+        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile)
 
     @api_method
     def export_pkg(self, deps_graph, path):
@@ -51,12 +50,11 @@ class ExportAPI:
         pkg_layout = cache.create_build_pkg_layout(pref)
 
         dest_package_folder = pkg_layout.package()
-        conanfile.develop = True
+
         conanfile_folder = os.path.dirname(path)
         conanfile.folders.set_base_build(conanfile_folder)
         conanfile.folders.set_base_source(conanfile_folder)
         conanfile.folders.set_base_package(dest_package_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
         conanfile.folders.set_base_generators(conanfile_folder)
 
         with pkg_layout.set_dirty_context_manager():

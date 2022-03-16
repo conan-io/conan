@@ -2,35 +2,14 @@ import errno
 import gzip
 import hashlib
 import os
-import platform
-import re
 import shutil
 import stat
-import sys
 import tarfile
 import tempfile
 
 
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
-
-from conans.util.log import logger
-
-
-def walk(top, **kwargs):
-    return os.walk(top, **kwargs)
-
-
-def make_read_only(folder_path):
-    for root, _, files in walk(folder_path):
-        for f in files:
-            full_path = os.path.join(root, f)
-            make_file_read_only(full_path)
-
-
-def make_file_read_only(file_path):
-    mode = os.stat(file_path).st_mode
-    os.chmod(file_path, mode & ~ stat.S_IWRITE)
 
 
 _DIRTY_FOLDER = ".dirty"
@@ -102,7 +81,6 @@ def decode_text(text, encoding="auto"):
     if encoding == "auto":
         encoding, bom_length = _detect_encoding(text)
         if encoding is None:
-            logger.warning("can't decode %s" % str(text))
             return text.decode("utf-8", "ignore")  # Ignore not compatible characters
     return text[bom_length:].decode(encoding)
 
@@ -112,19 +90,12 @@ def touch(fname, times=None):
 
 
 def touch_folder(folder):
-    for dirname, _, filenames in walk(folder):
+    for dirname, _, filenames in os.walk(folder):
         for fname in filenames:
             try:
                 os.utime(os.path.join(dirname, fname), None)
             except Exception:
                 pass
-
-
-def normalize(text):
-    if platform.system() == "Windows":
-        return re.sub("\r?\n", "\r\n", text)
-    else:
-        return text
 
 
 def md5(content):
@@ -152,6 +123,7 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
+# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -230,17 +202,6 @@ def load(path, binary=False, encoding="auto"):
         return tmp if binary else decode_text(tmp, encoding)
 
 
-def relative_dirs(path):
-    """ Walks a dir and return a list with the relative paths """
-    ret = []
-    for dirpath, _, fnames in walk(path):
-        for filename in fnames:
-            tmp = os.path.join(dirpath, filename)
-            tmp = tmp[len(path) + 1:]
-            ret.append(tmp)
-    return ret
-
-
 def get_abs_path(folder, origin):
     if folder:
         if os.path.isabs(folder):
@@ -283,26 +244,6 @@ def mkdir(path):
     if os.path.exists(path):
         return
     os.makedirs(path)
-
-
-def path_exists(path, basedir):
-    """Case sensitive, for windows, optional
-    basedir for skip caps check for tmp folders in testing for example (returned always
-    in lowercase for some strange reason)"""
-    exists = os.path.exists(path)
-    if not exists or sys.platform == "linux2":
-        return exists
-
-    path = os.path.normpath(path)
-    path = os.path.relpath(path, basedir)
-    chunks = path.split(os.sep)
-    tmp = basedir
-
-    for chunk in chunks:
-        if chunk and chunk not in os.listdir(tmp):
-            return False
-        tmp = os.path.normpath(tmp + os.sep + chunk)
-    return True
 
 
 def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
@@ -350,7 +291,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base):
-                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
+                # ConanOutput().warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux
@@ -365,19 +306,6 @@ def tar_extract(fileobj, destination_dir):
     the_tar.close()
 
 
-def list_folder_subdirs(basedir, level):
-    ret = []
-    for root, dirs, _ in walk(basedir):
-        rel_path = os.path.relpath(root, basedir)
-        if rel_path == ".":
-            continue
-        dir_split = rel_path.split(os.sep)
-        if len(dir_split) == level:
-            ret.append("/".join(dir_split))
-            dirs[:] = []  # Stop iterate subdirs
-    return ret
-
-
 def exception_message_safe(exc):
     try:
         return str(exc)
@@ -386,9 +314,8 @@ def exception_message_safe(exc):
 
 
 def merge_directories(src, dst, excluded=None):
-    from conans.client.file_copier import FileCopier
-    copier = FileCopier([src], dst)
-    copier(pattern="*", excludes=excluded)
+    from conan.tools.files import copy
+    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
     return
 
 
@@ -403,7 +330,7 @@ def discarded_file(filename):
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in os.walk(folder):
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
@@ -418,3 +345,30 @@ def gather_files(folder):
             file_dict[rel_path] = abs_path
 
     return file_dict, symlinked_folders
+
+
+# FIXME: This is very repeated with the tools.unzip, but wsa needed for config-install unzip
+def unzip(filename, destination="."):
+    from conan.tools.files.files import untargz  # FIXME, importing from conan.tools
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar")):
+        return untargz(filename, destination)
+    if filename.endswith(".gz"):
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        return untargz(filename, destination)
+
+    import zipfile
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    with zipfile.ZipFile(filename, "r") as z:
+        zip_info = z.infolist()
+        extracted_size = 0
+        for file_ in zip_info:
+            extracted_size += file_.file_size
+            z.extract(file_, full_path)

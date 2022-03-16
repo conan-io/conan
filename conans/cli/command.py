@@ -3,7 +3,6 @@ import textwrap
 
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException
-from conans.util.files import save
 
 COMMAND_GROUPS = {
     'consumer': 'Consumer commands',
@@ -15,11 +14,12 @@ COMMAND_GROUPS = {
 class Extender(argparse.Action):
     """Allows using the same flag several times in command and creates a list with the values.
     For example:
-        conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
+        conan install MyPackage/1.2@user/channel -o qt/*:value -o mode/*:2 -s cucumber/*:true
       It creates:
           options = ['qt:value', 'mode:2']
           settings = ['cucumber:true']
     """
+    raise_if_none = False
 
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
@@ -39,6 +39,15 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
+        else:  # When "--argument" with no value is specified
+            if self.raise_if_none:
+                raise argparse.ArgumentError(None, 'Specify --build="*" instead of --build')
+
+
+class ExtenderValueRequired(Extender):
+
+    # If --build is specified, it will raise
+    raise_if_none = True
 
 
 class OnceArgument(argparse.Action):
@@ -102,7 +111,7 @@ class BaseConanCommand(object):
         return self._parser
 
     def _format(self, parser, info, *args):
-        parser_args = parser.parse_args(*args)
+        parser_args, _ = parser.parse_known_args(*args)
         try:
             formatarg = parser_args.format
         except AttributeError:
@@ -118,10 +127,10 @@ class BaseConanCommand(object):
                                                                        list(self._formatters)))
 
         if info is None:
-            raise ConanException("Format {formatarg} was specified, but command didn't return "
+            raise ConanException(f"Format {formatarg} was specified, but command didn't return "
                                  "anything to format")
         result = formatter(info)
-        cli_out_write(result)
+        cli_out_write(result, endline="")
 
 
 class ConanCommand(BaseConanCommand):

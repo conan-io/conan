@@ -37,7 +37,7 @@ class ExportSettingsTest(unittest.TestCase):
     def test_export_read_only(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
@@ -79,7 +79,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "file2")
-        client.run("install --reference=hello/1.2@lasote/stable --build=missing")
+        client.run("install --requires=hello/1.2@lasote/stable --build=missing")
         self.assertIn("hello/1.2@lasote/stable: Generating the package", client.out)
 
         client.save({CONANFILE: conanfile,
@@ -95,13 +95,13 @@ class ExportSettingsTest(unittest.TestCase):
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
-        client.run("install --reference=hello/1.2@lasote/stable --build=hello")
+        client.run("install --requires=hello/1.2@lasote/stable --build=hello*")
         self.assertIn("hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
         # when referencing the parent, the relative folder "sibling" will be kept
         base = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -123,7 +123,7 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -144,7 +144,7 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
@@ -174,12 +174,12 @@ class TestConan(ConanFile):
         conanfile = load(os.path.join(export_path, "conanfile.py"))
         self.assertIn("name = 'hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
-        self.assertIn('conanfile.py: c827eb50b27ef2bf3107bf4bf1e1896b', manifest)
+        self.assertIn('conanfile.py: 5dc49e518e15f3889cb2e097ce4d1dff', manifest)
 
     def test_exclude_basic(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -205,7 +205,7 @@ class TestConan(ConanFile):
     def test_exclude_folders(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -251,7 +251,7 @@ class ExportTest(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
         expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
-                         'conanfile.py': '9a48d65e46c7a8f70604faf0be4d3359',
+                         'conanfile.py': '5dbbe4328efa3342baba2a7ca961ede1',
                          'executable': 'db299d5f0d82f113fad627a21f175e59',
                          'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -271,7 +271,7 @@ class ExportTest(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
 
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
@@ -286,7 +286,7 @@ class OpenSSLConan(ConanFile):
 
         # Now exports being a list instead a tuple
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
@@ -395,13 +395,13 @@ class OpenSSLConan(ConanFile):
 
 class ExportMetadataTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             revision_mode = "{revision_mode}"
         """)
 
-    summary_hash = "bfe8b4a6a2a74966c0c4e0b34705004a"
+    summary_hash = "e87f5e4174765cc6e0cc6f24109d65ef"
 
     def test_revision_mode_hash(self):
         t = TestClient()
@@ -460,7 +460,7 @@ def test_export_casing():
     # https://github.com/conan-io/conan/issues/8583
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports = "file1", "FILE1"
             exports_sources = "test", "TEST"
@@ -483,3 +483,16 @@ def test_export_casing():
     exports_folder = client.get_latest_ref_layout(ref).export()
     assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
     assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
+
+
+def test_export_invalid_refs():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=pkg% --version=0.1", assert_error=True)
+    assert "ERROR: Invalid package name 'pkg%'" in c.out
+    c.run("export . --name=pkg --version=0.1%", assert_error=True)
+    assert "ERROR: Invalid package version '0.1%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user%", assert_error=True)
+    assert "ERROR: Invalid package user 'user%'" in c.out
+    c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
+    assert "ERROR: Invalid package channel 'channel%'" in c.out

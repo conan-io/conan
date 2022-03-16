@@ -214,11 +214,6 @@ def _detect_compiler_version(result):
         return
 
     version = Version(version)
-    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
-    if compiler == "Visual Studio":
-        if version == "17":
-            compiler = "msvc"
-            version = Version("193")
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
@@ -240,19 +235,16 @@ def _detect_compiler_version(result):
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
-        result.append(("compiler.base", "gcc"))  # do the same for Intel?
-        result.append(("compiler.base.libcxx", "libstdc++"))
-        if version >= "1.24":
-            result.append(("compiler.base.version", "7.3"))
-        elif version >= "1.23":
-            result.append(("compiler.base.version", "5.5"))
-        elif version >= "1.21":
-            result.append(("compiler.base.version", "4.8"))
-        else:
-            result.append(("compiler.base.version", "4.4"))
+        result.append(("compiler.libcxx", "libstdc++"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
-    cppstd = _cppstd_default(compiler, version)
-    result.append(("compiler.cppstd", cppstd))
+    if compiler != "msvc":
+        cppstd = _cppstd_default(compiler, version)
+        result.append(("compiler.cppstd", cppstd))
 
 
 def _get_solaris_architecture():

@@ -10,7 +10,7 @@ class InfoTest(unittest.TestCase):
 
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class pkg(ConanFile):
                 name = "{name}"
                 version = "{version}"
@@ -109,8 +109,8 @@ class InfoTest(unittest.TestCase):
     def test_info_build_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/0.1@user/channel")
-        client.run("create . dep/0.1@user/channel")
+        client.run("create . --name=tool --version=0.1 --user=user --channel=channel")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=channel")
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")
@@ -134,7 +134,7 @@ class InfoTest(unittest.TestCase):
 
     def test_topics_graph(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
@@ -147,7 +147,7 @@ class InfoTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
 
         # Topics as tuple
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
@@ -156,7 +156,7 @@ class InfoTest(unittest.TestCase):
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=testing")
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)

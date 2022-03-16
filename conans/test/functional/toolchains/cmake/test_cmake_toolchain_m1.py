@@ -11,33 +11,39 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system", ["Macos", "iOS"])
+@pytest.mark.tool("cmake")
 def test_m1(op_system):
     os_version = "os.version=12.0" if op_system == "iOS" else ""
+    os_sdk = "" if op_system == "Macos" else "os.sdk=iphoneos"
     profile = textwrap.dedent("""
         include(default)
         [settings]
         os={}
         {}
+        {}
         arch=armv8
-    """.format(op_system, os_version))
+    """.format(op_system, os_sdk, os_version))
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"])
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
 
         class TestConan(ConanFile):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "CMakeLists.txt", "main.cpp"
             generators = "CMakeDeps", "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
 
             def build(self):
                 cmake = CMake(self)
@@ -50,8 +56,10 @@ def test_m1(op_system):
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
     client.run("install . --profile:build=default --profile:host=m1")
+
     client.run("build . --profile:build=default --profile:host=m1")
-    main_path = "./main.app/main" if op_system == "iOS" else "./main"
+    main_path = "./cmake-build-release/main.app/main" if op_system == "iOS" \
+        else "./cmake-build-release/main"
     client.run_command(main_path, assert_error=True)
     assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info {}".format(main_path))

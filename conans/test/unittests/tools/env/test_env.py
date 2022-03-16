@@ -7,12 +7,12 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir
+from conans.model.recipe_ref import RecipeReference
+from conans.client.subsystems import WINDOWS
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 def test_compose():
@@ -131,7 +131,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
 def test_profile():
     myprofile = textwrap.dedent("""
         # define
-        MyVar1=MyValue1
+        MyVar1 =MyValue1
         #  append
         MyVar2+=MyValue2
         #  multiple append works
@@ -160,7 +160,7 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_profile_env("")
+    env = profile_env.get_profile_env("", is_consumer=True)
     env = env.vars(ConanFileMock())
     with environment_update({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
@@ -172,7 +172,7 @@ def test_profile():
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
 
-        env = profile_env.get_profile_env("mypkg1/1.0")
+        env = profile_env.get_profile_env(RecipeReference.loads("mypkg1/1.0"))
         env = env.vars(ConanFileMock())
         assert env.get("MyVar1") == "MyValue1"
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
@@ -196,7 +196,7 @@ def env():
 
 def check_command_output(cmd, prevenv):
     result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=prevenv, shell=True).communicate()
+                                 env=prevenv, shell=True).communicate()
     out = result.decode()
 
     assert "MyVar=MyValueB!!" in out
@@ -341,7 +341,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1=MyValue1
-            MyPath1=(path)/my/path1
+            MyPath1 = (path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)
@@ -355,7 +355,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1+=MyValue1
-            MyPath1+=(path)/my/path1
+            MyPath1 +=(path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)

@@ -1,15 +1,13 @@
 import os
 import unittest
 
-import pytest
 
-from conans import load
 from conans.client.hook_manager import HookManager
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
-from conans.util.files import save
+from conans.util.files import save, load
 
 my_hook = """
 def pre_export(output, **kwargs):
@@ -66,9 +64,9 @@ class HookManagerTest(unittest.TestCase):
 
     def _init(self):
         temp_dir = temp_folder()
-        hook_path = os.path.join(temp_dir, "my_hook.py")
-        save(os.path.join(temp_dir, "my_hook.py"), my_hook)
-        hook_manager = HookManager(temp_dir, ["my_hook"])
+        hook_path = os.path.join(temp_dir, "hook_my_hook.py")
+        save(hook_path, my_hook)
+        hook_manager = HookManager(temp_dir)
         return hook_manager, hook_path
 
     def test_load(self):
@@ -76,7 +74,6 @@ class HookManagerTest(unittest.TestCase):
         with redirect_output(output):
             hook_manager, _ = self._init()
             self.assertEqual({}, hook_manager.hooks)
-            self.assertEqual(["my_hook"], hook_manager._hook_names)
             hook_manager.load_hooks()
             self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
 
@@ -88,7 +85,7 @@ class HookManagerTest(unittest.TestCase):
             methods = hook_manager.hooks.keys()
             for method in methods:
                 hook_manager.execute(method)
-                self.assertIn("[HOOK - my_hook.py] %s(): %s()" % (method, method), output)
+                self.assertIn("[HOOK - hook_my_hook.py] %s(): %s()" % (method, method), output)
 
     def test_no_error_with_no_method(self):
         output = RedirectedTestOutput()
@@ -120,4 +117,4 @@ def pre_build(output, **kwargs):
             try:
                 hook_manager.execute("pre_build")
             except ConanException as e:
-                self.assertIn("[HOOK - my_hook.py] pre_build(): My custom exception", str(e))
+                self.assertIn("[HOOK - hook_my_hook.py] pre_build(): My custom exception", str(e))

@@ -14,7 +14,7 @@ from conans.test.utils.tools import TestClient
 def test_reuse_with_modules_and_config(cmake_find_mode):
     t = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             def package_info(self):
@@ -25,14 +25,14 @@ def test_reuse_with_modules_and_config(cmake_find_mode):
         s = 'self.cpp_info.set_property("cmake_find_mode", "{}")'.format(cmake_find_mode)
         conanfile = conanfile.format(s)
     t.save({"conanfile.py": conanfile})
-    t.run("create . mydep/1.0@")
+    t.run("create . --name=mydep --version=1.0")
 
     conanfile = GenConanfile().with_name("myapp").with_require("mydep/1.0")\
                                                  .with_generator("CMakeDeps")\
                                                  .with_settings("build_type", "os", "arch")
     t.save({"conanfile.py": conanfile})
 
-    t.run("install . -if=install -s os=Linux -s compiler=gcc -s compiler.version=6 "
+    t.run("install . --output-folder=install -s os=Linux -s compiler=gcc -s compiler.version=6 "
           "-s compiler.libcxx=libstdc++11")
 
     def exists_config():

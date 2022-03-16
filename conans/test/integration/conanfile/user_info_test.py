@@ -13,7 +13,7 @@ class UserInfoTest(unittest.TestCase):
 
         def export_lib(name, requires, infolines):
             base = textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
 
                 class MyConanfile(ConanFile):
                     name = "%s"
@@ -34,7 +34,7 @@ class UserInfoTest(unittest.TestCase):
         export_lib("lib_d", "lib_c/0.1@lasote/stable", "self.user_info.var1=2")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConanfile(ConanFile):
                 requires = "lib_d/0.1@lasote/stable"
@@ -48,7 +48,7 @@ class UserInfoTest(unittest.TestCase):
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . --name=reuse --version=0.1 --user=lasote --channel=stable")
-        client.run('install --reference=reuse/0.1@lasote/stable --build')
+        client.run('install --requires=reuse/0.1@lasote/stable --build=*')
         # Now try local command with a consumer
-        client.run('install . --build')
+        client.run('install . --build=*')
         client.run("build .")

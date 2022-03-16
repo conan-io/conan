@@ -8,7 +8,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 conanfile_basic = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "basic"
@@ -40,47 +40,39 @@ def pre_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("reference={}".format(repr(kwargs["reference"])))
 
 def post_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("reference={}".format(repr(kwargs["reference"])))
 
 def pre_build(output, conanfile, **kwargs):
     assert conanfile
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
-    else:
-        output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
 
 def post_build(output, conanfile, **kwargs):
     assert conanfile
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
-    else:
-        output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
 
 def pre_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
 
 def post_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
 
 def pre_upload(output, conanfile_path, reference, remote, **kwargs):
     output.info("conanfile_path={}".format(conanfile_path))
@@ -184,8 +176,6 @@ class HookTest(unittest.TestCase):
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
                 [hooks]
                 complete_hook/complete_hook.py'
         """.format())
@@ -222,10 +212,10 @@ class HookTest(unittest.TestCase):
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
         self._check_package_info(client.out)
 
-        client.run("upload basic/0.1@danimtb/testing -r default")
+        client.run("upload basic/0.1@danimtb/testing -r default --only-recipe")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
-        client.run("upload basic/0.1@danimtb/testing -r default --all")
+        client.run("upload basic/0.1@danimtb/testing -r default")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
         self._check_upload_package(conanfile_cache_path, client.out)
@@ -241,7 +231,7 @@ class HookTest(unittest.TestCase):
         self._check_download_package(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
-        client.run("install --reference=basic/0.1@danimtb/testing")
+        client.run("install --requires=basic/0.1@danimtb/testing")
         self._check_download_recipe(conanfile_cache_path, client.out)
         self._check_download_package(conanfile_cache_path, client.out)
         self._check_package_info(client.out)
@@ -419,21 +409,14 @@ class HookTest(unittest.TestCase):
 
     def test_import_hook(self):
         client = TestClient()
-        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "my_hook.py")
+        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "hook_my_hook.py")
         init_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module", "__init__.py")
         custom_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module", "custom.py")
         client.save({init_path: "",
                      custom_path: custom_module,
                      hook_path: my_hook,
                      "conanfile.py": conanfile_basic})
-        conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
-                [hooks]
-                my_hook/my_hook.py
-        """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("export . --user=danimtb --channel=testing")
-        self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
+        self.assertIn("[HOOK - my_hook/hook_my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
                       client.out)

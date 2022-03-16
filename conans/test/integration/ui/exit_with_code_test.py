@@ -10,7 +10,7 @@ class ExitWithCodeTest(unittest.TestCase):
 
         base = '''
 import sys
-from conans import ConanFile
+from conan import ConanFile
 
 class HelloConan(ConanFile):
     name = "hello0"

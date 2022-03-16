@@ -1,5 +1,4 @@
 import copy
-import json
 import os
 import time
 import unittest
@@ -8,13 +7,13 @@ from collections import OrderedDict
 import pytest
 from mock import patch
 
-from conans import load
 from conans.util.env import environment_update
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env import get_env
+from conans.util.files import load
 
 
 @pytest.mark.artifactory_ready
@@ -38,7 +37,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.c_v2.upload_all(self.ref, remote="default")
-        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.package_id))
+        self.c_v2.run("remove {}#*:{} -f -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
         with environment_update({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
@@ -50,8 +49,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
-        self.c_v2.run("install --reference={}".format(self.ref))
-        self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
+        self.c_v2.run("install --requires={}".format(self.ref))
+        self.c_v2.assert_listed_require({str(self.ref): "Downloaded (default)"})
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.package_id),
                       self.c_v2.out)
 
@@ -84,7 +83,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.create(project,
                          conanfile=GenConanfile().with_requirement(lib2).with_requirement(lib3),
                          assert_error=True)
-        self.assertIn("ERROR: version conflict", self.c_v2.out)
+        self.assertIn("ERROR: Version conflict", self.c_v2.out)
         # self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
     def test_alias_to_a_rrev(self):
@@ -100,7 +99,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
 
         # Create an alias to the first revision
-        self.c_v2.run("alias lib/latest@conan/stable {}".format(repr(pref.ref)))
+        self.c_v2.alias("lib/latest@conan/stable", repr(pref.ref))
         alias_ref = RecipeReference.loads("lib/latest@conan/stable")
         exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
         self.assertIn('alias = "{}"'.format(repr(pref.ref)), exported)
@@ -108,7 +107,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(RecipeReference.loads("lib/latest@conan/stable"))
         self.c_v2.remove_all()
 
-        self.c_v2.run("install --reference=lib/(latest)@conan/stable")
+        self.c_v2.run("install --requires=lib/(latest)@conan/stable")
         # Shouldn't be packages in the cache
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 
@@ -126,7 +125,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
         assert len(self.c_v2.cache.get_recipe_revisions_references(self.ref)) == 0
 
-        self.c_v2.run("install --reference={}".format(self.ref))
+        self.c_v2.run("install --requires={}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
         local_prev = self.c_v2.package_revision(pref)
         self.assertEqual(local_rev, pref.ref.revision)
@@ -158,7 +157,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
-        client.run("install --reference={} --update".format(self.ref))
+        client.run("install --requires={} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.package_id), client.out)
 
         rrev = client.recipe_revision(self.ref)
@@ -195,8 +194,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev2_time_remote = self.server.package_revision_time(pref2)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
-        client.run("install --reference={} --update".format(self.ref))
-        self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
+        client.run("install --requires={} --update".format(self.ref))
+        client.assert_listed_require({str(self.ref): "Cache (Updated date) (default)"})
         self.assertIn("Retrieving package {}".format(pref.package_id), client.out)
 
         prev = client.package_revision(pref)
@@ -219,7 +218,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(pref.ref.revision, ref2.revision)
 
         # Now we try to install the self.ref, the binary is missing when using revisions
-        command = "install --reference={}".format(self.ref)
+        command = "install --requires={}".format(self.ref)
         client.run(command, assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
@@ -228,10 +227,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # It fail and won't look the remotes unless --update
         client = self.c_v2
         ref = client.export(self.ref)
-        command = "install --reference={}#fakerevision".format(ref)
+        command = "install --requires={}#fakerevision".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
-        command = "install --reference={}#fakerevision --update".format(ref)
+        command = "install --requires={}#fakerevision --update".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
@@ -241,8 +240,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         new_client.upload_all(self.ref)
 
         # Repeat the install --update pointing to the new reference
-        client.run("install --reference={} --update".format(repr(pref.ref)))
-        self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
+        client.run("install --requires={} --update".format(repr(pref.ref)))
+        client.assert_listed_require({str(self.ref): "Downloaded (default)"})
 
     def test_revision_mismatch_packages_remote(self):
         """If we have a recipe that doesn't match a remote recipe:
@@ -253,7 +252,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client = self.c_v2
         client.remove_all()
         client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
-        command = "install --reference={}".format(self.ref)
+        command = "install --requires={}".format(self.ref)
 
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
@@ -318,22 +317,21 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         pref1 = client.create(self.ref)
         tmp = copy.copy(pref1.ref)
         tmp.revision = None
-        command = "remove {} -f -p {}#{}".format(repr(tmp), pref1.package_id, pref1.revision)
+        command = "remove {}:{}#{} -f".format(repr(tmp), pref1.package_id, pref1.revision)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Specify a recipe revision if you specify a package revision", client.out)
+        self.assertIn("Specify a recipe revision", client.out)
 
         # A wrong PREV doesn't remove the PREV
         pref1 = client.create(self.ref)
-        command = "remove {} -f -p {}#fakeprev".format(repr(pref1.ref), pref1.package_id)
+        command = "remove {}:{}#fakeprev -f".format(repr(pref1.ref), pref1.package_id)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Binary package not found", client.out)
 
         # Everything correct, removes the unique local package revision
         pref1 = client.create(self.ref)
-        command = "remove {} -f -p {}#{}".format(repr(pref1.ref), pref1.package_id,
-                                                 pref1.revision)
+        command = "remove {}:{}#{} -f".format(repr(pref1.ref), pref1.package_id, pref1.revision)
         client.run(command)
         self.assertFalse(client.package_exists(pref1))
 
@@ -397,7 +395,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client = self.c_v2
 
         # Remove pref without RREV in a remote
-        remover_client.run("remove {} -p {} -f -r default".format(self.ref, pref2.package_id))
+        remover_client.run("remove {}#*:{} -f -r default".format(self.ref, pref2.package_id))
         self.assertTrue(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
         self.assertFalse(self.server.package_exists(pref1))
@@ -405,7 +403,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
     def test_remove_remote_package_revision(self):
         """When a client removes a package with PREV
-          (conan remove zlib/1.0@conan/stable -p 12312#PREV)
+          (conan remove zlib/1.0@conan/stable:12312#PREV)
             - If not RREV, the client fails
             - If RREV and PREV:
                 - If v1 it fails in the client (cannot transmit revisions with v1)
@@ -435,15 +433,14 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client = self.c_v2
 
         # Remove PREV without RREV in a remote, the client has to fail
-        command = "remove {} -p {}#{} -f -r default".format(self.ref, pref2.package_id,
+        command = "remove {}:{}#{} -f -r default".format(self.ref, pref2.package_id,
                                                             pref2.revision)
         remover_client.run(command, assert_error=True)
-        self.assertIn("Specify a recipe revision if you specify a package revision",
-                      remover_client.out)
+        self.assertIn("Specify a recipe revision", remover_client.out)
 
         # Remove package with RREV and PREV
-        command = "remove {} -p {}#{} -f -r default".format(repr(pref2.ref),
-                                                            pref2.package_id, pref2.revision)
+        command = "remove {}:{}#{} -f -r default".format(repr(pref2.ref),
+                                                         pref2.package_id, pref2.revision)
         remover_client.run(command)
         self.assertTrue(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
@@ -453,8 +450,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertFalse(self.server.package_exists(pref2))
 
         # Try to remove a missing revision
-        command = "remove {} -p {}#fakerev -f -r default".format(repr(pref2.ref),
-                                                                 pref2.package_id)
+        command = "remove {}:{}#fakerev -f -r default".format(repr(pref2.ref), pref2.package_id)
         remover_client.run(command, assert_error=True)
         fakeref = copy.copy(pref2)
         fakeref.revision = "fakerev"
@@ -829,36 +825,12 @@ class SCMRevisions(unittest.TestCase):
 
     def test_auto_revision_without_commits(self):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
         client.run_command('git init .')
-        client.save({"conanfile.py": str(conanfile)})
-        client.run("create . {}".format(ref), assert_error=True)
+        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
+        client.run("create .", assert_error=True)
         # It error, because the revision_mode is explicitly set to scm
-        self.assertIn("Cannot detect revision using 'scm' mode from repository at "
-                      "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
-                      client.out)
-
-    @pytest.mark.tool_svn
-    def test_auto_revision_even_without_scm_svn(self):
-        """Even without using the scm feature, the revision is detected from repo.
-         Also while we continue working in local, the revision doesn't change, so the packages
-         can be found"""
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
-        commit = client.init_svn_repo("project",
-                                      files={"file.txt": "hey", "conanfile.py": str(conanfile)})
-        client.current_folder = os.path.join(client.current_folder, "project")
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-
-        # Change the conanfile and make another create, the revision should be the same
-        client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-        self.assertIn("New changes!", client.out)
+        self.assertIn("Cannot detect revision using 'scm' mode from repository", client.out)
 
 
 class CapabilitiesRevisionsTest(unittest.TestCase):
@@ -946,8 +918,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
                          pref3.revision)
 
         # Delete the latest from the server
-        self.c_v2.run("remove {} -p {}#{} -r default -f".format(repr(pref3.ref),
-                                                                pref3.package_id, pref3.revision))
+        self.c_v2.run("remove {}:{}#{} -r default -f".format(repr(pref3.ref),pref3.package_id,
+                                                             pref3.revision))
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions_references(pref)]
         self.assertEqual(revs, [pref2.revision, pref1.revision])
@@ -996,14 +968,14 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         # Delete the package revisions (all of them have the same ref#rev and id)
-        command = "remove {} -p {}#{{}} -r default -f".format(repr(pref3.ref), pref3.package_id)
+        command = "remove {}:{}#{{}} -r default -f".format(pref3.ref.repr_notime(), pref3.package_id)
         self.c_v2.run(command.format(pref3.revision))
         self.c_v2.run(command.format(pref2.revision))
         self.c_v2.run(command.format(pref1.revision))
 
         with environment_update({"MY_VAR": "4"}):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run("upload {} -r default -c".format(pref4.repr_notime()))
 
         pref = copy.copy(pref1)
         pref.revision = None
@@ -1018,11 +990,11 @@ def test_touching_other_server():
                            ("remote2", None)])  # None server will crash if touched
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
-    c.run("create . pkg/0.1@conan/channel -s os=Windows")
-    c.run("upload * --all -c -r=remote1")
+    c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")
+    c.run("upload * -c -r=remote1")
     c.run("remove * -f")
 
     # This is OK, binary found
-    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Windows")
-    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    c.run("install --requires=pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install --requires=pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

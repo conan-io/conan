@@ -1,5 +1,4 @@
 import os
-import re
 
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -17,35 +16,34 @@ def get_latest_package_reference(cache, ref, pkgid):
 def test_auto_package_no_components():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
-                     .with_import("from conan.tools.files import AutoPackager"))
+                     .with_import("from conan.tools.files import AutoPackager, save"))
     conan_file += """
 
     def source(self):
-        tools.save("my_source/source_sources/source_stuff.cpp", "")
-        tools.save("my_source/source_includes/include1.hpp", "")
-        tools.save("my_source/source_includes/include2.hpp", "")
-        tools.save("my_source/source_includes2/include3.h", "")
-        tools.save("my_source/source_libs/slibone.a", "")
-        tools.save("my_source/source_libs/slibtwo.a", "")
-        tools.save("my_source/source_libs/bin_to_discard.exe", "")
-        tools.save("my_source/source_bins/source_bin.exe", "")
-        tools.save("my_source/source_frameworks/sframe1/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe2/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe1/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/foo/bar.txt", "")
+        save(self, "source_sources/source_stuff.cpp", "")
+        save(self, "source_includes/include1.hpp", "")
+        save(self, "source_includes/include2.hpp", "")
+        save(self, "source_includes2/include3.h", "")
+        save(self, "source_libs/slibone.a", "")
+        save(self, "source_libs/slibtwo.a", "")
+        save(self, "source_libs/bin_to_discard.exe", "")
+        save(self, "source_bins/source_bin.exe", "")
+        save(self, "source_frameworks/sframe1/include/include.h", "")
+        save(self, "source_frameworks/sframe2/include/include.h", "")
+        save(self, "source_frameworks/sframe1/lib/libframework.lib", "")
+        save(self, "source_frameworks/sframe2/lib/libframework.lib", "")
+        save(self, "source_frameworks/sframe2/foo/bar.txt", "")
 
     def build(self):
-        tools.save("build_sources/build_stuff.cpp", "")
-        tools.save("build_sources/subdir/othersubdir/selective_stuff.cpp", "")
-        tools.save("build_includes/include3.h", "")
-        tools.save("build_includes/include4.hpp", "")
-        tools.save("build_libs/blibone.a", "")
-        tools.save("build_libs/blibtwo.a", "")
-        tools.save("build_bins/build_bin.exe", "")
-        tools.save("build_frameworks/bframe1/include/include.h", "")
-        tools.save("build_frameworks/bframe2/include/include.h", "")
+        save(self, "build_sources/build_stuff.cpp", "")
+        save(self, "build_sources/subdir/othersubdir/selective_stuff.cpp", "")
+        save(self, "build_includes/include3.h", "")
+        save(self, "build_includes/include4.hpp", "")
+        save(self, "build_libs/blibone.a", "")
+        save(self, "build_libs/blibtwo.a", "")
+        save(self, "build_bins/build_bin.exe", "")
+        save(self, "build_frameworks/bframe1/include/include.h", "")
+        save(self, "build_frameworks/bframe2/include/include.h", "")
 
     def layout(self):
         self.folders.source = "my_source"
@@ -90,8 +88,8 @@ def test_auto_package_no_components():
         packager.run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     prev = get_latest_package_reference(client.cache, ref, package_id)
@@ -150,18 +148,17 @@ def test_auto_package_with_components():
     client = TestClient()
     conan_file = str(GenConanfile()
                      .with_settings("build_type")
-                     .with_import("from conans import tools")
-                     .with_import("from conan.tools.files import AutoPackager"))
+                     .with_import("from conan.tools.files import AutoPackager, save"))
     conan_file += """
 
     def source(self):
-        tools.save("includes1/component1.hpp", "")
-        tools.save("includes2/component2.hpp", "")
+        save(self, "includes1/component1.hpp", "")
+        save(self, "includes2/component2.hpp", "")
 
     def build(self):
-        tools.save("build_libs/component1.a", "")
-        tools.save("build_libs/component2.a", "")
-        tools.save("build_bins/component3.exe", "")
+        save(self, "build_libs/component1.a", "")
+        save(self, "build_libs/component2.a", "")
+        save(self, "build_bins/component3.exe", "")
 
     def layout(self):
         # Build and source infos
@@ -183,8 +180,8 @@ def test_auto_package_with_components():
         packager.run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
@@ -238,7 +235,7 @@ def test_auto_package_with_components_declared_badly():
     """
 
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@", assert_error=True)
+    client.run("create . --name=lib --version=1.0", assert_error=True)
     assert "There are components declared in cpp.source.components or in " \
            "cpp.build.components that are not declared in " \
            "cpp.package.components" in client.out
@@ -252,25 +249,24 @@ def test_auto_package_default_patterns():
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.files import AutoPackager"))
+                     .with_import("from conan.tools.files import AutoPackager, save"))
     conan_file += """
     def source(self):
-        tools.save("myincludes/mylib.header","")
-        tools.save("myincludes/mylib.h","")
-        tools.save("myincludes/mylib.hpp","")
-        tools.save("myincludes/mylib.hxx","")
+        save(self, "myincludes/mylib.header","")
+        save(self, "myincludes/mylib.h","")
+        save(self, "myincludes/mylib.hpp","")
+        save(self, "myincludes/mylib.hxx","")
 
     def build(self):
-        tools.save("ugly_build/mylib.a", "")
-        tools.save("ugly_build/mylib.so", "")
-        tools.save("ugly_build/mylib.so.0", "")
-        tools.save("ugly_build/mylib.lib", "")
-        tools.save("ugly_build/mylib.dylib", "")
-        tools.save("ugly_build/app.exe", "")
-        tools.save("ugly_build/app.dll", "")
-        tools.save("ugly_build/mylib.janderclander", "")
+        save(self, "ugly_build/mylib.a", "")
+        save(self, "ugly_build/mylib.so", "")
+        save(self, "ugly_build/mylib.so.0", "")
+        save(self, "ugly_build/mylib.lib", "")
+        save(self, "ugly_build/mylib.dylib", "")
+        save(self, "ugly_build/app.exe", "")
+        save(self, "ugly_build/app.dll", "")
+        save(self, "ugly_build/mylib.janderclander", "")
 
     def layout(self):
         self.cpp.source.includedirs = ["myincludes"]
@@ -281,8 +277,8 @@ def test_auto_package_default_patterns():
         AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
@@ -322,7 +318,7 @@ def test_auto_package_default_folders_with_components():
         AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
 
 
 def test_auto_package_with_custom_package_too():
@@ -330,15 +326,14 @@ def test_auto_package_with_custom_package_too():
        self.folders.package_files()"""
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.files import AutoPackager"))
+                     .with_import("from conan.tools.files import AutoPackager, save"))
     conan_file += """
     def source(self):
-        tools.save("myincludes/mylib.header","")
+        save(self, "myincludes/mylib.header","")
 
     def build(self):
-        tools.save("ugly_build/mylib.a", "")
+        save(self, "ugly_build/mylib.a", "")
 
     def layout(self):
         self.cpp.source.includedirs = ["myincludes"]
@@ -355,7 +350,7 @@ def test_auto_package_with_custom_package_too():
 
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     assert "Package method called!" in client.out
 
 
@@ -364,15 +359,14 @@ def test_auto_package_only_one_destination():
     where to put the artifacts (very weird situation a package with two include/)"""
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.files import AutoPackager"))
+                     .with_import("from conan.tools.files import AutoPackager, save"))
     conan_file += """
     def source(self):
-        tools.save("myincludes/mylib.header","")
+        save(self, "myincludes/mylib.header","")
 
     def build(self):
-       tools.save("ugly_build/mylib.a", "")
+       save(self, "ugly_build/mylib.a", "")
 
     def layout(self):
        self.cpp.source.includedirs = ["myincludes"]
@@ -395,6 +389,6 @@ def test_auto_package_only_one_destination():
     for dirs in ["includedirs", "builddirs", "bindirs", "srcdirs", "frameworkdirs", "libdirs",
                  "resdirs"]:
         client.save({"conanfile.py": conan_file.format(dirs)})
-        client.run("create . lib/1.0@", assert_error=True)
+        client.run("create . --name=lib --version=1.0", assert_error=True)
         assert "The package has more than 1 cpp_info.{}, " \
                "cannot package automatically".format(dirs) in client.out

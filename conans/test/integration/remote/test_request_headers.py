@@ -45,8 +45,9 @@ class RequestHeadersTestCase(unittest.TestCase):
         t = TestClient(servers=self.servers, inputs=["user", "mypass"])
         t.save({'conanfile.py': self.conanfile,
                 'profile': self.profile})
-        t.run('create conanfile.py name/version@user/channel --profile:host=profile')
-        t.run('upload name/version@user/channel --all -r default')
+        t.run('create file.py --name=name --version=version --user=user --channel=channel '
+              '--profile:host=profile')
+        t.run('upload name/version@user/channel -r default')
 
     def _get_header(self, requester, header_name):
         hits = sum([header_name in headers for _, headers in requester.requests])
@@ -82,7 +83,7 @@ class RequestHeadersTestCase(unittest.TestCase):
 
         t = self._get_test_client()
         t.save({'profile': self.profile})
-        t.run('install --reference=failing/version@user/channel --profile=profile', assert_error=True)
+        t.run('install --requires=failing/version@user/channel --profile=profile', assert_error=True)
         self.assertFalse(any([CONAN_REQUEST_HEADER_SETTINGS in headers for _, headers in
                               t.api.http_requester.requests]))
         self.assertFalse(any([CONAN_REQUEST_HEADER_OPTIONS in headers for _, headers in
@@ -95,20 +96,20 @@ class RequestHeadersTestCase(unittest.TestCase):
         t.save({'profile': self.profile})
 
         # Package match
-        t.run('install --reference=name/version@user/channel --profile=profile')
+        t.run('install --requires=name/version@user/channel --profile=profile')
         settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header)
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers)
 
         # Package mismatch (settings)
-        t.run('install --reference=name/version@user/channel --profile=profile -s compiler.version=12.0',
+        t.run('install --requires=name/version@user/channel --profile=profile -s compiler.version=12.0',
               assert_error=True)
         settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header, compiler_version='12.0')
 
         # Package mismatch (options)
-        t.run('install--reference=name/version@user/channel --profile=profile -o shared=True',
+        t.run('install--requires=name/version@user/channel --profile=profile -o shared=True',
               assert_error=True)
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers, shared_value='True')
@@ -132,7 +133,7 @@ class RequestHeadersTestCase(unittest.TestCase):
         self._assert_settings_headers(settings_header, compiler_version='12.0')
 
         # Package mismatch (options)
-        t.run('install --reference=name/version@user/channel --profile=profile -o shared=True',
+        t.run('install --requires=name/version@user/channel --profile=profile -o shared=True',
               assert_error=True)
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers, shared_value='True')
@@ -158,6 +159,6 @@ class RequestHeadersTestCase(unittest.TestCase):
         self._assert_settings_headers(settings_header, compiler_version='12.0')
 
         # Requirement is not found (options)
-        t.run('install . consumer/version@ --profile=profile -o name:shared=True', assert_error=True)
+        t.run('install . consumer/version@ --profile=profile -o name/*:shared=True', assert_error=True)
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers, shared_value='True')

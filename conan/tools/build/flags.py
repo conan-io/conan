@@ -1,4 +1,4 @@
-from conans.client.tools import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.model.version import Version
 
 
@@ -8,7 +8,6 @@ def architecture_flag(settings):
     Used by CMakeToolchain and AutotoolsToolchain
     """
     compiler = settings.get_safe("compiler")
-    compiler_base = settings.get_safe("compiler.base")
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
@@ -23,6 +22,8 @@ def architecture_flag(settings):
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
+                # TODO: Could we define anything like `to_apple_target()`?
+                #       Check https://github.com/rust-lang/rust/issues/48862
                 return '--target=%s-apple-ios-macabi' % apple_arch
         elif arch in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
@@ -35,12 +36,6 @@ def architecture_flag(settings):
                 return '-maix32'
             elif arch in ['ppc64']:
                 return '-maix64'
-    elif compiler == "intel":
-        # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
-        if arch == "x86":
-            return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
-        elif arch == "x86_64":
-            return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
     elif compiler == "intel-cc":
         # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
         if arch == "x86":
@@ -57,17 +52,36 @@ def architecture_flag(settings):
     return ""
 
 
+def build_type_link_flags(settings):
+    """
+    returns link flags specific to the build type (Debug, Release, etc.)
+    [-debug]
+    """
+    compiler = settings.get_safe("compiler")
+    build_type = settings.get_safe("build_type")
+    if not compiler or not build_type:
+        return []
+
+    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+    # Modules/Platform/Windows-MSVC.cmake
+    if compiler in ["msvc", "Visual Studio"]:
+        if build_type in ("Debug", "RelWithDebInfo"):
+            return ["-debug"]
+
+    return []
+
+
 def build_type_flags(settings):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     Used only by AutotoolsToolchain
     """
-    compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
+    compiler = settings.get_safe("compiler")
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
-        return ""
+        return []
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
@@ -142,20 +156,16 @@ def libcxx_flag(conanfile):
 def cppstd_flag(settings):
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
-    compiler_base = settings.get_safe("compiler.base")
     cppstd = settings.get_safe("compiler.cppstd")
 
     if not compiler or not compiler_version or not cppstd:
         return ""
 
-    cppstd_intel = _cppstd_intel_visualstudio if compiler_base == "Visual Studio" else \
-        _cppstd_intel_gcc
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
             "Visual Studio": _cppstd_visualstudio,
             "msvc": _cppstd_msvc,
-            "intel": cppstd_intel,
             "intel-cc": _cppstd_intel_cc,
             "mcst-lcc": _cppstd_mcst_lcc}.get(compiler, None)
     flag = None

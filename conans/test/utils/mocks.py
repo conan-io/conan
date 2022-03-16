@@ -2,11 +2,10 @@ import os
 from collections import namedtuple
 from io import StringIO
 
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
-from conans.model.layout import Folders
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.util.log import logger
 
 
 class LocalDBMock(object):
@@ -43,7 +42,6 @@ class RedirectedInputStream:
                             "There are no more inputs to be returned.\n"
                             "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
         ret = self.answers.pop(0)
-        logger.info("Testing: Reading fake input={}".format(ret))
         return ret
 
 
@@ -98,7 +96,6 @@ class ConanFileMock(ConanFile):
         self.settings = None
         self.settings_build = MockSettings({})
         self.options = Options()
-        self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.generators = []
@@ -106,15 +103,15 @@ class ConanFileMock(ConanFile):
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")
-        self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
+        self.cpp = Infos()
         self._conan_user = None
         self._conan_channel = None
         self.env_scripts = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
 
-    def run(self, command, win_bash=False, subsystem=None, env=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command

@@ -6,11 +6,10 @@ import textwrap
 import pytest
 
 from conan.tools.env import Environment
-from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir
+from conans.client.subsystems import WINDOWS
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 @pytest.fixture
@@ -35,8 +34,8 @@ def prevenv():
     return {
         "MyVar1": "OldVar1",
         "MyVar2": "OldVar2",
-        "MyVar3": "OldVar3",
-        "MyVar4": "OldVar4",
+        "MyVar3": "OldVar3 with spaces",
+        "MyVar4": "OldVar4 with (some) special @ characters",
         "MyPath1": "OldPath1",
         "MyPath2": "OldPath2",
         "MyPath3": "OldPath3",
@@ -51,7 +50,7 @@ def check_env_files_output(cmd_, prevenv):
     assert "MyVar=MyValue!!" in out
     assert "MyVar1=MyValue1!!" in out
     assert "MyVar2=OldVar2 MyValue2!!" in out
-    assert "MyVar3=MyValue3 OldVar3!!" in out
+    assert "MyVar3=MyValue3 OldVar3 with spaces!!" in out
     assert "MyVar4=!!" in out
     assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
     assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
@@ -64,8 +63,8 @@ def check_env_files_output(cmd_, prevenv):
     assert "MyVar=!!" in out
     assert "MyVar1=OldVar1!!" in out
     assert "MyVar2=OldVar2!!" in out
-    assert "MyVar3=OldVar3!!" in out
-    assert "MyVar4=OldVar4!!" in out
+    assert "MyVar3=OldVar3 with spaces!!" in out
+    assert "MyVar4=OldVar4 with (some) special @ characters!!" in out
     assert "MyVar5=!!" in out
     assert "MyVar6=!!" in out
     assert "MyPath1=OldPath1!!" in out
@@ -90,8 +89,8 @@ def test_env_files_bat(env, prevenv):
         echo MyPath3=%MyPath3%!!
         echo MyPath4=%MyPath4%!!
         """)
-
-    with chdir(temp_folder()):
+    t = temp_folder()
+    with chdir(t):
         env = env.vars(ConanFileMock())
         env._subsystem = WINDOWS
         env.save_bat("test.bat")

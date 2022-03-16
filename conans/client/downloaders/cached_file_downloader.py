@@ -3,11 +3,11 @@ import shutil
 from contextlib import contextmanager
 from threading import Lock
 
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
+from conans.cli.output import ConanOutput
 from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException
-from conans.util.log import logger
 from conans.util.files import mkdir, set_dirty, clean_dirty, is_dirty, remove
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as sha256_sum
@@ -53,7 +53,7 @@ class CachedFileDownloader(object):
                 try:
                     check_checksum(cached_path, md5, sha1, sha256)
                 except ConanException:
-                    logger.error("Cached file corrupt, redownloading")
+                    ConanOutput().error("Cached file corrupt, redownloading")
                     remove(cached_path)
 
             if not os.path.exists(cached_path):

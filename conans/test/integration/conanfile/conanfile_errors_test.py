@@ -9,7 +9,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_copy_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -21,7 +21,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy2("*.h", dst="include", src=["include","platform"]', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -29,7 +29,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_copy_error2(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -41,7 +41,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy("*.h", dst="include", src=["include","platform"]', client.out)
         # It results that the error is different in different Python2/3 and OSs
@@ -50,7 +50,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_package_info_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -62,7 +62,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package_info() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -70,7 +70,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_config_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -82,7 +82,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
 
         self.assertIn("ERROR: hello/0.1@lasote/stable: Error in configure() method, line 9",
                       client.out)
@@ -92,7 +92,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_source_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -104,7 +104,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in source() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -118,13 +118,13 @@ class ConanfileErrorsTest(unittest.TestCase):
             ''')
         files = {"conanfile.txt": conanfile}
         client.save(files)
-        client.run("install . --build", assert_error=True)
+        client.run("install . --build='*'", assert_error=True)
         self.assertIn("ERROR: Duplicated requirement", client.out)
 
     def test_duplicate_requires_py(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -140,7 +140,7 @@ class ConanfileErrorsTest(unittest.TestCase):
 def test_notduplicate_requires_py():
     client = TestClient()
     conanfile = textwrap.dedent('''
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloConan(ConanFile):
             name = "hello"

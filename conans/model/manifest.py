@@ -23,15 +23,14 @@ class FileTreeManifest(object):
 
     @staticmethod
     def loads(text):
-        """ parses a string representation, generated with __repr__ of a
-        ConanDigest
+        """ parses a string representation, generated with __repr__
         """
         tokens = text.split("\n")
         the_time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
             if md5line:
-                filename, file_md5 = md5line.split(": ")
+                filename, file_md5 = md5line.rsplit(": ", 1)
                 file_sums[filename] = file_md5
         return FileTreeManifest(the_time, file_sums)
 

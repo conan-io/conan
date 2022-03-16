@@ -11,7 +11,7 @@ class StdCppTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_set_default_package_id(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 
 class TestConan(ConanFile):
     name = "MyLib"
@@ -23,14 +23,14 @@ class TestConan(ConanFile):
 """
         # Without the setting
         client.save({CONANFILE: conanfile % ""})
-        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+        client.run('create . --user=user --channel=testing -s compiler="gcc" -s compiler.version="7.1" '
                    '-s compiler.libcxx="libstdc++" '
                    '--build missing')
         self.assertIn("BUILDING!", client.out)
 
         # Add the setting but with the default value, should not build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+        client.run('create . --user=user --channel=testing -s compiler="gcc" -s compiler.version="7.1" '
                    '-s compiler.libcxx="libstdc++" '
                    '-s cppstd=gnu14 '
                    '--build missing')
@@ -41,7 +41,7 @@ class TestConan(ConanFile):
 
         # Add the setting but with a non-default value, should build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting:
-        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+        client.run('create . --user=user --channel=testing -s compiler="gcc" -s compiler.version="7.1" '
                    '-s compiler.libcxx="libstdc++" '
                    '-s cppstd=gnu17 '
                    '--build missing')

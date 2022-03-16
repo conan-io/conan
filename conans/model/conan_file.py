@@ -1,4 +1,3 @@
-import os
 import platform
 
 from conans.cli.output import ConanOutput, ScopedOutput
@@ -8,7 +7,6 @@ from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.model.requires import Requirements
-from conans.paths import RUN_LOG_NAME
 
 
 class ConanFile:
@@ -35,7 +33,6 @@ class ConanFile:
     generators = []
     revision_mode = "hash"
 
-    in_local_cache = True
     develop = False
 
     # Settings and Options
@@ -50,10 +47,11 @@ class ConanFile:
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, runner, display_name=""):
+    _conan_is_consumer = False
+
+    def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
-        self._conan_runner = runner
 
         self.compatible_packages = []
         self._conan_requester = None
@@ -73,6 +71,7 @@ class ConanFile:
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None),
                                      getattr(self, "tool_requires", None))
+
         self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
@@ -99,7 +98,6 @@ class ConanFile:
                 result[a] = v
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
-        result["scm"] = getattr(self, "scm", None)
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result.update(self.options.serialize())  # FIXME: The options contain an "options" already
@@ -140,9 +138,8 @@ class ConanFile:
         # Lazy computation of the package buildenv based on the profileone
         from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
-            # TODO: missing user/channel
-            ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(self.ref,
+                                                                        self._conan_is_consumer)
         return self._conan_buildenv
 
     @property
@@ -158,6 +155,15 @@ class ConanFile:
         return self.folders.source_folder
 
     @property
+    def base_source_folder(self):
+        """ returns the base_source folder, that is the containing source folder in the cache
+        irrespective of the layout() and where the final self.source_folder (computed with the
+        layout()) points.
+        This can be necessary in the source() or build() methods to locate where exported sources
+        are, like patches or entire files that will be used to complete downloaded sources"""
+        return self.folders._base_source
+
+    @property
     def build_folder(self):
         return self.folders.build_folder
 
@@ -166,18 +172,8 @@ class ConanFile:
         return self.folders.base_package
 
     @property
-    def install_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.base_install
-
-    @property
     def generators_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.generators_folder if self.folders.generators else self.install_folder
-
-    @property
-    def imports_folder(self):
-        return self.folders.imports_folder
+        return self.folders.generators_folder
 
     def source(self):
         pass
@@ -185,9 +181,6 @@ class ConanFile:
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
         managers, as apt-get
-
-        You can define self.global_system_requirements = True, if you want the installation
-        to be for all packages (not depending on settings/options/requirements)
         """
 
     def config_options(self):
@@ -213,7 +206,7 @@ class ConanFile:
 
     def package(self):
         """ package the needed files from source and build folders.
-        E.g. self.copy("*.h", src="src/includes", dst="includes")
+        E.g. copy(self, "*.h", os.path.join(self.source_folder, "src/includes"), os.path.join(self.package_folder, "includes"))
         """
         self.output.warning("This conanfile has no package step")
 
@@ -221,20 +214,23 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, ignore_errors=False, env=None):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False,
+            shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
-                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                from conans.client.subsystems import run_in_windows_bash
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"
         from conan.tools.env.environment import environment_wrap_command
         wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
-        retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
+        from conans.util.runners import conan_run
+        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
 
         if not ignore_errors and retcode != 0:
-            raise ConanException("Error %d while executing %s" % (retcode, command))
+            raise ConanException("Error %d while executing" % retcode)
 
         return retcode
 
@@ -251,3 +247,7 @@ class ConanFile:
 
     def __repr__(self):
         return self.display_name
+
+    def set_deploy_folder(self, deploy_folder):
+        self.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.folders.set_base_package(deploy_folder)

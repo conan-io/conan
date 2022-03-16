@@ -10,7 +10,7 @@ class TestBasicCliOutput:
     def test_info_settings(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
@@ -101,31 +101,6 @@ class TestJsonOutput:
 class TestAdvancedCliOutput:
     """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES
     """
-    def test_scm_info(self):
-        # https://github.com/conan-io/conan/issues/8377
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class pkg(ConanFile):
-                scm = {"type": "git",
-                       "url": "some-url/path",
-                       "revision": "some commit hash"}
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-
-        client.run("graph info .")
-        assert "revision: some commit hash" in client.out
-        assert "url: some-url/path" in client.out
-
-        client.run("export . --name=pkg --version=0.1")
-        client.run("graph info --reference=pkg/0.1@")
-        assert "revision: some commit hash" in client.out
-        assert "url: some-url/path" in client.out
-
-        client.run("graph info . --format=json")
-        file_json = client.stdout
-        info_json = json.loads(file_json)
-        assert info_json["nodes"][0]["scm"]["type"] == "git"
 
     def test_python_requires(self):
         # https://github.com/conan-io/conan/issues/9277
@@ -141,11 +116,11 @@ class TestAdvancedCliOutput:
         client.save({"conanfile.py": conanfile})
 
         client.run("graph info .")
-        assert "python_requires: ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']" in client.out
+        assert "python_requires: ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']" in client.out
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert info["nodes"][0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
+        assert info["nodes"][0]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
 
     def test_build_id_info(self):
         client = TestClient()
@@ -177,7 +152,7 @@ class TestEditables:
         # https://github.com/conan-io/conan/issues/7054
         c = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def layout(self):
                     self.folders.source = "."
@@ -200,6 +175,6 @@ class TestInfoRevisions:
         ref = RecipeReference.loads("lib/1.0@conan/testing")
 
         client.create(ref)
-        client.run("graph info --reference={}".format(ref))
+        client.run("graph info --requires={}".format(ref))
         revision = client.recipe_revision(ref)
         assert f"ref: lib/1.0@conan/testing#{revision}" in client.out

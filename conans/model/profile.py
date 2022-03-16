@@ -1,10 +1,8 @@
 import copy
-import json
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
-from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -27,7 +25,6 @@ class Profile(object):
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
         self._package_settings_values = None
-        self.dev_reference = None  # Reference of the package being develop
 
     def __repr__(self):
         return self.dumps()

@@ -21,22 +21,15 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
             configs.add([node: "Macos", pyvers: ["PY36"]])
         }
     }
-    else if (jobName == "ConanNightlyv2") {
+    else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
     }
-    else if (branchName =~ /(^release.*)|(^develop2)/) {
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Linux", pyvers: ["PY36"]])
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "Macos", pyvers: ["PY36"]])
-        }
-        else {
-            configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
-        }
+    else if (branchName == "develop2") {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -76,7 +69,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest ${module} -n=4"
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
 
                 if (nodeName=="Linux") {
                     try {
@@ -158,7 +151,7 @@ void deployToPypiTest() {
             def scmVars = checkout scm
             checkout scm
             stage("Deploy conan to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'), 
+                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
                                  string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
                     def deployConan = "python -m pip install twine && " \
                                     + "python .ci/bump_dev_version.py && " \
@@ -168,7 +161,7 @@ void deployToPypiTest() {
                 }
             }
             stage("Deploy conan-server to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'), 
+                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
                                  string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
                     def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
                                      + "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*"
@@ -177,7 +170,7 @@ void deployToPypiTest() {
             }
         }
         finally {}
-    }    
+    }
 }
 
 try {

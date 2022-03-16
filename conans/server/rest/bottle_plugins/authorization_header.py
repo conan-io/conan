@@ -3,8 +3,6 @@ from abc import ABCMeta, abstractmethod
 
 from bottle import PluginError, request
 
-from conans.util.log import logger
-
 
 class AuthorizationHeader(object, metaclass=ABCMeta):
     """ Generic plugin to handle Authorization header. Must be extended and implement
@@ -30,7 +28,7 @@ class AuthorizationHeader(object, metaclass=ABCMeta):
     def apply(self, callback, context):
         """ Test if the original callback accepts a 'self.keyword' keyword. """
         args = inspect.getfullargspec(context.callback)[0]
-        logger.debug("Call: %s" % str(callback))
+        # logger.debug("Call: %s" % str(callback))
         if self.keyword not in args:
             return callback
 

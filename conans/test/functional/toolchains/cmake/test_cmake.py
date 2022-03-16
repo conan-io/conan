@@ -15,11 +15,11 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -96,20 +96,20 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.tools import save
+            from conan import ConanFile
+            from conan.tools.files import save
             import os
             class Pkg(ConanFile):
                 settings = "build_type"
                 def package(self):
-                    save(os.path.join(self.package_folder, "include/hello.h"),
+                    save(self, os.path.join(self.package_folder, "include/hello.h"),
                          '''#include <iostream>
                          void hello(){std::cout<< "Hello: %s" <<std::endl;}'''
                          % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . hello/0.1@ -s build_type=Debug")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Debug")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -127,7 +127,7 @@ class Base(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("build .. %s %s" % (settings, options))
+            self.client.run("build .. %s %s -of=." % (settings, options))
             install_out = self.client.out
         return install_out
 
@@ -273,8 +273,8 @@ class WinTest(Base):
 
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
-    @pytest.mark.tool_mingw64
-    @pytest.mark.tool_cmake(version="3.15")
+    @pytest.mark.tool("mingw64")
+    @pytest.mark.tool("cmake", "3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -460,7 +460,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     save(client.cache.new_config_path,
          "tools.microsoft.msbuild:vs_version={}".format(vs_version))
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -482,18 +482,18 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                  "app.cpp": main,
                  })
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-    client.run("create . app/1.0@ {}".format(settings))
+    client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
     check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -535,7 +535,7 @@ class CMakeInstallTest(unittest.TestCase):
                                                     "include", "header.h")))"""
 
         # The create flow must work
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)
@@ -543,13 +543,13 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeOverrideCacheTest(unittest.TestCase):
 
     def test_cmake_cache_variables(self):
         # https://github.com/conan-io/conan/issues/7832
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -576,12 +576,12 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class TestCMakeFindPackagePreferConfig:
 
     def test_prefer_config(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"

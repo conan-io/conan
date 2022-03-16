@@ -49,9 +49,9 @@ class FileUploader(object):
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
                headers=None, display_name=None):
-        retry = retry if retry is not None else self._config.get("core.upload:retry", int, 1)
+        retry = retry if retry is not None else self._config.get("core.upload:retry", default=1, check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
-            self._config.get("core.upload:retry_wait", int, 5)
+            self._config.get("core.upload:retry_wait", default=5, check_type=int)
 
         # Send always the header with the Sha1
         headers = copy(headers) or {}
@@ -83,7 +83,7 @@ class FileUploader(object):
         post_description = "Uploaded {}".format(
             file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
 
-        self._output.info(description)
+        # self._output.info(description)
         with open(abs_path, mode='rb') as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,

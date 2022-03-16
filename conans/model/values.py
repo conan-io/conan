@@ -60,6 +60,22 @@ class Values(object):
             result.append((name.strip(), value.strip()))
         return cls.from_list(result)
 
+    def update_values(self, values):
+        """ receives a list of tuples (compiler.version, value)
+        Only modifies values if it already exists and is defined
+        Necessary for binary_compatibility.py
+        """
+        assert isinstance(values, list), values
+        for (name, value) in values:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+                if attr is None:
+                    break
+            if attr is not None and list_settings[-1] in attr._dict:
+                attr._dict[list_settings[-1]] = Values(value)
+
     def as_list(self, list_all=True):
         result = []
         for field in self.fields:

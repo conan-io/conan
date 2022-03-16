@@ -66,15 +66,15 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7864
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . gtest/1.8.0@PORT/stable")
-        t.run("create . gtest/1.8.1@bloomberg/stable")
+        t.run("create . --name=gtest --version=1.8.0 --user=PORT --channel=stable")
+        t.run("create . --name=gtest --version=1.8.1 --user=bloomberg --channel=stable")
 
         t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.0@PORT/stable")})
-        t.run("create . intermediate/1.0@PORT/stable")
+        t.run("create . --name=intermediate --version=1.0 --user=PORT --channel=stable")
 
         t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
                .with_tool_requires("gtest/1.8.0@PORT/stable")})
-        t.run("create . scubaclient/1.6@PORT/stable")
+        t.run("create . --name=scubaclient --version=1.6 --user=PORT --channel=stable")
 
         # IMPORTANT: We need to override the private build-require in the profile too,
         # otherwise it will conflict, as it will not be overriden by regular requires

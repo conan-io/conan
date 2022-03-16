@@ -18,21 +18,20 @@ class ReadOnlyTest(unittest.TestCase):
         self.client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
         self.client.run("--version")
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [general]
                             read_only_cache=True
                         """)
         self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     exports_sources = "*.h"
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         self.client.save({"conanfile.py": conanfile,
                           "myheader.h": "my header"})
-        self.client.run("create . pkg/0.1@lasote/channel")
+        self.client.run("create . --name=pkg --version=0.1 --user=lasote --channel=channel")
 
     def test_basic(self):
         pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
@@ -51,16 +50,16 @@ class MyPkg(ConanFile):
         self.assertNotIn("pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("upload * --confirm -r default")
         self.client.run("remove pkg* -f")
-        self.client.run("install --reference=pkg/0.1@lasote/channel")
+        self.client.run("install --requires=pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("upload * --confirm -r default")
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
-        client.run("install --reference=pkg/0.1@lasote/channel")
+        client.run("install --requires=pkg/0.1@lasote/channel")
         pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
                                                         NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")

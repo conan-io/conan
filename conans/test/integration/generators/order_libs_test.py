@@ -1,4 +1,3 @@
-import os
 import textwrap
 import unittest
 
@@ -24,7 +23,7 @@ class OrderLibsTest(unittest.TestCase):
             return libs
         deps = ", ".join(['"%s/1.0@lasote/stable"' % d for d in deps or []]) or 'None'
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class HelloReuseConan(ConanFile):
                 name = "%s"

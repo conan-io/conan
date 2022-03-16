@@ -18,7 +18,7 @@ def test_info_build_order():
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
                 "packages": [
                     {
@@ -34,9 +34,9 @@ def test_info_build_order():
         ],
         [
             {
-                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
                 "packages": [
                     {
@@ -67,7 +67,7 @@ def test_info_build_order_build_require():
     result = [
         [
             {
-                "ref": 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97',
+                "ref": 'dep/0.1#4d670581ccb765839f2239cc8dff8fbd',
                 "depends": [],
                 "packages": [
                     {
@@ -83,9 +83,9 @@ def test_info_build_order_build_require():
         ],
         [
             {
-                "ref": "pkg/0.1#f487531dfe46620d4f64303baf2211fc",
+                "ref": "pkg/0.1#b5a40d7314ce57ebdcf8fa31257f3de1",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
                 "packages": [
                     {
@@ -119,13 +119,12 @@ def test_info_build_order_options():
     c.run("export dep2 --name=dep2 --version=0.1")
 
     c.run("graph build-order  consumer --build=missing --format=json")
-
     bo_json = json.loads(c.stdout)
 
     result = [
         [
             {
-                "ref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d",
+                "ref": "tool/0.1#b4c19a1357b43877a2019dd2804336a9",
                 "depends": [],
                 "packages": [
                     {
@@ -135,7 +134,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                                "tool:myopt=1"
+                                "tool/0.1:myopt=1"
                         ]
                     },
                     {
@@ -145,7 +144,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                                "tool:myopt=2"
+                                "tool/0.1:myopt=2"
                         ]
                     }
                 ]
@@ -153,9 +152,9 @@ def test_info_build_order_options():
         ],
         [
             {
-                "ref": "dep1/0.1#eeabd1fa65a6f7ccc227816a507bb966",
+                "ref": "dep1/0.1#7f0d80f9cb8c6bab06def7f6fb8f3b86",
                 "depends": [
-                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
+                    "tool/0.1#b4c19a1357b43877a2019dd2804336a9"
                 ],
                 "packages": [
                     {
@@ -170,9 +169,9 @@ def test_info_build_order_options():
                 ]
             },
             {
-                "ref": "dep2/0.1#d878e5a90ac7bd8fbb14ce899456cc74",
+                "ref": "dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e",
                 "depends": [
-                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
+                    "tool/0.1#b4c19a1357b43877a2019dd2804336a9"
                 ],
                 "packages": [
                     {
@@ -211,7 +210,7 @@ def test_info_build_order_merge_multi_product():
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
                 "packages": [
                     {
@@ -227,9 +226,9 @@ def test_info_build_order_merge_multi_product():
         ],
         [
             {
-                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
                 "packages": [
                     {
@@ -243,9 +242,9 @@ def test_info_build_order_merge_multi_product():
                 ]
             },
             {
-                "ref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.2#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
                 "packages": [
                     {
@@ -267,7 +266,7 @@ def test_info_build_order_merge_multi_product():
 def test_info_build_order_merge_conditionals():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -294,7 +293,7 @@ def test_info_build_order_merge_conditionals():
     result = [
         [
             {
-                "ref": "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "depwin/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
                 "packages": [
                     {
@@ -308,7 +307,7 @@ def test_info_build_order_merge_conditionals():
                 ]
             },
             {
-                "ref": "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "depnix/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
                 "packages": [
                     {
@@ -324,10 +323,10 @@ def test_info_build_order_merge_conditionals():
         ],
         [
             {
-                "ref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671",
+                "ref": "pkg/0.1#b615ac4c7cd16631cd9e924b68596fce",
                 "depends": [
-                    "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
-                    "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "depwin/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                    "depnix/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
                 "packages": [
                     {

@@ -236,7 +236,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
 def test_conditional():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = 'req/v1'
@@ -255,6 +255,6 @@ def test_conditional():
             'app.py': conanfile})
     t.run("create requires.py")
     t.run("install app.py --name=app --version=version")
-    t.run("install app.py --name=app --version=version -o app:conflict=True", assert_error=True)
+    t.run("install app.py --name=app --version=version -o app/*:conflict=True", assert_error=True)
     # TODO: Improve the error diagnostics
     assert "ERROR: provide conflict" in t.out

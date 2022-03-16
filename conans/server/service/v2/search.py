@@ -3,15 +3,15 @@ import os
 import re
 from fnmatch import translate
 
-from conans import load
+from conans.cli.output import ConanOutput
 from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.search import _partial_match
-from conans.util.files import list_folder_subdirs
-from conans.util.log import logger
+from conans.server.utils.files import list_folder_subdirs
+from conans.util.files import load
 
 
 def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
@@ -42,9 +42,9 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 conan_vars_info = info.serialize_min()
                 result[package_id] = conan_vars_info
             except Exception as exc:  # FIXME: Too wide
-                logger.error("Package %s has no ConanInfo file" % str(pref))
+                ConanOutput().error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
-                    logger.error(str(exc))
+                    ConanOutput().error(str(exc))
     return result
 
 

@@ -5,13 +5,10 @@ from conans.util.files import load
 
 
 def build_jobs(conanfile):
-    njobs = conanfile.conf["tools.build:jobs"]
-    if njobs is not None:
-        result = int(njobs)
-        if result == 0:
-            return None
-        return result
-    return _cpu_count()
+    njobs = conanfile.conf.get("tools.build:jobs",
+                               default=_cpu_count(),
+                               check_type=int)
+    return njobs
 
 
 def _cpu_count():

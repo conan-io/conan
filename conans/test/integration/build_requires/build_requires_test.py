@@ -18,7 +18,7 @@ from conans.util.files import save
 def client():
     openssl = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -34,7 +34,7 @@ def client():
 
     cmake = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -55,7 +55,7 @@ def client():
 
     gtest = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -75,9 +75,9 @@ def client():
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
 
-    client.run("create openssl openssl/1.0@")
-    client.run("create cmake mycmake/1.0@")
-    client.run("create gtest mygtest/1.0@")
+    client.run("create openssl --name=openssl --version=1.0")
+    client.run("create cmake --name=mycmake --version=1.0")
+    client.run("create gtest --name=mygtest --version=1.0")
 
     myrunner_bat = "@echo off\necho MYGTESTVAR=%MYGTESTVAR%!!\n"
     myrunner_sh = "echo MYGTESTVAR=$MYGTESTVAR!!\n"
@@ -108,7 +108,7 @@ def test_conanfile_txt(client):
 def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             build_requires = "mycmake/1.0"
@@ -148,7 +148,7 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
 
 
-tool_conanfile = """from conans import ConanFile
+tool_conanfile = """from conan import ConanFile
 
 class Tool(ConanFile):
     name = "Tool"
@@ -162,7 +162,7 @@ tool_conanfile2 = tool_conanfile.replace("0.1", "0.3")
 
 conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 from conan.tools.env import VirtualBuildEnv
 
 class MyLib(ConanFile):
@@ -205,10 +205,10 @@ class BuildRequiresTest(unittest.TestCase):
         t.save({"conanfile.py":
                     GenConanfile().with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
                                                      env_info={"MYENV": ["myenvcatch0.1env"]})})
-        t.run("create . catch/0.1@user/testing")
+        t.run("create . --name=catch --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_requirement(catch_ref, private=True)})
         print(t.load("conanfile.py"))
-        t.run("create . LibA/0.1@user/testing")
+        t.run("create . --name=LibA --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
                                               .with_tool_requires(catch_ref)})
         t.run("install .")
@@ -224,38 +224,38 @@ class BuildRequiresTest(unittest.TestCase):
 
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . liba/0.1@user/testing")
+        t.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)})
-        t.run("create . libb/0.1@user/testing")
+        t.run("create . --name=libb --version=0.1 --user=user --channel=testing")
 
         t.save({"conanfile.py": GenConanfile().with_tool_requires(libB_ref)
                                               .with_tool_requires(libA_ref)})
-        t.run("create . libC/0.1@user/testing")
+        t.run("create . --name=libC --version=0.1 --user=user --channel=testing")
         self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
     def test_create_with_tests_and_build_requires(self):
         client = TestClient()
         # Generate and export the build_require recipe
-        conanfile1 = """from conans import ConanFile
+        conanfile1 = """from conan import ConanFile
 class MyBuildRequire(ConanFile):
     def package_info(self):
         self.buildenv_info.define("MYVAR", "1")
 """
         client.save({"conanfile.py": conanfile1})
-        client.run("create . Build1/0.1@conan/stable")
-        conanfile2 = """from conans import ConanFile
+        client.run("create . --name=Build1 --version=0.1 --user=conan --channel=stable")
+        conanfile2 = """from conan import ConanFile
 class MyBuildRequire(ConanFile):
     def package_info(self):
         self.buildenv_info.define("MYVAR2", "2")
 """
         client.save({"conanfile.py": conanfile2})
-        client.run("create . Build2/0.1@conan/stable")
+        client.run("create . --name=Build2 --version=0.1 --user=conan --channel=stable")
 
         # Create a recipe that will use a profile requiring the build_require
         client.save({"conanfile.py": """
 from conan.tools.env import VirtualBuildEnv
-from conans import ConanFile
+from conan import ConanFile
 import os
 
 class MyLib(ConanFile):
@@ -270,7 +270,7 @@ class MyLib(ConanFile):
 [tool_requires]
 Build1/0.1@conan/stable
 ''',
-                    "test_package/conanfile.py": """from conans import ConanFile
+                    "test_package/conanfile.py": """from conan import ConanFile
 import os
 from conan.tools.env import VirtualBuildEnv
 class MyTest(ConanFile):
@@ -283,7 +283,7 @@ class MyTest(ConanFile):
 """}, clean_first=True)
 
         # Test that the build require is applyed to testing
-        client.run("create . Lib/0.1@conan/stable --profile=./myprofile")
+        client.run("create . --name=Lib --version=0.1 --user=conan/stable --profile=. --channel=myprofile")
         self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: "
                                                   "Applying build-requirement:"
                                                   " Build1/0.1@conan/stable"))
@@ -291,13 +291,13 @@ class MyTest(ConanFile):
 
     def test_dependents(self):
         client = TestClient()
-        boost = """from conans import ConanFile
+        boost = """from conan import ConanFile
 class Boost(ConanFile):
     def package_info(self):
         self.buildenv_info.define_path("PATH", "myboostpath")
 """
         client.save({CONANFILE: boost})
-        client.run("create . Boost/1.0@user/channel")
+        client.run("create . --name=Boost --version=1.0 --user=user --channel=channel")
         other = """[tool_requires]
 Boost/1.0@user/channel
 """
@@ -307,7 +307,7 @@ Boost/1.0@user/channel
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
 
-        other = """from conans import ConanFile
+        other = """from conan import ConanFile
 import os
 class Other(ConanFile):
     requires = "Boost/1.0@user/channel"
@@ -317,8 +317,8 @@ class Other(ConanFile):
         self.env_info.PATH.append("myotherpath")
 """
         client.save({CONANFILE: other})
-        client.run("create . other/1.0@user/channel")
-        lib = """from conans import ConanFile
+        client.run("create . --name=other --version=1.0 --user=user --channel=channel")
+        lib = """from conan import ConanFile
 import os
 class Lib(ConanFile):
     build_requires = "boost/1.0@user/channel", "other/1.0@user/channel"
@@ -326,14 +326,14 @@ class Lib(ConanFile):
         self.output.info("LIB PATH FOR BUILD %s" % os.getenv("PATH"))
 """
         client.save({CONANFILE: lib})
-        client.run("create . Lib/1.0@user/channel")
+        client.run("create . --name=Lib --version=1.0 --user=user --channel=channel")
         self.assertIn("LIB PATH FOR BUILD myotherpath%smyboostpath" % os.pathsep,
                       client.out)
 
     def test_applyname(self):
         # https://github.com/conan-io/conan/issues/4135
         client = TestClient()
-        mingw = """from conans import ConanFile
+        mingw = """from conan import ConanFile
 class Tool(ConanFile):
     def package_info(self):
         self.buildenv_info.define_path("PATH", "mymingwpath")
@@ -342,7 +342,7 @@ class Tool(ConanFile):
 [tool_requires]
 consumer*: mingw/0.1@myuser/stable
 """
-        app = """from conans import ConanFile
+        app = """from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
@@ -353,7 +353,7 @@ class App(ConanFile):
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
         client.save({CONANFILE: mingw})
-        client.run("create . mingw/0.1@myuser/stable")
+        client.run("create . --name=mingw --version=0.1 --user=myuser --channel=stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("build . -pr=myprofile")
@@ -364,7 +364,7 @@ class App(ConanFile):
 
     def test_transitive(self):
         client = TestClient()
-        mingw = """from conans import ConanFile
+        mingw = """from conan import ConanFile
 class Tool(ConanFile):
     def package_info(self):
         self.buildenv_info.append("MYVAR", "mymingwpath")
@@ -373,7 +373,7 @@ class Tool(ConanFile):
 [tool_requires]
 mingw/0.1@lasote/stable
 """
-        gtest = """from conans import ConanFile
+        gtest = """from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 import os
 class Gtest(ConanFile):
@@ -382,7 +382,7 @@ class Gtest(ConanFile):
         with build_env.apply():
             self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
-        app = """from conans import ConanFile
+        app = """from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
@@ -393,12 +393,12 @@ class App(ConanFile):
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
         client.save({CONANFILE: mingw})
-        client.run("create . mingw/0.1@lasote/stable")
+        client.run("create . --name=mingw --version=0.1 --user=lasote --channel=stable")
         client.save({CONANFILE: gtest})
         client.run("export . --name=gtest --version=0.1 --user=lasote --channel=stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
-        client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile -pr:b=myprofile")
+        client.run("create . --name=app --version=0.1 --user=lasote --channel=stable --build=missing -pr=myprofile -pr:b=myprofile")
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
                       client.out)
         self.assertIn("gtest/0.1@lasote/stable: GTEST PATH FOR BUILD mymingwpath",
@@ -406,12 +406,12 @@ class App(ConanFile):
 
     def test_profile_order(self):
         client = TestClient()
-        mingw = """from conans import ConanFile
+        mingw = """from conan import ConanFile
 class Tool(ConanFile):
     def package_info(self):
         self.buildenv_info.append("MYVAR", "mymingwpath")
 """
-        msys = """from conans import ConanFile
+        msys = """from conan import ConanFile
 class Tool(ConanFile):
     def package_info(self):
         self.buildenv_info.append("MYVAR", "mymsyspath")
@@ -427,7 +427,7 @@ msys/0.1@lasote/stable
 mingw/0.1@lasote/stable
 """
 
-        app = """from conans import ConanFile
+        app = """from conan import ConanFile
 from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
@@ -437,21 +437,21 @@ class App(ConanFile):
             self.output.info("FOR BUILD %s" % os.getenv("MYVAR"))
 """
         client.save({CONANFILE: mingw})
-        client.run("create . mingw/0.1@lasote/stable")
+        client.run("create . --name=mingw --version=0.1 --user=lasote --channel=stable")
         client.save({CONANFILE: msys})
-        client.run("create . msys/0.1@lasote/stable")
+        client.run("create . --name=msys --version=0.1 --user=lasote --channel=stable")
         client.save({CONANFILE: app,
                      "myprofile1": myprofile1,
                      "myprofile2": myprofile2})
-        client.run("create . app/0.1@lasote/stable -pr=myprofile1")
+        client.run("create . --name=app --version=0.1 --user=lasote --channel=stable -pr=myprofile1")
         # mingw being the first one, has priority and its "append" mandates it is the last appended
         self.assertIn("app/0.1@lasote/stable: FOR BUILD mymsyspath mymingwpath", client.out)
-        client.run("create . app/0.1@lasote/stable -pr=myprofile2")
+        client.run("create . --name=app --version=0.1 --user=lasote --channel=stable -pr=myprofile2")
         self.assertIn("app/0.1@lasote/stable: FOR BUILD mymingwpath mymsyspath", client.out)
 
     def test_require_itself(self):
         client = TestClient()
-        mytool_conanfile = """from conans import ConanFile
+        mytool_conanfile = """from conan import ConanFile
 class Tool(ConanFile):
     def build(self):
         self.output.info("BUILDING MYTOOL")
@@ -462,7 +462,7 @@ Tool/0.1@lasote/stable
 """
         client.save({CONANFILE: mytool_conanfile,
                      "profile.txt": myprofile})
-        client.run("create . Tool/0.1@lasote/stable -pr=profile.txt")
+        client.run("create . --name=Tool --version=0.1 --user=lasote --channel=stable -pr=profile.txt")
         self.assertEqual(1, str(client.out).count("BUILDING MYTOOL"))
 
     @parameterized.expand([(requires, ), (requires_range, ), (requirements, ), (override, )])
@@ -474,11 +474,11 @@ Tool/0.1@lasote/stable
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
@@ -493,24 +493,24 @@ Tool/0.1@lasote/stable
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
         client.run("export . --user=lasote --channel=stable")
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable")
+        client.run("install --requires=MyLib/0.1@lasote/stable")
         self.assertNotIn("Tool", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
-        client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install --requires=MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertNotIn("Tool/0.1", client.out)
         self.assertNotIn("Tool/0.2", client.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
     def test_options(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class package(ConanFile):
     name            = "first"
     version         = "0.0.0"
@@ -523,7 +523,7 @@ class package(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("export . --user=lasote --channel=stable")
 
-        consumer = """from conans import ConanFile
+        consumer = """from conan import ConanFile
 
 class package(ConanFile):
     name            = "second"
@@ -532,7 +532,7 @@ class package(ConanFile):
     build_requires  = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})
-        client.run("install . --build=missing -o Pkg:someoption=3")
+        client.run("install . --build=missing -o Pkg/*:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
 
     def test_failed_assert(self):
@@ -542,7 +542,7 @@ class package(ConanFile):
         client.run("export . --name=common --version=1.0 --user=test --channel=test")
 
         req = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class BuildReqConan(ConanFile):
                 requires = "common/1.0@test/test"
             """)
@@ -551,7 +551,7 @@ class package(ConanFile):
         client.run("export . --name=build_req --version=1.0 --user=test --channel=test")
 
         build_req_req = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class BuildReqConan(ConanFile):
                 requires = "common/1.0@test/test"
                 build_requires = "build_req/1.0@test/test"
@@ -575,7 +575,7 @@ class package(ConanFile):
         # https://github.com/conan-io/conan/issues/5682
         client = TestClient()
         zlib = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class ZlibPkg(ConanFile):
                 def package_info(self):
                     self.cpp_info.libs = ["myzlib"]
@@ -588,7 +588,7 @@ class package(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_require("freetype/1.0@test/test")})
         client.run("export . --name=fontconfig --version=1.0 --user=test --channel=test")
         harfbuzz = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class harfbuzz(ConanFile):
                 requires = "freetype/1.0@test/test", "fontconfig/1.0@test/test"
                 def build(self):
@@ -607,13 +607,13 @@ class package(ConanFile):
 def test_dependents_new_buildenv():
     client = TestClient()
     boost = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Boost(ConanFile):
             def package_info(self):
                 self.buildenv_info.define_path("PATH", "myboostpath")
         """)
     other = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Other(ConanFile):
             def requirements(self):
                 self.requires("boost/1.0")
@@ -623,7 +623,7 @@ def test_dependents_new_buildenv():
                 self.buildenv_info.prepend_path("PATH", "myotherprepend")
         """)
     consumer = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.env import VirtualBuildEnv
        import os
        class Lib(ConanFile):
@@ -639,8 +639,8 @@ def test_dependents_new_buildenv():
                  "profile_define": "[buildenv]\nPATH=(path)profilepath",
                  "profile_append": "[buildenv]\nPATH+=(path)profilepath",
                  "profile_prepend": "[buildenv]\nPATH=+(path)profilepath"})
-    client.run("create boost boost/1.0@")
-    client.run("create other other/1.0@")
+    client.run("create boost --name=boost --version=1.0")
+    client.run("create other --name=other --version=1.0")
     client.run("install consumer")
     result = os.pathsep.join(["myotherprepend", "myboostpath", "myotherpath"])
     assert "LIB PATH {}".format(result) in client.out
@@ -658,3 +658,25 @@ def test_dependents_new_buildenv():
     client.run("install consumer -pr=profile_prepend")
     result = os.pathsep.join(["profilepath", "myotherprepend", "myboostpath", "myotherpath"])
     assert "LIB PATH {}".format(result) in client.out
+
+
+def test_tool_requires_conanfile_txt():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+
+    build_req = textwrap.dedent("""
+        from conan import ConanFile
+        class BuildReqConan(ConanFile):
+            pass
+        """)
+
+    client.save({"conanfile.py": build_req})
+    client.run("export . --name=build_req --version=1.0 --user=test --channel=test")
+
+    consumer = textwrap.dedent("""
+                [tool_requires]
+                build_req/1.0@test/test
+            """)
+    client.save({"conanfile.txt": consumer}, clean_first=True)
+    client.run("install . --build=missing")
+    assert "build_req/1.0@test/test: Created package" in client.out
