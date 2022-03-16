@@ -14,7 +14,7 @@ from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
 from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conans.model.conf import Conf
 from conans.util.files import load
 
 
@@ -502,17 +502,10 @@ class CMakeFlagsInitBlock(Block):
         string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " {{ exelinkflags }}")
     """)
 
-    conan_conf_template = textwrap.dedent("""
-        tools.build:cxxflags=["{cxxflags}"]
-        tools.build:cflags=["{cflags}"]
-        tools.build:sharedlinkflags=["{sharedlinkflags}"]
-        tools.build:exelinkflags=["{exelinkflags}"]
-    """)
-
     def __init__(self, conanfile, toolchain):
         super(CMakeFlagsInitBlock, self).__init__(conanfile, toolchain)
         # Load all the predefined Conan C, CXX, etc. flags
-        self._conan_conf = ConfDefinition()
+        self._conan_conf = Conf()
         self._process_conan_flags()
 
     def _process_conan_flags(self):
@@ -521,13 +514,10 @@ class CMakeFlagsInitBlock(Block):
         glib_flag = self._get_glib_flag()
 
         # Defining all the flags
-        flags = self.conan_conf_template.format(
-            cxxflags=" ".join([glib_flag, arch_flag, mp_flag]),
-            cflags=" ".join([arch_flag, mp_flag]),
-            sharedlinkflags=arch_flag,
-            exelinkflags=arch_flag
-        )
-        self._conan_conf.loads(flags)
+        self._conan_conf.define("tools.build:cxxflags", [glib_flag, arch_flag, mp_flag])
+        self._conan_conf.define("tools.build:cflags", [arch_flag, mp_flag])
+        self._conan_conf.define("tools.build:sharedlinkflags", [arch_flag])
+        self._conan_conf.define("tools.build:exelinkflags", [arch_flag])
 
     def _get_parallel_jobs_flags(self):
         compiler = self._conanfile.settings.get_safe("compiler")
@@ -569,8 +559,8 @@ class CMakeFlagsInitBlock(Block):
         return glib_flag
 
     def context(self):
-        # now, it's time to update the predefined flags with [conf] ones injected by the user
-        self._conan_conf.update_conf_definition(self._conanfile.conf)
+        # Now, it's time to update the predefined flags with [conf] ones injected by the user
+        self._conan_conf.compose_conf(self._conanfile.conf)
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
