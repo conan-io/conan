@@ -285,7 +285,7 @@ class TestValidate(unittest.TestCase):
                       "exist for this configuration):", client.out)
         self.assertIn("dep/0.1: Invalid: Windows not supported", client.out)
 
-    def test_validate_export(self):
+    def test_validate_export_pkg(self):
         # https://github.com/conan-io/conan/issues/9797
         c = TestClient()
         conanfile = textwrap.dedent("""
@@ -299,3 +299,18 @@ class TestValidate(unittest.TestCase):
         c.save({"conanfile.py": conanfile})
         c.run("export-pkg . --name=test --version=1.0", assert_error=True)
         assert "Invalid: never ever" in c.out
+
+    def test_validate_install(self):
+        # https://github.com/conan-io/conan/issues/10602
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+
+            class TestConan(ConanFile):
+                def validate(self):
+                    raise ConanInvalidConfiguration("never ever")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        assert "ERROR: conanfile.py: Invalid ID: Invalid: never ever" in c.out
