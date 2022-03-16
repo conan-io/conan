@@ -167,11 +167,10 @@ def test_zip_download_with_subfolder(no_copy_source):
         tools.get("http://fake_url/my_sources.zip")
 
     def layout(self):
-        self.folders.source = "subfolder"
+        self.folders.source = "src"
 
     def build(self):
         assert os.path.exists(os.path.join(self.source_folder, "subfolder", "CMakeLists.txt"))
-        assert "subfolder" in self.source_folder
         assert os.path.exists(os.path.join(self.source_folder,
                                            "ignored_subfolder", "ignored.txt"))
         cmake = CMake(self)
@@ -218,11 +217,10 @@ def test_zip_download_with_subfolder_new_tools(no_copy_source):
         get(self, "http://fake_url/my_sources.zip")
 
     def layout(self):
-        self.folders.source = "subfolder"
+        self.folders.source = "src"
 
     def build(self):
         assert os.path.exists(os.path.join(self.source_folder, "subfolder", "CMakeLists.txt"))
-        assert "subfolder" in self.source_folder
         assert os.path.exists(os.path.join(self.source_folder,
                                            "ignored_subfolder", "ignored.txt"))
         cmake = CMake(self)

@@ -17,8 +17,7 @@ def test_shared_link_flags():
     """
     conanfile = textwrap.dedent("""
     from conans import ConanFile
-    from conan.tools.cmake import CMake
-    from conan.tools.layout import cmake_layout
+    from conan.tools.cmake import CMake, cmake_layout
 
 
     class HelloConan(ConanFile):
@@ -27,7 +26,7 @@ def test_shared_link_flags():
         settings = "os", "compiler", "build_type", "arch"
         options = {"shared": [True, False]}
         default_options = {"shared": False}
-        exports_sources = "CMakeLists.txt", "src/*"
+        exports_sources = "CMakeLists.txt", "src/*", "include/*"
         generators = "CMakeDeps", "CMakeToolchain"
 
         def layout(self):

@@ -41,7 +41,8 @@ def apple_sdk_name(settings):
     arch = settings.get_safe('arch')
     os_ = settings.get_safe('os')
     os_sdk = settings.get_safe('os.sdk')
-    return os_sdk or _guess_apple_sdk_name(os_, arch)
+    os_sdk_version = settings.get_safe('os.sdk_version') or ""
+    return "{}{}".format(os_sdk, os_sdk_version) if os_sdk else _guess_apple_sdk_name(os_, arch)
 
 
 def apple_min_version_flag(conanfile):
@@ -74,7 +75,7 @@ def apple_min_version_flag(conanfile):
 
 
 def apple_sdk_path(conanfile):
-    sdk_path = conanfile.conf["tools.apple:sdk_path"]
+    sdk_path = conanfile.conf.get("tools.apple:sdk_path")
     if not sdk_path:
         sdk_path = XCRun(conanfile.settings).sdk_path
     return sdk_path

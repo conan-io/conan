@@ -220,7 +220,7 @@ class _CppInfo(object):
         property_name = None
         if "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
+        return self.get_property(property_name) \
                or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
@@ -234,17 +234,12 @@ class _CppInfo(object):
             self._build_modules = self.build_modules
         return self._build_modules
 
-    def set_property(self, property_name, value, generator=None):
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+    def set_property(self, property_name, value):
+        self._generator_properties[property_name] = value
 
-    def get_property(self, property_name, generator=None):
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
+    def get_property(self, property_name):
         try:
-            return self._generator_properties[None][property_name]
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -333,9 +328,10 @@ class CppInfo(_CppInfo):
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
-        # Legacy logic for pkg_config generator
+        # Legacy logic for pkg_config generator, do not enter this logic if the properties model
+        # is used: https://github.com/conan-io/conan/issues/10309
         from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
+        if generator == PkgConfigGenerator.name and self.get_property("pkg_config_name") is None:
             fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
                 conan_v2_error("Generated file and name for {gen} generator will change in"

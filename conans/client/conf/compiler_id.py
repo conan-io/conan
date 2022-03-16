@@ -4,7 +4,7 @@ from six import StringIO
 
 from conans.client.runner import ConanRunner
 from conans.model.version import Version
-
+from conans.util.files import rmdir
 
 GCC = "gcc"
 LLVM_GCC = "llvm-gcc"  # GCC frontend with LLVM backend
@@ -183,11 +183,12 @@ def _parse_compiler_version(defines):
 def detect_compiler_id(executable, runner=None):
     runner = runner or ConanRunner()
     # use a temporary file, as /dev/null might not be available on all platforms
-    tmpname = tempfile.mktemp(suffix=".c")
+    tmpdir = tempfile.mkdtemp()
+    tmpname = os.path.join(tmpdir, "temp.c")
     with open(tmpname, "wb") as f:
         f.write(b"\n")
 
-    cmd = tempfile.mktemp(suffix=".cmd")
+    cmd = os.path.join(tmpdir, "file.cmd")
     with open(cmd, "wb") as f:
         f.write(b"echo off\nset MSC_CMD_FLAGS\n")
 
@@ -241,5 +242,7 @@ def detect_compiler_id(executable, runner=None):
                 return compiler
         return UNKNOWN_COMPILER
     finally:
-        os.unlink(tmpname)
-        os.unlink(cmd)
+        try:
+            rmdir(tmpdir)
+        except OSError:
+            pass

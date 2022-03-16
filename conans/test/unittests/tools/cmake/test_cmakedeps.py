@@ -31,7 +31,7 @@ def test_cpp_info_name_cmakedeps():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
@@ -67,7 +67,7 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
@@ -107,7 +107,7 @@ def test_cmake_deps_links_flags():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
@@ -118,7 +118,8 @@ def test_cmake_deps_links_flags():
         data_cmake = files["mypkg-release-x86-data.cmake"]
         assert 'set(mypkg_SHARED_LINK_FLAGS_RELEASE "-NODEFAULTLIB;-OTHERFLAG")' in data_cmake
         assert 'set(mypkg_EXE_LINK_FLAGS_RELEASE "-OPT:NOICF")' in data_cmake
-        assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' in data_cmake
+        assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' \
+               in data_cmake
 
 
 def test_component_name_same_package():
@@ -147,7 +148,7 @@ def test_component_name_same_package():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.context = "host"
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("mypkg/1.0"))
@@ -156,7 +157,8 @@ def test_component_name_same_package():
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         target_cmake = files["mypkg-Target-release.cmake"]
-        assert "$<$<CONFIG:Release>:${mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
+        assert "$<$<CONFIG:Release>:${mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" \
+               in target_cmake
 
         data_cmake = files["mypkg-release-x86-data.cmake"]
         assert 'set(mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \

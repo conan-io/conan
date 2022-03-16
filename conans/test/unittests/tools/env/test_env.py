@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conan.tools.microsoft.subsystems import WINDOWS
+from conans.client.subsystems import WINDOWS
 from conans.client.tools import chdir, environment_append
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -130,7 +130,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
 def test_profile():
     myprofile = textwrap.dedent("""
         # define
-        MyVar1=MyValue1
+        MyVar1 =MyValue1
         #  append
         MyVar2+=MyValue2
         #  multiple append works
@@ -195,7 +195,7 @@ def env():
 
 def check_command_output(cmd, prevenv):
     result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=prevenv, shell=True).communicate()
+                                 env=prevenv, shell=True).communicate()
     out = result.decode()
 
     assert "MyVar=MyValueB!!" in out
@@ -338,7 +338,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1=MyValue1
-            MyPath1=(path)/my/path1
+            MyPath1 = (path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)
@@ -352,7 +352,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1+=MyValue1
-            MyPath1+=(path)/my/path1
+            MyPath1 +=(path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)

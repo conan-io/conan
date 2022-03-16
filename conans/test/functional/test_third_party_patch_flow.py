@@ -15,9 +15,8 @@ def test_third_party_patch_flow():
     """
     conanfile = textwrap.dedent(r"""
         import os
-        from conans import ConanFile, load
-        from conans.tools import save
-        from conan.tools.files import apply_conandata_patches
+        from conan import ConanFile
+        from conan.tools.files import save, load, apply_conandata_patches
 
         class Pkg(ConanFile):
             name = "mypkg"
@@ -30,12 +29,13 @@ def test_third_party_patch_flow():
 
             def source(self):
                 # emulate a download from web site
-                save("myfile.cpp", "mistake1\nsomething\nmistake2\nmistake3\nsome\n")
+                save(self, "myfile.cpp", "mistake1\nsomething\nmistake2\nmistake3\nsome\n")
                 apply_conandata_patches(self)
 
             def build(self):
+                content = load(self,  os.path.join(self.source_folder, "myfile.cpp"))
                 for i in (1, 2, 3):
-                    if "mistake{}".format(i) in load(os.path.join(self.source_folder, "myfile.cpp")):
+                    if "mistake{}".format(i) in content:
                         raise Exception("MISTAKE{} BUILD!".format(i))
         """)
 
@@ -114,8 +114,8 @@ def test_third_party_overwrite_build_file():
     """
     conanfile = textwrap.dedent(r"""
         import os, shutil
-        from conans import ConanFile, load
-        from conans.tools import save
+        from conan import ConanFile
+        from conan.tools.files import save, load
 
         class Pkg(ConanFile):
             name = "mypkg"
@@ -128,12 +128,12 @@ def test_third_party_overwrite_build_file():
 
             def source(self):
                 # emulate a download from web site
-                save("CMakeLists.txt", "MISTAKE: Very old CMakeLists that needs to be replaced")
+                save(self, "CMakeLists.txt", "MISTAKE: Very old CMakeLists to be replaced")
                 # Now I fix it with one of the exported files
                 shutil.copy("../CMakeLists.txt", ".")
 
             def build(self):
-                if "MISTAKE" in load(os.path.join(self.source_folder, "CMakeLists.txt")):
+                if "MISTAKE" in load(self, os.path.join(self.source_folder, "CMakeLists.txt")):
                     raise Exception("MISTAKE BUILD!")
         """)
 
@@ -161,8 +161,8 @@ def test_third_party_git_overwrite_build_file():
 
     conanfile = textwrap.dedent(r"""
         import os, shutil
-        from conans import ConanFile, load
-        from conans.tools import save
+        from conan import ConanFile
+        from conan.tools.files import save, load
 
         class Pkg(ConanFile):
             name = "mypkg"
@@ -183,7 +183,7 @@ def test_third_party_git_overwrite_build_file():
                 shutil.copy("../CMakeLists.txt", ".")
 
             def build(self):
-                if "MISTAKE" in load(os.path.join(self.source_folder, "CMakeLists.txt")):
+                if "MISTAKE" in load(self, os.path.join(self.source_folder, "CMakeLists.txt")):
                     raise Exception("MISTAKE BUILD!")
         """.format(git_repo))
 
@@ -194,7 +194,7 @@ def test_third_party_git_overwrite_build_file():
     client.run("install .")
     client.run("source .")
     # This is the ugly exports, these 2 files are locally copied inside "src" folder
-    assert "FILES: ['CMakeLists.txt', 'conandata.yml']!" in client.out
+    assert "FILES: ['CMakeLists.txt']!" in client.out
     client.run("build .")
     assert "conanfile.py (mypkg/1.0): Calling build()" in client.out
 

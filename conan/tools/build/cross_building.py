@@ -18,6 +18,8 @@ def cross_building(conanfile=None, skip_x64_x86=False):
 
 
 def get_cross_building_settings(conanfile):
+    # FIXME: Develop2 this shouldn't go in develop2 where the build settings always exists
+    #        Keep the current develop2 implementation for the whole module while merging
     os_host = conanfile.settings.get_safe("os")
     arch_host = conanfile.settings.get_safe("arch")
 

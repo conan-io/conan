@@ -50,13 +50,13 @@ def test_foo():
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
     dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
-    dep1.package_folder = "/path/to/folder_dep1"
+    dep1.folders.set_base_package("/path/to/folder_dep1")
 
     dep2 = ConanFile(Mock(), None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
     dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
-    dep2.package_folder = "/path/to/folder_dep2"
+    dep2.folders.set_base_package("/path/to/folder_dep2")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req1 = Requirement(ConanFileReference.loads("dep1/1.0"))
@@ -69,6 +69,7 @@ def test_foo():
         consumer.settings = MockSettings(
             {"build_type": "Release",
              "arch": "x86",
+             "os": "Macos",
              "compiler": "gcc",
              "compiler.libcxx": "libstdc++11",
              "compiler.version": "7.1",
@@ -91,12 +92,14 @@ def test_foo():
                                  '-F /path/to/folder_dep2/one/framework/path/dep2 ' \
                                  '-L/path/to/folder_dep1/one/lib/path/dep1 ' \
                                  '-L/path/to/folder_dep2/one/lib/path/dep2 ' \
-                                 '-Wl,-rpath,"/path/to/folder_dep1/one/lib/path/dep1" ' \
-                                 '-Wl,-rpath,"/path/to/folder_dep2/one/lib/path/dep2" ' \
                                  '--sysroot=/path/to/folder/dep1 OtherSuperStuff'
 
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
         assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
+        assert env["LIBS"] == "-ldep1_onelib -ldep1_twolib -ldep2_onelib -ldep2_twolib "\
+                              "-ldep1_onesystemlib -ldep1_twosystemlib "\
+                              "-ldep2_onesystemlib -ldep2_twosystemlib"
+
         folder = temp_folder()
         consumer.folders.set_base_install(folder)
         deps.generate()

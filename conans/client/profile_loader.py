@@ -161,8 +161,8 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "options", "conf",
-                                           "buildenv"])
+                           allowed_fields=["build_requires", "tool_requires", "settings", "env",
+                                           "options", "conf", "buildenv"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -220,6 +220,10 @@ def _apply_inner_profile(doc, base_profile):
     if doc.build_requires:
         # FIXME CHECKS OF DUPLICATED?
         for req in doc.build_requires.splitlines():
+            _load_single_build_require(base_profile, req)
+
+    if doc.tool_requires:
+        for req in doc.tool_requires.splitlines():
             _load_single_build_require(base_profile, req)
 
     if doc.options:

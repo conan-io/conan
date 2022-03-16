@@ -111,3 +111,69 @@ def test_reuse_with_modules_and_config(client):
 
     client.run("install . -if=install")
     client.run("build . -if=install")
+
+
+@pytest.mark.parametrize("find_mode", ["both", "config", "module"])
+def test_transitive_modules_found(find_mode):
+    """
+    related to https://github.com/conan-io/conan/issues/10224
+    modules files variables were set with the pkg_name_FOUND or pkg_name_VERSION
+    instead of using filename_*, also there was missing doing a find_dependency of the
+    requires packages to find_package transitive dependencies
+    """
+    client = TestClient()
+    conan_pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            {requires}
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "{mode}")
+                self.cpp_info.set_property("cmake_file_name", "{filename}")
+                self.cpp_info.defines.append("DEFINE_{filename}")
+            """)
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Consumer(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            requires = "pkgb/1.0"
+            generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "CMakeLists.txt"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.1)
+        project(test_package CXX)
+        find_package(MYPKGB REQUIRED)
+        message("MYPKGB_VERSION: ${MYPKGB_VERSION}")
+        message("MYPKGB_VERSION_STRING: ${MYPKGB_VERSION_STRING}")
+        message("MYPKGB_INCLUDE_DIRS: ${MYPKGB_INCLUDE_DIRS}")
+        message("MYPKGB_INCLUDE_DIR: ${MYPKGB_INCLUDE_DIR}")
+        message("MYPKGB_LIBRARIES: ${MYPKGB_LIBRARIES}")
+        message("MYPKGB_DEFINITIONS: ${MYPKGB_DEFINITIONS}")
+        """)
+
+    client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', mode=find_mode),
+                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', mode=find_mode),
+                 "consumer.py": consumer,
+                 "CMakeLists.txt": cmakelist})
+    client.run("create pkga.py pkga/1.0@")
+    client.run("create pkgb.py pkgb/1.0@")
+    client.run("create consumer.py consumer/1.0@")
+
+    assert "MYPKGB_VERSION: 1.0" in client.out
+    assert "MYPKGB_VERSION_STRING: 1.0" in client.out
+    assert "MYPKGB_INCLUDE_DIRS:" in client.out
+    assert "MYPKGB_INCLUDE_DIR:" in client.out
+    assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
+    assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
+    assert "Conan: Target declared 'pkga::pkga'"
+    if find_mode == "module":
+        assert 'Found MYPKGA: 1.0 (found version "1.0")' in client.out
+
+

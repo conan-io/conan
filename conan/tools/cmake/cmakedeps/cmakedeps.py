@@ -80,7 +80,7 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode", "CMakeDeps")
+            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode")
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement

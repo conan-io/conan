@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.files import save_toolchain_args
+from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
@@ -19,7 +19,7 @@ def test_source_folder_works():
     conanfile.folders.set_base_source(sources)
     autotools = Autotools(conanfile)
     autotools.configure(build_script_folder="subfolder")
-    assert conanfile.command.replace("\\", "/") == "/path/to/sources/subfolder/configure -foo bar"
+    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/subfolder/configure" -foo bar'
 
     autotools.configure()
-    assert conanfile.command.replace("\\", "/") == "/path/to/sources/configure -foo bar"
+    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar'

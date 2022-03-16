@@ -22,7 +22,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError, ConanInvalidSystemRequirements
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
-from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -486,6 +486,8 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
+        parser.add_argument("-of", "--output-folder",
+                            help='The root output folder for generated and build files')
         _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
@@ -533,6 +535,7 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
+                                           output_folder=args.output_folder,
                                            lockfile=args.lockfile,
                                            lockfile_out=args.lockfile_out,
                                            require_overrides=args.require_override)
@@ -658,8 +661,8 @@ class Command(object):
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.writeln("{}: {}".format(key, value))
+            for key, description in BUILT_IN_CONFS.items():
+                self._out.writeln("{}: {}".format(key, description))
 
     def info(self, *args):
         """
@@ -1892,6 +1895,8 @@ class Command(object):
                                 help='Relative or absolute path to a file containing the layout.'
                                 ' Relative paths will be resolved first relative to current dir, '
                                 'then to local cache "layouts" folder')
+        add_parser.add_argument("-of", "--output-folder",
+                                help='The root output folder for generated and build files')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
         remove_parser.add_argument('reference',
@@ -1903,7 +1908,8 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, args.layout, args.output_folder,
+                                     cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)

@@ -12,13 +12,12 @@ def pkg_cmake(name, version, requires=None, exe=False):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
-            exports_sources = "CMakeLists.txt", "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             options = {{"shared": [True, False]}}
@@ -34,7 +33,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
+                self.copy("*.h", dst="include", src="include")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.dll", dst="bin", keep_path=False)
                 self.copy("*.dylib*", dst="lib", keep_path=False)
@@ -54,7 +53,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
     src = gen_function_cpp(name=name, includes=deps, calls=deps)
 
     deps = [r.name for r in refs]
-    files = {"src/{}.h".format(name): hdr,
+    files = {"include/{}.h".format(name): hdr,
              "src/{}.cpp".format(name): src,
              "conanfile.py": conanfile}
     if exe:
@@ -72,8 +71,7 @@ def pkg_cmake_test(require_name):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -108,8 +106,7 @@ def pkg_cmake_app(name, version, requires=None):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             name = "{pkg_name}"

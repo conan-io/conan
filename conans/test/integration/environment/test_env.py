@@ -491,3 +491,57 @@ def test_multiple_deactivate():
     assert 2 == str(out).count("Restoring environment")
     assert "VAR1=!!" in out
     assert "VAR2=!!" in out
+
+
+def test_profile_build_env_spaces():
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo VAR1=%VAR1%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo VAR1=$VAR1!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.txt": "",
+                 "profile": "[buildenv]\nVAR1 = VALUE1",
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install . -g VirtualBuildEnv -pr=profile")
+
+    if platform.system() == "Windows":
+        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+    else:
+        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "VAR1= VALUE1!!" in out
+    assert  "Restoring environment" in out
+    assert "VAR1=!!" in out
+
+
+def test_deactivate_location():
+    conanfile = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define("FOO", "BAR")
+        """)
+    client = TestClient()
+    client.save({"pkg.py": conanfile})
+    client.run("create pkg.py pkg/1.0@")
+    client.run("install pkg/1.0@ -g VirtualBuildEnv --install-folder=myfolder -s build_type=Release -s arch=x86_64")
+
+    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
+    cmd = "{}conanbuild{}".format(source_cmd, script_ext)
+
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
+                     cwd=client.current_folder).communicate()
+
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
+
+    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
+                                       "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))

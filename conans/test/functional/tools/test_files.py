@@ -127,7 +127,7 @@ def test_patch_real(no_copy_source):
         class Pkg(ConanFile):
             name = "mypkg"
             version = "1.0"
-            exports = "*"
+            exports_sources = "*"
             no_copy_source = %s
 
             def layout(self):
@@ -186,7 +186,7 @@ def test_apply_conandata_patches(mock_patch_ng):
             version = "1.11.0"
 
             def layout(self):
-                self.folders.build = "source_subfolder"
+                self.folders.source = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)
@@ -232,7 +232,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
             version = "1.11.0"
 
             def layout(self):
-                self.folders.build = "source_subfolder"
+                self.folders.source = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)
@@ -284,7 +284,6 @@ def test_no_patch_file_entry():
     assert "The 'conandata.yml' file needs a 'patch_file' or 'patch_string' entry for every patch" \
            " to be applied" in str(client.out)
 
-
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -314,7 +313,6 @@ def test_patch_string_entry(mock_patch_ng):
     assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
     assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
 
-
 def test_relate_base_path_all_versions(mock_patch_ng):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -325,7 +323,7 @@ def test_relate_base_path_all_versions(mock_patch_ng):
             version = "1.0"
 
             def layout(self):
-                self.folders.build = "source_subfolder"
+                self.folders.source = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)

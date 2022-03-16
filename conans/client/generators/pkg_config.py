@@ -59,12 +59,16 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                         comp,
                         comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
+                # Mechanism to avoid overwriting the component PC file in case of being
+                # the same as the root package one.
+                # Issue related: https://github.com/conan-io/conan/issues/10341
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
                                                                               comp_gennames)
         return ret
 
     def _pc_file_content(self, name, cpp_info, requires_gennames):
+        version = cpp_info.get_property("component_version") or cpp_info.version
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -81,7 +85,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
-        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content", self.name)
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content")
         if pkg_config_custom_content:
             lines.append(pkg_config_custom_content)
 
@@ -89,7 +93,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % cpp_info.version)
+        lines.append("Version: %s" % version)
         libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags

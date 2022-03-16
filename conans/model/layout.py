@@ -26,9 +26,34 @@ class Folders(object):
         self.package = ""
         self.generators = ""
         self.imports = ""
+        # Relative location of the project root, if the conanfile is not in that project root, but
+        # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
+        self.root = None
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def set_base_folders(self, conanfile_folder, output_folder):
+        """ this methods can be used for defining all the base folders in the
+        local flow (conan install, source, build), where only the current conanfile location
+        and the potential --output-folder user argument are the folders to take into account
+        If the "layout()" method defines a self.folders.root = "xxx" it will be used to compute
+        the base folder
+
+        @param conanfile_folder: the location where the current consumer conanfile is
+        @param output_folder: Can potentially be None (for export-pkg: TODO), in that case
+        the conanfile location is used
+        """
+        # This must be called only after ``layout()`` has been called
+        base_folder = conanfile_folder if self.root is None else \
+            os.path.normpath(os.path.join(conanfile_folder, self.root))
+
+        self._base_source = base_folder
+
+        self._base_install = output_folder or base_folder
+        self._base_build = output_folder or base_folder
+        self._base_generators = output_folder or base_folder
+        self._base_imports = output_folder or base_folder
 
     @property
     def source_folder(self):

@@ -476,3 +476,34 @@ def test_install_bintray_warning():
     client.run("install zlib/1.0@lasote/testing -r conan-center -s build_type=Debug")
     assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
            "soon" not in client.out
+
+
+def test_package_folder_available_consumer():
+    """
+    The package folder is not available when doing a consumer conan install "."
+    We don't want to provide the package folder for the "cmake install" nor the "make install",
+    as a consumer you could call the build system and pass the prefix PATH manually.
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+
+        settings = "os", "arch", "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            self.output.warn("Package folder is None? {}".format(self.package_folder is None))
+    """)
+    client.save({"conanfile.py": conanfile})
+
+    # Installing it with "install ." with output folder
+    client.run("install . -of=my_build")
+    assert "WARN: Package folder is None? True" in client.out
+
+    # Installing it with "install ." without output folder
+    client.run("install .")
+    assert "WARN: Package folder is None? True" in client.out

@@ -644,8 +644,7 @@ class TestComponentsCMakeGenerators:
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile
-            from conan.tools.cmake import CMake
-            from conan.tools.layout import cmake_layout
+            from conan.tools.cmake import CMake, cmake_layout
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -852,51 +851,3 @@ def test_cmakedeps_targets_no_namespace():
     assert "Target declared 'CURL'" in client.out
     assert "Component target declared 'MYPKGCOMPNAME'" in client.out
     assert "Target declared 'nonamespacepkg'" in client.out
-
-
-@pytest.mark.tool_cmake
-def test_colliding_target_names():
-    client = TestClient()
-
-    mypkg = textwrap.dedent("""
-        from conans import ConanFile
-        class MyPkg(ConanFile):
-            name = "mypkg"
-            version = "1.0"
-            settings = "os", "compiler", "build_type", "arch"
-            def package_info(self):
-                self.cpp_info.set_property("cmake_target_name", "mypkg::name")
-                self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mypkg::name")
-                self.cpp_info.components["mycomponent2"].set_property("cmake_target_name", "collidetarget")
-        """)
-
-    client.save({"conanfile.py": mypkg})
-    client.run("create .")
-
-    cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8)
-        find_package(mypkg REQUIRED)
-        """)
-
-    consumer = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.cmake import CMake
-
-        class Consumer(ConanFile):
-            name = "consumer"
-            version = "1.0"
-            settings = "os", "compiler", "build_type", "arch"
-            generators = "CMakeDeps", "CMakeToolchain"
-            exports_sources = ["CMakeLists.txt"]
-            requires = "mypkg/1.0"
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-        """)
-
-    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .")
-
-    assert "Target name 'mypkg::name' already exists." in client.out

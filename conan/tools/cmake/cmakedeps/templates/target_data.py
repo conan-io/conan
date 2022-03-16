@@ -3,7 +3,6 @@ import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name
-from conans.errors import ConanException
 
 """
 
@@ -25,26 +24,30 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        global_cpp = self.get_global_cpp_cmake()
+        global_cpp = self._get_global_cpp_cmake()
         if not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
 
+        components = self._get_required_components_cpp()
         # using the target names to name components, may change in the future?
         components_names = " ".join([components_target_name for components_target_name, _ in
-                                    reversed(self.get_required_components_cpp())])
+                                    reversed(components)])
 
         components_cpp = [(cmake_target_name.replace("::", "_"), cmake_target_name, cpp)
-                          for cmake_target_name, cpp in self.get_required_components_cpp()]
+                          for cmake_target_name, cpp in components]
 
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
         # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
         # for example a framework test won't be a build require but a "test/not public" require.
         dependency_filenames = self._get_dependency_filenames()
-        package_folder = self.conanfile.package_folder.replace('\\', '/')\
-                                                      .replace('$', '\\$').replace('"', '\\"')
+        # package_folder might not be defined if Editable and layout()
+        package_folder = self.conanfile.package_folder or ""
+        package_folder = package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
+                "file_name": self.file_name,
                 "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
                 "components_names": components_names,
@@ -58,10 +61,18 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
-              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
+              {% if components_names %}
+              list(APPEND {{ pkg_name }}_COMPONENT_NAMES {{ components_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
+              {% else %}
+              set({{ pkg_name }}_COMPONENT_NAMES "")
+              {% endif %}
+              {% if dependency_filenames %}
+              list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+              {% else %}
+              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES "")
+              {% endif %}
 
               ########### VARIABLES #######################################################################
               #############################################################################################
@@ -101,31 +112,33 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ cpp.framework_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS{{ config_suffix }} {{ cpp.frameworks }})
               set({{ pkg_name }}_{{ comp_variable_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ cpp.sharedlinkflags_list }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ cpp.exelinkflags_list }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ cpp.exelinkflags_list }}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
+              list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
               {%- endfor %}
           """)
         return ret
 
-    def get_global_cpp_cmake(self):
-        global_cppinfo = self.conanfile.cpp_info.copy()
-        global_cppinfo.aggregate_components()
+    def _get_global_cpp_cmake(self):
+        global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return DepsCppCmake(global_cppinfo, pfolder_var_name)
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder)
 
-    def get_required_components_cpp(self):
+    def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
-
+        pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
-            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-            deps_cpp_cmake = DepsCppCmake(comp, pfolder_var_name)
+            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
+                                                self.conanfile.package_folder)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -157,9 +170,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
 
-class DepsCppCmake(object):
+class _TargetDataContext(object):
 
-    def __init__(self, cpp_info, pfolder_var_name):
+    def __init__(self, cpp_info, pfolder_var_name, package_folder):
 
         def join_paths(paths):
             """
@@ -168,12 +181,20 @@ class DepsCppCmake(object):
             """
             ret = []
             for p in paths:
-                norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-                if os.path.isabs(p):
-                    ret.append('"{}"'.format(norm_path))
-                else:
+                assert os.path.isabs(p), "{} is not absolute".format(p)
+
+                # Trying to use a ${mypkg_PACKAGE_FOLDER}/include path instead of full
+                # TODO: We could do something similar for some build_folder for editables
+                # package_folder can be None if editable and layout()
+                if package_folder is not None and p.startswith(package_folder):
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
-                    ret.append('"${%s}/%s"' % (pfolder_var_name, norm_path))
+                    rel = p[len(package_folder):]
+                    rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")
+                    norm_path = ("${%s}/%s" % (pfolder_var_name, rel))
+                else:
+                    norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                ret.append('"{}"'.format(norm_path))
+
             return "\n\t\t\t".join(ret)
 
         def join_flags(separator, values):
@@ -196,7 +217,6 @@ class DepsCppCmake(object):
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        self.include_path = join_paths_single_var(cpp_info.includedirs)
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
@@ -225,5 +245,5 @@ class DepsCppCmake(object):
 
         self.objects_list = join_paths(cpp_info.objects)
 
-        build_modules = cpp_info.get_property("cmake_build_modules", "CMakeDeps") or []
+        build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)

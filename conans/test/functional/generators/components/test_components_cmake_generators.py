@@ -161,7 +161,7 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
             generators = "{}", "cmake"
             exports_sources = "src/*"
             requires = "greetings/0.0.1"
-            default_options = {{"greetings:components": "{}"}}
+            default_options = {{"greetings/*:components": "{}"}}
 
             def build(self):
                 cmake = CMake(self)
@@ -592,12 +592,11 @@ class TestComponentsCMakeGenerators:
                 def package_info(self):
                     self.cpp_info.names["{generator}"] = "nonstd"
                     self.cpp_info.filenames["{generator}"] = "{name}"
-                    self.cpp_info.set_property("cmake_target_name", "nonstd", "{generator}")
-                    self.cpp_info.set_property("cmake_file_name", "{name}", "{generator}")
+                    self.cpp_info.set_property("cmake_target_name", "nonstd")
+                    self.cpp_info.set_property("cmake_file_name", "{name}")
 
                     self.cpp_info.components["1"].names["{generator}"] = "{name}"
-                    self.cpp_info.components["1"].set_property("cmake_target_name",
-                                                               "{name}", "{generator}")
+                    self.cpp_info.components["1"].set_property("cmake_target_name", "{name}")
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         client = TestClient()

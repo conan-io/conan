@@ -14,8 +14,7 @@ def client_weird_lib_name():
     conanfile = textwrap.dedent("""
         import os, platform
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             exports_sources = "CMakeLists.txt", "src/*"
@@ -74,7 +73,7 @@ def test_cmake_find_package(client_weird_lib_name):
         from conans import ConanFile, CMake
 
         class Pkg(ConanFile):
-            exports_sources = "CMakeLists.txt", "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "cmake_find_package"
             requires = "hello/0.1"
@@ -100,7 +99,7 @@ def test_cmake_find_package_multi(client_weird_lib_name):
         from conans import ConanFile, CMake
 
         class Pkg(ConanFile):
-            exports_sources = "CMakeLists.txt", "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "cmake_find_package_multi"
             requires = "hello/0.1"

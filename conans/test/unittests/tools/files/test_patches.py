@@ -35,31 +35,51 @@ def mock_patch_ng(monkeypatch):
     return mock
 
 
-@pytest.mark.xfail(reason="patch() has changed, using cwd")
 def test_single_patch_file(mock_patch_ng):
     conanfile = ConanFileMock()
-    conanfile.folders.set_base_source("my_source")
+    conanfile.folders.set_base_source("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file')
-    assert mock_patch_ng.filename == 'patch-file'
+    assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
     assert mock_patch_ng.string is None
-    assert mock_patch_ng.apply_args == ("my_source", 0, False)
+    assert mock_patch_ng.apply_args == ("/my_source", 0, False)
     assert len(str(conanfile.output)) == 0
 
 
-@pytest.mark.xfail(reason="patch() has changed, using cwd")
+def test_single_patch_file_from_forced_build(mock_patch_ng):
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_source("/my_source")
+    conanfile.display_name = 'mocked/ref'
+    patch(conanfile, patch_file='/my_build/patch-file')
+    assert mock_patch_ng.filename == '/my_build/patch-file'
+    assert mock_patch_ng.string is None
+    assert mock_patch_ng.apply_args == ("/my_source", 0, False)
+    assert len(str(conanfile.output)) == 0
+
+
 def test_base_path(mock_patch_ng):
     conanfile = ConanFileMock()
-    conanfile.folders.set_base_source("my_source")
+    conanfile.folders.set_base_source("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file', base_path="subfolder")
-    assert mock_patch_ng.filename == 'patch-file'
+    assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
     assert mock_patch_ng.string is None
-    assert mock_patch_ng.apply_args == (os.path.join("my_source", "subfolder"), 0, False)
+    assert mock_patch_ng.apply_args == (os.path.join("/my_source", "subfolder"), 0, False)
+    assert len(str(conanfile.output)) == 0
+
+def test_apply_in_build_from_patch_in_source(mock_patch_ng):
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_source("/my_source")
+    conanfile.display_name = 'mocked/ref'
+    patch(conanfile, patch_file='patch-file', base_path="/my_build/subfolder")
+    assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
+    assert mock_patch_ng.string is None
+    assert mock_patch_ng.apply_args[0] == os.path.join("/my_build", "subfolder").replace("\\", "/")
+    assert mock_patch_ng.apply_args[1] == 0
+    assert mock_patch_ng.apply_args[2] is False
     assert len(str(conanfile.output)) == 0
 
 
-@pytest.mark.xfail(reason="patch() has changed, using cwd")
 def test_single_patch_string(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("my_folder")
@@ -71,13 +91,12 @@ def test_single_patch_string(mock_patch_ng):
     assert len(str(conanfile.output)) == 0
 
 
-@pytest.mark.xfail(reason="patch() has changed, using cwd")
 def test_single_patch_arguments(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
     conanfile.folders.set_base_source("/path/to/sources")
     patch(conanfile, patch_file='patch-file', strip=23, fuzz=True)
-    assert mock_patch_ng.filename == 'patch-file'
+    assert mock_patch_ng.filename.replace("\\", "/") == '/path/to/sources/patch-file'
     assert mock_patch_ng.apply_args == ("/path/to/sources", 23, True)
     assert len(str(conanfile.output)) == 0
 

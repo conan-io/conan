@@ -366,6 +366,18 @@ class Pkg(ConanFile):
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
+    def test_install_url_query(self):
+        """ should install from a URL
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            # repeat the process to check it works with ?args
+            self.client.run("config install http://myfakeurl.com/myconf.zip?sha=1")
+            self._check("url, http://myfakeurl.com/myconf.zip?sha=1, True, None")
+
     def test_install_change_only_verify_ssl(self):
         def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
             self._create_zip(file_path)
