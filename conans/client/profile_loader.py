@@ -84,13 +84,13 @@ class ProfileLoader:
         profile_path = self.get_profile_path(profile_name, cwd)
         text = load(profile_path)
 
-        if profile_name.endswith(".jinja"):
-            base_path = os.path.dirname(profile_path)
-            context = {"platform": platform,
-                       "os": os,
-                       "profile_dir": base_path}
-            rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
-            text = rtemplate.render(context)
+        # All profiles will be now rendered with jinja2 as first pass
+        base_path = os.path.dirname(profile_path)
+        context = {"platform": platform,
+                   "os": os,
+                   "profile_dir": base_path}
+        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        text = rtemplate.render(context)
 
         try:
             return self._recurse_load_profile(text, profile_path)
