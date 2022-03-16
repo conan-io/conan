@@ -248,7 +248,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("dep/0.1: Invalid ID: Windows not supported", client.out)
         self.assertIn("pkg/0.1: Invalid ID: Invalid transitive dependencies", client.out)
 
-    def test_validate_export(self):
+    def test_validate_export_pkg(self):
         # https://github.com/conan-io/conan/issues/9797
         c = TestClient()
         conanfile = textwrap.dedent("""
@@ -262,3 +262,20 @@ class TestValidate(unittest.TestCase):
         c.save({"conanfile.py": conanfile})
         c.run("export-pkg . test/1.0@", assert_error=True)
         assert "Invalid ID: never ever" in c.out
+
+    def test_validate_install(self):
+        # https://github.com/conan-io/conan/issues/10602
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+
+            class TestConan(ConanFile):
+                def validate(self):
+                    raise ConanInvalidConfiguration("never ever")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .")
+        assert "conanfile.py: ERROR: Invalid ID: never ever" in c.out
+        assert "Trying to install dependencies, but this configuration will fail to build a package"\
+               in c.out
