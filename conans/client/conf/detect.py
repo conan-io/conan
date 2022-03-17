@@ -157,7 +157,7 @@ def _get_profile_compiler_version(compiler, version, output):
         output.info("gcc>=5, using the major as version")
         return major
     elif compiler == "apple-clang" and int(major) >= 13:
-        output.info("aple-clang>=13, using the major as version")
+        output.info("apple-clang>=13, using the major as version")
         return major
     elif compiler == "Visual Studio":
         return major
