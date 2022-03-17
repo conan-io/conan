@@ -87,8 +87,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
             conan_determine_library_type(library_path type)
             add_library(${target_name} ${type} IMPORTED)
 
-            set(imported_loc)
-            set(imported_imp_lib)
+            set(imported_loc "")
+            set(imported_imp_lib "")
             if(WIN32)
                 if(type STREQUAL "SHARED")
                     # Find a corresponding DLL in the binary directory (if possible)
