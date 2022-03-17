@@ -575,7 +575,7 @@ class ExtraFlagsBlock(Block):
         {% if exelinkflags %}
         string(APPEND CONAN_EXE_LINKER_FLAGS
         {% for exelinkflag in exelinkflags %}
-        " {{ exelinkflags }}"
+        " {{ exelinkflag }}"
         {% endfor %}
         )
         {% endif %}
