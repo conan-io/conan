@@ -165,7 +165,8 @@ class CompatibleIDsTest(unittest.TestCase):
         c2 = GenConanfile().with_name("bb").with_version("1.0").with_require("aa/1.0")
         client = TestClient()
         # Recipe revision mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         # Create binaries with recipe revision mode for both
         client.save({"conanfile.py": c1})
         client.run("create .")
@@ -174,13 +175,14 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create .")
 
         # Back to semver default
-        save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=semver_mode")
         client.run("install --requires=bb/1.0@", assert_error=True)
         self.assertIn("Missing prebuilt package for 'bb/1.0'", client.out)
 
         # What if client modifies the packages declaring a compatible_package with the recipe mode
         # Recipe revision mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         tmp = """
 
     def package_id(self):
@@ -202,7 +204,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=semver_mode")
         client.run("install --requires=bb/1.0@ --update")
         self.assertIn(f"Using compatible package '{package_id}'", client.out)
 
@@ -229,7 +231,8 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8

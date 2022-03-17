@@ -305,24 +305,6 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type):
-        # If the requirement doesn't declare package_id, try to guess it with the types
-        if self.package_id_mode is not None:
-            return
-
-        if self.headers or self.libs:  # only if linked
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
-                if dep_pkg_type is PackageType.SHARED:
-                    self.package_id_mode = "minor_mode"
-                else:
-                    self.package_id_mode = "recipe_revision_mode"
-            elif pkg_type is PackageType.STATIC:
-                if dep_pkg_type is PackageType.HEADER:
-                    self.package_id_mode = "recipe_revision_mode"
-                else:
-                    self.package_id_mode = "minor_mode"
-            # HEADER-ONLY is automatically cleared in compute_package_id()
-
 
 class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax

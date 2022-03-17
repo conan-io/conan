@@ -260,7 +260,7 @@ class TestValidate(unittest.TestCase):
 
     def test_validate_package_id_mode(self):
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_mode=full_package_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
         conanfile = textwrap.dedent("""
           from conan import ConanFile
           from conans.errors import ConanInvalidConfiguration
