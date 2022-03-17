@@ -85,6 +85,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
         function(conan_define_package_library_target package_bindirs library_name target_name library_path)
 
             conan_determine_library_type(library_path type)
+
+            conan_message(DEBUG "Added library target '${target_name}'")
             add_library(${target_name} ${type} IMPORTED)
 
             set(imported_loc "")
