@@ -73,7 +73,7 @@ macros = textwrap.dedent("""
     * Links to libraries: {{ join_list_bold(cpp_info.libs) }}
     {%- endif %}
     {%- if cpp_info.system_libs %}
-    * Systems libs: {{ join_list_sources(cpp_info.system_libs) }}
+    * Systems libs: {{ join_list_bold(cpp_info.system_libs) }}
     {%- endif %}
     {%- if cpp_info.defines %}
     * Preprocessor definitions: {{ join_list_code(cpp_info.defines) }}
