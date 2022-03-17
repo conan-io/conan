@@ -28,7 +28,7 @@ class Bazel(object):
         #     bazel_config,
         #     label
         # )
-        command = 'bazel {} build {} {} --verbose_failures'.format(
+        command = 'bazel {} build {} {}'.format(
             bazelrc_path,
             bazel_config,
             label
@@ -39,5 +39,6 @@ class Bazel(object):
     def _get_bazel_project_configuration(self):
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
                                                      namespace=self._namespace)
-        self._bazel_config = toolchain_file_content.get("bazel_configs").split(",")
+        configs = toolchain_file_content.get("bazel_configs")
+        self._bazel_config = configs.split(",") if configs else []
         self._bazelrc_path = toolchain_file_content.get("bazelrc_path")

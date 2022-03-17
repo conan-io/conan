@@ -60,6 +60,9 @@ class {package_name}TestConan(ConanFile):
     generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
     apply_env = False
 
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
     def build(self):
         bazel = Bazel(self)
         bazel.configure()
@@ -136,6 +139,7 @@ class {package_name}Conan(ConanFile):
         dest_bin = os.path.join(self.package_folder, "bin")
         build = os.path.join(self.build_folder, "bazel-bin", "main")
         copy(self, "{name}", build, dest_bin, keep_path=False)
+        copy(self, "{name}.exe", build, dest_bin, keep_path=False)
         """
 
 test_conanfile_exe_v2 = """import os

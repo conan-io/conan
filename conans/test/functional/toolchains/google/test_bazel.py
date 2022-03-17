@@ -68,7 +68,7 @@ def test_basic_exe(client_exe, build_type, base_profile):
 @pytest.mark.tool_bazel
 def test_basic_lib(client_lib, build_type, base_profile):
 
-    profile = base_profile.format(build_type=build_type, curdir=client_exe.current_folder)
+    profile = base_profile.format(build_type=build_type, curdir=client_lib.current_folder)
     client_lib.save({"my_profile": profile})
 
     client_lib.run("create . --profile=./my_profile")
@@ -76,3 +76,153 @@ def test_basic_lib(client_lib, build_type, base_profile):
         assert "mylib/1.0: Hello World Release!" in client_lib.out
     else:
         assert "mylib/1.0: Hello World Debug!" in client_lib.out
+
+
+def test_transitive_consuming():
+
+    client = TestClient(path_with_spaces=False)
+    # A regular library made with CMake
+    with client.chdir("zlib"):
+        client.run("new zlib/1.2.11 --template cmake_lib")
+        conanfile = client.load("conanfile.py")
+        conanfile += """
+        self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
+        """
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+    # We prepare a consumer with Bazel (library openssl using zlib) and a test_package with an
+    # example executable
+    conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.google import Bazel, bazel_layout
+            from conan.tools.files import copy
+
+
+            class OpenSSLConan(ConanFile):
+                name = "openssl"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "main/*", "WORKSPACE"
+                requires = "zlib/1.2.11"
+
+                generators = "BazelToolchain", "BazelDeps"
+
+                def layout(self):
+                    bazel_layout(self)
+
+                def build(self):
+                    bazel = Bazel(self)
+                    bazel.configure()
+                    bazel.build(label="//main:openssl")
+
+                def package(self):
+                    dest_bin = os.path.join(self.package_folder, "bin")
+                    dest_lib = os.path.join(self.package_folder, "lib")
+                    build = os.path.join(self.build_folder, "bazel-bin", "main")
+                    copy(self, "*.so", build, dest_bin, keep_path=False)
+                    copy(self, "*.dll", build, dest_bin, keep_path=False)
+                    copy(self, "*.dylib", build, dest_bin, keep_path=False)
+                    copy(self, "*.a", build, dest_lib, keep_path=False)
+                    copy(self, "*openssl.h", self.source_folder,
+                         os.path.join(self.package_folder, "include"), keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.libs = ["openssl"]
+                """)
+    bazel_build = textwrap.dedent("""
+            load("@rules_cc//cc:defs.bzl", "cc_library")
+
+            cc_library(
+                name = "openssl",
+                srcs = ["openssl.cpp"],
+                hdrs = ["openssl.h"],
+                deps = [
+                    "@zlib//:zlib",
+                ],
+            )
+            """)
+    openssl_c = textwrap.dedent("""
+            #include <iostream>
+            #include "openssl.h"
+            #include "zlib.h"
+
+            void openssl(){
+                std::cout << "Calling OpenSSL function with define " << MY_DEFINE << "\\n";
+                zlib();
+            }
+            """)
+    openssl_h = textwrap.dedent("""
+            void openssl();
+            """)
+
+    bazel_workspace = textwrap.dedent("""
+        load("@//:dependencies.bzl", "load_conan_dependencies")
+        load_conan_dependencies()
+    """)
+
+    test_example = """#include "openssl.h"
+
+    int main() {{
+        openssl();
+    }}
+    """
+
+    test_conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.google import Bazel, bazel_layout
+    from conan.tools.build import cross_building
+
+
+    class OpenSSLTestConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
+        # (it will be defined in Conan 2.0)
+        generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
+        apply_env = False
+
+        def requirements(self):
+            self.requires(self.tested_reference_str)
+
+        def build(self):
+            bazel = Bazel(self)
+            bazel.configure()
+            bazel.build(label="//main:example")
+
+        def layout(self):
+            bazel_layout(self)
+
+        def test(self):
+            if not cross_building(self):
+                cmd = os.path.join(self.cpp.build.bindirs[0], "main", "example")
+                self.run(cmd, env="conanrun")
+    """)
+
+    test_bazel_build = textwrap.dedent("""
+        load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+        cc_binary(
+            name = "example",
+            srcs = ["example.cpp"],
+            deps = [
+                "@openssl//:openssl",
+            ],
+        )
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "main/BUILD": bazel_build,
+                 "main/openssl.cpp": openssl_c,
+                 "main/openssl.h": openssl_h,
+                 "WORKSPACE": bazel_workspace,
+                 "test_package/conanfile.py": test_conanfile,
+                 "test_package/main/example.cpp": test_example,
+                 "test_package/main/BUILD": test_bazel_build,
+                 "test_package/WORKSPACE": bazel_workspace
+                 })
+
+    client.run("create .")
+    assert "Calling OpenSSL function with define MY_VALUE" in client.out
+    assert "zlib/1.2.11: Hello World Release!"
