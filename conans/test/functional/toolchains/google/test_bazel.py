@@ -87,6 +87,7 @@ def test_transitive_consuming():
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
+        self.cpp_info.defines.append("MY_OTHER_DEFINE=2")
         """
         client.save({"conanfile.py": conanfile})
         client.run("create .")
@@ -149,7 +150,7 @@ def test_transitive_consuming():
             #include "zlib.h"
 
             void openssl(){
-                std::cout << "Calling OpenSSL function with define " << MY_DEFINE << "\\n";
+                std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
                 zlib();
             }
             """)
@@ -224,5 +225,5 @@ def test_transitive_consuming():
                  })
 
     client.run("create .")
-    assert "Calling OpenSSL function with define MY_VALUE" in client.out
+    assert "Calling OpenSSL function with define MY_VALUE and other define 2" in client.out
     assert "zlib/1.2.11: Hello World Release!"

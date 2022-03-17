@@ -377,6 +377,10 @@ class GraphBinariesAnalyzer(object):
             if msvc_compatible:
                 conanfile.compatible_packages.append(msvc_compatible)
 
+        apple_clang_compatible = conanfile.info.apple_clang_compatible()
+        if apple_clang_compatible:
+            conanfile.compatible_packages.append(apple_clang_compatible)
+
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             with conan_v2_property(conanfile, 'cpp_info',
