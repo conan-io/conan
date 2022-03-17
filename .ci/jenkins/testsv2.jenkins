@@ -188,6 +188,8 @@ try {
     }
 }
 catch(e){
-    echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+    def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+    def summary = "${subject} (${env.BUILD_URL}), Conan Branch: ${branch}"
+    slackSend (color: '#FF0000', message: summary)
     throw e
 }
