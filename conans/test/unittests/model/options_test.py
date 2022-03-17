@@ -100,15 +100,17 @@ class TestOptions:
         sut2 = Options({"static": [True, False],
                         "other": [True, False]})
         sut2.freeze()
+        sut2.other = False
         sut2.static = True
         assert "static=True" in sut2.dumps()
+        assert "other=False" in sut2.dumps()
         # But not twice
         with pytest.raises(ConanException) as e:
             sut2.static = False
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
         assert "static=True" in sut2.dumps()
 
-        # can remove other, not assigned yet
+        # can remove other, removing is always possible, even if freeze
         del sut2.other
         assert "other" not in sut2.dumps()
 
@@ -203,8 +205,12 @@ class TestOptionsNone:
         assert self.sut.static == 1
 
     def test_dumps(self):
+        with pytest.raises(ConanException) as e:
+            self.sut.dumps()
+        assert "'options.more' doesn't have a value" in str(e.value)
+        self.sut.more = "None"  # This is text, different from python None
         text = self.sut.dumps()
-        assert text == ""
+        assert text == "more=None"
 
 '''
     def test_undefined_value(self):

@@ -1,26 +1,20 @@
-import json
 import textwrap
 
-
-from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
-from conans.client.graph.graph import BINARY_INVALID
-from conans.test.assets.genconanfile import GenConanfile
-from conans.util.files import save
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 class TestValidPackageIdValue:
 
     def test_valid(self):
-        client = TestClient()
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
                 options = {"shared": [False, True]}
             """)
 
-        client.save({"conanfile.py": conanfile})
+        c.save({"conanfile.py": conanfile})
 
-        client.run("create . --name=pkg --version=0.1")
-
-
+        c.run("create . --name=pkg --version=0.1", assert_error=True)
+        assert "ERROR: pkg/0.1: Can't compute package_id: 'options.shared' doesn't have a value" \
+               in c.out
