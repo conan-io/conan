@@ -599,7 +599,8 @@ class ConanInfo(object):
     def apple_clang_compatible(self):
         # https://github.com/conan-io/conan/pull/10797
         # apple-clang compiler version 13 will be compatible with 13.0
-        if self.settings.compiler != "apple-clang" and self.settings.compiler.version != "13":
+        if not self.settings.compiler or \
+           (self.settings.compiler != "apple-clang" and self.settings.compiler.version != "13"):
             return
 
         compatible = self.clone()
