@@ -1,7 +1,6 @@
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-
 """
 
 FooTarget-release.cmake
@@ -10,11 +9,11 @@ FooTarget-release.cmake
 
 
 class TargetConfigurationTemplate(CMakeDepsFileTemplate):
-
     @property
     def filename(self):
         name = "" if not self.find_module_mode else "module-"
-        name += "{}-Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
+        name += "{}-Target-{}.cmake".format(
+            self.file_name, self.cmakedeps.configuration.lower())
         return name
 
     @property
@@ -23,15 +22,19 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             if not self.conanfile.is_build_context else []
 
         components_targets_names = self.get_declared_components_targets_names()
-        components_names = [(components_target_name.replace("::", "_"), components_target_name)
-                            for components_target_name in components_targets_names]
+        components_names = [
+            (components_target_name.replace("::", "_"), components_target_name)
+            for components_target_name in components_targets_names
+        ]
 
-        return {"pkg_name": self.pkg_name,
-                "root_target_name": self.root_target_name,
-                "config_suffix": self.config_suffix,
-                "deps_targets_names": ";".join(deps_targets_names),
-                "components_names": components_names,
-                "configuration": self.cmakedeps.configuration}
+        return {
+            "pkg_name": self.pkg_name,
+            "root_target_name": self.root_target_name,
+            "config_suffix": self.config_suffix,
+            "deps_targets_names": ";".join(deps_targets_names),
+            "components_names": components_names,
+            "configuration": self.cmakedeps.configuration
+        }
 
     @property
     def template(self):
@@ -99,6 +102,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }} "")
         set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }})
         conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_BIN_DIRS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
                                       {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
@@ -170,7 +174,10 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         # Get a list of dependencies target names
         # Declared cppinfo.requires or .components[].requires
-        visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True})
+        visible_host = self.conanfile.dependencies.filter({
+            "build": False,
+            "visible": True
+        })
         visible_host_direct = visible_host.filter({"direct": True})
         if self.conanfile.cpp_info.required_components:
             for dep_name, component_name in self.conanfile.cpp_info.required_components:
@@ -184,5 +191,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 ret.append(component_name)
         elif visible_host_direct:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = [self.get_root_target_name(r) for r in visible_host_direct.values()]
+            ret = [
+                self.get_root_target_name(r)
+                for r in visible_host_direct.values()
+            ]
         return ret
