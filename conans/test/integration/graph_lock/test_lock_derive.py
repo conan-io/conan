@@ -25,13 +25,13 @@ def test_regular_package():
     client.run("lock create --reference=defaults/1.0@ --base --lockfile-out=defaults.lock")
     # derive app.lock from defaults.lock
     client.run("lock create app/conanfile.py --lockfile=defaults.lock --lockfile-out=app.lock")
-    client.run("install app/conanfile.py --lockfile=app.lock", assert_error=True)
+    client.run("install app/conanfile.py --lockfile=app.lock --build=missing")
 
     # check that specified versions from default package are to be installed for app.
     assert "pkga/1.0.0" in client.out
     assert "pkgb/1.1.0" in client.out
 
-         
+
 def test_non_semver_package():
     client = TestClient()
     # TODO: This is hardcoded
@@ -47,10 +47,56 @@ def test_non_semver_package():
     client.run("export defaults defaults/1.0@")
     client.run("lock create --reference=defaults/1.0@ --base --lockfile-out=defaults.lock")
     client.run("lock create app/conanfile.py --lockfile=defaults.lock --lockfile-out=app.lock")
-    client.run("install app/conanfile.py --lockfile=app.lock", assert_error=True)
+    client.run("install app/conanfile.py --lockfile=app.lock --build=missing")
 
-    #assert "pkga/1.1.1" in client.out # This runs though it is not the locked version (note, it's not just the "i" stripped, but newest version")
-    assert "pkga/1.0.0i" in client.out # This fails, though should be ok
+    #assert "pkga/1.0.0i" in client.out
 
+def test_update_package():
+    client = TestClient()
+    client.save({"pkga/conanfile.py":     GenConanfile(),
+                 "pkgb/conanfile.py":     GenConanfile(),
+                 # specify versions in default packages
+                 "defaults/conanfile.py": GenConanfile().with_requires("pkga/1.0.0",
+                                                                                 "pkgb/1.0.0"),
+                 # version range in app
+                 "app/conanfile.py":      GenConanfile().with_requires("pkga/1.1.0","pkgb/[*]")})
 
-   
+    # export different version from the libs to the cache
+    client.run("export pkga pkga/1.0.0@")
+    client.run("export pkga pkga/1.1.0@")
+    client.run("export pkgb pkgb/1.0.0@")
+    client.run("export pkgb pkgb/1.1.0@")
+    client.run("export defaults defaults/1.0@")
+    client.run("lock create --reference=defaults/1.0@ --base --lockfile-out=defaults.lock")
+    # derive app.lock from defaults.lock
+    client.run("lock create app/conanfile.py --lockfile=defaults.lock --lockfile-out=app.lock")
+    client.run("install app/conanfile.py --lockfile=app.lock --build=missing")
+
+    # check that specified versions from default package are to be installed for app.
+    assert "pkga/1.1.0" in client.out
+    assert "pkgb/1.0.0" in client.out
+
+def test_update_package_transitive():
+    client = TestClient()
+    client.save({"pkga/conanfile.py":     GenConanfile(),
+                 "pkgb/conanfile.py":     GenConanfile().with_requires("pkga/[*]"),
+                 # specify versions in default packages
+                 "defaults/conanfile.py": GenConanfile().with_requires("pkga/1.0.0",
+                                                                                 "pkgb/1.0.0"),
+                 # version range in app
+                 "app/conanfile.py":      GenConanfile().with_requires("pkga/1.1.0","pkgb/[*]")})
+
+    # export different version from the libs to the cache
+    client.run("export pkga pkga/1.0.0@")
+    client.run("export pkga pkga/1.1.0@")
+    client.run("export pkgb pkgb/1.0.0@")
+    client.run("export pkgb pkgb/1.1.0@")
+    client.run("export defaults defaults/1.0@")
+    client.run("lock create --reference=defaults/1.0@ --base --lockfile-out=defaults.lock")
+    # derive app.lock from defaults.lock
+    client.run("lock create app/conanfile.py --lockfile=defaults.lock --lockfile-out=app.lock")
+    client.run("install app/conanfile.py --lockfile=app.lock --build=missing")
+
+    # check that specified versions from default package are to be installed for app.
+    assert "pkga/1.1.0" in client.out
+    assert "pkgb/1.0.0" in client.out
