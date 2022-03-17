@@ -63,9 +63,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
                 # Does it match a common Unix library extension.
                 # - A.so.1.3.0, A.so, A.dylib, A.dylib.1.3.0
-                if(ext MATCHES ".*\\.(a)(\\..+)$")
+                if(ext MATCHES ".*\\.(a)(\\..+)?$")
                     set(${out_type} STATIC PARENT_SCOPE)
-                elseif(ext MATCHES ".*\\.(so|dylib)(\\..+)$")
+                elseif(ext MATCHES ".*\\.(so|dylib)(\\..+)?$")
                     set(${out_type} SHARED PARENT_SCOPE)
                 endif()
             endif()
@@ -84,7 +84,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
         function(conan_define_package_library_target package_bindirs library_name target_name library_path)
 
-            conan_determine_library_type(library_path type)
+            conan_determine_library_type(${library_path} type)
 
             conan_message(DEBUG "Added library target '${target_name}'")
             add_library(${target_name} ${type} IMPORTED)
@@ -129,9 +129,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
             endif()
 
             # Set the libraries.
-            set_target_properties(${target} PROPERTIES IMPORTED_LOCATION ${imported_loc})
+            set_target_properties(${target_name} PROPERTIES IMPORTED_LOCATION ${imported_loc})
             if(NOT imported_imp_lib STREQUAL "")
-                set_target_properties(${target} PROPERTIES IMPORTED_LOCATION ${imported_imp_lib})
+                set_target_properties(${target_name} PROPERTIES IMPORTED_LOCATION ${imported_imp_lib})
             endif()
 
         endfunction()
