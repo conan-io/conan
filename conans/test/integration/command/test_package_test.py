@@ -184,6 +184,8 @@ class HelloConan(ConanFile):
 from conan import ConanFile
 
 class HelloTestConan(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def test(self):
         self.output.warning("Tested ok!")
 ''', "hello/0.1@conan/stable")
@@ -326,3 +328,17 @@ def test_tested_reference_str():
     client.run("create . --name=foo --version=1.0")
     for method in ("generate", "build", "build_requirements", "test"):
         assert "At {}: foo/1.0".format(method) in client.out
+
+
+def test_folder_output():
+    """ the "conan test" command should also follow the test_output layout folder
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("create .")
+    c.save({"test_package/conanfile.py": GenConanfile().with_test("pass").with_settings("build_type")
+                                                       .with_generator("CMakeDeps")})
+    # c.run("create .")
+    c.run("test test_package hello/0.1@")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "test_package/test_output/hello-config.cmake"))

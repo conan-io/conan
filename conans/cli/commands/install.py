@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
+from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.cli.commands import make_abs_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \
@@ -70,9 +70,6 @@ def graph_compute(args, conan_api, strict=False):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    # FIXME: Not used?
-    build_require = args.build_require if "build_require" in args else None
-    require_override = args.require_override if "require_override" in args else None
     if path is not None:
         root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
                                                                  name=args.name,
@@ -80,15 +77,13 @@ def graph_compute(args, conan_api, strict=False):
                                                                  user=args.user,
                                                                  channel=args.channel,
                                                                  lockfile=lockfile,
-                                                                 require_overrides=require_override,
                                                                  remotes=remotes,
                                                                  update=args.update)
     else:
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
-                                                                profile_host=profile_host,
-                                                                require_overrides=require_override)
+                                                                profile_host=profile_host)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
@@ -119,9 +114,6 @@ def common_graph_args(subparser):
                            help='Directly provide tool-requires instead of a conanfile')
     _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
     add_lockfile_args(subparser)
-
-    subparser.add_argument("--require-override", action="append",
-                           help="Define a requirement override")
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
