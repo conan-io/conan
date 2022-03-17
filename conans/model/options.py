@@ -383,6 +383,7 @@ class Options:
 
     @property
     def sha(self):
+        # FIXME: This should fail if trying to hash a not defined value (None not in range)
         result = ["[options]"]
         d = self.dumps()
         if d:
