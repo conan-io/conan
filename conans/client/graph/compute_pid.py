@@ -2,39 +2,9 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration, ConanException
+    ConanErrorConfiguration
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
-from conans.model.pkg_type import PackageType
 from conans.util.conan_v2_mode import conan_v2_property
-
-
-def _get_mode(node, require, dep_node, lib_mode, bin_mode, build_mode, unknown_mode):
-    # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
-    # The "conf" values are defaults, no hard overrides
-    if require.package_id_mode:
-        return require.package_id_mode
-
-    if require.build:
-        if build_mode and require.direct:
-            return build_mode
-        return None  # At the moment no defaults
-
-    pkg_type = node.conanfile.package_type
-    dep_pkg_type = dep_node.conanfile.package_type
-    if require.headers or require.libs:  # only if linked
-        if pkg_type in (PackageType.SHARED, PackageType.APP):
-            if dep_pkg_type is PackageType.SHARED:
-                return lib_mode
-            else:
-                return bin_mode
-        elif pkg_type is PackageType.STATIC:
-            if dep_pkg_type is PackageType.HEADER:
-                return bin_mode
-            else:
-                return lib_mode
-        # HEADER-ONLY is automatically cleared in compute_package_id()
-
-    return unknown_mode
 
 
 def compute_package_id(node, new_config):
@@ -58,10 +28,10 @@ def compute_package_id(node, new_config):
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        dep_package_id_mode = _get_mode(node, require, dep_node, lib_mode, bin_mode, build_mode,
-                                        unknown_mode)
-        if dep_package_id_mode is not None:
-            req_info = RequirementInfo(dep_node.pref, dep_package_id_mode)
+        require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
+                                       lib_mode, bin_mode, build_mode, unknown_mode)
+        if require.package_id_mode is not None:
+            req_info = RequirementInfo(dep_node.pref, require.package_id_mode)
             if require.build:
                 build_data[require] = req_info
             else:
