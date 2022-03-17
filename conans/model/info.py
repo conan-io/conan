@@ -1,5 +1,6 @@
 import os
 
+from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -435,9 +436,13 @@ class ConanInfo(object):
         """
         result = [self.settings.sha,
                   "[options]"]
-        options_dumps = self.options.dumps()
-        if options_dumps:
-            result.append(options_dumps)
+        try:
+            options_dumps = self.options.dumps()
+            if options_dumps:
+                result.append(options_dumps)
+        except ConanException as e:
+            self.invalid = BINARY_INVALID, str(e)
+
         result.append("[requires]")
         requires_dumps = self.requires.dumps()
         if requires_dumps:

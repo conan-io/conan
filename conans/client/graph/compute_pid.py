@@ -73,7 +73,4 @@ def compute_package_id(node, new_config):
                 conanfile.info.invalid = BINARY_ERROR, str(e)
 
     info = conanfile.info
-    try:
-        node.package_id = info.package_id()
-    except ConanException as e:
-        raise ConanException(f"{node.ref}: Can't compute package_id: {e}")
+    node.package_id = info.package_id()
