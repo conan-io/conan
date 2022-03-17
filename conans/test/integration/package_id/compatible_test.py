@@ -1,6 +1,9 @@
+import platform
 import textwrap
 import time
 import unittest
+
+import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -578,6 +581,7 @@ def test_msvc_visual_incompatible():
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
 def test_apple_clang_compatible():
     """
     From apple-clang version 13 we detect apple-clang version as 13 and we make
