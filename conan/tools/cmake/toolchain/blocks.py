@@ -582,7 +582,7 @@ class ExtraFlagsBlock(Block):
     """)
 
     def context(self):
-        # Now, it's time to add flags defined by the user
+        # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)

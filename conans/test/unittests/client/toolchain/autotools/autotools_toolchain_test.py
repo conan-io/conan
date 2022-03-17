@@ -258,7 +258,7 @@ def test_build_type_flag(compiler):
 
 def test_apple_arch_flag():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings_build = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -290,7 +290,7 @@ def test_apple_arch_flag():
 def test_apple_min_os_flag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -308,7 +308,7 @@ def test_apple_min_os_flag():
 def test_apple_isysrootflag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings_build = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -339,7 +339,7 @@ def test_apple_isysrootflag():
 
 def test_custom_defines():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -355,7 +355,7 @@ def test_custom_defines():
 
 def test_custom_cxxflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -374,7 +374,7 @@ def test_custom_cxxflags():
 
 def test_custom_cflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -393,7 +393,7 @@ def test_custom_cflags():
 
 def test_custom_ldflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",

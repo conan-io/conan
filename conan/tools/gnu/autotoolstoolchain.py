@@ -2,24 +2,72 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path, is_apple_os
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc
-from conans.model.conf import Conf
 from conans.tools import args_to_string
 
 
-class _AutotoolFlags:
-
-    def __init__(self, conanfile, is_apple_cross_building=False):
+class AutotoolsToolchain:
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
-        self._is_apple_cross_building = is_apple_cross_building
-        # Load all the predefined Conan C, CXX, etc. flags for CMakeToolchain
-        self._conan_conf = Conf()
-        self._process_conan_flags()
+        self._namespace = namespace
+
+        self.configure_args = []
+        self.make_args = []
+        self.default_configure_install_args = True
+
+        # Flags
+        self.cxxflags = []
+        self.cflags = []
+        self.ldflags = []
+        self.defines = []
+
+        # TODO: compiler.runtime for Visual studio?
+        # Defines
+        self.gcc_cxx11_abi = self._get_cxx11_abi_define()
+        self.ndebug = None
+        build_type = self._conanfile.settings.get_safe("build_type")
+        if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
+            self.ndebug = "NDEBUG"
+
+        # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
+        self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
+
+        self.cppstd = cppstd_flag(self._conanfile.settings)
+        self.arch_flag = architecture_flag(self._conanfile.settings)
+        self.libcxx = self._get_libcxx_flag()
+        self.fpic = self._conanfile.options.get_safe("fPIC")
+        self.msvc_runtime_flag = self._get_msvc_runtime_flag()
+
+        # Cross build
+        self._host = None
+        self._build = None
+        self._target = None
+
+        self.apple_arch_flag = self.apple_isysroot_flag = None
+        self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+
+        if cross_building(self._conanfile):
+            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+
+            # Apple Stuff
+            if os_build == "Macos":
+                sdk_path = apple_sdk_path(conanfile)
+                apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+                # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
+                self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
+                # -isysroot makes all includes for your library relative to the build directory
+                self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+
+        check_using_build_profile(self._conanfile)
 
     def _get_cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -76,114 +124,48 @@ class _AutotoolFlags:
         elif compiler == "qcc":
             return "-Y _%s" % str(libcxx)
 
-    def _get_apple_flags(self):
-        os_ = self._conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
-            return []
-
-        apple_min_vflag = apple_min_version_flag(self._conanfile)
-        apple_arch_flag = apple_isysroot_flag = None
-
-        if self._is_apple_cross_building:
-            sdk_path = apple_sdk_path(self._conanfile)
-            apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
-            # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-            apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
-            # -isysroot makes all includes for your library relative to the build directory
-            apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
-
-        return [apple_isysroot_flag, apple_arch_flag, apple_min_vflag]
-
-    def _process_conan_flags(self):
-        """Calculating all the flags predefined by Conan"""
-        # TODO: compiler.runtime for Visual studio?
-        # Defines
-        gcc_cxx11_abi = self._get_cxx11_abi_define()
-        ndebug = None
-        if self._conanfile.settings.get_safe("build_type") in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
-            ndebug = "NDEBUG"
-
-        # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
-        btype_flags = build_type_flags(self._conanfile.settings)
-        btype_lflags = build_type_link_flags(self._conanfile.settings)
-
-        cppstd = cppstd_flag(self._conanfile.settings)
-        arch_flag = architecture_flag(self._conanfile.settings)
-        libcxx = self._get_libcxx_flag()
-        fpic = "-fPIC" if self._conanfile.options.get_safe("fPIC") else ""
-        msvc_runtime_flag = self._get_msvc_runtime_flag()
-        apple_flags = self._get_apple_flags()
-
-        # Creating all the flags variables
-        cxxflags = [libcxx, cppstd, arch_flag, fpic, msvc_runtime_flag] + btype_flags + apple_flags
-        cflags = [arch_flag, fpic, msvc_runtime_flag] + btype_flags + apple_flags
-        ldflags = [arch_flag] + btype_lflags + apple_flags
-        cppflags = [ndebug, gcc_cxx11_abi]
-        # Saving them into the internal Conan conf
-        self._conan_conf.define("tools.build:cxxflags", cxxflags)
-        self._conan_conf.define("tools.build:cflags", cflags)
-        self._conan_conf.define("tools.build:ldflags", ldflags)
-        self._conan_conf.define("tools.build:cppflags", cppflags)
-
     @staticmethod
     def _filter_empty_list_fields(v):
         return list(filter(bool, v))
 
-    def context(self):
-        # Now, it's time to update the predefined flags with [conf] ones injected by the user
-        self._conan_conf.compose_conf(self._conanfile.conf)
-        cxxflags = self._conan_conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conan_conf.get("tools.build:cflags", default=[], check_type=list)
-        cppflags = self._conan_conf.get("tools.build:cppflags", default=[], check_type=list)
-        ldflags = self._conan_conf.get("tools.build:ldflags", default=[], check_type=list)
+    def _get_extra_flags(self):
+        # Now, it's time to get all the flags defined by the user
+        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        ldflags = self._conanfile.conf.get("tools.build:ldflags", default=[], check_type=list)
+        cppflags = self._conanfile.conf.get("tools.build:cppflags", default=[], check_type=list)
         return {
-            "cxxflags": self._filter_empty_list_fields(cxxflags),
-            "cflags": self._filter_empty_list_fields(cflags),
-            "cppflags": ["-D{}".format(d) for d in self._filter_empty_list_fields(cppflags)],
-            "ldflags": self._filter_empty_list_fields(ldflags),
+            "cxxflags": cxxflags,
+            "cflags": cflags,
+            "cppflags": cppflags,
+            "ldflags": ldflags
         }
-
-
-class AutotoolsToolchain:
-
-    def __init__(self, conanfile, namespace=None):
-        self._conanfile = conanfile
-        self._namespace = namespace
-
-        self.configure_args = []
-        self.make_args = []
-        self.default_configure_install_args = True
-
-        # Cross build
-        self._host = None
-        self._build = None
-        self._target = None
-
-        os_build = None
-        is_cross_building = cross_building(self._conanfile)
-        if is_cross_building:
-            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            compiler = self._conanfile.settings.get_safe("compiler")
-            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
-            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-
-        check_using_build_profile(self._conanfile)
-        # Get all the flags
-        is_apple_cross_building = all([is_cross_building, os_build == "Macos"])
-        self._autotool_flags = _AutotoolFlags(conanfile, is_apple_cross_building=is_apple_cross_building)
 
     def environment(self):
         env = Environment()
+
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        fpic = "-fPIC" if self.fpic else None
+        extra_flags = self._get_extra_flags()
+
+        self.cxxflags.extend([self.libcxx, self.cppstd,
+                              self.arch_flag, fpic, self.msvc_runtime_flag]
+                             + self.build_type_flags + apple_flags + extra_flags["cxxflags"])
+        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag]
+                           + self.build_type_flags + apple_flags + extra_flags["cflags"])
+        self.ldflags.extend([self.arch_flag] + self.build_type_link_flags
+                            + apple_flags + extra_flags["ldflags"])
+        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["cppflags"])
 
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
 
-        flags = self._autotool_flags.context()
-        env.append("CPPFLAGS", flags["cppflags"])
-        env.append("CXXFLAGS", flags["cxxflags"])
-        env.append("CFLAGS", flags["cflags"])
-        env.append("LDFLAGS", flags["ldflags"])
+        env.append("CPPFLAGS", ["-D{}".format(d) for d in self._filter_empty_list_fields(self.defines)])
+        env.append("CXXFLAGS", self._filter_empty_list_fields(self.cxxflags))
+        env.append("CFLAGS", self._filter_empty_list_fields(self.cflags))
+        env.append("LDFLAGS", self._filter_empty_list_fields(self.ldflags))
+
         return env
 
     def vars(self):
