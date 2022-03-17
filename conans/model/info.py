@@ -434,8 +434,11 @@ class ConanInfo(object):
         options and settings
         """
         result = [self.settings.sha,
-                  self.options.sha,
-                  "[requires]"]
+                  "[options]"]
+        options_dumps = self.options.dumps()
+        if options_dumps:
+            result.append(options_dumps)
+        result.append("[requires]")
         requires_dumps = self.requires.dumps()
         if requires_dumps:
             result.append(requires_dumps)
