@@ -28,8 +28,7 @@ class Bazel(object):
         #     bazel_config,
         #     label
         # )
-
-        command = 'bazel {} build {} {}'.format(
+        command = 'bazel {} build {} {} --verbose_failures'.format(
             bazelrc_path,
             bazel_config,
             label
