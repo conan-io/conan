@@ -85,4 +85,4 @@ class ConanDeprecatedImportsChecker(BaseChecker):
         with node.stream() as stream:
             for (index, line) in enumerate(stream):
                 if self.deprecated_imports_pattern.match(line.decode('utf-8')):
-                    self.add_message("conan1.x-deprecated-imports", line=index)
+                    self.add_message("conan1.x-deprecated-imports", line=index + 1)
