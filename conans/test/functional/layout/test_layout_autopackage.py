@@ -213,7 +213,6 @@ def test_auto_package_with_components():
 def test_auto_package_with_components_declared_badly():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
                      .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
 
@@ -294,7 +293,6 @@ def test_auto_package_default_folders_with_components():
     """By default, the cpp_info of the components are empty"""
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
-                     .with_import("from conans import tools")
                      .with_import("import os")
                      .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """

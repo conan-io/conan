@@ -65,7 +65,6 @@ def test_apple_framework_xcode(client):
 
 conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans import tools
             from conan.tools.cmake import CMake, CMakeToolchain
 
             class AppleframeworkConan(ConanFile):
@@ -213,7 +212,7 @@ def test_apple_own_framework_cross_build(settings):
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conan import ConanFile, tools
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
         from conan.tools.build import cross_building
 
