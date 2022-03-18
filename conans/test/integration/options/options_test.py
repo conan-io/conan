@@ -87,7 +87,7 @@ from conan import ConanFile
 class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
-    options = {"opt": "ANY"}
+    options = {"opt": ["ANY"]}
     default_options = {"opt": "b=c"}
 
     def build(self):
