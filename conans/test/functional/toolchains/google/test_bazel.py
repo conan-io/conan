@@ -27,7 +27,7 @@ def base_profile():
 
         [conf]
         tools.google.bazel:bazelrc_path={curdir}/mybazelrc
-        tools.google.bazel:config=["{build_type}", "withTimeStamps"]
+        tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
         """)
 
 
@@ -36,7 +36,7 @@ def client_exe(bazelrc):
     client = TestClient(path_with_spaces=False)
     client.run("new myapp/1.0 --template bazel_exe")
     # The build:<config> define several configurations that can be activated by passing
-    # the bazel config with tools.google.bazel:config
+    # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
     return client
 
@@ -46,7 +46,7 @@ def client_lib(bazelrc):
     client = TestClient(path_with_spaces=False)
     client.run("new mylib/1.0 --template bazel_lib")
     # The build:<config> define several configurations that can be activated by passing
-    # the bazel config with tools.google.bazel:config
+    # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
     return client
 
