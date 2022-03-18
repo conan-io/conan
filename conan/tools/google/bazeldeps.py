@@ -1,9 +1,11 @@
 import os
+import platform
 import textwrap
 
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -57,10 +59,10 @@ class BazelDeps(object):
         template = textwrap.dedent("""
             load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-            {% for lib in libs %}
+            {% for libname, filepath in libs.items() %}
             cc_import(
-                name = "{{ lib }}_precompiled",
-                {{ library_type }} = "{{ libdir }}/lib{{ lib }}.{{extension}}"
+                name = "{{ libname }}_precompiled",
+                {{ library_type }} = "{{ filepath }}"
             )
             {% endfor %}
 
@@ -121,37 +123,59 @@ class BazelDeps(object):
         defines = ', '.join(defines)
 
         linkopts = []
-        for linkopt in cpp_info.system_libs:
-            linkopts.append('"-l{}"'.format(linkopt))
+        for system_lib in cpp_info.system_libs:
+            # FIXME: Replace with settings_build
+            if platform.system() == "Windows":
+                linkopts.append('"/DEFAULTLIB:{}"'.format(system_lib))
+            else:
+                linkopts.append('"-l{}"'.format(system_lib))
+
         linkopts = ', '.join(linkopts)
-
-
         lib_dir = 'lib'
-        if len(cpp_info.libdirs) != 0:
-            lib_dir = _relativize_path(cpp_info.libdirs[0], package_folder)
 
         dependencies = []
         for req, dep in dependency.dependencies.items():
             dependencies.append(dep.ref.name)
 
+        libs = {}
+        for lib in cpp_info.libs:
+            real_path = self._resolve_real_file(cpp_info.libdirs, lib)
+            libs[lib] = _relativize_path(real_path, package_folder)
+
         shared_library = dependency.options.get_safe("shared") if dependency.options else False
         context = {
             "name": dependency.ref.name,
-            "libs": cpp_info.libs,
+            "libs": libs,
             "libdir": lib_dir,
             "headers": headers,
             "includes": includes,
             "defines": defines,
             "linkopts": linkopts,
             "library_type": "shared_library" if shared_library else "static_library",
-            # FIXME: This is extremely weak, not working in windows and the prefix "lib" always also
-            "extension": "so" if shared_library else "a",
             "dependencies": dependencies,
         }
         content = Template(template).render(**context)
         return content
 
+    def _resolve_real_file(self, libdirs, lib):
+        for libdir in libdirs:
+            files = os.listdir(libdir)
+            for f in files:
+                name, ext = os.path.splitext(f)
+                if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
+                    if ext != ".lib" and name.startswith("lib"):
+                        name = name[3:]
+                if lib == name:
+                    return os.path.join(libdir, f)
+        raise ConanException("The library {} cannot be found in the dependency".format(lib))
+
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
+        if dependency.package_folder is None:
+            # The local repository path should be the base of every declared cc_library,
+            # this is potentially incompatible with editables where there is no package_folder
+            # and the build_folder and the source_folder might be different, so there is no common
+            # base.
+            raise ConanException("BazelDeps doesn't support editable packages")
         snippet = textwrap.dedent("""
             native.new_local_repository(
                 name="{}",
@@ -160,6 +184,7 @@ class BazelDeps(object):
             )
         """).format(
             dependency.ref.name,
+            # FIXME: This shouldn't use package_folder, at editables it doesn't exists
             dependency.package_folder.replace("\\", "/"),
             dependency_buildfile_name.replace("\\", "/")
         )

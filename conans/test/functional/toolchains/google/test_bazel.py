@@ -157,7 +157,7 @@ def test_transitive_consuming():
                 std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
                 zlib();
                 // This comes from the systemlibs declared in the zlib
-                acos(23.23);
+                sqrt(25);
             }
             """)
     openssl_c_win = textwrap.dedent("""
