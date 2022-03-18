@@ -68,7 +68,7 @@ class ConanDeprecatedImportsChecker(BaseChecker):
     name = "conan_deprecated_imports"
     msgs = {
         "E9000": (
-            "Using deprecated imports from 'conans'",
+            "Using deprecated imports from 'conans'. Check migration guide at https://docs.conan.io/en/latest/conan_v2.html",
             "conan1.x-deprecated-imports",
             (
                 "Use imports from 'conan' instead of 'conans'"
