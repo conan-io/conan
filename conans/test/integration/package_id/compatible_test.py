@@ -427,7 +427,7 @@ def test_apple_clang_compatible():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
-    client.run('create . pkg/0.1@ -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
+    client.run('create . --name=pkg --version=0.1 -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
                '-s build_type=Release -s arch=x86_64')
-    client.run("install pkg/0.1@ -pr=profile")
+    client.run("install --requires=pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out
