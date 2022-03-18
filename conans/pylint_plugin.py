@@ -68,7 +68,7 @@ class ConanDeprecatedImportsChecker(BaseChecker):
     name = "conan_deprecated_imports"
     msgs = {
         "E9000": (
-            "Using deprecated imports from 'conans'",
+            "Using deprecated imports from 'conans'. Check migration guide at https://docs.conan.io/en/latest/conan_v2.html",
             "conan1.x-deprecated-imports",
             (
                 "Use imports from 'conan' instead of 'conans'"
@@ -85,4 +85,4 @@ class ConanDeprecatedImportsChecker(BaseChecker):
         with node.stream() as stream:
             for (index, line) in enumerate(stream):
                 if self.deprecated_imports_pattern.match(line.decode('utf-8')):
-                    self.add_message("conan1.x-deprecated-imports", line=index)
+                    self.add_message("conan1.x-deprecated-imports", line=index + 1)
