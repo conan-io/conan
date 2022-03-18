@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -88,6 +89,8 @@ def test_transitive_consuming():
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
         self.cpp_info.defines.append("MY_OTHER_DEFINE=2")
+        if self.settings.os != "Windows":
+            self.cpp_info.system_libs.append("m")
         """
         client.save({"conanfile.py": conanfile})
         client.run("create .")
@@ -148,12 +151,25 @@ def test_transitive_consuming():
             #include <iostream>
             #include "openssl.h"
             #include "zlib.h"
+            #include <math.h>
 
             void openssl(){
                 std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
                 zlib();
+                // This comes from the systemlibs declared in the zlib
+                acos(23.23);
             }
             """)
+    openssl_c_win = textwrap.dedent("""
+                #include <iostream>
+                #include "openssl.h"
+                #include "zlib.h"
+
+                void openssl(){
+                    std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
+                    zlib();
+                }
+                """)
     openssl_h = textwrap.dedent("""
             void openssl();
             """)
@@ -215,7 +231,7 @@ def test_transitive_consuming():
 
     client.save({"conanfile.py": conanfile,
                  "main/BUILD": bazel_build,
-                 "main/openssl.cpp": openssl_c,
+                 "main/openssl.cpp": openssl_c if platform.system() != "Windows" else openssl_c_win,
                  "main/openssl.h": openssl_h,
                  "WORKSPACE": bazel_workspace,
                  "test_package/conanfile.py": test_conanfile,
