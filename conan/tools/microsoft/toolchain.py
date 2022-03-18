@@ -50,6 +50,9 @@ class MSBuildToolchain(object):
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         if compiler == "msvc":
+            subs_toolset = settings.get_safe("compiler.toolset")
+            if subs_toolset:
+                return subs_toolset
             return msvc_version_to_toolset_version(compiler_version)
         if compiler == "intel":
             compiler_version = compiler_version if "." in compiler_version else \

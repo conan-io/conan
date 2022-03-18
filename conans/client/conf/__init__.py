@@ -110,6 +110,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             runtime: [static, dynamic]
             runtime_type: [Debug, Release]
             cppstd: [98, 14, 17, 20, 23]
+            toolset: [None, v110_xp, v120_xp, v140_xp, v141_xp]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
