@@ -3346,11 +3346,11 @@ compiler:
                   llvm, ClangCL, v143]
         cppstd: [None, 14, 17, 20, 23]
     msvc:
-        version: [170, 180, 190, 191, 192, 193]
+        version: [190, 191, 192, 193]
         update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         runtime: [static, dynamic]
         runtime_type: [Debug, Release]
-        cppstd: [98, 14, 17, 20, 23]
+        cppstd: [14, 17, 20, 23]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
@@ -3402,7 +3402,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 
 settings_1_46_2 = settings_1_46_1
 
-settings_1_47_0 = settings_1_47_0 = """
+settings_1_47_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX, VxWorks]
 arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
