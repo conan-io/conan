@@ -11,7 +11,7 @@ class TestOptions:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [True, False], "optimized": [2, 3, 4], "path": "ANY"}
+        options = {"static": [True, False], "optimized": [2, 3, 4], "path": ["ANY"]}
         values = {"static": True, "optimized": 3, "path": "mypath"}
         self.sut = Options(options, values)
 
@@ -100,10 +100,8 @@ class TestOptions:
         sut2 = Options({"static": [True, False],
                         "other": [True, False]})
         sut2.freeze()
-        sut2.other = False
         sut2.static = True
         assert "static=True" in sut2.dumps()
-        assert "other=False" in sut2.dumps()
         # But not twice
         with pytest.raises(ConanException) as e:
             sut2.static = False
@@ -165,7 +163,7 @@ class TestOptionsPropagate:
 class TestOptionsNone:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [None, 1, 2], "other": "ANY", "more": ["None", 1]}
+        options = {"static": [None, 1, 2], "other": [None, "ANY"], "more": ["None", 1]}
         self.sut = Options(options)
 
     def test_booleans(self):
@@ -205,12 +203,8 @@ class TestOptionsNone:
         assert self.sut.static == 1
 
     def test_dumps(self):
-        with pytest.raises(ConanException) as e:
-            self.sut.dumps()
-        assert "'options.more' doesn't have a value" in str(e.value)
-        self.sut.more = "None"  # This is text, different from python None
         text = self.sut.dumps()
-        assert text == "more=None"
+        assert text == ""
 
 '''
     def test_undefined_value(self):

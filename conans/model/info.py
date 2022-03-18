@@ -436,13 +436,9 @@ class ConanInfo(object):
         """
         result = [self.settings.sha,
                   "[options]"]
-        try:
-            options_dumps = self.options.dumps()
-            if options_dumps:
-                result.append(options_dumps)
-        except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
-
+        options_dumps = self.options.dumps()
+        if options_dumps:
+            result.append(options_dumps)
         result.append("[requires]")
         requires_dumps = self.requires.dumps()
         if requires_dumps:
@@ -458,6 +454,10 @@ class ConanInfo(object):
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
         package_id = sha1(text.encode())
+        try:
+            self.options.validate()
+        except ConanException as e:
+            self.invalid = BINARY_INVALID, str(e)
         return package_id
 
     def serialize_min(self):

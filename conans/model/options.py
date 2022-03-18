@@ -18,24 +18,24 @@ class _PackageOption:
         self._name = name
         self._value = value  # Value None = not defined
         # possible_values only possible origin is recipes
-        if possible_values is None or possible_values == "ANY":
+        if possible_values is None:
             self._possible_values = None
         else:
+            # This can contain "ANY"
             self._possible_values = [str(v) if v is not None else None for v in possible_values]
 
     def dumps(self, scope=None):
         if self._value is None:
-            if self._possible_values is not None and None not in self._possible_values:
-                raise ConanException("'options.%s' doesn't have a value." % self._name)
-            return ""
+            return None
         if scope:
             return "%s:%s=%s" % (scope, self._name, self._value)
         else:
             return "%s=%s" % (self._name, self._value)
 
     def copy_conaninfo_option(self):
-        # Conan info keeps the validation
-        return _PackageOption(self._name, self._value, self._possible_values)
+        # To generate a copy without validation, for package_id info.options value
+        assert self._possible_values is not None  # this should always come from recipe, with []
+        return _PackageOption(self._name, self._value, self._possible_values + ["ANY"])
 
     def __bool__(self):
         if self._value is None:
@@ -51,10 +51,15 @@ class _PackageOption:
     def _check_valid_value(self, value):
         """ checks that the provided value is allowed by current restrictions
         """
-        if self._possible_values is not None and value not in self._possible_values:
-            msg = ("'%s' is not a valid 'options.%s' value.\nPossible values are %s"
-                   % (value, self._name, self._possible_values))
-            raise ConanException(msg)
+        if self._possible_values is None:  # validation not defined (profile)
+            return
+        if value in self._possible_values:
+            return
+        if value is not None and "ANY" in self._possible_values:
+            return
+        msg = ("'%s' is not a valid 'options.%s' value.\nPossible values are %s"
+               % (value, self._name, self._possible_values))
+        raise ConanException(msg)
 
     def __eq__(self, other):
         # To promote the other to string, and always compare as strings
@@ -74,6 +79,13 @@ class _PackageOption:
         v = str(v) if v is not None else None
         self._check_valid_value(v)
         self._value = v
+
+    def validate(self):
+        # check that this has a valid option value defined
+        if self._value is not None:
+            return
+        if None not in self._possible_values:
+            raise ConanException("'options.%s' value not defined" % self._name)
 
 
 class _PackageOptions:
@@ -120,8 +132,12 @@ class _PackageOptions:
     def get_safe(self, field, default=None):
         return self._data.get(field, default)
 
+    def validate(self):
+        for child in self._data.values():
+            child.validate()
+
     def copy_conaninfo_options(self):
-        # To generate a copy keeping validation, for package_id info.options value
+        # To generate a copy without validation, for package_id info.options value
         result = _PackageOptions()
         for k, v in self._data.items():
             result._data[k] = v.copy_conaninfo_option()

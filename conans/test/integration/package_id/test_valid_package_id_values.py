@@ -16,4 +16,4 @@ class TestValidPackageIdValue:
         c.save({"conanfile.py": conanfile})
 
         c.run("create . --name=pkg --version=0.1", assert_error=True)
-        assert "pkg/0.1: Invalid: 'options.shared' doesn't have a value." in c.out
+        assert "pkg/0.1: Invalid: 'options.shared' value not defined" in c.out
