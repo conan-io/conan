@@ -115,6 +115,7 @@ class Values(object):
 
     @property
     def sha(self):
+        # FIXME: This should fail if trying to hash a not defined value (None not in range)
         result = ["[settings]"]
         for (name, value) in self.as_list(list_all=False):
             # It is important to discard None values, so migrations in settings can be done
