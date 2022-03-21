@@ -58,20 +58,6 @@ class MSBuildToolchain(object):
             return "Intel C++ Compiler " + compiler_version
         if compiler == "intel-cc":
             return IntelCC(conanfile).ms_toolset
-        if compiler == "Visual Studio":
-            toolset = settings.get_safe("compiler.toolset")
-            if not toolset:
-                toolsets = {"17": "v143",
-                            "16": "v142",
-                            "15": "v141",
-                            "14": "v140",
-                            "12": "v120",
-                            "11": "v110",
-                            "10": "v100",
-                            "9": "v90",
-                            "8": "v80"}
-                toolset = toolsets.get(compiler_version)
-            return toolset or ""
 
     @staticmethod
     def _runtime_library(settings):

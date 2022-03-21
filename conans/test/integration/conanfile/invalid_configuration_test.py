@@ -16,13 +16,13 @@ class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def configure(self):
-        if self.settings.compiler.version == "12":
+        if self.settings.compiler.version == "190":
             raise ConanInvalidConfiguration("user says that compiler.version=12 is invalid")
 
     """})
-        settings = "-s os=Windows -s compiler='Visual Studio' -s compiler.version={ver}"
-        self.settings_msvc15 = settings.format(ver="15")
-        self.settings_msvc12 = settings.format(ver="12")
+        settings = "-s os=Windows -s compiler=msvc -s compiler.version={ver}"
+        self.settings_msvc15 = settings.format(ver="192")
+        self.settings_msvc12 = settings.format(ver="190")
 
     def test_install_method(self):
         self.client.run("install . %s" % self.settings_msvc15)

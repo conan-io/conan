@@ -68,15 +68,6 @@ compiler:
         threads: [None, posix, win32]  # Windows MinGW
         exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
-    Visual Studio:
-        runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14", "15", "16", "17"]
-        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
-                    v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
-                    LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
-                    LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
-                    llvm, ClangCL, v143]
-        cppstd: [None, 14, 17, 20, 23]
     msvc:
         version: [170, 180, 190, 191, 192, 193]
         update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

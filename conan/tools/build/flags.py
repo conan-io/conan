@@ -64,7 +64,7 @@ def build_type_link_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if compiler in ["msvc", "Visual Studio"]:
+    if compiler == "msvc":
         if build_type in ("Debug", "RelWithDebInfo"):
             return ["-debug"]
 
@@ -85,7 +85,7 @@ def build_type_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if compiler in ['Visual Studio', 'msvc']:
+    if compiler == "msvc":
         if vs_toolset and "clang" in vs_toolset:
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
@@ -164,7 +164,6 @@ def cppstd_flag(settings):
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
-            "Visual Studio": _cppstd_visualstudio,
             "msvc": _cppstd_msvc,
             "intel-cc": _cppstd_intel_cc,
             "mcst-lcc": _cppstd_mcst_lcc}.get(compiler, None)
@@ -172,27 +171,6 @@ def cppstd_flag(settings):
     if func:
         flag = func(Version(compiler_version), str(cppstd))
     return flag
-
-
-def _cppstd_visualstudio(visual_version, cppstd):
-    # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
-    v14 = None
-    v17 = None
-    v20 = None
-    v23 = None
-
-    if visual_version >= "14":
-        v14 = "c++14"
-        v17 = "c++latest"
-    if visual_version >= "15":
-        v17 = "c++17"
-        v20 = "c++latest"
-    if visual_version >= "17":
-        v20 = "c++20"
-        v23 = "c++latest"
-
-    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
-    return "/std:%s" % flag if flag else None
 
 
 def _cppstd_msvc(visual_version, cppstd):

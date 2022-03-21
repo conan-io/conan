@@ -11,17 +11,17 @@ class SettingsCompilerVisualPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
         self.settings = Settings.loads(get_default_settings_yml())
-        self.settings.compiler = "Visual Studio"
+        self.settings.compiler = "msvc"
 
     def test_release_build_type_runtime(self):
         self.settings.build_type = "Release"
         preprocess(self.settings)
-        self.assertEqual(self.settings.compiler.runtime, "MD")
+        self.assertEqual(self.settings.compiler.runtime, None)
 
     def test_debug_build_type_runtime(self):
         self.settings.build_type = "Debug"
         preprocess(self.settings)
-        self.assertEqual(self.settings.compiler.runtime, "MDd")
+        self.assertEqual(self.settings.compiler.runtime, None)
 
     def test_different_base_compiler(self):
         self.settings.compiler = "gcc"
@@ -31,9 +31,9 @@ class SettingsCompilerVisualPreprocessorTest(unittest.TestCase):
 
     def test_custom_base_runtime_set(self):
         self.settings.build_type = "Debug"
-        self.settings.compiler.runtime = "MT"
+        self.settings.compiler.runtime = "static"
         preprocess(self.settings)
-        self.assertEqual(self.settings.compiler.runtime, "MT")
+        self.assertEqual(self.settings.compiler.runtime_type, "Debug")
 
 
 class TestSettingsCompilerMSVCPreprocessorTest:
