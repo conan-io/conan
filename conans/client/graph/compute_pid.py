@@ -68,7 +68,8 @@ def run_package_id(conanfile):
     with conanfile_exception_formatter(conanfile, "package_id"):
         msg = "'self.{}' access in package_id() method is deprecated"
         with (conan_v2_property(conanfile, 'cpp_info', msg.format("cpp_info")),
-              conan_v2_property(conanfile, 'settings', msg.format("cpp_info"))):
+              conan_v2_property(conanfile, 'settings', msg.format("settings")),
+              conan_v2_property(conanfile, 'options', msg.format("options"))):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
