@@ -1,3 +1,6 @@
+def branchName = env.BRANCH_NAME
+def jobName = env.JOB_NAME
+
 void cancelPrevious() {
     stage("Cancelling previous") {
         def buildNumber = env.BUILD_NUMBER as int
@@ -176,9 +179,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
-    def branchName = env.BRANCH_NAME
-    def jobName = env.JOB_NAME
-
+ 
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }
@@ -188,6 +189,10 @@ try {
     }
 }
 catch(e){
-    echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+    if (branchName == "develop2") {
+        def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+        def summary = "${subject} (${env.BUILD_URL}), Conan Branch: ${branchName}"
+        slackSend (color: '#FF0000', message: summary)
+    }
     throw e
 }
