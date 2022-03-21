@@ -98,13 +98,19 @@ def test_cppstd():
 
 
 class TestDefaultCompat:
-    @pytest.mark.xfail(reason="Default app-compatibility not working yet")
+
     def test_default_app_compat(self):
         c = TestClient()
         save(c.cache.default_profile_path, "")
-        c.save({"conanfile.py": GenConanfile("app", "1.0")
-               .with_package_type("application")
-               .with_settings("os", "arch", "compiler", "build_type")})
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "1.0"
+                package_type = "application"
+                settings = "os", "arch", "compiler", "build_type"
+            """)
+        c.save({"conanfile.py": conanfile})
         os_ = "Windows"
         arch = "x86_64"
         compiler = "msvc"

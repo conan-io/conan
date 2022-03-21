@@ -8,7 +8,8 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_ERROR, BINARY_EDITABLE_BUILD)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter
+    PackageNotFoundException, conanfile_exception_formatter, ConanInvalidConfiguration, \
+    ConanErrorConfiguration
 
 
 class GraphBinariesAnalyzer(object):
@@ -98,6 +99,22 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
+    @staticmethod
+    def _process_info(conanfile):
+        # Once we are done, call package_id() to narrow and change possible values
+        if hasattr(conanfile, "package_id_info"):
+            with conanfile_exception_formatter(conanfile, "package_id_info"):
+                conanfile.package_id_info()
+
+        if hasattr(conanfile, "validate_info"):
+            with conanfile_exception_formatter(conanfile, "validate_info"):
+                try:
+                    conanfile.validate_info()
+                except ConanInvalidConfiguration as e:
+                    conanfile.info.invalid = BINARY_INVALID, str(e)
+                except ConanErrorConfiguration as e:
+                    conanfile.info.invalid = BINARY_ERROR, str(e)
+
     def _process_compatible_packages(self, node):
         conanfile = node.conanfile
         plugin_compatibles = self._compatibility.compatibles(conanfile) or []
@@ -112,11 +129,13 @@ class GraphBinariesAnalyzer(object):
         # Avoid repetitions of same package_id
         compatibles = OrderedDict()
         for c in compatible_packages:
+            conanfile.info = c
+            self._process_info(conanfile)
             pid = c.package_id()
             if pid == original_package_id:  # Skip the check if same packge_id
                 conanfile.output.info(f"Compatible package ID {pid} equal to the default package ID")
                 continue
-            if pid not in compatibles:
+            if pid not in compatibles and not c.invalid:
                 compatibles[pid] = c
 
         for package_id, compatible_package in compatibles.items():

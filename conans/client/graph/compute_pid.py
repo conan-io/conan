@@ -57,10 +57,18 @@ def compute_package_id(node, new_config):
     if apple_clang_compatible:
         conanfile.compatible_packages.append(apple_clang_compatible)
 
+
+
+    info = conanfile.info
+    node.package_id = info.package_id()
+
+
+def run_package_id(conanfile):
     # Once we are done, call package_id() to narrow and change possible values
     with conanfile_exception_formatter(conanfile, "package_id"):
-        with conan_v2_property(conanfile, 'cpp_info',
-                               "'self.cpp_info' access in package_id() method is deprecated"):
+        msg = "'self.{}' access in package_id() method is deprecated"
+        with (conan_v2_property(conanfile, 'cpp_info', msg.format("cpp_info")),
+              conan_v2_property(conanfile, 'settings', msg.format("cpp_info"))):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
@@ -72,6 +80,3 @@ def compute_package_id(node, new_config):
                 conanfile.info.invalid = BINARY_INVALID, str(e)
             except ConanErrorConfiguration as e:
                 conanfile.info.invalid = BINARY_ERROR, str(e)
-
-    info = conanfile.info
-    node.package_id = info.package_id()
