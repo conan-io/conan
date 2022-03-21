@@ -139,7 +139,7 @@ class BazelDeps(object):
 
         libs = {}
         for lib in cpp_info.libs:
-            real_path = self._resolve_real_file(cpp_info.libdirs, lib)
+            real_path = self._get_libs_absolute_paths(cpp_info.libdirs, lib)
             if real_path:
                 libs[lib] = _relativize_path(real_path, package_folder)
 
@@ -158,7 +158,7 @@ class BazelDeps(object):
         content = Template(template).render(**context)
         return content
 
-    def _resolve_real_file(self, libdirs, lib):
+    def _get_libs_absolute_paths(self, libdirs, lib):
         for libdir in libdirs:
             if not os.path.exists(libdir):
                 self._conanfile.output.warning("The library folder doesn't exist: {}".format(libdir))
