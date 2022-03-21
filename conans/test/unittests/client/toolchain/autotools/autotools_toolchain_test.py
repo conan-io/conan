@@ -408,3 +408,22 @@ def test_custom_ldflags():
 
     assert "MyFlag" not in env["CXXFLAGS"]
     assert "MyFlag" not in env["CFLAGS"]
+
+
+def test_extra_flags_via_conf():
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:cxxflags", ["--flag1", "--flag2"])
+    conanfile.conf.define("tools.build:cflags", ["--flag3", "--flag4"])
+    conanfile.conf.define("tools.build:ldflags", ["--flag5", "--flag6"])
+    conanfile.conf.define("tools.build:cppflags", ["DEF1", "DEF2"])
+    conanfile.settings = MockSettings(
+        {"build_type": "RelWithDebInfo",
+         "os": "iOS",
+         "os.version": "14",
+         "arch": "armv8"})
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert '-DNDEBUG -DDEF1 -DDEF2' in env["CPPFLAGS"]
+    assert '-mios-version-min=14 --flag1 --flag2' in env["CXXFLAGS"]
+    assert '-mios-version-min=14 --flag3 --flag4' in env["CFLAGS"]
+    assert '-mios-version-min=14 --flag5 --flag6' in env["LDFLAGS"]

@@ -235,6 +235,8 @@ class Conf:
                 return self._get_boolean_value(v)
             elif check_type is str and not isinstance(v, str):
                 return str(v)
+            elif v is None:  # value was unset
+                return default
             elif check_type is not None and not isinstance(v, check_type):
                 raise ConanException("[conf] {name} must be a {type}-like object. "
                                      "The value '{value}' introduced is a {vtype} "

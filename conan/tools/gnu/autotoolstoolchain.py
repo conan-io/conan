@@ -125,7 +125,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     @staticmethod
-    def _filter_empty_list_fields(v):
+    def _filter_list_empty_fields(v):
         return list(filter(bool, v))
 
     def _get_extra_flags(self):
@@ -161,10 +161,10 @@ class AutotoolsToolchain:
             env.define("CXX", "cl")
             env.define("CC", "cl")
 
-        env.append("CPPFLAGS", ["-D{}".format(d) for d in self._filter_empty_list_fields(self.defines)])
-        env.append("CXXFLAGS", self._filter_empty_list_fields(self.cxxflags))
-        env.append("CFLAGS", self._filter_empty_list_fields(self.cflags))
-        env.append("LDFLAGS", self._filter_empty_list_fields(self.ldflags))
+        env.append("CPPFLAGS", ["-D{}".format(d) for d in self._filter_list_empty_fields(self.defines)])
+        env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
+        env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
+        env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
 
         return env
 
