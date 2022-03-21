@@ -398,10 +398,10 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "191", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "193", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -519,7 +519,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
                    ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_myrelease_myx86_64.props")
@@ -707,14 +707,14 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2017():
-    check_build_vs_project_with_a("15")
+    check_build_vs_project_with_a("191")
 
 
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
-    check_build_vs_project_with_a("17")
+    check_build_vs_project_with_a("193")
 
 
 def check_build_vs_project_with_a(vs_version):
@@ -761,7 +761,7 @@ def check_build_vs_project_with_a(vs_version):
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . --name=mydep.pkg.team --version=0.1 -s compiler="Visual Studio"'
+    client.run('create . --name=mydep.pkg.team --version=0.1 -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
@@ -785,7 +785,7 @@ def check_build_vs_project_with_a(vs_version):
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('build . -s compiler="Visual Studio"'
+    client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
@@ -797,14 +797,14 @@ def check_build_vs_project_with_a(vs_version):
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2017():
-    check_build_vs_project_with_test_requires("15")
+    check_build_vs_project_with_test_requires("191")
 
 
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
-    check_build_vs_project_with_test_requires("17")
+    check_build_vs_project_with_test_requires("193")
 
 
 def check_build_vs_project_with_test_requires(vs_version):
