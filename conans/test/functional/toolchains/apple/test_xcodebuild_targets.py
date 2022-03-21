@@ -498,7 +498,7 @@ conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 def test_shared_static_targets():
     """
     The pbxproj has defined two targets, one for static and one for dynamic libraries, in the
