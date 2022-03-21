@@ -140,6 +140,6 @@ def test_build_type_remove_windows():
     client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038",
                                              "Build")})
     client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler=msvc '
-               '-s compiler.version=190 -s build_type=Debug')
+               '-s compiler.version=190 -s build_type=Debug -s compiler.runtime=dynamic')
     client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038", "Cache")})
 
