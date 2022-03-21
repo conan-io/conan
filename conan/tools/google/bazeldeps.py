@@ -140,7 +140,8 @@ class BazelDeps(object):
         libs = {}
         for lib in cpp_info.libs:
             real_path = self._resolve_real_file(cpp_info.libdirs, lib)
-            libs[lib] = _relativize_path(real_path, package_folder)
+            if real_path:
+                libs[lib] = _relativize_path(real_path, package_folder)
 
         shared_library = dependency.options.get_safe("shared") if dependency.options else False
         context = {
@@ -170,7 +171,8 @@ class BazelDeps(object):
                         name = name[3:]
                 if lib == name:
                     return os.path.join(libdir, f)
-        raise ConanException("The library {} cannot be found in the dependency".format(lib))
+        self._conanfile.output.warning("The library {} cannot be found in the "
+                                       "dependency".format(lib))
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
         if dependency.package_folder is None:

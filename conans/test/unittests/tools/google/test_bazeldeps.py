@@ -1,3 +1,4 @@
+import os
 import re
 
 import mock
@@ -10,6 +11,7 @@ from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import Requirement, ConanFileDependencies
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 def test_bazeldeps_dependency_buildfiles():
@@ -25,6 +27,7 @@ def test_bazeldeps_dependency_buildfiles():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
     package_folder = temp_folder()
+    save(os.path.join(package_folder, "lib", "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -55,7 +58,9 @@ def test_bazeldeps_dependency_transitive():
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
-    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+    package_folder = temp_folder()
+    save(os.path.join(package_folder, "lib", "liblib1.a"), "")
+    conanfile_dep.folders.set_base_package(package_folder)
 
     # Add dependency on the direct dependency
     req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
