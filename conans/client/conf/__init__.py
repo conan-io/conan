@@ -231,6 +231,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
     # with "~/", will be relative to the conan user home, not to the system user home)
     path = ./data
+    # download_cache = /tmp/conan         # environment CONAN_DOWNLOAD_CACHE
 
     [proxies]
     # Empty (or missing) section will try to use system proxies.
@@ -481,7 +482,9 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def download_cache(self):
         try:
-            download_cache = self.get_item("storage.download_cache")
+            download_cache = get_env("CONAN_DOWNLOAD_CACHE")
+            if download_cache is None:
+                download_cache = self.get_item("storage.download_cache")
             return download_cache
         except ConanException:
             return None
