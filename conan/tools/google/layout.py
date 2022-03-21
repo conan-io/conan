@@ -6,5 +6,3 @@ def bazel_layout(conanfile, generator=None, src_folder="."):
        the build can load the dependencies.bzl from the BazelDeps"""
     conanfile.folders.build = ""
     conanfile.folders.generators = ""
-    conanfile.cpp.build.bindirs = ["bazel-bin"]
-    conanfile.cpp.build.libdirs = ["bazel-bin"]
