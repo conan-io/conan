@@ -92,6 +92,8 @@ def test_transitive_consuming():
         self.cpp_info.defines.append("MY_OTHER_DEFINE=2")
         if self.settings.os != "Windows":
             self.cpp_info.system_libs.append("m")
+        else:
+            self.cpp_info.system_libs.append("ws2_32")
         """
         client.save({"conanfile.py": conanfile})
         client.run("create .")
@@ -166,8 +168,10 @@ def test_transitive_consuming():
                 #include <iostream>
                 #include "openssl.h"
                 #include "zlib.h"
+                #include <WinSock2.h>
 
                 void openssl(){
+                    SOCKET foo; // From the system library
                     std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
                     zlib();
                 }
