@@ -18,7 +18,7 @@ class TestAttributesScope:
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
-        assert "'self.cpp_info' access in package_id() method is deprecated" in t.out
+        assert "'self.cpp_info' access in 'package_id()' method is forbidden" in t.out
 
     def test_info_not_in_package(self):
         # self.info is not available in 'package'
@@ -33,7 +33,7 @@ class TestAttributesScope:
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
-        assert "'self.info' access in package() method is deprecated" in t.out
+        assert "'self.info' access in 'package()' method is forbidden" in t.out
 
     def test_no_settings(self):
         # self.setting is not available in 'source'
@@ -49,7 +49,7 @@ class TestAttributesScope:
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
-        assert "'self.settings' access in source() method is deprecated" in t.out
+        assert "'self.settings' access in 'source()' method is forbidden" in t.out
 
     def test_no_options(self):
         # self.setting is not available in 'source'
@@ -65,4 +65,4 @@ class TestAttributesScope:
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -o shared=False', assert_error=True)
-        assert "'self.options' access in source() method is deprecated" in t.out
+        assert "'self.options' access in 'source()' method is forbidden" in t.out

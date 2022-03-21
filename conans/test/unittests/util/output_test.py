@@ -6,7 +6,6 @@ import zipfile
 import pytest
 
 from conan.tools.files import unzip
-from conans.client import tools
 from conans.test.utils.mocks import RedirectedTestOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output

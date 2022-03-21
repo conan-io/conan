@@ -76,7 +76,7 @@ class BinaryCompatibilityPlugin:
         cache_compatibles = []
         list_of_compatibles = self._compatibility(conanfile) or []
         for elem in list_of_compatibles:
-            compat = conanfile.info.clone()
+            compat = conanfile.original_info.clone()
             settings = elem.get("settings")
             if settings:
                 # This update only modifies existing binaries, but it will not add unexisting

@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
@@ -19,8 +18,8 @@ class CompatibleIDsTest(unittest.TestCase):
 
             class Pkg(ConanFile):
                 settings = "os", "compiler"
-                def package_id(self):
-                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                def compatibility(self):
+                    if self.info.settings.compiler == "gcc" and self.info.settings.compiler.version == "4.9":
                         for version in ("4.8", "4.7", "4.6"):
                             compatible_pkg = self.info.clone()
                             compatible_pkg.settings.compiler.version = version
@@ -56,8 +55,8 @@ class CompatibleIDsTest(unittest.TestCase):
 
            class Pkg(ConanFile):
                settings = "os", "compiler"
-               def package_id(self):
-                   if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+               def compatibility(self):
+                   if self.info.settings.compiler == "gcc" and self.info.settings.compiler.version == "4.9":
                        for version in ("4.8", "4.7", "4.6"):
                            compatible_pkg = self.info.clone()
                            compatible_pkg.settings.compiler.version = version
@@ -77,7 +76,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
         # Create package with gcc 4.8
         client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
-        self.assertIn("pkg/0.1@user/stable: Exported revision: aa6c81a7746c85101bc5c8d9f870660b",
+        self.assertIn("pkg/0.1@user/stable: Exported revision: 8a274effe00881a1d47a528078802c94",
                       client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
@@ -95,8 +94,8 @@ class CompatibleIDsTest(unittest.TestCase):
 
             class Pkg(ConanFile):
                 settings = "os", "compiler"
-                def package_id(self):
-                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                def compatibility(self):
+                    if self.info.settings.compiler == "gcc" and self.info.settings.compiler.version == "4.9":
                         for version in ("4.8", "4.7", "4.6"):
                             compatible_pkg = self.info.clone()
                             compatible_pkg.settings.compiler.version = version
@@ -129,7 +128,7 @@ class CompatibleIDsTest(unittest.TestCase):
             class Pkg(ConanFile):
                 options = {"optimized": [1, 2, 3]}
                 default_options = {"optimized": 1}
-                def package_id(self):
+                def compatibility(self):
                     for optimized in range(int(self.options.optimized), 0, -1):
                         compatible_pkg = self.info.clone()
                         compatible_pkg.options.optimized = optimized
@@ -279,8 +278,8 @@ class CompatibleIDsTest(unittest.TestCase):
             class Conan(ConanFile):
                 settings = "os"
 
-                def package_id(self):
-                   if self.settings.os == "Windows":
+                def compatibility(self):
+                   if self.info.settings.os == "Windows":
                        compatible = self.info.clone()
                        compatible.settings.os = "Linux"
                        self.compatible_packages.append(compatible)
@@ -306,8 +305,8 @@ class CompatibleIDsTest(unittest.TestCase):
                 settings = "os"
                 python_requires = "tool/0.1"
 
-                def package_id(self):
-                   if self.settings.os == "Windows":
+                def compatibility(self):
+                   if self.info.settings.os == "Windows":
                        compatible = self.info.clone()
                        compatible.settings.os = "Linux"
                        self.compatible_packages.append(compatible)
@@ -329,8 +328,8 @@ class CompatibleIDsTest(unittest.TestCase):
             from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os"
-                def package_id(self):
-                    if self.settings.os == "Windows":
+                def compatibility(self):
+                   if self.info.settings.os == "Windows":
                         compatible_pkg = self.info.clone()
                         compatible_pkg.settings.os = "Linux"
                         self.compatible_packages.append(compatible_pkg)
@@ -359,8 +358,8 @@ class CompatibleIDsTest(unittest.TestCase):
             class Pkg(ConanFile):
                 {}
                 settings = "build_type"
-                def package_id(self):
-                    if self.settings.build_type == "Debug":
+                def compatibility(self):
+                    if self.info.settings.build_type == "Debug":
                         compatible_pkg = self.info.clone()
                         compatible_pkg.settings.build_type = "Release"
                         self.compatible_packages.append(compatible_pkg)

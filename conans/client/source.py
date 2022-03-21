@@ -1,7 +1,7 @@
 import os
 
-from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException
-from conans.util.conan_v2_mode import conan_v2_property
+from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException, \
+    conanfile_remove_attr
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories, clean_dirty, chdir)
 
@@ -91,11 +91,6 @@ def run_source_method(conanfile, hook_manager, **hook_kwargs):
         hook_manager.execute("pre_source", conanfile=conanfile, **hook_kwargs)
         conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
         with conanfile_exception_formatter(conanfile, "source"):
-            with conan_v2_property(conanfile, 'settings',
-                                   "'self.settings' access in source() method is "
-                                   "deprecated"):
-                with conan_v2_property(conanfile, 'options',
-                                       "'self.options' access in source() method is "
-                                       "deprecated"):
-                    conanfile.source()
+            with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
+                conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile, **hook_kwargs)

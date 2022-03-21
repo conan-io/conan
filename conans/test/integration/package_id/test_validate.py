@@ -17,12 +17,12 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.errors import ConanInvalidConfiguration
+            from conan.errors import ConanInvalidConfiguration
             class Pkg(ConanFile):
                 settings = "os"
 
                 def validate(self):
-                    if self.settings.os == "Windows":
+                    if self.info.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
             """)
 
@@ -45,16 +45,16 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.errors import ConanInvalidConfiguration
+            from conan.errors import ConanInvalidConfiguration
             class Pkg(ConanFile):
                 settings = "os"
 
                 def validate(self):
-                    if self.settings.os == "Windows":
+                    if self.info.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
 
-                def package_id(self):
-                    if self.settings.os == "Windows":
+                def compatibility(self):
+                    if self.info.settings.os == "Windows":
                         compatible_pkg = self.info.clone()
                         compatible_pkg.settings.os = "Linux"
                         self.compatible_packages.append(compatible_pkg)
@@ -71,6 +71,7 @@ class TestValidate(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb",
                                                  "Invalid")})
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
+        print(client.out)
         self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
@@ -80,7 +81,7 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
                from conan import ConanFile
-               from conans.errors import ConanInvalidConfiguration
+               from conan.errors import ConanInvalidConfiguration
                class Pkg(ConanFile):
                    settings = "os"
 
@@ -109,16 +110,16 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.errors import ConanInvalidConfiguration
+           from conan.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                settings = "os", "build_type"
 
                def validate(self):
-                   if self.settings.os == "Windows":
+                   if self.info.settings.os == "Windows":
                        raise ConanInvalidConfiguration("Windows not supported")
 
-               def package_id(self):
-                   if self.settings.build_type == "Debug" and self.settings.os != "Windows":
+               def compatibility(self):
+                   if self.info.settings.build_type == "Debug" and self.info.settings.os != "Windows":
                        compatible_pkg = self.info.clone()
                        compatible_pkg.settings.build_type = "Release"
                        self.compatible_packages.append(compatible_pkg)
@@ -147,16 +148,16 @@ class TestValidate(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.errors import ConanInvalidConfiguration
+           from conan.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                settings = "os", "build_type"
 
                def validate(self):
-                   if self.settings.os == "Windows":
+                   if self.info.settings.os == "Windows":
                        raise ConanInvalidConfiguration("Windows not supported")
 
-               def package_id(self):
-                   if self.settings.build_type == "Debug":
+               def compatibility(self):
+                   if self.info.settings.build_type == "Debug":
                        compatible_pkg = self.info.clone()
                        compatible_pkg.settings.build_type = "Release"
                        self.compatible_packages.append(compatible_pkg)
@@ -210,7 +211,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=dep --version=0.1 -o dep/*:myoption=2")
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.errors import ConanErrorConfiguration
+           from conan.errors import ConanErrorConfiguration
            class Pkg(ConanFile):
                requires = "dep/0.1"
 
@@ -239,7 +240,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=dep --version=0.2")
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conans.errors import ConanInvalidConfiguration
+           from conan.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                requires = "dep/0.1"
 
@@ -263,12 +264,12 @@ class TestValidate(unittest.TestCase):
         save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
         conanfile = textwrap.dedent("""
           from conan import ConanFile
-          from conans.errors import ConanInvalidConfiguration
+          from conan.errors import ConanInvalidConfiguration
           class Pkg(ConanFile):
               settings = "os"
 
               def validate(self):
-                  if self.settings.os == "Windows":
+                  if self.info.settings.os == "Windows":
                       raise ConanInvalidConfiguration("Windows not supported")
               """)
         client.save({"conanfile.py": conanfile})
@@ -290,7 +291,7 @@ class TestValidate(unittest.TestCase):
         c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conans.errors import ConanInvalidConfiguration
+            from conan.errors import ConanInvalidConfiguration
 
             class TestConan(ConanFile):
                 def validate(self):

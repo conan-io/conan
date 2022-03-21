@@ -2,14 +2,13 @@ from collections import OrderedDict
 
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compatibility import BinaryCompatibilityPlugin
-from conans.client.graph.compute_pid import compute_package_id
+from conans.client.graph.compute_pid import compute_package_id, run_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_ERROR, BINARY_EDITABLE_BUILD)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration
+    PackageNotFoundException, conanfile_exception_formatter
 
 
 class GraphBinariesAnalyzer(object):
@@ -99,22 +98,6 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
-    @staticmethod
-    def _process_info(conanfile):
-        # Once we are done, call package_id() to narrow and change possible values
-        if hasattr(conanfile, "package_id_info"):
-            with conanfile_exception_formatter(conanfile, "package_id_info"):
-                conanfile.package_id_info()
-
-        if hasattr(conanfile, "validate_info"):
-            with conanfile_exception_formatter(conanfile, "validate_info"):
-                try:
-                    conanfile.validate_info()
-                except ConanInvalidConfiguration as e:
-                    conanfile.info.invalid = BINARY_INVALID, str(e)
-                except ConanErrorConfiguration as e:
-                    conanfile.info.invalid = BINARY_ERROR, str(e)
-
     def _process_compatible_packages(self, node):
         conanfile = node.conanfile
         plugin_compatibles = self._compatibility.compatibles(conanfile) or []
@@ -129,9 +112,11 @@ class GraphBinariesAnalyzer(object):
         # Avoid repetitions of same package_id
         compatibles = OrderedDict()
         for c in compatible_packages:
+            print("TETSING COMPAT ", c.dumps())
             conanfile.info = c
-            self._process_info(conanfile)
+            run_package_id(conanfile)
             pid = c.package_id()
+            print("     TETSING COMPAT pic", pid)
             if pid == original_package_id:  # Skip the check if same packge_id
                 conanfile.output.info(f"Compatible package ID {pid} equal to the default package ID")
                 continue
@@ -139,6 +124,7 @@ class GraphBinariesAnalyzer(object):
                 compatibles[pid] = c
 
         for package_id, compatible_package in compatibles.items():
+            print("EVALUATEING COMPAT ", compatible_package.dumps(), package_id)
             conanfile.info = compatible_package  # Redefine current
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it

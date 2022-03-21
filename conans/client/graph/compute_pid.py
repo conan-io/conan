@@ -2,9 +2,8 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration
+    ConanErrorConfiguration, conanfile_remove_attr
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
-from conans.util.conan_v2_mode import conan_v2_property
 
 
 def compute_package_id(node, new_config):
@@ -46,6 +45,7 @@ def compute_package_id(node, new_config):
                                       build_requires_info,
                                       python_requires=python_requires,
                                       default_python_requires_id_mode=python_mode)
+    conanfile.original_info = conanfile.info.clone()
 
     msvc_incomp = False  # self._cache.new_config["core.package_id:msvc_visual_incompatible"]
     if not msvc_incomp:
@@ -57,7 +57,11 @@ def compute_package_id(node, new_config):
     if apple_clang_compatible:
         conanfile.compatible_packages.append(apple_clang_compatible)
 
+    run_package_id(conanfile)
 
+    if hasattr(conanfile, "compatibility") and callable(conanfile.compatibility):
+        with conanfile_exception_formatter(conanfile, "compatibility"):
+            conanfile.compatibility()
 
     info = conanfile.info
     node.package_id = info.package_id()
@@ -66,18 +70,16 @@ def compute_package_id(node, new_config):
 def run_package_id(conanfile):
     # Once we are done, call package_id() to narrow and change possible values
     with conanfile_exception_formatter(conanfile, "package_id"):
-        msg = "'self.{}' access in package_id() method is deprecated"
-        with (conan_v2_property(conanfile, 'cpp_info', msg.format("cpp_info")),
-              conan_v2_property(conanfile, 'settings', msg.format("settings")),
-              conan_v2_property(conanfile, 'options', msg.format("options"))):
+        with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate") and callable(conanfile.validate):
         with conanfile_exception_formatter(conanfile, "validate"):
-            try:
-                conanfile.validate()
-            except ConanInvalidConfiguration as e:
-                conanfile.info.invalid = BINARY_INVALID, str(e)
-            except ConanErrorConfiguration as e:
-                conanfile.info.invalid = BINARY_ERROR, str(e)
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
+                try:
+                    conanfile.validate()
+                except ConanInvalidConfiguration as e:
+                    conanfile.info.invalid = BINARY_INVALID, str(e)
+                except ConanErrorConfiguration as e:
+                    conanfile.info.invalid = BINARY_ERROR, str(e)

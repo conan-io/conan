@@ -92,11 +92,11 @@ def test_option_in():
             options = {"fpic": [True, False]}
             default_options = {"fpic": True}
             def package_id(self):
-                if "fpic" in self.options:
+                if "fpic" in self.info.options:
                     self.output.info("fpic is an option!!!")
                 if "fpic" in self.info.options:  # Not documented
                     self.output.info("fpic is an info.option!!!")
-                if "other" not in self.options:
+                if "other" not in self.info.options:
                     self.output.info("other is not an option!!!")
                 if "other" not in self.info.options:  # Not documented
                     self.output.info("other is not an info.option!!!")
@@ -117,7 +117,7 @@ def test_option_in():
     assert "fpic is an info.option!!!" in client.out
     assert "other is not an option!!!" in client.out
     assert "other is not an info.option!!!" in client.out
-    assert "ERROR: OPTIONS: option 'whatever' doesn't exist" in client.out
+    assert "ERROR: OPTIONS: 'self.options' access in 'package_id()' method is forbidden" in client.out
     assert "ERROR: INFO: option 'whatever' doesn't exist" in client.out
 
 
@@ -129,7 +129,7 @@ def test_build_type_remove_windows():
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             def package_id(self):
-                if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+                if self.info.settings.os == "Windows" and self.info.settings.compiler == "Visual Studio":
                    del self.info.settings.build_type
                    del self.info.settings.compiler.runtime
         """)
