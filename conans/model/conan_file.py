@@ -141,6 +141,7 @@ class ConanFile(object):
 
     # Run in windows bash
     win_bash = None
+    tested_reference_str = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)

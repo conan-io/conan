@@ -107,6 +107,8 @@ class Requirements(OrderedDict):
     def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
+        if reference is None:
+            return
         assert isinstance(reference, six.string_types)
         ref = ConanFileReference.loads(reference)
         self.add_ref(ref, private, override)
