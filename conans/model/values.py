@@ -62,10 +62,9 @@ class Values(object):
 
     def update_values(self, values):
         """ receives a list of tuples (compiler.version, value)
-        Only modifies values if it already exists and is defined
         Necessary for binary_compatibility.py
         """
-        assert isinstance(values, list), values
+        assert isinstance(values, (list, tuple)), values
         for (name, value) in values:
             list_settings = name.split(".")
             attr = self

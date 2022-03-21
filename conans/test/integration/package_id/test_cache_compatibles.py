@@ -25,8 +25,9 @@ class TestCacheCompatibles:
                     return
                 return debug_compat(conanfile)
             """)
-        save(os.path.join(client.cache.plugins_path, "binary_compatibility.py"), compatibles)
-        save(os.path.join(client.cache.plugins_path, "debug_compat.py"), debug_compat)
+        compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
+        save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+        save(os.path.join(compatible_folder, "debug_compat.py"), debug_compat)
         return client
 
     def test_compatible_build_type(self, client):
@@ -75,7 +76,8 @@ def test_cppstd():
                                                 ("compiler.runtime", "MD")]})
             return result
         """)
-    save(os.path.join(client.cache.plugins_path, "binary_compatibility.py"), compatibles)
+    compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
+    save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
 
     conanfile = GenConanfile("dep", "0.1").with_settings("compiler", "build_type")
     client.save({"dep/conanfile.py": conanfile,
@@ -93,3 +95,24 @@ def test_cppstd():
     client.run(f"install consumer {base_settings} -s build_type=Debug -s compiler.cppstd=17")
     assert "dep/0.1: Main binary package 'c3d18617551d2975da867453ee96f409034f1365' missing. " \
            f"Using compatible package '{package_id}'" in client.out
+
+
+class TestDefaultCompat:
+    @pytest.mark.xfail(reason="Default app-compatibility not working yet")
+    def test_default_app_compat(self):
+        c = TestClient()
+        save(c.cache.default_profile_path, "")
+        c.save({"conanfile.py": GenConanfile("app", "1.0")
+               .with_package_type("application")
+               .with_settings("os", "arch", "compiler", "build_type")})
+        os_ = "Windows"
+        arch = "x86_64"
+        compiler = "msvc"
+        version = "191"
+        cppstd = "14"
+        runtime = "dynamic"
+        c.run(f"create . -s os={os_} -s arch={arch} -s compiler={compiler} "
+              f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
+              f"-s compiler.runtime={runtime}")
+        c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
+        print(c.out)

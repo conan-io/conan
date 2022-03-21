@@ -1,40 +1,14 @@
-import os
 from collections import OrderedDict
 
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.compatibility import BinaryCompatibilityPlugin
 from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_ERROR, BINARY_EDITABLE_BUILD)
-from conans.client.loader import load_python_file
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
-
-
-class BinaryCompatibilityPlugin:
-    def __init__(self, cache):
-        compatible_file = os.path.join(cache.plugins_path, "binary_compatibility.py")
-        if os.path.isfile(compatible_file):
-            mod, _ = load_python_file(compatible_file)
-            self._compatibility = mod.compatibility
-        else:
-            self._compatibility = None
-
-    def compatibles(self, conanfile):
-        if self._compatibility is None:
-            return  # We might want to define a common compatibility for cppstd, for example
-
-        cache_compatibles = []
-        list_of_compatibles = self._compatibility(conanfile) or []
-        for elem in list_of_compatibles:
-            compat = conanfile.info.clone()
-            settings = elem.get("settings")
-            if settings:
-                # This update only modifies existing binaries, but it will not add unexisting
-                compat.settings.update_values(settings)
-            cache_compatibles.append(compat)
-        return cache_compatibles
 
 
 class GraphBinariesAnalyzer(object):
