@@ -78,11 +78,12 @@ compiler:
                     llvm, ClangCL, v143]
         cppstd: [None, 14, 17, 20, 23]
     msvc:
-        version: [190, 191, 192, 193]
+        version: [170, 180, 190, 191, 192, 193]
         update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         runtime: [static, dynamic]
         runtime_type: [Debug, Release]
-        cppstd: [14, 17, 20, 23]
+        cppstd: [98, 14, 17, 20, 23]
+        toolset: [None, v110_xp, v120_xp, v140_xp, v141_xp]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                     "5.0", "6.0", "7.0", "7.1",
