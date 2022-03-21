@@ -41,7 +41,7 @@ class Pkg(ConanFile):
     def configure(self):
         del self.settings.build_type
 
-    def source(self):
+    def build(self):
         self.settings.build_type
 """
         client.save({"conanfile.py": conanfile})
@@ -49,11 +49,8 @@ class Pkg(ConanFile):
         mkdir(build_folder)
         client.current_folder = build_folder
 
-        client.run("source ..", assert_error=True)
+        client.run("build ..", assert_error=True)
         self.assertIn("'settings.build_type' doesn't exist", client.out)
-        # This doesn't fail, it doesn't access build_type
-        client.run("install ..")
-        client.run("build ..")
 
     @pytest.mark.xfail(reason="Move this to CMakeToolchain")
     def test_remove_subsetting(self):
