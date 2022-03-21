@@ -20,7 +20,8 @@ class MyPkg(ConanFile):
             raise ConanInvalidConfiguration("user says that compiler.version=12 is invalid")
 
     """})
-        settings = "-s os=Windows -s compiler=msvc -s compiler.version={ver}"
+        settings = "-s os=Windows -s compiler=msvc -s compiler.version={ver} "\
+                   "-s compiler.runtime=dynamic"
         self.settings_msvc15 = settings.format(ver="192")
         self.settings_msvc12 = settings.format(ver="190")
 
