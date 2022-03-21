@@ -8,7 +8,6 @@ import pytest
 from mock.mock import mock_open, patch
 
 from conan.tools.files import replace_in_file, collect_libs
-from conans.client import tools
 from conans.client.conf.detect_vs import vswhere
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput

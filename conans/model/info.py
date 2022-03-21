@@ -1,6 +1,6 @@
 import os
 
-from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
+
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
@@ -368,7 +368,6 @@ class ConanInfo(object):
         result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
         result.build_requires = build_requires_info
-        result.vs_toolset_compatible()
         result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
@@ -501,22 +500,3 @@ class ConanInfo(object):
         compatible = self.clone()
         compatible.settings.compiler.version = "13.0"
         return compatible
-
-    def vs_toolset_compatible(self):
-        """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
-        using Visual Studio 14"""
-        if self.full_settings.compiler != "Visual Studio":
-            return
-
-        toolset = str(self.full_settings.compiler.toolset)
-        version = MSVS_DEFAULT_TOOLSETS_INVERSE.get(toolset)
-        if version is not None:
-            self.settings.compiler.version = version
-            del self.settings.compiler.toolset
-
-    def vs_toolset_incompatible(self):
-        """Will generate different packages for v140 and visual 15 than the visual 14"""
-        if self.full_settings.compiler != "Visual Studio":
-            return
-        self.settings.compiler.version = self.full_settings.compiler.version
-        self.settings.compiler.toolset = self.full_settings.compiler.toolset

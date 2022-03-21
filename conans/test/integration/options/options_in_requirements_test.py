@@ -24,7 +24,6 @@ class ConanLib(ConanFile):
         client.run("export . --user=lasote --channel=testing")
 
         boost = """from conan import ConanFile
-from conans import tools
 import platform, os, sys
 
 class BoostConan(ConanFile):
