@@ -17,6 +17,11 @@ class MesonToolchain(object):
     cross_filename = "conan_meson_cross.ini"
 
     _meson_file_template = textwrap.dedent("""
+    [properties]
+    {% for it, value in properties.items() -%}
+    {{it}} = {{value}}
+    {% endfor %}
+
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
@@ -96,6 +101,7 @@ class MesonToolchain(object):
         else:
             self._b_vscrt = None
 
+        self.properties = {}
         self.project_options = {}
         self.preprocessor_definitions = {}
         self.pkg_config_path = self._conanfile.generators_folder
@@ -109,6 +115,7 @@ class MesonToolchain(object):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self.cross_build["build"] = to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = to_meson_machine(os_host, arch_host)
+            self.properties["needs_exe_wrapper"] = True
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -190,6 +197,8 @@ class MesonToolchain(object):
 
     def _context(self):
         return {
+            # https://mesonbuild.com/Machine-files.html#properties
+            "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories

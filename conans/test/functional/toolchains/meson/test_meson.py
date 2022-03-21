@@ -90,4 +90,7 @@ class MesonToolchainTest(TestMesonBase):
         self.assertIn("hello: Release!", self.t.out)
         self.assertIn("STRING_DEFINITION: Text", self.t.out)
 
+        self.assertIn("[properties]", content)
+        self.assertNotIn("needs_exe_wrapper", content)
+
         self._check_binary()
