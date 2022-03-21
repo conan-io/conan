@@ -12,7 +12,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build.cross_building import cross_building
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import is_msvc
+from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
 from conans.errors import ConanException
 from conans.util.files import load
 
@@ -634,13 +634,16 @@ class GenericSystemBlock(Block):
         elif compiler == "intel-cc":
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
+            subs_toolset = settings.get_safe("compiler.toolset")
+            if subs_toolset:
+                return subs_toolset
             compiler_version = str(settings.compiler.version)
             compiler_update = str(settings.compiler.update)
             if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
                 # The equivalent of compiler 19.26 is toolset 14.26
                 return "version=14.{}{}".format(compiler_version[-1], compiler_update)
             else:
-                return "v14{}".format(compiler_version[-1])
+                return msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator:

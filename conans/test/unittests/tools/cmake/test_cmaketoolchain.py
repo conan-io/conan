@@ -180,6 +180,57 @@ def test_toolset(conanfile_msvc):
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
 
+def test_older_msvc_toolset():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["170"], "update": [None],
+                                                 "cppstd": ["98"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]}), EnvValues())
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "170"
+    c.settings.compiler.cppstd = "98"
+    c.settings.os = "Windows"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    toolchain = CMakeToolchain(c)
+    assert 'CMAKE_GENERATOR_TOOLSET "v110"' in toolchain.content
+    assert 'Visual Studio 11 2012' in toolchain.generator
+    # As by the CMake docs, this has no effect for VS < 2015
+    assert 'CMAKE_CXX_STANDARD 98' in toolchain.content
+
+
+def test_msvc_xp_toolsets():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["170"], "update": [None],
+                                                 "cppstd": ["98"], "toolset": [None, "v110_xp"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]}), EnvValues())
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "170"
+    c.settings.compiler.toolset = "v110_xp"
+    c.settings.compiler.cppstd = "98"
+    c.settings.os = "Windows"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    toolchain = CMakeToolchain(c)
+    assert 'CMAKE_GENERATOR_TOOLSET "v110_xp"' in toolchain.content
+    assert 'Visual Studio 11 2012' in toolchain.generator
+    # As by the CMake docs, this has no effect for VS < 2015
+    assert 'CMAKE_CXX_STANDARD 98' in toolchain.content
+
+
 @pytest.fixture
 def conanfile_linux():
     c = ConanFile(Mock(), None)
