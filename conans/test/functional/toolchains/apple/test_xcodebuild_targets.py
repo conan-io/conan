@@ -394,7 +394,7 @@ hello_cpp = textwrap.dedent("""
     #include "hello.hpp"
     #include <iostream>
 
-    void hello(){
+    void hellofunction(){
         #ifndef DEBUG
         std::cout << "Hello Release!" << std::endl;
         #else
@@ -407,7 +407,7 @@ hello_hpp = textwrap.dedent("""
     #ifndef hello_hpp
     #define hello_hpp
 
-    void hello();
+    void hellofunction();
 
     #endif /* hello_hpp */
     """)
@@ -465,7 +465,7 @@ test_src = textwrap.dedent("""
     #include "hello.hpp"
 
     int main() {
-        hello();
+        hellofunction();
     }
     """)
 
@@ -523,4 +523,5 @@ def test_shared_static_targets():
     client.run("create . -tf None")
     assert "Packaged 1 '.a' file: libhello.a" in client.out
     client.run("test test_package hello/1.0@")
-    assert "hello" in client.out
+    # check the symbol hellofunction in in the executable
+    assert "hellofunction" in client.out
