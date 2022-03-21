@@ -1,5 +1,6 @@
 import os
 import re
+import platform
 
 import mock
 from mock import Mock
@@ -40,7 +41,10 @@ def test_bazeldeps_dependency_buildfiles():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
             assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
-            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+            if platform.system() == "Windows":
+                assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
+            else:
+                assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
             assert 'deps = [\n    \n    ":lib1_precompiled",' in dependency_content
 
 
@@ -89,7 +93,11 @@ def test_bazeldeps_dependency_transitive():
         dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
         assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
         assert 'defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""],' in dependency_content
-        assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+        if platform.system() == "Windows":
+            assert 'linkopts = ["/DEFAULTLIB:system_lib1"],' in dependency_content
+        else:
+            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+
         # Ensure that transitive dependency is referenced by the 'deps' attribute of the direct
         # dependency
         assert re.search(r'deps =\s*\[\s*":lib1_precompiled",\s*"@TransitiveDepName"',
