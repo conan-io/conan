@@ -335,7 +335,7 @@ pbxproj = textwrap.dedent("""
                     DEBUG_INFORMATION_FORMAT = dwarf;
                     EXECUTABLE_EXTENSION = a;
                     EXECUTABLE_PREFIX = lib;
-                    MACH_O_TYPE = mh_dylib;
+                    MACH_O_TYPE = staticlib;
                     PRODUCT_NAME = hello;
                     SKIP_INSTALL = YES;
                 };
@@ -348,7 +348,7 @@ pbxproj = textwrap.dedent("""
                     DEBUG_INFORMATION_FORMAT = dwarf;
                     EXECUTABLE_EXTENSION = a;
                     EXECUTABLE_PREFIX = lib;
-                    MACH_O_TYPE = mh_dylib;
+                    MACH_O_TYPE = staticlib;
                     PRODUCT_NAME = hello;
                     SKIP_INSTALL = YES;
                 };
@@ -394,7 +394,7 @@ hello_cpp = textwrap.dedent("""
     #include "hello.hpp"
     #include <iostream>
 
-    void hello(){
+    void hellofunction(){
         #ifndef DEBUG
         std::cout << "Hello Release!" << std::endl;
         #else
@@ -407,7 +407,7 @@ hello_hpp = textwrap.dedent("""
     #ifndef hello_hpp
     #define hello_hpp
 
-    void hello();
+    void hellofunction();
 
     #endif /* hello_hpp */
     """)
@@ -445,7 +445,10 @@ test = textwrap.dedent("""
             if not cross_building(self):
                 cmd = os.path.join(self.cpp.build.bindirs[0], "example")
                 self.run(cmd, env="conanrun")
-                self.run("otool -l {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
+                if self.options.shared:
+                    self.run("otool -l {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
+                else:
+                    self.run("nm {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
     """)
 
 cmakelists = textwrap.dedent("""
@@ -462,7 +465,7 @@ test_src = textwrap.dedent("""
     #include "hello.hpp"
 
     int main() {
-        hello();
+        hellofunction();
     }
     """)
 
@@ -498,7 +501,7 @@ conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 def test_shared_static_targets():
     """
     The pbxproj has defined two targets, one for static and one for dynamic libraries, in the
@@ -520,4 +523,5 @@ def test_shared_static_targets():
     client.run("create . -tf None")
     assert "Packaged 1 '.a' file: libhello.a" in client.out
     client.run("test test_package hello/1.0@")
-    assert "/build/Release/libhello.a" in client.out
+    # check the symbol hellofunction in in the executable
+    assert "hellofunction" in client.out
