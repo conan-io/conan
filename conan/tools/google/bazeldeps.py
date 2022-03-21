@@ -159,6 +159,9 @@ class BazelDeps(object):
 
     def _resolve_real_file(self, libdirs, lib):
         for libdir in libdirs:
+            if not os.path.exists(libdir):
+                self._conanfile.output.warning("The library folder doesn't exist: {}".format(libdir))
+                continue
             files = os.listdir(libdir)
             for f in files:
                 name, ext = os.path.splitext(f)
