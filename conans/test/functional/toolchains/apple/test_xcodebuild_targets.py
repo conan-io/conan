@@ -335,7 +335,7 @@ pbxproj = textwrap.dedent("""
                     DEBUG_INFORMATION_FORMAT = dwarf;
                     EXECUTABLE_EXTENSION = a;
                     EXECUTABLE_PREFIX = lib;
-                    MACH_O_TYPE = mh_dylib;
+                    MACH_O_TYPE = staticlib;
                     PRODUCT_NAME = hello;
                     SKIP_INSTALL = YES;
                 };
@@ -348,7 +348,7 @@ pbxproj = textwrap.dedent("""
                     DEBUG_INFORMATION_FORMAT = dwarf;
                     EXECUTABLE_EXTENSION = a;
                     EXECUTABLE_PREFIX = lib;
-                    MACH_O_TYPE = mh_dylib;
+                    MACH_O_TYPE = staticlib;
                     PRODUCT_NAME = hello;
                     SKIP_INSTALL = YES;
                 };
@@ -445,7 +445,10 @@ test = textwrap.dedent("""
             if not cross_building(self):
                 cmd = os.path.join(self.cpp.build.bindirs[0], "example")
                 self.run(cmd, env="conanrun")
-                self.run("otool -l {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
+                if self.options.shared:
+                    self.run("otool -l {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
+                else:
+                    self.run("nm {}".format(os.path.join(self.cpp.build.bindirs[0], "example")))
     """)
 
 cmakelists = textwrap.dedent("""
@@ -520,4 +523,4 @@ def test_shared_static_targets():
     client.run("create . -tf None")
     assert "Packaged 1 '.a' file: libhello.a" in client.out
     client.run("test test_package hello/1.0@")
-    assert "/build/Release/libhello.a" in client.out
+    assert "hello" in client.out
