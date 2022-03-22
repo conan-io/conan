@@ -238,8 +238,7 @@ def test_find_builddirs():
 def test_cmaketoolchain_cmake_system_processor_cross_apple():
     """
     https://github.com/conan-io/conan/pull/10434
-    Looks like CMAKE_SYSTEM_PROCESSOR is not set when cross-building in Mac
-    TODO: Also check other platforms later
+    CMAKE_SYSTEM_PROCESSOR was not set when cross-building in Mac
     """
     client = TestClient()
     client.save({"hello.py": GenConanfile().with_name("hello")
