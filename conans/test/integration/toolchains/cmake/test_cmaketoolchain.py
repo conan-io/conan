@@ -1,5 +1,8 @@
 import os
+import platform
 import textwrap
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -229,3 +232,37 @@ def test_find_builddirs():
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_cmaketoolchain_cmake_system_processor_cross_apple():
+    """
+    https://github.com/conan-io/conan/pull/10434
+    Looks like CMAKE_SYSTEM_PROCESSOR is not set when cross-building in Mac
+    TODO: Also check other platforms later
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        arch=armv8
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        [options]
+        [build_requires]
+        [env]
+
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 15.4)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain

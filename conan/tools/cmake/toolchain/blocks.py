@@ -6,7 +6,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conan.tools._compilers import architecture_flag
-from conan.tools.apple.apple import is_apple_os
+from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
@@ -319,12 +319,6 @@ class AndroidSystemBlock(Block):
 
 class AppleSystemBlock(Block):
     template = textwrap.dedent("""
-        {% if CMAKE_SYSTEM_NAME is defined %}
-        set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
-        {% endif %}
-        {% if CMAKE_SYSTEM_VERSION is defined %}
-        set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
-        {% endif %}
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
@@ -386,10 +380,6 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
         if host_architecture:
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
-
-        if os_ in ('iOS', "watchOS", "tvOS"):
-            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
-            ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
 
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
@@ -574,20 +564,79 @@ class TryCompileBlock(Block):
         """)
 
 
-class GenericSystemBlock(Block):
+class CrossBuildingBlock(Block):
     template = textwrap.dedent("""
         {% if cmake_system_name %}
         # Cross building
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
         {% endif %}
         {% if cmake_system_version %}
-        # Cross building
         set(CMAKE_SYSTEM_VERSION {{ cmake_system_version }})
         {% endif %}
         {% if cmake_system_processor %}
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
         {% endif %}
+        """)
 
+    # TODO: Check what happens in Android we were not taking these variables into account
+    def _get_cross_build(self):
+        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
+        if user_toolchain is not None:
+            return None, None, None  # Will be provided by user_toolchain
+
+        system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
+        system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
+        system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
+
+        settings = self._conanfile.settings
+        if hasattr(self._conanfile, "settings_build"):
+            os_ = settings.get_safe("os")
+            arch = settings.get_safe("arch")
+            settings_build = self._conanfile.settings_build
+            os_build = settings_build.get_safe("os")
+            arch_build = settings_build.get_safe("arch")
+
+            if system_name is None:  # Try to deduce
+                if os_ in ('iOS', 'watchOS', 'tvOS'):  # cross-building in Macos
+                    system_name = os_
+                else:
+                    cmake_system_name_map = {"Neutrino": "QNX",
+                                             "": "Generic",
+                                             None: "Generic"}
+                    if os_ != os_build:
+                        system_name = cmake_system_name_map.get(os_, os_)
+                    elif arch is not None and arch != arch_build:
+                        if not ((arch_build == "x86_64") and (arch == "x86") or
+                                (arch_build == "sparcv9") and (arch == "sparc") or
+                                (arch_build == "ppc64") and (arch == "ppc32")):
+                            system_name = cmake_system_name_map.get(os_, os_)
+
+            if system_name is not None and system_version is None:
+                if os_ in ('iOS', 'watchOS', 'tvOS'):
+                    host_os_version = self._conanfile.settings.get_safe("os.version")
+                    system_version = host_os_version
+                else:
+                    system_version = settings.get_safe("os.version")
+
+            if system_name is not None and system_processor is None:
+                if os_ in ('iOS', 'watchOS', 'tvOS'):
+                    if arch != arch_build:
+                        system_processor = to_apple_arch(arch)
+                else:
+                    if arch != arch_build:
+                        system_processor = arch
+
+        return system_name, system_version, system_processor
+
+    def context(self):
+        system_name, system_version, system_processor = self._get_cross_build()
+        return {"cmake_system_name": system_name,
+                "cmake_system_version": system_version,
+                "cmake_system_processor": system_processor}
+
+
+class GenericSystemBlock(Block):
+    template = textwrap.dedent("""
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -670,46 +719,6 @@ class GenericSystemBlock(Block):
                     "armv8": "ARM64"}.get(arch)
         return None
 
-    def _get_cross_build(self):
-        user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        if user_toolchain is not None:
-            return None, None, None  # Will be provided by user_toolchain
-
-        system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
-        system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
-        system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
-
-        settings = self._conanfile.settings
-        if hasattr(self._conanfile, "settings_build"):
-            os_ = settings.get_safe("os")
-            arch = settings.get_safe("arch")
-            settings_build = self._conanfile.settings_build
-            os_build = settings_build.get_safe("os")
-            arch_build = settings_build.get_safe("arch")
-
-            if system_name is None:  # Try to deduce
-                # Handled by AppleBlock, or AndroidBlock, not here
-                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
-                    cmake_system_name_map = {"Neutrino": "QNX",
-                                             "": "Generic",
-                                             None: "Generic"}
-                    if os_ != os_build:
-                        system_name = cmake_system_name_map.get(os_, os_)
-                    elif arch is not None and arch != arch_build:
-                        if not ((arch_build == "x86_64") and (arch == "x86") or
-                                (arch_build == "sparcv9") and (arch == "sparc") or
-                                (arch_build == "ppc64") and (arch == "ppc32")):
-                            system_name = cmake_system_name_map.get(os_, os_)
-
-            if system_name is not None and system_version is None:
-                system_version = settings.get_safe("os.version")
-
-            if system_name is not None and system_processor is None:
-                if arch != arch_build:
-                    system_processor = arch
-
-        return system_name, system_version, system_processor
-
     def _get_compiler(self, generator):
         compiler = self._conanfile.settings.get_safe("compiler")
         os_ = self._conanfile.settings.get_safe("os")
@@ -737,17 +746,12 @@ class GenericSystemBlock(Block):
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
 
-        system_name, system_version, system_processor = self._get_cross_build()
-
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type,
-                "cmake_system_name": system_name,
-                "cmake_system_version": system_version,
-                "cmake_system_processor": system_processor}
+                "build_type": build_type}
 
 
 class OutputDirsBlock(Block):
