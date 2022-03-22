@@ -73,7 +73,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
         # Create package with gcc 4.8
         client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
-        self.assertIn("pkg/0.1@user/stable: Exported revision: 8a274effe00881a1d47a528078802c94",
+        self.assertIn("pkg/0.1@user/stable: Exported revision: d165eb4bcdd1c894a97d2a212956f5fe",
                       client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
