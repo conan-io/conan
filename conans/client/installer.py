@@ -16,7 +16,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
-from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
@@ -363,8 +362,6 @@ class BinaryInstaller(object):
             self._out.info("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
-
-        conanfile.user_info = UserInfo()
 
         with chdir(package_folder):
             with conanfile_exception_formatter(conanfile, "package_info"):

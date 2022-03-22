@@ -14,7 +14,6 @@ class parentLib(ConanFile):
 
     def package_info(self):
         self.cpp_info.cxxflags.append("-myflag")
-        self.user_info.MyVar = "MyVarValue"
         self.buildenv_info.define("MyEnvVar", "MyEnvVarValue")
 """
 
