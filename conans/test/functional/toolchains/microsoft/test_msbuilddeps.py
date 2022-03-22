@@ -480,9 +480,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         props = client.load("conan_pkg_release_x64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -521,12 +521,12 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
         client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_myrelease_myx86_64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD -s arch=x86 '
+                   ' -s compiler.runtime=dynamic -s arch=x86 '
                    '-s build_type=Debug'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_mydebug_myx86.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -552,15 +552,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.configuration is None, it should have a value", client.out)
         client.save({"conanfile.py": conanfile.replace("configuration", "platform")})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.platform is None, it should have a value", client.out)
 
     def test_install_transitive(self):
@@ -977,7 +977,7 @@ def test_build_requires():
     client.run("create dep --name=dep --version=0.1 -s arch=x86")
     client.run("create dep --name=dep --version=0.1 -s arch=x86_64")
     with client.chdir("consumer"):
-        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release")
         client.assert_listed_binary({"dep/0.1": ("6745936d8a913181e35fed8eb321e5aa6cf7500c",
                                                  "Cache")}, build=True)
@@ -985,12 +985,12 @@ def test_build_requires():
         assert "conan_dep_build.props" in deps_props
         assert "Invoking 64bit dep_1 build tool" in client.out
 
-        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s:b arch=x86 -s build_type=Release")
         assert "Invoking 32bit dep_1 build tool" in client.out
 
         # Make sure it works with 2 profiles too
-        client.run('install . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('install . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release -s:b os=Windows -s:h os=Windows")
         client.run("build .")
         assert "Invoking 64bit dep_1 build tool" in client.out

@@ -308,16 +308,16 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 @pytest.mark.tool("visual_studio", "15")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2017():
-    check_msvc_runtime_flag("15", "191")
+    check_msvc_runtime_flag("191")
 
 
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
-    check_msvc_runtime_flag("17", "193")
+    check_msvc_runtime_flag("193")
 
 
-def check_msvc_runtime_flag(vs_version, msvc_version):
+def check_msvc_runtime_flag(msvc_version):
     client = TestClient()
     conanfile = textwrap.dedent("""
        from conan import ConanFile
@@ -329,8 +329,8 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
                self.output.info("MSVC FLAG={}!!".format(msvc_runtime_flag(self)))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s compiler="Visual Studio" -s compiler.version={vs_version} '
-               '-s compiler.runtime=MD'.format(vs_version=vs_version))
+    client.run('install . -s compiler=msvc -s compiler.version={vs_version} '
+               '-s compiler.runtime=dynamic'.format(vs_version=msvc_version))
     assert "MSVC FLAG=MD!!" in client.out
     client.run('install . -s compiler=msvc -s compiler.version={msvc_version} '
                '-s compiler.runtime=static '
@@ -343,10 +343,10 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "191", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "193", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -428,8 +428,7 @@ class WinTest(unittest.TestCase):
             command_str = "x64\\%s\\MyApp.exe" % configuration
         client.run_command(command_str)
 
-    @parameterized.expand([("Visual Studio", "15", "MT", "17"),
-                           ("msvc", "191", "static", "17"),
+    @parameterized.expand([("msvc", "191", "static", "17"),
                            ("msvc", "190", "static", "14")]
                           )
     @pytest.mark.tool("cmake")
@@ -439,8 +438,7 @@ class WinTest(unittest.TestCase):
         else:
             self.check_toolchain_win(compiler, version, runtime, cppstd)
 
-    @parameterized.expand([("Visual Studio", "17", "MT", "17"),
-                           ("msvc", "193", "static", "17")]
+    @parameterized.expand([("msvc", "193", "static", "17")]
                           )
     def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd):
         if self.vs_version != "17":
@@ -504,10 +502,9 @@ class WinTest(unittest.TestCase):
     @pytest.mark.tool("cmake")
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
-        settings = [("compiler",  "Visual Studio"),
+        settings = [("compiler",  "msvc"),
                     ("compiler.version",  self.vs_version),
-                    ("compiler.toolset",  "v140"),
-                    ("compiler.runtime",  "MDd"),
+                    ("compiler.runtime",  "dynamic"),
                     ("build_type",  "Debug"),
                     ("arch",  "x86_64")]
 
@@ -545,7 +542,7 @@ class WinTest(unittest.TestCase):
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
 
-        settings = [("compiler", "Visual Studio"),
+        settings = [("compiler", "msvc"),
                     ("compiler.version", self.vs_version),
                     ("compiler.cppstd", "17")]
 
@@ -558,7 +555,7 @@ class WinTest(unittest.TestCase):
             # TODO: It is a bit ugly to remove manually
             build_test_folder = os.path.join(client.current_folder, "test_package", "build")
             rmdir(build_test_folder)
-            runtime = "MT" if build_type == "Release" else "MTd"
+            runtime = "static"
             client.run("create . --name=hello --version=0.1 %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello/*:shared=%s" % (settings, build_type, arch, runtime, shared))
 
@@ -571,7 +568,7 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         for build_type, arch, shared in configs:
-            runtime = "MT" if build_type == "Release" else "MTd"
+            runtime = "static"
             client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
                        " -o hello/*:shared=%s" % (settings, build_type, arch, runtime, shared))
 
