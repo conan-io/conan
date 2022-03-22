@@ -42,6 +42,7 @@ class TestSettingsCompilerMSVCPreprocessorTest:
     def setup(self):
         self.settings = Settings.loads(get_default_settings_yml())
         self.settings.compiler = "msvc"
+        self.settings.compiler.runtime = "dynamic"
 
     def test_release_build_type_runtime(self):
         self.settings.build_type = "Release"

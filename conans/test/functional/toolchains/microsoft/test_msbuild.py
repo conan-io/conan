@@ -1,6 +1,5 @@
 import os
 import platform
-import shutil
 import textwrap
 import unittest
 
@@ -343,10 +342,10 @@ def check_msvc_runtime_flag(msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
-vs_versions = [{"vs_version": "191", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "193", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "17", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -503,7 +502,7 @@ class WinTest(unittest.TestCase):
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler",  "msvc"),
-                    ("compiler.version",  self.vs_version),
+                    ("compiler.version",  self.msvc_version),
                     ("compiler.runtime",  "dynamic"),
                     ("build_type",  "Debug"),
                     ("arch",  "x86_64")]
@@ -529,7 +528,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("Hello World Debug", client.out)
-        check_exe_run(client.out, "main", "msvc", "190", "Debug", "x86_64", "14",
+        check_exe_run(client.out, "main", "msvc", self.msvc_version, "Debug", "x86_64", "14",
                       {"DEFINITIONS_BOTH": 'True',
                        "DEFINITIONS_BOTH2": "True",
                        "DEFINITIONS_BOTH_INT": "123",
@@ -543,8 +542,9 @@ class WinTest(unittest.TestCase):
         client = TestClient(path_with_spaces=False)
 
         settings = [("compiler", "msvc"),
-                    ("compiler.version", self.vs_version),
-                    ("compiler.cppstd", "17")]
+                    ("compiler.version", self.msvc_version),
+                    ("compiler.cppstd", "17"),
+                    ("compiler.runtime", "static")]
 
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
         client.run("new cmake_lib -d name=hello -d version=0.1")
