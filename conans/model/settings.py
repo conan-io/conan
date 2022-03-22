@@ -167,9 +167,6 @@ class Settings(object):
             return str(tmp)
         return default
 
-    def get_item(self, item, value):
-        return self._data[item]._definition[value]
-
     def copy(self):
         """ deepcopy, recursive
         """

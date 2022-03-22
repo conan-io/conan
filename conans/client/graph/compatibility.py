@@ -37,22 +37,39 @@ def app_compat(conanfile):
         compiler = compilers.get(os_, "gcc")
         factors.append([("compiler", compiler)])
 
-    # This will be simplified if we know if the language is pure C
-    cppstd = conanfile.settings.get_safe("compiler.cppstd")
-    if not cppstd:
-        for cppstd in ["11", "14", "17", "20"]:
-            pass
-
-    version = conanfile.settings.get_safe("compiler.version")
-    if version is None:
-        possible_versions = conanfile.settings.get_item("compiler", compiler).version.values_range
-        possible_versions = reversed(possible_versions)
+    versions = {"gcc": ["9", "10", "11", "12"],
+                "msvc": ["190", "191", "192", "193"],
+                "clang": ["12", "13", "14", "15"],
+                "apple-clang": ["10.0", "11.0", "12.0", "13"]
+                }
+    valid_versions = versions.get(compiler)
+    if valid_versions:
+        possible_versions = reversed(valid_versions)
         factors.append([("compiler.version", v) for v in possible_versions])
 
-    print("FACTORS", factors)
+    # This will be simplified if we know if the language is pure C
+    cppstds = {"gcc": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
+                       "20", "gnu20", "23", "gnu23"],
+               "msvc": [None, "14", "17", "20", "23"],
+               "clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
+                         "20", "gnu20", "23", "gnu23"],
+               "apple-clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
+                               "20", "gnu20"]
+               }
+    # This can be improved reducing the cppstd to the compiler versions. A conan.tools helper?
+    valid_cppstds = cppstds.get(compiler)
+    if valid_cppstds:
+       valid_cppstds = reversed(valid_cppstds)
+       factors.append([("compiler.cppstd", v) for v in valid_cppstds])
+
+    if compiler == "msvc":
+        runtime = conanfile.settings.get_safe("compiler.runtime")
+        if runtime is None:
+            factors.append([("compiler.runtime", "dynamic")])
+            factors.append([("compiler.runtime_type", build_type or "Release")])
+
     result = []
     combinations = list(product(*factors))
-    print("COMBINATIONS", combinations)
     for combination in combinations:
         result.append({"settings": combination})
     return result

@@ -112,11 +112,9 @@ class GraphBinariesAnalyzer(object):
         # Avoid repetitions of same package_id
         compatibles = OrderedDict()
         for c in compatible_packages:
-            print("TETSING COMPAT ", c.dumps())
             conanfile.info = c
             run_package_id(conanfile)
             pid = c.package_id()
-            print("     TETSING COMPAT pic", pid)
             if pid == original_package_id:  # Skip the check if same packge_id
                 conanfile.output.info(f"Compatible package ID {pid} equal to the default package ID")
                 continue
@@ -124,7 +122,6 @@ class GraphBinariesAnalyzer(object):
                 compatibles[pid] = c
 
         for package_id, compatible_package in compatibles.items():
-            print("EVALUATEING COMPAT ", compatible_package.dumps(), package_id)
             conanfile.info = compatible_package  # Redefine current
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it

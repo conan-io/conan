@@ -72,8 +72,7 @@ def test_cppstd():
             if conanfile.settings.build_type == "Debug":
                 for cppstd in ["11", "14", "17", "20"]:
                     result.append({"settings": [("compiler.cppstd", cppstd),
-                                                ("build_type", "Release"),
-                                                ("compiler.runtime", "MD")]})
+                                                ("build_type", "Release")]})
             return result
         """)
     compatible_folder = os.path.join(client.cache.plugins_path, "compatibility")
@@ -112,13 +111,17 @@ class TestDefaultCompat:
             """)
         c.save({"conanfile.py": conanfile})
         os_ = "Windows"
+        build_type = "Release"
         arch = "x86_64"
         compiler = "msvc"
         version = "191"
         cppstd = "14"
         runtime = "dynamic"
-        c.run(f"create . -s os={os_} -s arch={arch} -s compiler={compiler} "
+        c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
+              f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
               f"-s compiler.runtime={runtime}")
+        package_id = c.created_package_id("app/1.0")
         c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
-        print(c.out)
+        assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
+               f"Using compatible package '{package_id}'"

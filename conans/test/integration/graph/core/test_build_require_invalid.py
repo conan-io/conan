@@ -188,7 +188,7 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
                if self.info.settings.os == "Windows":
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
-           def compatbility(self):
+           def compatibility(self):
                if self.info.settings.os == "Windows":
                    compatible_pkg = self.info.clone()
                    compatible_pkg.settings.os = "Linux"
