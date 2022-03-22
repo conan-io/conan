@@ -139,10 +139,10 @@ class MesonToolchain(object):
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        self.c_args = build_env.get("CFLAGS", [])
-        self.c_link_args = build_env.get("LDFLAGS", [])
-        self.cpp_args = build_env.get("CXXFLAGS", [])
-        self.cpp_link_args = build_env.get("LDFLAGS", [])
+        self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
+        self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
+        self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
+        self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
         # Apple flags
         self.apple_arch_flag = []
@@ -183,6 +183,11 @@ class MesonToolchain(object):
             "cflags": cflags,
             "ldflags": ldflags
         }
+
+    @staticmethod
+    def _get_env_list(v):
+        # FIXME: Should Environment have the "check_type=None" keyword as Conf?
+        return v.strip().split() if not isinstance(v, list) else v
 
     @staticmethod
     def _filter_list_empty_fields(v):
