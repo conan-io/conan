@@ -1,6 +1,9 @@
 import os
+from collections import OrderedDict
 
+from conans.client.graph.compute_pid import run_package_id
 from conans.client.loader import load_python_file
+from conans.errors import conanfile_exception_formatter
 from conans.util.files import save
 
 
@@ -15,7 +18,7 @@ def compatibility(conanfile):
 """
 
 # TODO: missing runtime, libcxx, cppstd, etc
-# TODO: Improve conanfile.settings.get_item("compiler", compiler).version.values_range
+# TODO: Improve definition of cppstd for each compiler version
 default_app_compat = """
 from itertools import product
 def app_compat(conanfile):
@@ -76,7 +79,7 @@ def app_compat(conanfile):
 """
 
 
-class BinaryCompatibilityPlugin:
+class BinaryCompatibility:
     def __init__(self, cache):
         compatible_folder = os.path.join(cache.plugins_path, "compatibility")
         compatible_file = os.path.join(compatible_folder, "compatibility.py")
@@ -87,16 +90,35 @@ class BinaryCompatibilityPlugin:
         self._compatibility = mod.compatibility
 
     def compatibles(self, conanfile):
-        if self._compatibility is None:
-            return  # We might want to define a common compatibility for cppstd, for example
+        compat_infos = []
+        if hasattr(conanfile, "compatibility") and callable(conanfile.compatibility):
+            with conanfile_exception_formatter(conanfile, "compatibility"):
+                recipe_compatibles = conanfile.compatibility()
+                compat_infos.extend(self._compatible_infos(conanfile, recipe_compatibles))
 
-        cache_compatibles = []
-        list_of_compatibles = self._compatibility(conanfile) or []
-        for elem in list_of_compatibles:
-            compat = conanfile.original_info.clone()
-            settings = elem.get("settings")
-            if settings:
-                # This update only modifies existing binaries, but it will not add unexisting
-                compat.settings.update_values(settings)
-            cache_compatibles.append(compat)
-        return cache_compatibles
+        plugin_compatibles = self._compatibility(conanfile)
+        compat_infos.extend(self._compatible_infos(conanfile, plugin_compatibles))
+
+        result = OrderedDict()
+        for c in compat_infos:
+            conanfile.info = c
+            run_package_id(conanfile)
+            pid = c.package_id()
+            if pid not in result and not c.invalid:
+                result[pid] = c
+        return result
+
+    @staticmethod
+    def _compatible_infos(conanfile, compatibles):
+        result = []
+        if compatibles:
+            for elem in compatibles:
+                compat_info = conanfile.original_info.clone()
+                settings = elem.get("settings")
+                if settings:
+                    compat_info.settings.update_values(settings)
+                options = elem.get("options")
+                if options:
+                    compat_info.options.update(options_values=OrderedDict(options))
+                result.append(compat_info)
+        return result

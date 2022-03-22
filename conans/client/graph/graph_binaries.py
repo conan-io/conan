@@ -1,8 +1,6 @@
-from collections import OrderedDict
-
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.compatibility import BinaryCompatibilityPlugin
-from conans.client.graph.compute_pid import compute_package_id, run_package_id
+from conans.client.graph.compatibility import BinaryCompatibility
+from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
@@ -19,7 +17,7 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        self._compatibility = BinaryCompatibilityPlugin(self._cache)
+        self._compatibility = BinaryCompatibility(self._cache)
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -100,26 +98,15 @@ class GraphBinariesAnalyzer(object):
 
     def _process_compatible_packages(self, node):
         conanfile = node.conanfile
-        plugin_compatibles = self._compatibility.compatibles(conanfile) or []
-        compatible_packages = conanfile.compatible_packages + plugin_compatibles
-        if not compatible_packages:
-            return
-
         original_info = conanfile.info
         original_binary = node.binary
         original_package_id = node.package_id
 
-        # Avoid repetitions of same package_id
-        compatibles = OrderedDict()
-        for c in compatible_packages:
-            conanfile.info = c
-            run_package_id(conanfile)
-            pid = c.package_id()
-            if pid == original_package_id:  # Skip the check if same packge_id
-                conanfile.output.info(f"Compatible package ID {pid} equal to the default package ID")
-                continue
-            if pid not in compatibles and not c.invalid:
-                compatibles[pid] = c
+        compatibles = self._compatibility.compatibles(conanfile)
+        existing = compatibles.pop(original_package_id, None)   # Skip main package_id
+        if existing:  # Skip the check if same packge_id
+            conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
+                                  "the default package ID")
 
         for package_id, compatible_package in compatibles.items():
             conanfile.info = compatible_package  # Redefine current

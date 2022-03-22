@@ -105,10 +105,8 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
                     raise ConanErrorConfiguration("Package does not work in Windows!")
 
             def compatibility(self):
-               if self.info.settings.os == "Windows":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.settings.os = "Linux"
-                   self.compatible_packages.append(compatible_pkg)
+               if self.settings.os == "Windows":
+                   return [{"settings": [("os", "Linux")]}]
         """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
     invalid = "ConfigurationError"
@@ -189,10 +187,8 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
            def compatibility(self):
-               if self.info.settings.os == "Windows":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.settings.os = "Linux"
-                   self.compatible_packages.append(compatible_pkg)
+               if self.settings.os == "Windows":
+                   return [{"settings": [("os", "Linux")]}]
        """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
     windows_package_id = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"

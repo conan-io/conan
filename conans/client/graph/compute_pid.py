@@ -57,10 +57,6 @@ def compute_package_id(node, new_config):
     if apple_clang_compatible:
         conanfile.compatible_packages.append(apple_clang_compatible)
 
-    if hasattr(conanfile, "compatibility") and callable(conanfile.compatibility):
-        with conanfile_exception_formatter(conanfile, "compatibility"):
-            conanfile.compatibility()
-
     run_package_id(conanfile)
 
     info = conanfile.info
