@@ -10,7 +10,15 @@ class BazelToolchain(object):
         check_using_build_profile(self._conanfile)
 
     def generate(self):
-        save_toolchain_args({
-            "bazel_config": self._conanfile.conf.get("tools.google.bazel:config"),
-            "bazelrc_path": self._conanfile.conf.get("tools.google.bazel:bazelrc_path")
-        }, namespace=self._namespace)
+        content = {}
+        configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
+                                                    default=[],
+                                                    check_type=list))
+        if configs:
+            content["bazel_configs"] = configs
+
+        bazelrc = self._conanfile.conf.get("tools.google.bazel:bazelrc_path")
+        if bazelrc:
+            content["bazelrc_path"] = bazelrc
+
+        save_toolchain_args(content, namespace=self._namespace)
