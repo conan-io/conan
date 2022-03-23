@@ -555,7 +555,7 @@ class TryCompileBlock(Block):
         """)
 
 
-class CrossBuildingBlock(Block):
+class CMakeSystemBlock(Block):
     template = textwrap.dedent("""
         {% if cmake_system_name %}
         # Cross building
