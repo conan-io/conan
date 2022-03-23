@@ -126,7 +126,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :return: None
     """
     # TODO: Add all parameters to the new conf
-    requester = conanfile._conan_requester
+    requester = conanfile._conan_helpers.requester
     config = conanfile.conf
     out = ConanOutput()
     overwrite = True
