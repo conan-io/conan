@@ -9,7 +9,7 @@ class InvalidSystemRequirementsTest(unittest.TestCase):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
 from conan import ConanFile
-from conans.errors import ConanInvalidSystemRequirements
+from conan.errors import ConanInvalidSystemRequirements
 
 class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"

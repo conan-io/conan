@@ -105,7 +105,7 @@ def my_custom_function():
         with redirect_output(output):
             hook_manager, hook_path = self._init()
             my_hook = """
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 def pre_build(output, **kwargs):
     raise Exception("My custom exception")
