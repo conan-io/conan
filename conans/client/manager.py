@@ -108,6 +108,11 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 
+    if conanfile.info.invalid:
+        msg = "Invalid ID: {}. ".format(conanfile.info.invalid)
+        msg += "Trying to install dependencies, but this configuration will fail to build a package"
+        output.error(msg)
+
     if install_folder:
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
