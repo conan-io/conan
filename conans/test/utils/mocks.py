@@ -80,6 +80,11 @@ class MockConanfile(ConanFile):
         self.generators = []
         self.conf = Conf()
 
+        class MockConanInfo:
+            pass
+        self.info = MockConanInfo()
+        self.info.settings = settings  # Incomplete, only settings for CppstdMinCheck tests
+
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None

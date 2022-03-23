@@ -12,6 +12,14 @@ class Values(object):
             return None
         return self._dict[attr]
 
+    def get_safe(self, attr):
+        # To provide the same inferface as regular Settings object
+        tokens = attr.split(".")
+        obj = self
+        for token in tokens[:-1]:
+            obj = getattr(obj, token)
+        return getattr(obj, tokens[-1])
+
     def __delattr__(self, attr):
         if attr not in self._dict:
             return
