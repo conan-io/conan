@@ -593,7 +593,6 @@ class CrossBuildSystemBlock(Block):
 
     def _system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
-        os_build = self._conanfile.settings_build.get_safe("os")
         if self._is_apple_cross_building():
             # cross-build in Macos also for M1
             return {'Macos': 'Darwin'}.get(os_host, os_host)
