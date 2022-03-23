@@ -30,7 +30,7 @@ class TestlinksConan(ConanFile):
         copy(self, "*", self.source_folder, self.package_folder)
 """
         test_package = """from conan import ConanFile
-from conans.errors import ConanException
+from conan.errors import ConanException
 import os
 
 class TestlinksTestConan(ConanFile):

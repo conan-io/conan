@@ -189,3 +189,24 @@ def test_dependencies_visit_build_requires_profile():
     # generate time, build-requires already available
     assert "conanfile.py: GENERATE REQUIRE: cmake/0.1!!!" in client.out
     assert "conanfile.py: GENERATE CMAKE: cmake/0.1!!!" in client.out
+
+
+def test_dependencies_package_type():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library")})
+    c.run("create .")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "lib/0.1"
+            def generate(self):
+                is_app = self.dependencies["lib"].package_type == "static-library"
+                self.output.info(f"APP: {is_app}!!")
+                assert is_app
+                self.dependencies["lib"].package_type == "not-exist-type"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "APP: True!!" in c.out
+    assert "conanfile.py: Error in generate() method, line 9" in c.out
+    assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out

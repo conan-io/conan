@@ -12,7 +12,7 @@ class TestInvalidConfiguration:
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanInvalidConfiguration
+        from conan.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             settings = "os"
@@ -73,7 +73,7 @@ class TestErrorConfiguration(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanErrorConfiguration
+        from conan.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
             settings = "os"
@@ -95,7 +95,7 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanErrorConfiguration
+        from conan.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
             settings = "os"
@@ -118,7 +118,7 @@ class TestInvalidBuildPackageID:
     """
     conanfile = textwrap.dedent("""
        from conan import ConanFile
-       from conans.errors import ConanInvalidConfiguration
+       from conan.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):
            settings = "os"
@@ -177,7 +177,7 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
     """
     conanfile = textwrap.dedent("""
        from conan import ConanFile
-       from conans.errors import ConanInvalidConfiguration
+       from conan.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):
            settings = "os"
