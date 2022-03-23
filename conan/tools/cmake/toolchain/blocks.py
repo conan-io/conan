@@ -588,9 +588,9 @@ class CrossBuildSystemBlock(Block):
             arch_build = settings_build.get_safe("arch")
 
             if system_name is None:  # Try to deduce
-                if os_ in ('iOS', 'watchOS', 'tvOS'):  # cross-building in Macos
-                    system_name = os_
-                elif os_ not in ('Macos', 'Android'):
+                if os_ in ('iOS', 'watchOS', 'tvOS') or (os_ == 'Macos' and arch != arch_build):  # cross-building in Macos
+                    system_name = {'Macos': 'Darwin'}.get(os_, os_)
+                elif os_ != 'Android':
                     cmake_system_name_map = {"Neutrino": "QNX",
                                              "": "Generic",
                                              None: "Generic"}
@@ -611,12 +611,10 @@ class CrossBuildSystemBlock(Block):
                     system_version = settings.get_safe("os.version")
 
             if system_name is not None and system_processor is None:
-                if os_ in ('iOS', 'watchOS', 'tvOS'):
-                    if arch != arch_build:
-                        system_processor = to_apple_arch(arch)
-                elif os_ not in ('Macos', 'Android'):
-                    if arch != arch_build:
-                        system_processor = arch
+                if os_ in ('iOS', 'watchOS', 'tvOS') or (os_ == 'Macos' and arch != arch_build):
+                    system_processor = to_apple_arch(arch)
+                elif os_ != 'Android' and arch != arch_build:
+                    system_processor = arch
 
         return system_name, system_version, system_processor
 
