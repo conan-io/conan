@@ -613,7 +613,8 @@ class CrossBuildingBlock(Block):
 
             if system_name is not None and system_version is None:
                 if os_ in ('iOS', 'watchOS', 'tvOS'):
-                    host_os_version = self._conanfile.settings.get_safe("os.version")
+                    #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
+                    host_os_version = self._conanfile.settings.get_safe("os.sdk_version")
                     system_version = host_os_version
                 else:
                     system_version = settings.get_safe("os.version")

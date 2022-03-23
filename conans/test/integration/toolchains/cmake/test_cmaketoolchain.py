@@ -245,25 +245,19 @@ def test_cmaketoolchain_cmake_system_processor_cross_apple():
                                            .with_version("1.0")
                                            .with_settings("os", "arch", "compiler", "build_type")})
     profile_ios = textwrap.dedent("""
+        include(default)
         [settings]
         os=iOS
         os.version=15.4
         os.sdk=iphoneos
+        os.sdk_version=15.0
         arch=armv8
-        compiler=apple-clang
-        compiler.version=13
-        compiler.libcxx=libc++
-        build_type=Release
-        [options]
-        [build_requires]
-        [env]
-
     """)
     client.save({"profile_ios": profile_ios})
     client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
     toolchain = client.load("conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
-    assert "set(CMAKE_SYSTEM_VERSION 15.4)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 
@@ -283,6 +277,7 @@ def test_apple_vars_overwrite_user_conf():
         os=iOS
         os.version=15.4
         os.sdk=iphoneos
+        os.sdk_version=15.0
         arch=armv8
     """)
     client.save({"profile_ios": profile_ios})
@@ -297,6 +292,6 @@ def test_apple_vars_overwrite_user_conf():
     assert "CMAKE_SYSTEM_NAME tvOS" in toolchain
     assert "CMAKE_SYSTEM_NAME iOS" not in toolchain
     assert "CMAKE_SYSTEM_VERSION 15.1" in toolchain
-    assert "CMAKE_SYSTEM_VERSION 15.4" not in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.0" not in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
