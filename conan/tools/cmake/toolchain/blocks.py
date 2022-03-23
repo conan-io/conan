@@ -567,6 +567,7 @@ class GenericSystemBlock(Block):
         {% if cmake_system_processor %}
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
         {% endif %}
+
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -687,31 +688,6 @@ class GenericSystemBlock(Block):
         arch_build = self._conanfile.settings_build.get_safe("arch")
         return os_host in ('iOS', 'watchOS', 'tvOS') or (os_host == 'Macos' and arch_host != arch_build)
 
-    def _system_name(self):
-        os_host = self._conanfile.settings.get_safe("os")
-        if self._is_apple_cross_building():
-            # cross-build in Macos also for M1
-            return {'Macos': 'Darwin'}.get(os_host, os_host)
-        elif os_host != 'Android':
-            return self._get_generic_system_name()
-
-    def _system_version(self):
-        os_host = self._conanfile.settings.get_safe("os")
-        if self._is_apple_cross_building():
-            #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-            return self._conanfile.settings.get_safe("os.sdk_version")
-        elif os_host != 'Android':
-            return self._conanfile.settings.get_safe("os.version")
-
-    def _system_processor(self):
-        os_host = self._conanfile.settings.get_safe("os")
-        arch_host = self._conanfile.settings.get_safe("arch")
-        arch_build = self._conanfile.settings_build.get_safe("arch")
-        if self._is_apple_cross_building():
-            return to_apple_arch(arch_host)
-        elif os_host != 'Android' and arch_host != arch_build:
-            return arch_host
-
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
         if user_toolchain is not None:
@@ -722,12 +698,26 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         if hasattr(self._conanfile, "settings_build"):
+            os_host = self._conanfile.settings.get_safe("os")
+            arch_host = self._conanfile.settings.get_safe("arch")
             if system_name is None:  # Try to deduce
-                system_name = self._system_name()
-            if system_name is not None and system_version is None:
-                system_version = self._system_version()
-            if system_name is not None and system_processor is None:
-                system_processor = self._system_processor()
+                _system_version = None
+                _system_processor = None
+                if self._is_apple_cross_building():
+                    # cross-build in Macos also for M1
+                    system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
+                    #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
+                    _system_version = self._conanfile.settings.get_safe("os.sdk_version")
+                    _system_processor = to_apple_arch(arch_host)
+                elif os_host != 'Android':
+                    system_name = self._get_generic_system_name()
+                    _system_version = self._conanfile.settings.get_safe("os.version")
+                    _system_processor = arch_host
+
+                if system_name is not None and system_version is None:
+                    system_version = _system_version
+                if system_name is not None and system_processor is None:
+                    system_processor = _system_processor
 
         return system_name, system_version, system_processor
 
