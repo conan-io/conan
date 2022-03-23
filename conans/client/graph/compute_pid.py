@@ -14,7 +14,7 @@ def compute_package_id(node, new_config):
 
     unknown_mode = new_config.get("core.package_id:default_unknown_mode", default="semver_mode")
     lib_mode = new_config.get("core.package_id:default_lib_mode", default="minor_mode")
-    # TODO: Change it to "full_mode" including package_id
+    # recipe_revision_mode already takes into account the package_id
     bin_mode = new_config.get("core.package_id:default_bin_mode", default="recipe_revision_mode")
     python_mode = new_config.get("core.package_id:default_python_mode", default="minor_mode")
     build_mode = new_config.get("core.package_id:default_build_mode", default=None)
