@@ -8,7 +8,6 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
-from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
@@ -352,20 +351,6 @@ class ProfileTest(unittest.TestCase):
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
-
-    @pytest.mark.xfail(reason="New environment changed")
-    def test_default_including_another_profile(self):
-        p1 = "include(p2)\n[env]\nA_VAR=1"
-        p2 = "include(default)\n[env]\nA_VAR=2"
-        save(os.path.join(self.client.cache.profiles_path, "p1"), p1)
-        save(os.path.join(self.client.cache.profiles_path, "p2"), p2)
-        # Change default profile to p1 => p2 => default
-        tools.replace_in_file(self.client.cache.conan_conf_path,
-                              "default_profile = default",
-                              "default_profile = p1")
-        self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("create . --user=user --channel=testing")
-        self._assert_env_variable_printed("A_VAR", "1")
 
     @pytest.mark.xfail(reason="New environment changed")
     def test_test_package(self):

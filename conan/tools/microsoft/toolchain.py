@@ -4,7 +4,7 @@ from xml.dom import minidom
 
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
-from conan.tools.microsoft.visual import VCVars
+from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -48,11 +48,14 @@ class MSBuildToolchain(object):
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         if compiler == "msvc":
-            toolsets = {'190': 'v140',  # TODO: This is common to CMake, refactor
-                        '191': 'v141',
-                        '192': 'v142',
-                        "193": 'v143'}
-            return toolsets[compiler_version]
+            subs_toolset = settings.get_safe("compiler.toolset")
+            if subs_toolset:
+                return subs_toolset
+            return msvc_version_to_toolset_version(compiler_version)
+        if compiler == "intel":
+            compiler_version = compiler_version if "." in compiler_version else \
+                "%s.0" % compiler_version
+            return "Intel C++ Compiler " + compiler_version
         if compiler == "intel-cc":
             return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":

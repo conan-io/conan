@@ -4,27 +4,11 @@ import re
 import tempfile
 import textwrap
 
-from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
-from conans.cli.output import Color, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env import get_env
 from conans.util.files import save
 from conans.util.runners import detect_runner, check_output_runner
-
-
-def _get_compiler_and_version(compiler_exe):
-    output = ConanOutput()
-    compiler_id = detect_compiler_id(compiler_exe)
-    if compiler_id.name == LLVM_GCC:
-        output.error("%s detected as a frontend using apple-clang. "
-                     "Compiler not supported" % compiler_exe)
-        return None
-    if compiler_id != UNKNOWN_COMPILER:
-        output.success("Found %s %s" % (compiler_id.name, compiler_id.major_minor))
-        return compiler_id.name, compiler_id.major_minor
-    return None
 
 
 def _gcc_compiler(compiler_exe="gcc"):
@@ -97,27 +81,21 @@ def _get_default_compiler():
     6. clang executable
     """
     output = ConanOutput()
-    v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
-        if v2_mode:
-            compiler = _get_compiler_and_version(command)
-            if compiler:
-                return compiler
-        else:
-            if "clang" in command.lower():
-                return _clang_compiler(command)
-            if "gcc" in command:
-                gcc = _gcc_compiler(command)
-                if platform.system() == "Darwin" and gcc is None:
-                    output.error("%s detected as a frontend using apple-clang. "
-                                 "Compiler not supported" % command)
-                return gcc
-            if platform.system() == "SunOS" and command.lower() == "cc":
-                return _sun_cc_compiler(command)
+        if "clang" in command.lower():
+            return _clang_compiler(command)
+        if "gcc" in command:
+            gcc = _gcc_compiler(command)
+            if platform.system() == "Darwin" and gcc is None:
+                output.error("%s detected as a frontend using apple-clang. "
+                             "Compiler not supported" % command)
+            return gcc
+        if platform.system() == "SunOS" and command.lower() == "cc":
+            return _sun_cc_compiler(command)
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
@@ -127,15 +105,10 @@ def _get_default_compiler():
         version = latest_visual_studio_version_installed()
         vs = ('Visual Studio', version) if version else None
 
-    if v2_mode:
-        cc = _get_compiler_and_version("cc")
-        gcc = _get_compiler_and_version("gcc")
-        clang = _get_compiler_and_version("clang")
-    else:
-        gcc = _gcc_compiler()
-        clang = _clang_compiler()
-        if platform.system() == "SunOS":
-            sun_cc = _sun_cc_compiler()
+    gcc = _gcc_compiler()
+    clang = _clang_compiler()
+    if platform.system() == "SunOS":
+        sun_cc = _sun_cc_compiler()
 
     if platform.system() == "Windows":
         return vs or cc or gcc or clang
@@ -157,6 +130,9 @@ def _get_profile_compiler_version(compiler, version):
         return major
     elif compiler == "gcc" and major >= 5:
         output.info("gcc>=5, using the major as version")
+        return major
+    elif compiler == "apple-clang" and major >= 13:
+        output.info("apple-clang>=13, using the major as version")
         return major
     elif compiler == "Visual Studio":
         return major

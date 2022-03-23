@@ -1,3 +1,4 @@
+import platform
 import textwrap
 import time
 import unittest
@@ -165,7 +166,8 @@ class CompatibleIDsTest(unittest.TestCase):
         c2 = GenConanfile().with_name("bb").with_version("1.0").with_require("aa/1.0")
         client = TestClient()
         # Recipe revision mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         # Create binaries with recipe revision mode for both
         client.save({"conanfile.py": c1})
         client.run("create .")
@@ -174,13 +176,14 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create .")
 
         # Back to semver default
-        save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=semver_mode")
         client.run("install --requires=bb/1.0@", assert_error=True)
         self.assertIn("Missing prebuilt package for 'bb/1.0'", client.out)
 
         # What if client modifies the packages declaring a compatible_package with the recipe mode
         # Recipe revision mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         tmp = """
 
     def package_id(self):
@@ -202,7 +205,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
-        save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=semver_mode")
         client.run("install --requires=bb/1.0@ --update")
         self.assertIn(f"Using compatible package '{package_id}'", client.out)
 
@@ -229,7 +232,8 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler.version=4.9
             compiler.libcxx=libstdc++
             """)
-        save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
+        save(client.cache.new_config_path,
+             "core.package_id:default_unknown_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
@@ -405,3 +409,28 @@ def test_msvc_visual_incompatible():
     save(client.cache.new_config_path, new_config)
     client.run("install --requires=pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
+def test_apple_clang_compatible():
+    """
+    From apple-clang version 13 we detect apple-clang version as 13 and we make
+    this compiler version compatible with 13.0
+    """
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run('create . --name=pkg --version=0.1 -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
+               '-s build_type=Release -s arch=x86_64')
+    client.run("install --requires=pkg/0.1@ -pr=profile")
+    assert "Using compatible package" in client.out

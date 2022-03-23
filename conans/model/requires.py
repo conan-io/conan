@@ -305,23 +305,33 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type):
-        # If the requirement doesn't declare package_id, try to guess it with the types
-        if self.package_id_mode is not None:
+    def deduce_package_id_mode(self, pkg_type, dep_pkg_type, lib_mode, bin_mode, build_mode,
+                               unknown_mode):
+        # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
+        # The "conf" values are defaults, no hard overrides
+        if self.package_id_mode:
             return
+
+        if self.build:
+            if build_mode and self.direct:
+                self.package_id_mode = build_mode
+            return  # At the moment no defaults
 
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:
-                    self.package_id_mode = "minor_mode"
+                    self.package_id_mode = lib_mode
                 else:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = bin_mode
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = bin_mode
                 else:
-                    self.package_id_mode = "minor_mode"
+                    self.package_id_mode = lib_mode
+
             # HEADER-ONLY is automatically cleared in compute_package_id()
+        if self.package_id_mode is None:
+            self.package_id_mode = unknown_mode
 
 
 class BuildRequirements:

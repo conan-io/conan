@@ -48,12 +48,17 @@ class HookManager(object):
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 
     def load_hooks(self):
+        hooks = {}
         for root, dirs, files in os.walk(self._hooks_folder):
             for f in files:
                 if f.startswith("hook_") and f.endswith(".py"):
                     hook_path = os.path.join(root, f)
                     name = os.path.relpath(hook_path, self._hooks_folder).replace("\\", "/")
-                    self._load_hook(hook_path, name)
+                    hooks[name] = hook_path
+        # Load in alphabetical order, just in case the order is important there is a criteria
+        # This is difficult to test, apparently in most cases os.walk is alphabetical
+        for name, hook_path in sorted(hooks.items()):
+            self._load_hook(hook_path, name)
 
     def _load_hook(self, hook_path, hook_name):
         try:

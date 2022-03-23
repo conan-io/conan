@@ -35,7 +35,7 @@ def test_msbuild_cpu_count():
 
 def test_msbuild_toolset():
     settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["193"]}},
+                         "compiler": {"msvc": {"version": ["193"], "toolset": [None, "v142_xp"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
@@ -49,6 +49,10 @@ def test_msbuild_toolset():
 
     msbuild = MSBuildToolchain(conanfile)
     assert 'v143' in msbuild.toolset
+
+    conanfile.settings.compiler.toolset = "v142_xp"
+    msbuild = MSBuildToolchain(conanfile)
+    assert 'v142_xp' in msbuild.toolset
 
 
 @pytest.mark.parametrize("mode,expected_toolset", [

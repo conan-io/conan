@@ -2,10 +2,8 @@ import os
 import textwrap
 import unittest
 
-import pytest
 from requests import Response
 
-from conans.client import tools
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestRequester
 from conans.util.files import save

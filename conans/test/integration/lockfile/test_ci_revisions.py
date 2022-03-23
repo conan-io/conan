@@ -42,7 +42,7 @@ conanfile = textwrap.dedent("""
 @pytest.fixture()
 def client_setup():
     c = TestClient()
-    c.save({"global.conf": "core.package_id:default_mode=recipe_revision_mode"},
+    c.save({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"},
            path=c.cache.cache_folder)
     pkb_requirements = """
     def requirements(self):

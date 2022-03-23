@@ -5,7 +5,6 @@ import unittest
 import pytest
 
 from conan.tools.files import replace_in_file, unzip
-from conans.client import tools
 from conans.test.utils.mocks import ConanFileMock
 
 from conans.test.utils.test_files import temp_folder

@@ -24,6 +24,28 @@ class CalledProcessErrorWithStderr(CalledProcessError):
 
 
 @contextmanager
+def conanfile_remove_attr(conanfile, names, method):
+    """ remove some self.xxxx attribute from the class, so it raises an exception if used
+    within a given conanfile method
+    """
+    original_class = type(conanfile)
+
+    def _prop(attr_name):
+        def _m(_):
+            raise ConanException(f"'self.{attr_name}' access in '{method}()' method is forbidden")
+        return property(_m)
+
+    try:
+        new_class = type(original_class.__name__, (original_class, ), {})
+        conanfile.__class__ = new_class
+        for name in names:
+            setattr(new_class, name, _prop(name))
+        yield
+    finally:
+        conanfile.__class__ = original_class
+
+
+@contextmanager
 def conanfile_exception_formatter(conanfile_name, func_name):
     """
     Decorator to throw an exception formatted with the line of the conanfile where the error ocurrs.
