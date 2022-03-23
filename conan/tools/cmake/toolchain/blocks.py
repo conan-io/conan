@@ -569,7 +569,54 @@ class CrossBuildSystemBlock(Block):
         {% endif %}
         """)
 
-    # TODO: Check what happens in Android we were not taking these variables into account
+    def _get_generic_system_name(self):
+        os_host = self._conanfile.settings.get_safe("os")
+        os_build = self._conanfile.settings_build.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        arch_build = self._conanfile.settings_build.get_safe("arch")
+        cmake_system_name_map = {"Neutrino": "QNX",
+                                 "": "Generic",
+                                 None: "Generic"}
+        if os_host != os_build:
+            return cmake_system_name_map.get(os_host, os_host)
+        elif arch_host is not None and arch_host != arch_build:
+            if not ((arch_build == "x86_64") and (arch_host == "x86") or
+                    (arch_build == "sparcv9") and (arch_host == "sparc") or
+                    (arch_build == "ppc64") and (arch_host == "ppc32")):
+                return cmake_system_name_map.get(os_host, os_host)
+
+    def _is_apple_cross_building(self):
+        os_host = self._conanfile.settings.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        arch_build = self._conanfile.settings_build.get_safe("arch")
+        return os_host in ('iOS', 'watchOS', 'tvOS') or (os_host == 'Macos' and arch_host != arch_build)
+
+    def _system_name(self):
+        os_host = self._conanfile.settings.get_safe("os")
+        os_build = self._conanfile.settings_build.get_safe("os")
+        if self._is_apple_cross_building():
+            # cross-build in Macos also for M1
+            return {'Macos': 'Darwin'}.get(os_host, os_host)
+        elif os_host != 'Android':
+            return self._get_generic_system_name()
+
+    def _system_version(self):
+        os_host = self._conanfile.settings.get_safe("os")
+        if self._is_apple_cross_building():
+            #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
+            return self._conanfile.settings.get_safe("os.sdk_version")
+        elif os_host != 'Android':
+            return self._conanfile.settings.get_safe("os.version")
+
+    def _system_processor(self):
+        os_host = self._conanfile.settings.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        arch_build = self._conanfile.settings_build.get_safe("arch")
+        if self._is_apple_cross_building():
+            return to_apple_arch(arch_host)
+        elif os_host != 'Android' and arch_host != arch_build:
+            return arch_host
+
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
         if user_toolchain is not None:
@@ -579,42 +626,13 @@ class CrossBuildSystemBlock(Block):
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        settings = self._conanfile.settings
         if hasattr(self._conanfile, "settings_build"):
-            os_ = settings.get_safe("os")
-            arch = settings.get_safe("arch")
-            settings_build = self._conanfile.settings_build
-            os_build = settings_build.get_safe("os")
-            arch_build = settings_build.get_safe("arch")
-
             if system_name is None:  # Try to deduce
-                if os_ in ('iOS', 'watchOS', 'tvOS') or (os_ == 'Macos' and arch != arch_build):  # cross-building in Macos
-                    system_name = {'Macos': 'Darwin'}.get(os_, os_)
-                elif os_ != 'Android':
-                    cmake_system_name_map = {"Neutrino": "QNX",
-                                             "": "Generic",
-                                             None: "Generic"}
-                    if os_ != os_build:
-                        system_name = cmake_system_name_map.get(os_, os_)
-                    elif arch is not None and arch != arch_build:
-                        if not ((arch_build == "x86_64") and (arch == "x86") or
-                                (arch_build == "sparcv9") and (arch == "sparc") or
-                                (arch_build == "ppc64") and (arch == "ppc32")):
-                            system_name = cmake_system_name_map.get(os_, os_)
-
+                system_name = self._system_name()
             if system_name is not None and system_version is None:
-                if os_ in ('iOS', 'watchOS', 'tvOS'):
-                    #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-                    sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    system_version = sdk_version
-                elif os_ not in ('Macos', 'Android'):
-                    system_version = settings.get_safe("os.version")
-
+                system_version = self._system_version()
             if system_name is not None and system_processor is None:
-                if os_ in ('iOS', 'watchOS', 'tvOS') or (os_ == 'Macos' and arch != arch_build):
-                    system_processor = to_apple_arch(arch)
-                elif os_ != 'Android' and arch != arch_build:
-                    system_processor = arch
+                system_processor = self._system_processor()
 
         return system_name, system_version, system_processor
 
