@@ -2,7 +2,7 @@ import os
 import platform
 from collections import OrderedDict, defaultdict
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, BaseLoader
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
@@ -125,7 +125,31 @@ def read_profile(profile_name, cwd, default_folder):
         context = {"platform": platform,
                    "os": os,
                    "profile_dir": base_path}
-        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+
+        class FullPathLoader(BaseLoader):
+            """ Load absolute paths and relative paths to 'base_path'. """
+            def __init__(self, base_path):
+                BaseLoader.__init__()
+                self.base_path = base_path
+
+            def get_source(self, environment, template):
+                if not os.path.isabs(template):
+                    template = os.path.join(self.base_path, template)
+
+                with open(template, "br") as f:
+                    contents = f.read().decode('utf-8')
+                    mtime = os.path.getmtime(template)
+
+                    def uptodate():
+                        try:
+                            return os.path.getmtime(template) == mtime
+                        except OSError:
+                            return False
+
+                    return contents, template, uptodate
+
+        env = Environment(loader=FullPathLoader(base_path))
+        rtemplate = env.from_string(text)
         text = rtemplate.render(context)
 
     try:

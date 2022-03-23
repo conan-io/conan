@@ -223,7 +223,7 @@ class TestBufferConanOutput(ConanOutput):
 
 class RedirectedTestOutput(StringIO):
     def __init__(self):
-        # Chage to super() for Py3
+        # TODO: Change to super() for Py3
         StringIO.__init__(self)
 
     def __repr__(self):
