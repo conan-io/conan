@@ -599,7 +599,7 @@ class CrossBuildingBlock(Block):
             if system_name is None:  # Try to deduce
                 if os_ in ('iOS', 'watchOS', 'tvOS'):  # cross-building in Macos
                     system_name = os_
-                else:
+                elif not 'Macos':
                     cmake_system_name_map = {"Neutrino": "QNX",
                                              "": "Generic",
                                              None: "Generic"}
@@ -614,16 +614,16 @@ class CrossBuildingBlock(Block):
             if system_name is not None and system_version is None:
                 if os_ in ('iOS', 'watchOS', 'tvOS'):
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
-                    host_os_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    system_version = host_os_version
-                else:
+                    sdk_version = self._conanfile.settings.get_safe("os.sdk_version")
+                    system_version = sdk_version
+                elif not 'Macos':
                     system_version = settings.get_safe("os.version")
 
             if system_name is not None and system_processor is None:
                 if os_ in ('iOS', 'watchOS', 'tvOS'):
                     if arch != arch_build:
                         system_processor = to_apple_arch(arch)
-                else:
+                elif not 'Macos':
                     if arch != arch_build:
                         system_processor = arch
 
