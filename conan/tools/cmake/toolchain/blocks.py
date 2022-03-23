@@ -330,17 +330,6 @@ class AppleSystemBlock(Block):
         {% endif %}
         """)
 
-    def _get_architecture(self):
-        # check valid combinations of architecture - os ?
-        # for iOS a FAT library valid for simulator and device
-        # can be generated if multiple archs are specified:
-        # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        arch = self._conanfile.settings.get_safe("arch")
-        return {"x86": "i386",
-                "x86_64": "x86_64",
-                "armv8": "arm64",
-                "armv8_32": "arm64_32"}.get(arch, arch)
-
     def _apple_sdk_name(self):
         """
         Returns the value for the SDKROOT with this preference:
@@ -371,7 +360,8 @@ class AppleSystemBlock(Block):
         if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
             return None
 
-        host_architecture = self._get_architecture()
+        arch = self._conanfile.settings.get_safe("arch")
+        host_architecture = to_apple_arch(arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
