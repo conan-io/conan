@@ -41,12 +41,12 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
     "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
     # Flags configuration
-    "tools.build:cxxflags": "TBD",
-    "tools.build:cflags": "TBD",
-    "tools.build:cppflags": "TBD",
-    "tools.build:ldflags": "TBD",
-    "tools.build:sharedlinkflags": "TBD",
-    "tools.build:exelinkflags": "TBD",
+    "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cppflags": "List of extra CPP flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:ldflags": "List of extra LD flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
+    "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
 }
 
 
