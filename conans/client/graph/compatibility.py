@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
 
-from conans.client.graph.compute_pid import run_package_id
+from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
 from conans.errors import conanfile_exception_formatter
 from conans.util.files import save
@@ -53,7 +53,7 @@ def app_compat(conanfile):
     # This will be simplified if we know if the language is pure C
     cppstds = {"gcc": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
                        "20", "gnu20", "23", "gnu23"],
-               "msvc": [None, "14", "17", "20", "23"],
+               "msvc": ["98", "14", "17", "20", "23"],
                "clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
                          "20", "gnu20", "23", "gnu23"],
                "apple-clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
@@ -102,7 +102,7 @@ class BinaryCompatibility:
         result = OrderedDict()
         for c in compat_infos:
             conanfile.info = c
-            run_package_id(conanfile)
+            run_validate_package_id(conanfile)
             pid = c.package_id()
             if pid not in result and not c.invalid:
                 result[pid] = c

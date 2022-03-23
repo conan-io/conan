@@ -108,6 +108,8 @@ class GraphBinariesAnalyzer(object):
             conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
                                   "the default package ID")
 
+        if compatibles:
+            conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
             conanfile.info = compatible_package  # Redefine current
             node._package_id = package_id  # Modifying package id under the hood, FIXME

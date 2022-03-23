@@ -69,7 +69,6 @@ class TestValidate(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb",
                                                  "Invalid")})
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
-        print(client.out)
         self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
