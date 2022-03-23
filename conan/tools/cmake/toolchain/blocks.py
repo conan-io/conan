@@ -368,6 +368,7 @@ class AppleSystemBlock(Block):
         ctxt_toolchain = {}
         if host_sdk_name:
             ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
+        # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
         if host_architecture:
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
 
