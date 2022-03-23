@@ -3,6 +3,7 @@ from collections import namedtuple
 from io import StringIO
 
 from conan import ConanFile
+from conans.cli.conan_app import ConanFileHelpers
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
@@ -110,6 +111,7 @@ class ConanFileMock(ConanFile):
         self.env_scripts = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
+        self._conan_helpers = ConanFileHelpers(None, None)
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
