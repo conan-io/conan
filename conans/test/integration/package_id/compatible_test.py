@@ -604,3 +604,45 @@ def test_apple_clang_compatible():
                '-s build_type=Release -s arch=x86_64')
     client.run("install pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out
+
+
+class TestNewCompatibility:
+
+    def test_compatible_setting(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler"
+
+                def compatibility(self):
+                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                        return [{"settings": [("compiler.version", v)]}
+                                for v in ("4.8", "4.7", "4.6")]
+
+                def package_info(self):
+                    self.output.info("PackageInfo!: Gcc version: %s!"
+                                     % self.settings.compiler.version)
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+        # Create package with gcc 4.8
+        c.run("create .  -pr=myprofile -s compiler.version=4.8")
+        assert "pkg/0.1: Package '22c594d7fed4994c59a1eacb24ff6ff48bc5c51c' created" in c.out
+
+        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
+        c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("install . -pr=myprofile")
+        assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
+        assert "pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c" in c.out
+        assert "pkg/0.1: Already installed!" in c.out
