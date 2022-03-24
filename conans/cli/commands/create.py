@@ -99,7 +99,24 @@ def create(conan_api, parser, *args):
         lockfile.save(lockfile_out)
 
     if test_conanfile_path:
+        _check_tested_reference_matches(deps_graph, ref, out)
         test_package(conan_api, deps_graph, test_conanfile_path)
+
+
+def _check_tested_reference_matches(deps_graph, tested_ref, out):
+    """ Check the test_profile_override_conflict test. If we are testing a build require
+    but we specify the build require with a different version in the profile, it has priority,
+    it is correct but weird and likely a mistake"""
+    # https://github.com/conan-io/conan/issues/10453
+    levels = deps_graph.by_levels()
+    levels.reverse()
+    # The dependencies of the test package conanfile
+    level1_refs = [node.ref for node in levels[1]]
+    # There is a reference with same name but different
+    missmatch = [ref for ref in level1_refs if ref.name == tested_ref.name and ref != tested_ref]
+    if missmatch:
+        out.warning("The package created was '{}' but the reference being "
+                    "tested is '{}'".format(missmatch[0], tested_ref))
 
 
 def test_package(conan_api, deps_graph, test_conanfile_path):
