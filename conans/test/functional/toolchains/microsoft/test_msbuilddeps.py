@@ -398,10 +398,10 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "191", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "193", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -480,9 +480,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         props = client.load("conan_pkg_release_x64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -519,14 +519,14 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_myrelease_myx86_64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD -s arch=x86 '
+                   ' -s compiler.runtime=dynamic -s arch=x86 '
                    '-s build_type=Debug'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_mydebug_myx86.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -552,15 +552,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.configuration is None, it should have a value", client.out)
         client.save({"conanfile.py": conanfile.replace("configuration", "platform")})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.platform is None, it should have a value", client.out)
 
     def test_install_transitive(self):
@@ -707,14 +707,14 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2017():
-    check_build_vs_project_with_a("15")
+    check_build_vs_project_with_a("191")
 
 
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
-    check_build_vs_project_with_a("17")
+    check_build_vs_project_with_a("193")
 
 
 def check_build_vs_project_with_a(vs_version):
@@ -761,7 +761,7 @@ def check_build_vs_project_with_a(vs_version):
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . --name=mydep.pkg.team --version=0.1 -s compiler="Visual Studio"'
+    client.run('create . --name=mydep.pkg.team --version=0.1 -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
@@ -785,7 +785,7 @@ def check_build_vs_project_with_a(vs_version):
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('build . -s compiler="Visual Studio"'
+    client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
@@ -797,14 +797,14 @@ def check_build_vs_project_with_a(vs_version):
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2017():
-    check_build_vs_project_with_test_requires("15")
+    check_build_vs_project_with_test_requires("191")
 
 
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
-    check_build_vs_project_with_test_requires("17")
+    check_build_vs_project_with_test_requires("193")
 
 
 def check_build_vs_project_with_test_requires(vs_version):
@@ -977,7 +977,7 @@ def test_build_requires():
     client.run("create dep --name=dep --version=0.1 -s arch=x86")
     client.run("create dep --name=dep --version=0.1 -s arch=x86_64")
     with client.chdir("consumer"):
-        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release")
         client.assert_listed_binary({"dep/0.1": ("6745936d8a913181e35fed8eb321e5aa6cf7500c",
                                                  "Cache")}, build=True)
@@ -985,12 +985,12 @@ def test_build_requires():
         assert "conan_dep_build.props" in deps_props
         assert "Invoking 64bit dep_1 build tool" in client.out
 
-        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s:b arch=x86 -s build_type=Release")
         assert "Invoking 32bit dep_1 build tool" in client.out
 
         # Make sure it works with 2 profiles too
-        client.run('install . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('install . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release -s:b os=Windows -s:h os=Windows")
         client.run("build .")
         assert "Invoking 64bit dep_1 build tool" in client.out

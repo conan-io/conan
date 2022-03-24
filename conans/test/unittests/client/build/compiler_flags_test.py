@@ -24,8 +24,8 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("gcc", "s390x", None, "-m64"),
                            ("clang", "s390x", None, "-m64"),
                            ("sun-cc", "s390x", None, "-m64"),
-                           ("Visual Studio", "x86", None, ""),
-                           ("Visual Studio", "x86_64", None, ""),
+                           ("msvc", "x86", None, ""),
+                           ("msvc", "x86_64", None, ""),
                            ("gcc", "ppc32", "AIX", "-maix32"),
                            ("gcc", "ppc64", "AIX", "-maix64"),
                            ])
@@ -71,14 +71,14 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 
-    @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
-                           ("Visual Studio", "Release", None, "-O2 -Ob2"),
-                           ("Visual Studio", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
-                           ("Visual Studio", "MinSizeRel", None, "-O1 -Ob1"),
-                           ("Visual Studio", "Debug", "v140_clang_c2", "-gline-tables-only -fno-inline -O0"),
-                           ("Visual Studio", "Release", "v140_clang_c2", "-O2"),
-                           ("Visual Studio", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
-                           ("Visual Studio", "MinSizeRel", "v140_clang_c2", ""),
+    @parameterized.expand([("msvc", "Debug", None, "-Zi -Ob0 -Od"),
+                           ("msvc", "Release", None, "-O2 -Ob2"),
+                           ("msvc", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
+                           ("msvc", "MinSizeRel", None, "-O1 -Ob1"),
+                           ("msvc", "Debug", "v140_clang_c2", "-gline-tables-only -fno-inline -O0"),
+                           ("msvc", "Release", "v140_clang_c2", "-O2"),
+                           ("msvc", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
+                           ("msvc", "MinSizeRel", "v140_clang_c2", ""),
                            ("gcc", "Debug", None, "-g"),
                            ("gcc", "Release", None, "-O3 -s"),
                            ("gcc", "RelWithDebInfo", None, "-O2 -g"),

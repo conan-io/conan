@@ -11,8 +11,9 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=16
+         compiler=msvc
+        compiler.version=192
+        compiler.runtime=dynamic
 
         [tool_requires]
         br2/version
