@@ -54,7 +54,7 @@ class ConanFile:
         # something that can run commands, as os.sytem
 
         self.compatible_packages = []
-        self._conan_requester = None
+        self._conan_helpers = None
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
@@ -217,6 +217,7 @@ class ConanFile:
     def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False,
             shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
+        command = self._conan_helpers.cmd_wrapper.wrap(command)
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
                 from conans.client.subsystems import run_in_windows_bash

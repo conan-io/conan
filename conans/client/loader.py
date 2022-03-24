@@ -18,10 +18,10 @@ from conans.util.files import load, chdir
 
 class ConanFileLoader:
 
-    def __init__(self, pyreq_loader=None, requester=None):
+    def __init__(self, pyreq_loader=None, conanfile_helpers=None):
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
-        self._requester = requester
+        self._conanfile_helpers = conanfile_helpers
         invalidate_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display=""):
@@ -35,7 +35,7 @@ class ConanFileLoader:
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached:
             conanfile = cached[0](display)
-            conanfile._conan_requester = self._requester
+            conanfile._conan_helpers = self._conanfile_helpers
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(conanfile, "init"):
                     conanfile.init()
@@ -56,7 +56,7 @@ class ConanFileLoader:
             self._cached_conanfile_classes[conanfile_path] = (conanfile, module)
             result = conanfile(display)
 
-            result._conan_requester = self._requester
+            result._conan_helpers = self._conanfile_helpers
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(result, "init"):
                     result.init()
