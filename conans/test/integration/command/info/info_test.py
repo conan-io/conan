@@ -178,3 +178,29 @@ class TestInfoRevisions:
         client.run("graph info --requires={}".format(ref))
         revision = client.recipe_revision(ref)
         assert f"ref: lib/1.0@conan/testing#{revision}" in client.out
+
+
+class TestInfoTestPackage:
+    # https://github.com/conan-io/conan/issues/10714
+
+    def test_tested_reference_str(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("tool", "0.1")})
+        client.run("export .")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class HelloConan(ConanFile):
+
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
+
+                def build_requirements(self):
+                    self.build_requires(self.tested_reference_str)
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        for args in ["", " --build=*"]:
+            client.run("graph info . " + args)
+            assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
+                   not in client.out

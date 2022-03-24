@@ -46,6 +46,7 @@ class ConanFile:
     package_type = None
     # Run in windows bash
     win_bash = None
+    tested_reference_str = None
 
     _conan_is_consumer = False
 

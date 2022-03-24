@@ -22,10 +22,18 @@ class NewAPI:
         from conans.cli.api.helpers.new.cmake_lib import cmake_lib_files
         from conans.cli.api.helpers.new.meson_lib import meson_lib_files
         from conans.cli.api.helpers.new.meson_exe import meson_exe_files
+        from conans.cli.api.helpers.new.msbuild_lib import msbuild_lib_files
+        from conans.cli.api.helpers.new.msbuild_exe import msbuild_exe_files
+        from conans.cli.api.helpers.new.bazel_lib import bazel_lib_files
+        from conans.cli.api.helpers.new.bazel_exe import bazel_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
                          "meson_exe": meson_exe_files,
+                         "msbuild_lib": msbuild_lib_files,
+                         "msbuild_exe": msbuild_exe_files,
+                         "bazel_lib": bazel_lib_files,
+                         "bazel_exe": bazel_exe_files,
                          "alias": alias_file}
         template_files = new_templates.get(template_name)
         return template_files
