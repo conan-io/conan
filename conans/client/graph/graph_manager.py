@@ -31,6 +31,8 @@ class _RecipeBuildRequires(OrderedDict):
                 self.add(build_require, context=self._default_context)
 
     def add(self, build_require, context, force_host_context=False):
+        if build_require is None:
+            return
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
         build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
