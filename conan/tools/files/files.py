@@ -16,7 +16,7 @@ from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.sha import check_with_algorithm_sum
-from conans.util.files import rmdir
+from conans.util.files import rmdir as _internal_rmdir
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -57,6 +57,10 @@ def mkdir(conanfile, path):
     if os.path.exists(path):
         return
     os.makedirs(path)
+
+
+def rmdir(conanfile, path):
+    _internal_rmdir(path)
 
 
 def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
@@ -474,7 +478,7 @@ def swap_child_folder(parent_folder, child_folder):
             if os.path.isfile(path):
                 os.remove(path)
             else:
-                rmdir(path)
+                _internal_rmdir(path)
     child = os.path.join(parent_folder, child_folder)
     for f in os.listdir(child):
         shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))

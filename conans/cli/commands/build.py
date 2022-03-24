@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conans.cli.command import conan_command, COMMAND_GROUPS
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, _get_conanfile_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
@@ -38,7 +38,7 @@ def build(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
     source_folder = folder
-    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else folder
+    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
     out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
