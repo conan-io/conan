@@ -88,10 +88,6 @@ class AutotoolsToolchain:
             runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
             if runtime:
                 msvc_runtime_flag = "-{}".format(runtime)
-        elif self._conanfile.settings.get_safe("compiler") == "Visual Studio":
-            runtime = self._conanfile.settings.get_safe("compiler.runtime")
-            if runtime:
-                msvc_runtime_flag = "-{}".format(runtime)
 
         return msvc_runtime_flag
 

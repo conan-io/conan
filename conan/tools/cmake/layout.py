@@ -9,7 +9,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
     else:
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler in ("Visual Studio", "msvc"):
+        if compiler == "msvc":
             multi = True
         else:
             multi = False

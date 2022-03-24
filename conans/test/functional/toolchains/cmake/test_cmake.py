@@ -171,9 +171,7 @@ class Base(unittest.TestCase):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
-                           ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
-                           ("msvc", "Debug", "static", "191", "14", "x86", None, True),
+    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", None, True),
                            ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,

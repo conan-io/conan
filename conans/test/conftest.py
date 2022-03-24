@@ -135,8 +135,9 @@ default_profiles = {
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         """),
     "Linux": textwrap.dedent("""\

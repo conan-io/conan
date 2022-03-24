@@ -175,7 +175,7 @@ compiler:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
     gcc:
         version: ["4.8", "4.9", "5.0"]
-    Visual Studio:
+    msvc:
         runtime: [None, MD, MT, MTd, MDd]
         version: ["10", "11", "12"]
     clang:
@@ -190,7 +190,7 @@ build_type: [None, Debug, Release]""")
     def test_loads(self):
         settings = Settings.loads("""
 compiler:
-    Visual Studio:
+    msvc:
         runtime: [MD, MT]
         version:
             '10':
@@ -209,11 +209,11 @@ compiler:
         version: ['4.8', '4.9']
 os: [Windows, Linux]
 """)
-        settings.update_values([('compiler', 'Visual Studio'),
+        settings.update_values([('compiler', 'msvc'),
                                 ('compiler.version', '10'),
                                 ('compiler.version.arch', '32')])
         self.assertEqual(settings.values_list,
-                         [('compiler', 'Visual Studio'),
+                         [('compiler', 'msvc'),
                           ('compiler.version', '10'),
                           ('compiler.version.arch', '32')])
 
@@ -225,7 +225,7 @@ os: [Windows, Linux]
         settings.compiler.version.arch = "64"
 
         self.assertEqual(settings.values_list,
-                         [('compiler', 'Visual Studio'),
+                         [('compiler', 'msvc'),
                           ('compiler.version', '12'),
                           ('compiler.version.arch', '64')])
 

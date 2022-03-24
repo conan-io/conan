@@ -173,7 +173,6 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
 
 
 @pytest.mark.parametrize("compiler,expected", [
-    ("Visual Studio", True),
     ("msvc", True),
     ("clang", False)
 ])
@@ -189,10 +188,7 @@ def test_is_msvc(compiler, expected):
 
 
 @pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
-    ("Visual Studio", True, "MT", "Release", True),
     ("msvc", True, "static", "Release", True),
-    ("Visual Studio", False, "MT", "Release", True),
-    ("Visual Studio", True, "MD", "Release", False),
     ("msvc", True, "static", "Debug", True),
     ("clang", True, None, "Debug", False),
 ])

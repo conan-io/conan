@@ -128,8 +128,8 @@ class BasicTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD')
+        client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=191'
+                   ' -s compiler.runtime=dynamic')
 
         conan_toolchain_props = client.load("conantoolchain.props")
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)

@@ -194,9 +194,9 @@ class ProfileTest(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows profiles")
     def test_install_profile_settings(self):
         # Create a profile and use it
-        profile_settings = OrderedDict([("compiler", "Visual Studio"),
-                                        ("compiler.version", "12"),
-                                        ("compiler.runtime", "MD"),
+        profile_settings = OrderedDict([("compiler", "msvc"),
+                                        ("compiler.version", "191"),
+                                        ("compiler.runtime", "dynamic"),
                                         ("arch", "x86")])
 
         create_profile(self.client.cache.profiles_path, "vs_12_86",
@@ -210,13 +210,13 @@ class ProfileTest(unittest.TestCase):
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
-        self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
+        self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=191")
         info = self.client.out
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
                 self.assertIn("%s=%s" % (setting, value), info)
             else:
-                self.assertIn("compiler.version=14", info)
+                self.assertIn("compiler.version=191", info)
 
         # Use package settings in profile
         tmp_settings = OrderedDict()
@@ -228,7 +228,7 @@ class ProfileTest(unittest.TestCase):
                        "vs_12_86_hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
         # Try to override some settings in install command
-        self.client.run("install . --build missing -pr vs_12_86_hello0_gcc -s compiler.version=14")
+        self.client.run("install . --build missing -pr vs_12_86_hello0_gcc -s compiler.version=191")
         info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
@@ -246,7 +246,7 @@ class ProfileTest(unittest.TestCase):
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_hello0_gcc"
-                        " -s compiler.version=14 -s hello0/*:compiler.libcxx=libstdc++")
+                        " -s compiler.version=191 -s hello0/*:compiler.libcxx=libstdc++")
         info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
@@ -268,9 +268,9 @@ class ProfileTest(unittest.TestCase):
 
         # Create a profile and use it
         profile_settings = OrderedDict([("os", "Windows"),
-                                        ("compiler", "Visual Studio"),
-                                        ("compiler.version", "12"),
-                                        ("compiler.runtime", "MD"),
+                                        ("compiler", "msvc"),
+                                        ("compiler.version", "191"),
+                                        ("compiler.runtime", "dynamic"),
                                         ("arch", "x86")])
 
         # Use package settings in profile
@@ -295,8 +295,8 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --user=lasote --channel=testing -pr myprofile")
         info = self.client.out
-        self.assertIn("(hello0/0.1@lasote/testing): Visual Studio", info)
-        self.assertIn("(hello0/0.1@lasote/testing): 12", info)
+        self.assertIn("(hello0/0.1@lasote/testing): msvc", info)
+        self.assertIn("(hello0/0.1@lasote/testing): 191", info)
         self.assertNotIn("(hello0/0.1@lasote/testing): gcc", info)
         self.assertNotIn("(hello0/0.1@lasote/testing): 4.8", info)
 
@@ -483,8 +483,9 @@ class ProfileAggregationTest(unittest.TestCase):
     [settings]
     arch=x86
     build_type=Debug
-    compiler=Visual Studio
-    compiler.version=15
+    compiler=msvc
+    compiler.version=191
+    compiler.runtime=dynamic
 
     [env]
     ENV1=foo2
@@ -537,7 +538,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("graph info . --profile profile1 --profile profile2")
-        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
+        self.assertIn("ef4cdf9abf2825f3335ef1287c147076ab24173e", self.client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
@@ -567,15 +568,16 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_export_pkg(self):
         self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
-        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
+        self.assertIn("ef4cdf9abf2825f3335ef1287c147076ab24173e", self.client.out)
 
     def test_profile_crazy_inheritance(self):
         profile1 = dedent("""
             [settings]
             os=Windows
             arch=x86_64
-            compiler=Visual Studio
-            compiler.version=15
+            compiler=msvc
+            compiler.version=191
+            compiler.runtime=dynamic
             """)
 
         profile2 = dedent("""
@@ -589,9 +591,10 @@ class ProfileAggregationTest(unittest.TestCase):
         self.assertIn(dedent("""\
                              [settings]
                              arch=x86_64
-                             compiler=Visual Studio
-                             compiler.runtime=MD
-                             compiler.version=15
+                             compiler=msvc
+                             compiler.runtime=dynamic
+                             compiler.runtime_type=Release
+                             compiler.version=191
                              os=Windows"""), self.client.out)
 
 
