@@ -11,6 +11,7 @@ from conan.tools.files import copy
 class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "application"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
