@@ -174,10 +174,8 @@ def test_third_party_git_overwrite_build_file():
                 self.folders.build = "build"
 
             def source(self):
-                # git clone: WILL FAIL because folder not empty, because UGLY local exports already
                 self.output.info("CWD: {{}}!".format(os.getcwd()))
                 self.output.info("FILES: {{}}!".format(sorted(os.listdir("."))))
-                [shutil.rmtree(t) if os.path.isdir(t) else os.remove(t) for t in os.listdir(".")]
                 self.run('git clone "{}" .')
                 # Now I fix it with one of the exported files
                 shutil.copy("../CMakeLists.txt", ".")
@@ -193,8 +191,7 @@ def test_third_party_git_overwrite_build_file():
                  "CMakeLists.txt": "My better cmake"})
     client.run("install .")
     client.run("source .")
-    # This is the ugly exports, these 2 files are locally copied inside "src" folder
-    assert "FILES: ['CMakeLists.txt']!" in client.out
+    assert "FILES: []!" in client.out
     client.run("build .")
     assert "conanfile.py (mypkg/1.0): Calling build()" in client.out
 
