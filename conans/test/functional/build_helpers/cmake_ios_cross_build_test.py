@@ -15,7 +15,7 @@ def test_cross_build_test_package():
         os=Macos
         arch=x86_64
         compiler=apple-clang
-        compiler.version=13.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         [options]
@@ -29,7 +29,7 @@ def test_cross_build_test_package():
         os.version=13.0
         arch=x86_64
         compiler=apple-clang
-        compiler.version=13.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         [options]

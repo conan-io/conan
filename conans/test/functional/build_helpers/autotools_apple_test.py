@@ -81,14 +81,14 @@ class AutoToolsAppleTest(unittest.TestCase):
         self.t.run_command('lipo -info "%s"' % app)
         self.assertIn("architecture: %s" % expected_arch, self.t.out)
 
-    @parameterized.expand([("x86_64",),
-                           ("armv8",)])
+    @parameterized.expand([("x86_64",), ("armv8",)])
+    @pytest.mark.xfail(reason="Disabled until fix apple-clang 13.1 and --target value for catalyst")
     def test_catalyst(self, arch):
         profile = textwrap.dedent("""
             include(default)
             [settings]
             os = Macos
-            os.version = 13.0
+            os.version = 12.0
             os.sdk = macosx
             os.subsystem = catalyst
             arch = {arch}
