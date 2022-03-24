@@ -61,7 +61,12 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
             conanfile.output.info("Executing exports to: %s" % src_folder)
             if not hasattr(conanfile, "layout"):
                 export_recipe(conanfile, conanfile_folder, src_folder)
-            export_source(conanfile, conanfile_folder, src_folder)
+            else:
+                # If layout declared, the export_sources will go to base source (like develop2)
+                src_folder = conanfile.folders.base_source
+
+            if conanfile_folder != src_folder:
+                export_source(conanfile, conanfile_folder, src_folder)
 
     _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
                 get_sources_from_exports=get_sources_from_exports)
