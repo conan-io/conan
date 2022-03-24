@@ -256,22 +256,7 @@ def test_extra_flags_via_conf():
                 "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
     toolchain = client.load("conan_toolchain.cmake")
-    expected = textwrap.dedent("""\
-        string(APPEND CONAN_CXX_FLAGS
-        " --flag1"
-        " --flag2"
-        )
-        string(APPEND CONAN_C_FLAGS
-        " --flag3"
-        " --flag4"
-        )
-        string(APPEND CONAN_SHARED_LINKER_FLAGS
-        " --flag5"
-        " --flag6"
-        )
-        string(APPEND CONAN_EXE_LINKER_FLAGS
-        " --flag7"
-        " --flag8"
-        )
-    """)
-    assert expected in toolchain
+    assert 'string(APPEND CONAN_CXX_FLAGS " --flag1 --flag2")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain

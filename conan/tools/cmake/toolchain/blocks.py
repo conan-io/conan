@@ -552,32 +552,16 @@ class ExtraFlagsBlock(Block):
 
     template = textwrap.dedent("""
         {% if cxxflags %}
-        string(APPEND CONAN_CXX_FLAGS
-        {% for cxxflag in cxxflags %}
-        " {{ cxxflag }}"
-        {% endfor %}
-        )
+        string(APPEND CONAN_CXX_FLAGS "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
         {% endif %}
         {% if cflags %}
-        string(APPEND CONAN_C_FLAGS
-        {% for cflag in cflags %}
-        " {{ cflag }}"
-        {% endfor %}
-        )
+        string(APPEND CONAN_C_FLAGS "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
         {% endif %}
         {% if sharedlinkflags %}
-        string(APPEND CONAN_SHARED_LINKER_FLAGS
-        {% for sharedlinkflag in sharedlinkflags %}
-        " {{ sharedlinkflag }}"
-        {% endfor %}
-        )
+        string(APPEND CONAN_SHARED_LINKER_FLAGS "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
         {% endif %}
         {% if exelinkflags %}
-        string(APPEND CONAN_EXE_LINKER_FLAGS
-        {% for exelinkflag in exelinkflags %}
-        " {{ exelinkflag }}"
-        {% endfor %}
-        )
+        string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
     """)
 

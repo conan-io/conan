@@ -26,7 +26,6 @@ class AutotoolsToolchain:
         self.ldflags = []
         self.defines = []
 
-        # TODO: compiler.runtime for Visual studio?
         # Defines
         self.gcc_cxx11_abi = self._get_cxx11_abi_define()
         self.ndebug = None
