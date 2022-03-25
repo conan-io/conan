@@ -252,7 +252,7 @@ class Requirement:
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
@@ -263,7 +263,7 @@ class Requirement:
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
@@ -305,7 +305,7 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type, lib_mode, bin_mode, build_mode,
+    def deduce_package_id_mode(self, pkg_type, dep_pkg_type, non_embed_mode, embed_mode, build_mode,
                                unknown_mode):
         # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
         # The "conf" values are defaults, no hard overrides
@@ -317,21 +317,27 @@ class Requirement:
                 self.package_id_mode = build_mode
             return  # At the moment no defaults
 
+        if pkg_type is PackageType.HEADER:
+            self.package_id_mode = "unrelated_mode"
+            return
+
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:
-                    self.package_id_mode = lib_mode
+                    self.package_id_mode = non_embed_mode
                 else:
-                    self.package_id_mode = bin_mode
+                    self.package_id_mode = embed_mode
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
-                    self.package_id_mode = bin_mode
+                    self.package_id_mode = embed_mode
                 else:
-                    self.package_id_mode = lib_mode
+                    self.package_id_mode = non_embed_mode
 
-            # HEADER-ONLY is automatically cleared in compute_package_id()
-        if self.package_id_mode is None:
-            self.package_id_mode = unknown_mode
+            if self.package_id_mode is None:
+                self.package_id_mode = unknown_mode
+
+        # For cases like Application->Application, without headers or libs, package_id_mode=None
+        # It will be independent by default
 
 
 class BuildRequirements:

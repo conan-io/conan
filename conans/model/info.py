@@ -145,13 +145,15 @@ class RequirementInfo:
         self.package_id = self._pref.package_id
         self.recipe_revision = None
 
-    def recipe_revision_mode(self):
+    def full_mode(self):
         self.name = self._pref.ref.name
         self.version = self._pref.ref.version
         self.user = self._pref.ref.user
         self.channel = self._pref.ref.channel
         self.package_id = self._pref.package_id
         self.recipe_revision = self._pref.ref.revision
+
+    recipe_revision_mode = full_mode  # to not break everything and help in upgrade
 
 
 class RequirementsInfo(UserRequirementsDict):
