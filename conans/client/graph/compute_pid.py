@@ -13,9 +13,9 @@ def compute_package_id(node, new_config):
     conanfile = node.conanfile
 
     unknown_mode = new_config.get("core.package_id:default_unknown_mode", default="semver_mode")
-    lib_mode = new_config.get("core.package_id:default_lib_mode", default="minor_mode")
+    non_embed_mode = new_config.get("core.package_id:default_non_embed_mode", default="minor_mode")
     # recipe_revision_mode already takes into account the package_id
-    bin_mode = new_config.get("core.package_id:default_bin_mode", default="recipe_revision_mode")
+    embed_mode = new_config.get("core.package_id:default_embed_mode", default="full_mode")
     python_mode = new_config.get("core.package_id:default_python_mode", default="minor_mode")
     build_mode = new_config.get("core.package_id:default_build_mode", default=None)
 
@@ -28,7 +28,7 @@ def compute_package_id(node, new_config):
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
         require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
-                                       lib_mode, bin_mode, build_mode, unknown_mode)
+                                       non_embed_mode, embed_mode, build_mode, unknown_mode)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref, require.package_id_mode)
             if require.build:
