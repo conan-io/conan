@@ -510,27 +510,12 @@ class CMakeInstallTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
             project(App C)
-            if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
-                include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
-            endif()
-            if(NOT CMAKE_TOOLCHAIN_FILE)
-                message(FATAL ">> Not using toolchain")
-            endif()
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist,
                      "header.h": "# my header file"})
-
-        # FIXME: This is broken, because the toolchain at install time, doesn't have the package
-        # folder yet. We need to define the layout for local development
-        """
-        with client.chdir("build"):
-            client.run("build ..")
-            client.run("package .. -pf=mypkg")  # -pf=mypkg ignored
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build",
-                                                    "include", "header.h")))"""
 
         # The create flow must work
         client.run("create . --name=pkg --version=0.1")
@@ -539,6 +524,40 @@ class CMakeInstallTest(unittest.TestCase):
         pref = client.get_latest_package_reference(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+    def test_install_in_build(self):
+        """
+        test that we can do a ``cmake.install()`` inside the ``build()`` method without
+        crashing
+        """
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.install()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            project(App C)
+            install(FILES header.h DESTINATION include)
+            """)
+        client = TestClient(path_with_spaces=False)
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "header.h": "# my header file"})
+
+        # The create flow must work
+        client.run("build .")
+        assert "conanfile.py: CMake command: cmake --install" in client.out
 
 
 @pytest.mark.tool("cmake")
