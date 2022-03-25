@@ -46,7 +46,7 @@ def build(conan_api, parser, *args):
     # TODO: Decide API to put this
     app = ConanApp(conan_api.cache_folder)
     conanfile = deps_graph.root.conanfile
-
+    conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     if args.lockfile_out:

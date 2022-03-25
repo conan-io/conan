@@ -121,6 +121,7 @@ def test_package(conan_api, deps_graph, test_conanfile_path):
 
     out.highlight("\n-------- Testing the package: Building ----------")
     app = ConanApp(conan_api.cache_folder)
+    conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
     out.highlight("\n-------- Testing the package: Running test() ----------")

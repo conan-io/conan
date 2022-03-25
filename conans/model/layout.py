@@ -52,7 +52,6 @@ class Folders(object):
         self._base_install = output_folder or base_folder
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
-        self._base_package = output_folder or base_folder
 
     @property
     def source_folder(self):
