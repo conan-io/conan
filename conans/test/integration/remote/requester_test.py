@@ -53,7 +53,7 @@ class TestRequester:
     def test_no_request_timeout(self):
         # Test that not having timeout works
         client = TestClient(requester_class=MyRequester)
-        client.save({"global.conf": "core.net.http:timeout=None"}, path=client.cache.cache_folder)
+        client.save({"global.conf": "core.net.http:timeout=-1"}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=foo --version=1.0")
         assert "TIMEOUT: NOT SPECIFIED" in client.out
