@@ -137,6 +137,8 @@ class ConanOutput(object):
     def warn(self, data):
         self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW, error=True)
 
+    warning = warn
+
     def error(self, data):
         self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED, error=True)
 
