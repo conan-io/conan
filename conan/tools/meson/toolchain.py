@@ -96,6 +96,8 @@ class MesonToolchain(object):
         else:
             self._b_vscrt = None
 
+        # default option
+        self.wrap_mode = "nofallback"
         self.project_options = {}
         self.preprocessor_definitions = {}
         self.pkg_config_path = self._conanfile.generators_folder
@@ -189,6 +191,7 @@ class MesonToolchain(object):
                 self.cpp_link_args += v
 
     def _context(self):
+        self.project_options.setdefault("wrap_mode", self.wrap_mode)
         return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
