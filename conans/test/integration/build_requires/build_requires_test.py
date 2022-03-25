@@ -680,3 +680,27 @@ def test_tool_requires_conanfile_txt():
     client.save({"conanfile.txt": consumer}, clean_first=True)
     client.run("install . --build=missing")
     assert "build_req/1.0@test/test: Created package" in client.out
+
+
+def test_profile_override_conflict():
+    client = TestClient()
+
+    test = textwrap.dedent("""
+        from conan import ConanFile
+        class Lib(ConanFile):
+
+            def requirements(self):
+                self.tool_requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+        """)
+    client.save({"conanfile.py": GenConanfile("protoc"),
+                 "test_package/conanfile.py": test,
+                 "profile": "[tool_requires]\nprotoc/0.1"})
+    client.run("create . --version 0.1 -pr=profile")
+    client.run("create . --version 0.2 -pr=profile")
+    assert "protoc/0.1: Already installed!" in client.out
+    assert "protoc/0.2 (test package)" in client.out
+    assert "WARN: The package created was 'protoc/0.1' but the reference being tested " \
+           "is 'protoc/0.2'" in client.out

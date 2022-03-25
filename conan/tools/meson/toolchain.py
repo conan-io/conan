@@ -87,10 +87,7 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
-        if compiler == "Visual Studio":
-            vscrt = self._conanfile.settings.get_safe("compiler.runtime")
-            self._b_vscrt = str(vscrt).lower()
-        elif compiler == "msvc":
+        if compiler == "msvc":
             vscrt = msvc_runtime_flag(self._conanfile)
             self._b_vscrt = str(vscrt).lower()
         else:

@@ -211,12 +211,6 @@ class CMakeToolchain(object):
             vs_version = vs_ide_version(self._conanfile)
             return "Visual Studio %s" % cmake_years[vs_version]
 
-        if compiler == "Visual Studio":
-            version = compiler_version
-            major_version = version.split('.', 1)[0]
-            base = "Visual Studio %s" % cmake_years[major_version]
-            return base
-
         if use_win_mingw(conanfile):
             return "MinGW Makefiles"
 

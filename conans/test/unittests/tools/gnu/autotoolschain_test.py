@@ -57,9 +57,10 @@ def test_visual_runtime(runtime):
     Testing AutotoolsToolchain with the msvc compiler adjust the runtime
     """
     # Issue: https://github.com/conan-io/conan/issues/10139
-    settings = MockSettings({"build_type": "Release",
-                             "compiler": "Visual Studio",
-                             "compiler.runtime": runtime,
+    settings = MockSettings({"build_type": "Release" if "d" not in runtime else "Debug",
+                             "compiler": "msvc",
+                             "compiler.runtime": "static" if "MT" in runtime else "dynamic",
+                             "compiler.runtime_type": "Release" if "d" not in runtime else "Debug",
                              "os": "Windows",
                              "arch": "x86_64"})
     conanfile = ConanFileMock()

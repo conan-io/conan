@@ -129,16 +129,17 @@ def test_build_type_remove_windows():
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             def package_id(self):
-                if self.info.settings.os == "Windows" and self.info.settings.compiler == "Visual Studio":
+                if self.info.settings.os == "Windows" and self.info.settings.compiler == "msvc":
                    del self.info.settings.build_type
                    del self.info.settings.compiler.runtime
+                   del self.info.settings.compiler.runtime_type
         """)
     client.save({"conanfile.py": conanfile})
-    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" '
-               '-s compiler.version=14 -s build_type=Release')
-    client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be",
+    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler=msvc '
+               '-s compiler.version=190 -s build_type=Release -s compiler.runtime=dynamic')
+    client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038",
                                              "Build")})
-    client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
-               '-s compiler.version=14 -s build_type=Debug')
-    client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be", "Cache")})
+    client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler=msvc '
+               '-s compiler.version=190 -s build_type=Debug -s compiler.runtime=dynamic')
+    client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038", "Cache")})
 

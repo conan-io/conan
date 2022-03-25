@@ -88,8 +88,8 @@ def test_cppstd():
     conanfile.settings = MockSettings(
         {"build_type": "Release",
          "arch": "x86",
-         "compiler": "Visual Studio",
-         "compiler.version": "14",
+         "compiler": "msvc",
+         "compiler.version": "190",
          "compiler.cppstd": "17"})
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
@@ -241,7 +241,7 @@ def test_architecture_flag(config):
     assert "-debug" not in env["LDFLAGS"]
 
 
-@pytest.mark.parametrize("compiler", ['Visual Studio', 'msvc'])
+@pytest.mark.parametrize("compiler", ['msvc'])
 def test_build_type_flag(compiler):
     """Architecture flag is set in CXXFLAGS, CFLAGS and LDFLAGS"""
     conanfile = ConanFileMock()

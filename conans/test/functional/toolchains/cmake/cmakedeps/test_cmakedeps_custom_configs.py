@@ -63,9 +63,9 @@ class CustomConfigurationTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
-        self.client.run("create . -s compiler.version=15 "
+        self.client.run("create . -s compiler.version=191 "
                         "-s build_type=Release -o hello/*:shared=True -tf=None")
-        self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 "
+        self.client.run("create . --name=hello --version=0.1 -s compiler.version=191 "
                         "-s build_type=Release -tf=None")
 
         # Prepare the actual consumer package
@@ -74,8 +74,9 @@ class CustomConfigurationTest(unittest.TestCase):
                           "app.cpp": self.app})
 
     def test_generator_multi(self):
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
+        settings = {"compiler": "msvc",
+                    "compiler.version": "191",
+                    "compiler.runtime": "dynamic",
                     "arch": "x86_64",
                     "build_type": "Release",
                     }
@@ -160,7 +161,7 @@ class CustomSettingsTest(unittest.TestCase):
             add_library"""))
         cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
         self.client.save({"CMakeLists.txt": cmake})
-        self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 -s build_type=MyRelease "
+        self.client.run("create . --name=hello --version=0.1 -s compiler.version=191 -s build_type=MyRelease "
                         "-s:b build_type=MyRelease -tf=None")
 
         # Prepare the actual consumer package
@@ -169,8 +170,9 @@ class CustomSettingsTest(unittest.TestCase):
                           "app.cpp": self.app})
 
     def test_generator_multi(self):
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
+        settings = {"compiler": "msvc",
+                    "compiler.version": "191",
+                    "compiler.runtime": "dynamic",
                     "arch": "x86_64",
                     "build_type": "MyRelease",
                     }

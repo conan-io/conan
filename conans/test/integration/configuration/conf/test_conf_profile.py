@@ -34,9 +34,9 @@ def test_cmake_no_config(client):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         """)
     client.save({"myprofile": profile})
@@ -49,9 +49,9 @@ def test_cmake_config(client):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         tools.microsoft.msbuild:verbosity=Minimal
@@ -66,9 +66,9 @@ def test_cmake_config_error(client):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         tools.microsoft.msbuild:verbosity=non-existing
@@ -83,9 +83,9 @@ def test_cmake_config_package(client):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         dep*:tools.microsoft.msbuild:verbosity=Minimal
@@ -102,9 +102,9 @@ def test_cmake_config_package_not_scoped(client):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         tools.microsoft.msbuild:verbosity=Minimal
@@ -144,9 +144,9 @@ def test_msbuild_config():
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         tools.microsoft.msbuild:verbosity=Minimal
@@ -173,9 +173,9 @@ def test_msbuild_compile_options():
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
+        compiler=msvc
+        compiler.version=191
+        compiler.runtime=dynamic
         build_type=Release
         [conf]
         tools.microsoft.msbuildtoolchain:compile_options={"ExceptionHandling": "Async"}

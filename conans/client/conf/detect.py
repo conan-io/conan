@@ -103,7 +103,7 @@ def _get_default_compiler():
     vs = cc = sun_cc = None
     if platform.system() == "Windows":
         version = latest_visual_studio_version_installed()
-        vs = ('Visual Studio', version) if version else None
+        vs = ('msvc', version) if version else None
 
     gcc = _gcc_compiler()
     clang = _clang_compiler()
@@ -368,7 +368,7 @@ def _cppstd_default(compiler, compiler_version):
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
-               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
@@ -385,7 +385,7 @@ def _gcc_cppstd_default(compiler_version):
 
 
 def _visual_cppstd_default(compiler_version):
-    if compiler_version >= "14":  # VS 2015 update 3 only
+    if compiler_version >= "190":  # VS 2015 update 3 only
         return "14"
     return None
 
