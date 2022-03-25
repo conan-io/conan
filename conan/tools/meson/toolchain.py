@@ -96,7 +96,9 @@ class MesonToolchain(object):
         else:
             self._b_vscrt = None
 
-        self.project_options = {}
+        self.project_options = {
+            "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
+        }
         self.preprocessor_definitions = {}
         self.pkg_config_path = self._conanfile.generators_folder
 
