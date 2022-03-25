@@ -11,6 +11,7 @@ def architecture_flag(settings):
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
@@ -24,7 +25,7 @@ def architecture_flag(settings):
             if apple_arch:
                 # TODO: Could we define anything like `to_apple_target()`?
                 #       Check https://github.com/rust-lang/rust/issues/48862
-                return '--target=%s-apple-ios-macabi' % apple_arch
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
         elif arch in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif arch in ['x86', 'sparc']:
