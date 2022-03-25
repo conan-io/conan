@@ -93,6 +93,7 @@ class ConanFileMock(ConanFile):
         self.display_name = ""
         self._conan_node = None
         self.command = None
+        self._commands = []
         self.path = None
         self.settings = None
         self.settings_build = MockSettings({})
@@ -117,9 +118,15 @@ class ConanFileMock(ConanFile):
         assert win_bash is False
         assert subsystem is None
         self.command = command
+        self._commands.append(command)
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
 
+    @property
+    def commands(self):
+        result = self._commands
+        self._commands = []
+        return result
 
 MockOptions = MockSettings
 
