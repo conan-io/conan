@@ -85,7 +85,7 @@ class DetectCompilersTest(unittest.TestCase):
         platform_default_compilers = {
             "Linux": "gcc",
             "Darwin": "apple-clang",
-            "Windows": "Visual Studio"
+            "Windows": "msvc"
         }
 
         result = detect_defaults_settings()

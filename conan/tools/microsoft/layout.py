@@ -5,6 +5,7 @@ from conans.errors import ConanException
 
 
 def vs_layout(conanfile):
+    conanfile.folders.test_output = ""
     if not conanfile.settings.get_safe("build_type"):
         raise ConanException("The 'vs_layout' requires the 'build_type' setting")
     if not conanfile.settings.get_safe("arch"):
@@ -15,12 +16,13 @@ def vs_layout(conanfile):
         if not arch:
             raise ConanException("The 'vs_layout' doesn't "
                                  "work with the arch '{}'".format(conanfile.settings.arch))
-        base = "{}/{}".format(arch, str(conanfile.settings.build_type))
+        base = os.path.join(arch, str(conanfile.settings.build_type))
     else:
         base = str(conanfile.settings.build_type)
 
-    conanfile.folders.build = base
-    conanfile.cpp.build.libdirs = ["."]
-    conanfile.folders.generators = os.path.join(base, "generators")
+    conanfile.folders.build = "."
+    conanfile.folders.generators = "conan"
     conanfile.folders.source = "."
-    conanfile.cpp.source.includedirs = ["."]
+    conanfile.cpp.build.libdirs = [base]
+    conanfile.cpp.build.bindirs = [base]
+    conanfile.cpp.source.includedirs = ["include"]

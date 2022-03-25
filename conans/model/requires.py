@@ -405,6 +405,8 @@ class Requirements:
 
     # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
+        if str_ref is None:
+            return
         assert isinstance(str_ref, str)
         ref = RecipeReference.loads(str_ref)
         req = Requirement(ref, **kwargs)
@@ -424,6 +426,8 @@ class Requirements:
              headers = False => We won't include headers, is a tool, no propagate the includes.
              run = None => It will be determined by the package_type of the ref
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
@@ -474,6 +478,8 @@ class Requirements:
          libs = False => We won't link with it, is a tool, no propagate the libs.
          headers = False => We won't include headers, is a tool, no propagate the includes.
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,

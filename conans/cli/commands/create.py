@@ -110,20 +110,18 @@ def test_package(conan_api, deps_graph, test_conanfile_path):
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
-    output_folder = os.path.join(conanfile_folder, "test_output")
-    shutil.rmtree(output_folder, ignore_errors=True)
-    mkdir(output_folder)
+    conanfile = deps_graph.root.conanfile
+    output_folder = os.path.join(conanfile_folder, conanfile.folders.test_output)
+    if conanfile.folders.test_output:
+        shutil.rmtree(output_folder, ignore_errors=True)
+        mkdir(output_folder)
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        source_folder=conanfile_folder,
                                        output_folder=output_folder)
-    conanfile = deps_graph.root.conanfile
-    conanfile.folders.set_base_build(output_folder)
-    conanfile.folders.set_base_source(conanfile_folder)
-    conanfile.folders.set_base_package(output_folder)
-    conanfile.folders.set_base_generators(output_folder)
 
     out.highlight("\n-------- Testing the package: Building ----------")
     app = ConanApp(conan_api.cache_folder)
+    conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
     out.highlight("\n-------- Testing the package: Running test() ----------")
