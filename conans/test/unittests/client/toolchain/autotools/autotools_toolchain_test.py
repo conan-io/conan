@@ -442,8 +442,10 @@ def test_extra_flags_via_conf():
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
+    conanfile.settings_build = MockSettings({"os": "iOS", "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert '-DNDEBUG -DDEF1 -DDEF2' in env["CPPFLAGS"]
