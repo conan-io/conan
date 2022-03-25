@@ -148,11 +148,13 @@ def install(conan_api, parser, *args):
     cwd = os.getcwd()
     if args.path:
         path = _get_conanfile_path(args.path, cwd, py=None)
-        source_folder = output_folder = os.path.dirname(path)
+        source_folder = os.path.dirname(path)
     else:
-        source_folder = output_folder = cwd
+        source_folder = cwd
     if args.output_folder:
         output_folder = make_abs_path(args.output_folder, cwd)
+    else:
+        output_folder = None
 
     remote = get_multiple_remotes(conan_api, args.remote)
 

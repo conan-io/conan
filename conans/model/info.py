@@ -473,30 +473,6 @@ class ConanInfo(object):
         self.options.clear()
         self.requires.clear()
 
-    def msvc_compatible(self):
-        if self.settings.compiler != "msvc":
-            return
-
-        compatible = self.clone()
-        version = compatible.settings.compiler.version
-        runtime = compatible.settings.compiler.runtime
-        runtime_type = compatible.settings.compiler.runtime_type
-
-        if version is None:
-            raise undefined_value('settings.compiler.version')
-        if runtime is None:
-            raise undefined_value('settings.compiler.runtime')
-
-        compatible.settings.compiler = "Visual Studio"
-        from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
-        visual_version = msvc_version_to_vs_ide_version(version)
-        compatible.settings.compiler.version = visual_version
-        runtime = "MT" if runtime == "static" else "MD"
-        if runtime_type == "Debug":
-            runtime = "{}d".format(runtime)
-        compatible.settings.compiler.runtime = runtime
-        return compatible
-
     def apple_clang_compatible(self):
         # https://github.com/conan-io/conan/pull/10797
         # apple-clang compiler version 13 will be compatible with 13.0

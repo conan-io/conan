@@ -8,7 +8,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
-    SharedLibBock, OutputDirsBlock
+    SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -124,6 +124,7 @@ class CMakeToolchain(object):
                                        ("vs_runtime", VSRuntimeBlock),
                                        ("cppstd", CppStdBlock),
                                        ("parallel", ParallelBlock),
+                                       ("extra_flags", ExtraFlagsBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
@@ -210,12 +211,6 @@ class CMakeToolchain(object):
                 raise ConanException("compiler.version must be defined")
             vs_version = vs_ide_version(self._conanfile)
             return "Visual Studio %s" % cmake_years[vs_version]
-
-        if compiler == "Visual Studio":
-            version = compiler_version
-            major_version = version.split('.', 1)[0]
-            base = "Visual Studio %s" % cmake_years[major_version]
-            return base
 
         if use_win_mingw(conanfile):
             return "MinGW Makefiles"

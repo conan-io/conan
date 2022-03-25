@@ -9,7 +9,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
     else:
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler in ("Visual Studio", "msvc"):
+        if compiler == "msvc":
             multi = True
         else:
             multi = False
@@ -35,14 +35,3 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     else:
         conanfile.cpp.build.libdirs = ["."]
         conanfile.cpp.build.bindirs = ["."]
-
-
-def clion_layout(conanfile):
-    if not conanfile.settings.get_safe("build_type"):
-        raise ConanException("The 'clion_layout' requires the 'build_type' setting")
-    base = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
-    conanfile.folders.build = base
-    conanfile.cpp.build.libdirs = ["."]
-    conanfile.folders.generators = os.path.join(base, "generators")
-    conanfile.folders.source = "."
-    conanfile.cpp.source.includedirs = ["."]

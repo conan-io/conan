@@ -89,7 +89,7 @@ def to_meson_value(value):
 
 # FIXME: Move to another more common module
 def to_cppstd_flag(compiler, cppstd):
-    if compiler in ("msvc", "Visual Studio"):
+    if compiler == "msvc":
         return _vs_cppstd_map.get(cppstd)
     else:
         return _cppstd_map.get(cppstd)

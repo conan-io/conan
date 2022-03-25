@@ -46,12 +46,6 @@ def compute_package_id(node, new_config):
                                       python_requires=python_requires,
                                       default_python_requires_id_mode=python_mode)
 
-    msvc_incomp = False  # self._cache.new_config["core.package_id:msvc_visual_incompatible"]
-    if not msvc_incomp:
-        msvc_compatible = conanfile.info.msvc_compatible()
-        if msvc_compatible:
-            conanfile.compatible_packages.append(msvc_compatible)
-
     apple_clang_compatible = conanfile.info.apple_clang_compatible()
     if apple_clang_compatible:
         conanfile.compatible_packages.append(apple_clang_compatible)
