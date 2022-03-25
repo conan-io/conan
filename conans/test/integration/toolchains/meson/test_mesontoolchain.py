@@ -88,7 +88,7 @@ def test_extra_flags_via_conf():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2']" in content
     assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
