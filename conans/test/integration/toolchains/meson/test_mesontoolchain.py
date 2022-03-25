@@ -1,3 +1,4 @@
+import sys
 import textwrap
 
 import pytest
@@ -6,53 +7,8 @@ from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
 
 
-build_env_1 = textwrap.dedent("""
-CFLAGS=-mios-version-min=1 -isysroot ROOT1 -arch armv1
-CXXFLAGS=-mios-version-min=2 -isysroot ROOT2 -arch armv2
-LDFLAGS=-mios-version-min=3 -isysroot ROOT3 -arch armv3
-""")
-
-expected_args_1 = textwrap.dedent("""
-c_args = ['-mios-version-min=1', '-isysroot', 'ROOT1', '-arch', 'armv1'] + preprocessor_definitions
-c_link_args = ['-mios-version-min=3', '-isysroot', 'ROOT3', '-arch', 'armv3']
-cpp_args = ['-mios-version-min=2', '-isysroot', 'ROOT2', '-arch', 'armv2'] + preprocessor_definitions
-cpp_link_args = ['-mios-version-min=3', '-isysroot', 'ROOT3', '-arch', 'armv3']
-""")
-
-build_env_2 = textwrap.dedent("""
-CFLAGS=-isysroot ROOT1 -arch armv1
-CXXFLAGS=-mios-version-min=2 -arch armv2
-LDFLAGS=-mios-version-min=3 -isysroot ROOT3
-""")
-
-expected_args_2 = textwrap.dedent("""
-c_args = ['-isysroot', 'ROOT1', '-arch', 'armv1', '-mios-version-min=10.0'] + preprocessor_definitions
-c_link_args = ['-mios-version-min=3', '-isysroot', 'ROOT3', '-arch', 'arm64']
-cpp_args = ['-mios-version-min=2', '-arch', 'armv2', '-isysroot', '/my/sdk/path'] + preprocessor_definitions
-cpp_link_args = ['-mios-version-min=3', '-isysroot', 'ROOT3', '-arch', 'arm64']
-""")
-
-
-build_env_3 = textwrap.dedent("""
-CFLAGS=-flag1
-CXXFLAGS=-flag2
-LDFLAGS=-flag3
-""")
-
-expected_args_3 = textwrap.dedent("""
-c_args = ['-flag1', '-mios-version-min=10.0', '-isysroot', '/my/sdk/path', '-arch', 'arm64'] + preprocessor_definitions
-c_link_args = ['-flag3', '-mios-version-min=10.0', '-isysroot', '/my/sdk/path', '-arch', 'arm64']
-cpp_args = ['-flag2', '-mios-version-min=10.0', '-isysroot', '/my/sdk/path', '-arch', 'arm64'] + preprocessor_definitions
-cpp_link_args = ['-flag3', '-mios-version-min=10.0', '-isysroot', '/my/sdk/path', '-arch', 'arm64']
-""")
-
-
-@pytest.mark.parametrize("build_env,expected_args", [
-    (build_env_1, expected_args_1),
-    (build_env_2, expected_args_2),
-    (build_env_3, expected_args_3),
-])
-def test_apple_meson_keep_user_flags(build_env, expected_args):
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+def test_apple_meson_keep_user_custom_flags():
     default = textwrap.dedent("""
     [settings]
     os=Macos
@@ -73,12 +29,9 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
     compiler.version = 12.0
     compiler.libcxx = libc++
 
-    [buildenv]
-    {build_env}
-
     [conf]
     tools.apple:sdk_path=/my/sdk/path
-    """.format(build_env=build_env))
+    """)
 
     _conanfile_py = textwrap.dedent("""
     from conan import ConanFile
@@ -89,6 +42,10 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
 
         def generate(self):
             tc = MesonToolchain(self)
+            # Customized apple flags
+            tc.apple_arch_flag = ['-arch', 'myarch']
+            tc.apple_isysroot_flag = ['-isysroot', '/other/sdk/path']
+            tc.apple_min_version_flag = ['-otherminversion=10.7']
             tc.generate()
     """)
 
@@ -99,9 +56,47 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
 
     t.run("install . -pr:h host_prof -pr:b build_prof")
     content = t.load(MesonToolchain.cross_filename)
-    assert expected_args in content
+    assert "c_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
+    assert "c_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
+    assert "cpp_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
+    assert "cpp_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
 
 
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+def test_extra_flags_via_conf():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [buildenv]
+        CFLAGS=-flag0 -other=val
+        CXXFLAGS=-flag0 -other=val
+        LDFLAGS=-flag0 -other=val
+
+        [conf]
+        tools.build:cxxflags=["-flag1", "-flag2"]
+        tools.build:cflags=["-flag3", "-flag4"]
+        tools.build:ldflags=["-flag5", "-flag6"]
+   """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+
+    t.run("install . -pr=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2']" in content
+    assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
+    assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+    assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
+
+
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_correct_quotes():
     profile = textwrap.dedent("""
        [settings]

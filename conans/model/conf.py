@@ -58,7 +58,14 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
     "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
-    "tools.apple:sdk_path": "Path to the SDK to be used"
+    "tools.apple:sdk_path": "Path to the SDK to be used",
+    # Flags configuration
+    "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cppflags": "List of extra CPP flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:ldflags": "List of extra LD flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
+    "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
 }
 
 
@@ -232,6 +239,8 @@ class Conf:
                 return self._get_boolean_value(v)
             elif check_type is str and not isinstance(v, str):
                 return str(v)
+            elif v is None:  # value was unset
+                return default
             elif check_type is not None and not isinstance(v, check_type):
                 raise ConanException("[conf] {name} must be a {type}-like object. "
                                      "The value '{value}' introduced is a {vtype} "

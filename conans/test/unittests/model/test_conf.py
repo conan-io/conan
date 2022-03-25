@@ -212,6 +212,8 @@ def test_conf_get_check_type_and_default():
     # Check type does not affect to default value
     assert c.get("non:existing:conf", default=0, check_type=dict) == 0
     assert c.get("zlib:user.company.check:shared") is None  # unset value
+    assert c.get("zlib:user.company.check:shared", default=[]) == []  # returning default
+    assert c.get("zlib:user.company.check:shared", default=[], check_type=list) == []  # not raising exception
     assert c.get("zlib:user.company.check:shared_str") == '"False"'
     assert c.get("zlib:user.company.check:shared_str", check_type=bool) is False  # smart conversion
     assert c.get("zlib:user.company.check:static_str") == "off"

@@ -448,6 +448,38 @@ class UserToolchain(Block):
         return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
 
 
+class ExtraFlagsBlock(Block):
+    """This block is adding flags directly from user [conf] section"""
+
+    template = textwrap.dedent("""
+        {% if cxxflags %}
+        string(APPEND CONAN_CXX_FLAGS "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
+        {% endif %}
+        {% if cflags %}
+        string(APPEND CONAN_C_FLAGS "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
+        {% endif %}
+        {% if sharedlinkflags %}
+        string(APPEND CONAN_SHARED_LINKER_FLAGS "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
+        {% endif %}
+        {% if exelinkflags %}
+        string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
+        {% endif %}
+    """)
+
+    def context(self):
+        # Now, it's time to get all the flags defined by the user
+        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        return {
+            "cxxflags": cxxflags,
+            "cflags": cflags,
+            "sharedlinkflags": sharedlinkflags,
+            "exelinkflags": exelinkflags
+        }
+
+
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
         if(DEFINED CONAN_CXX_FLAGS)
