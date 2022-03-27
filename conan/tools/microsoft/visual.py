@@ -89,7 +89,7 @@ def msvc_runtime_flag(conanfile):
     runtime = settings.get_safe("compiler.runtime")
     if compiler == "Visual Studio":
         return runtime
-    if compiler == "msvc" or compiler == "intel-cc":
+    if runtime is not None:
         runtime_type = settings.get_safe("compiler.runtime_type")
         runtime = "MT" if runtime == "static" else "MD"
         if runtime_type == "Debug":

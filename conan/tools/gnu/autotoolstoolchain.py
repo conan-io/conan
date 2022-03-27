@@ -7,7 +7,7 @@ from conan.tools.build.cross_building import cross_building, get_cross_building_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc
+from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
 from conans.tools import args_to_string
 
 
@@ -85,22 +85,10 @@ class AutotoolsToolchain:
                 return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _get_msvc_runtime_flag(self):
-        msvc_runtime_flag = None
-        if self._conanfile.settings.get_safe("compiler") == "msvc":
-            runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
-            if runtime_type == "Release":
-                values = {"static": "MT", "dynamic": "MD"}
-            else:
-                values = {"static": "MTd", "dynamic": "MDd"}
-            runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
-            if runtime:
-                msvc_runtime_flag = "-{}".format(runtime)
-        elif self._conanfile.settings.get_safe("compiler") == "Visual Studio":
-            runtime = self._conanfile.settings.get_safe("compiler.runtime")
-            if runtime:
-                msvc_runtime_flag = "-{}".format(runtime)
-
-        return msvc_runtime_flag
+        flag = msvc_runtime_flag(self)
+        if flag:
+            flag = "-{}".format(flag)
+        return flag
 
     def _get_libcxx_flag(self):
         settings = self._conanfile.settings
