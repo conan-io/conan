@@ -80,7 +80,6 @@ def test_makefile_arch(config):
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("arch", ["x86_64", "armv8"])
-@pytest.mark.xfail(reason="Disabled until fix apple-clang 13.1 and --target value for catalyst")
 def test_catalyst(arch):
     profile = textwrap.dedent("""
         include(default)
@@ -89,6 +88,7 @@ def test_catalyst(arch):
         os.version = 13.0
         os.sdk = macosx
         os.subsystem = catalyst
+        os.subsystem.ios_version = 13.1
         arch = {arch}
         """).format(arch=arch)
 
@@ -135,4 +135,4 @@ def test_catalyst(arch):
 
     if arch == "x86_64":
         t.run_command('"%s"' % app)
-        assert "running catalyst 130000" in t.out
+        assert "running catalyst 130100" in t.out

@@ -399,6 +399,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         elif template == "meson_exe":
             from conans.assets.templates.new_v2_meson import get_meson_exe_files
             files = get_meson_exe_files(name, version, package_name)
+        elif template == "msbuild_lib":
+            from conans.assets.templates.new_v2_msbuild import get_msbuild_lib_files
+            files = get_msbuild_lib_files(name, version, package_name)
+        elif template == "msbuild_exe":
+            from conans.assets.templates.new_v2_msbuild import get_msbuild_exe_files
+            files = get_msbuild_exe_files(name, version, package_name)
         elif template == "bazel_lib":
             from conans.assets.templates.new_v2_bazel import get_bazel_lib_files
             files = get_bazel_lib_files(name, version, package_name)

@@ -96,11 +96,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         manifest_manager.print_log()
 
     if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_source(conanfile_path)
-        conanfile.folders.set_base_build(output_folder or conanfile_path)
-        conanfile.folders.set_base_install(output_folder or conanfile_path)
-        conanfile.folders.set_base_imports(output_folder or conanfile_path)
-        conanfile.folders.set_base_generators(output_folder or conanfile_path)
+        conanfile.folders.set_base_folders(conanfile_path, output_folder)
     else:
         conanfile.folders.set_base_install(install_folder)
         conanfile.folders.set_base_imports(install_folder)

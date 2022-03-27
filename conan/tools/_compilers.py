@@ -11,6 +11,7 @@ def architecture_flag(settings):
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
@@ -22,7 +23,7 @@ def architecture_flag(settings):
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
-                return '--target=%s-apple-ios-macabi' % apple_arch
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:

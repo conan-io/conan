@@ -13,7 +13,7 @@ def test_exports_sources_own_code_in_subfolder():
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
-        from conan.tools.files import load, copy
+        from conan.tools.files import load, copy, save
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
@@ -22,6 +22,10 @@ def test_exports_sources_own_code_in_subfolder():
                 self.folders.root = ".."
                 self.folders.source = "."
                 self.folders.build = "build"
+                self.folders.generators = "conangen"
+
+            def generate(self):
+                save(self, "mygen.txt", "mycontent")
 
             def export_sources(self):
                 source_folder = os.path.join(self.recipe_folder, "..")
@@ -35,6 +39,7 @@ def test_exports_sources_own_code_in_subfolder():
                 path = os.path.join(self.source_folder, "CMakeLists.txt")
                 cmake = load(self, path)
                 self.output.info("MYCMAKE-BUILD: {}".format(cmake))
+                save(self, "mylib.a", "mylib")
             """)
     c.save({"conan/conanfile.py": conanfile,
             "CMakeLists.txt": "mycmake!"})
@@ -44,6 +49,8 @@ def test_exports_sources_own_code_in_subfolder():
 
     # Local flow
     c.run("install conan")
+    assert c.load("conangen/mygen.txt") == "mycontent"
     # SOURCE NOT CALLED! It doesnt make sense (will fail due to local exports)
     c.run("build conan")
     assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake!" in c.out
+    assert c.load("build/mylib.a") == "mylib"
