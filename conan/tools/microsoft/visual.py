@@ -90,8 +90,13 @@ def msvc_runtime_flag(conanfile):
     if compiler == "Visual Studio":
         return runtime
     if runtime is not None:
+        if runtime == "static":
+            runtime = "MT"
+        elif runtime == "dynamic":
+            runtime = "MD"
+        else:
+            raise ConanException("compiler.runtime should be 'static' or 'dynamic'")
         runtime_type = settings.get_safe("compiler.runtime_type")
-        runtime = "MT" if runtime == "static" else "MD"
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         return runtime
