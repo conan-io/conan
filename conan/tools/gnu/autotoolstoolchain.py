@@ -85,7 +85,7 @@ class AutotoolsToolchain:
                 return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _get_msvc_runtime_flag(self):
-        flag = msvc_runtime_flag(self)
+        flag = msvc_runtime_flag(self._conanfile)
         if flag:
             flag = "-{}".format(flag)
         return flag
