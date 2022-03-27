@@ -34,6 +34,8 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     assert src != dst
     assert not pattern.startswith("..")
 
+    # This is necessary to add the trailing / so it is not reported as symlink
+    src = os.path.join(src, "")
     excluded_folder = dst
     files_to_copy, symlinked_folders = _filter_files(src, pattern, excludes, ignore_case,
                                                      excluded_folder)
