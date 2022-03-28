@@ -26,6 +26,20 @@ def transform_conanfile(node):
         "conans.client.importer").lookup("_FileImporter")
     python_requires_class = MANAGER.ast_from_module_name(
         "conans.client.graph.python_requires").lookup("PyRequires")
+    cpp_info_class = MANAGER.ast_from_module_name(
+        "conans.model.build_info").lookup("CppInfo")
+    deps_cpp_info_class = MANAGER.ast_from_module_name(
+        "conans.model.build_info").lookup("DepsCppInfo")
+    env_info_class = MANAGER.ast_from_module_name(
+        "conans.model.env_info").lookup("EnvInfo")
+    deps_env_info_class = MANAGER.ast_from_module_name(
+        "conans.model.env_info").lookup("DepsEnvInfo")
+    user_info_class = MANAGER.ast_from_module_name(
+        "conans.model.user_info").lookup("UserInfo")
+    deps_user_info_class = MANAGER.ast_from_module_name(
+        "conans.model.user_info").lookup("DepsUserInfo")
+    user_info_build_class = MANAGER.ast_from_module_name(
+        "conans.model.user_info").lookup("UserInfo")
 
     dynamic_fields = {
         "conan_data": str_class,
@@ -36,6 +50,13 @@ def transform_conanfile(node):
         "copy_deps": file_importer_class,
         "python_requires": [str_class, python_requires_class],
         "recipe_folder": str_class,
+        "cpp_info": cpp_info_class,
+        "deps_cpp_info": deps_cpp_info_class,
+        "env_info": env_info_class,
+        "deps_env_info": deps_env_info_class,
+        "user_info": user_info_class,
+        "deps_user_info": deps_user_info_class,
+        "user_info_build": user_info_build_class,
     }
 
     for f, t in dynamic_fields.items():
