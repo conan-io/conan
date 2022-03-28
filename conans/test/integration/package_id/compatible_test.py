@@ -1,6 +1,4 @@
-import platform
 import textwrap
-import time
 import unittest
 
 import pytest
@@ -319,54 +317,3 @@ class CompatibleIDsTest(unittest.TestCase):
                in client.out
         client.assert_listed_binary({"pkga/0.1":
                                          ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
-
-
-@pytest.mark.xfail(reason="The conf core.package_id:msvc_visual_incompatible is not passed yet")
-def test_msvc_visual_incompatible():
-    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
-    client = TestClient()
-    profile = textwrap.dedent("""
-        [settings]
-        os=Windows
-        compiler=msvc
-        compiler.version=191
-        compiler.runtime=dynamic
-        compiler.cppstd=14
-        build_type=Release
-        arch=x86_64
-        """)
-    client.save({"conanfile.py": conanfile,
-                 "profile": profile})
-    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
-               '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
-    client.run("install --requires=pkg/0.1@ -pr=profile")
-    assert "Using compatible package" in client.out
-    new_config = "core.package_id:msvc_visual_incompatible=1"
-    save(client.cache.new_config_path, new_config)
-    client.run("install --requires=pkg/0.1@ -pr=profile", assert_error=True)
-    assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
-
-
-@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
-def test_apple_clang_compatible():
-    """
-    From apple-clang version 13 we detect apple-clang version as 13 and we make
-    this compiler version compatible with 13.0
-    """
-    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
-    client = TestClient()
-    profile = textwrap.dedent("""
-        [settings]
-        os=Macos
-        arch=x86_64
-        compiler=apple-clang
-        compiler.version=13
-        compiler.libcxx=libc++
-        build_type=Release
-        """)
-    client.save({"conanfile.py": conanfile,
-                 "profile": profile})
-    client.run('create . --name=pkg --version=0.1 -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
-               '-s build_type=Release -s arch=x86_64')
-    client.run("install --requires=pkg/0.1@ -pr=profile")
-    assert "Using compatible package" in client.out
