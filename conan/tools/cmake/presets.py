@@ -33,7 +33,9 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
         cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
-        cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
+        if cmake_make_program:
+            cmake_make_program = cmake_make_program.replace("\\", "/")
+            cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
     tmp = _contents(conanfile, toolchain_file, cache_variables, generator)
     tmp = json.dumps(tmp, indent=4)
