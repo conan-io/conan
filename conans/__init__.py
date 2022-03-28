@@ -5,4 +5,4 @@ MATRIX_PARAMS = "matrix_params"
 OAUTH_TOKEN = "oauth_token"
 
 
-__version__ = '2.0.0-alpha5'
+__version__ = '2.0.0-alpha6'
