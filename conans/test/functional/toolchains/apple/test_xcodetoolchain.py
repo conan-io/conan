@@ -383,4 +383,4 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     assert "minos {}".format(min_version) in client.out
     assert "sdk {}".format(sdk_version) in client.out
     assert "libc++" in client.out
-    assert " -fstack-protector-strong " in client.out
+    assert " -fstack-protector-strong -" in client.out
