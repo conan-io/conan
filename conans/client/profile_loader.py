@@ -2,7 +2,7 @@ import os
 import platform
 from collections import OrderedDict, defaultdict
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import Environment, BaseLoader, TemplateNotFound
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
@@ -135,6 +135,9 @@ def read_profile(profile_name, cwd, default_folder):
             def get_source(self, environment, template):
                 if not os.path.isabs(template):
                     template = os.path.join(self.base_path, template)
+
+                if os.path.exists(template):
+                    raise TemplateNotFound(template)
 
                 with open(template, "br") as f:
                     contents = f.read().decode('utf-8')
