@@ -136,7 +136,7 @@ def read_profile(profile_name, cwd, default_folder):
                 if not os.path.isabs(template):
                     template = os.path.join(self.base_path, template)
 
-                if os.path.exists(template):
+                if not os.path.exists(template):
                     raise TemplateNotFound(template)
 
                 with open(template, "br") as f:
