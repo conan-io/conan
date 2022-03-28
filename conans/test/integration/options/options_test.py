@@ -87,7 +87,7 @@ from conan import ConanFile
 class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
-    options = {"opt": "ANY"}
+    options = {"opt": ["ANY"]}
     default_options = {"opt": "b=c"}
 
     def build(self):
@@ -317,3 +317,21 @@ equal/1.0.0@user/testing:opt=a=b
                clean_first=True)
         c.run("install . -o pkg*:shared=True --build=missing")
         assert "pkg/0.1" in c.out  # Real test is the above doesn't crash
+
+    def test_any(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class EqualerrorConan(ConanFile):
+                name = "equal"
+                version = "1.0.0"
+                options = {"opt": "ANY"}
+                default_options = {"opt": "b=c"}
+
+                def generate(self):
+                    self.output.warning("OPTION %s" % self.options.opt)
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        assert "Error while initializing options. 'b=c' is not a valid 'options.opt' value." in c.out
+        assert "Possible values are ['A', 'N', 'Y']" in c.out

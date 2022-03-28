@@ -1,6 +1,6 @@
 import os
 
-
+from conans.client.graph.graph import BINARY_INVALID
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
@@ -435,8 +435,11 @@ class ConanInfo(object):
         options and settings
         """
         result = [self.settings.sha,
-                  self.options.sha,
-                  "[requires]"]
+                  "[options]"]
+        options_dumps = self.options.dumps()
+        if options_dumps:
+            result.append(options_dumps)
+        result.append("[requires]")
         requires_dumps = self.requires.dumps()
         if requires_dumps:
             result.append(requires_dumps)
@@ -451,6 +454,10 @@ class ConanInfo(object):
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
         package_id = sha1(text.encode())
+        try:
+            self.options.validate()
+        except ConanException as e:
+            self.invalid = BINARY_INVALID, str(e)
         return package_id
 
     def serialize_min(self):

@@ -11,7 +11,7 @@ class TestOptions:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [True, False], "optimized": [2, 3, 4], "path": "ANY"}
+        options = {"static": [True, False], "optimized": [2, 3, 4], "path": ["ANY"]}
         values = {"static": True, "optimized": 3, "path": "mypath"}
         self.sut = Options(options, values)
 
@@ -108,7 +108,7 @@ class TestOptions:
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
         assert "static=True" in sut2.dumps()
 
-        # can remove other, not assigned yet
+        # can remove other, removing is always possible, even if freeze
         del sut2.other
         assert "other" not in sut2.dumps()
 
@@ -163,7 +163,7 @@ class TestOptionsPropagate:
 class TestOptionsNone:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [None, 1, 2], "other": "ANY", "more": ["None", 1]}
+        options = {"static": [None, 1, 2], "other": [None, "ANY"], "more": ["None", 1]}
         self.sut = Options(options)
 
     def test_booleans(self):
