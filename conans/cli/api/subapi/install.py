@@ -6,7 +6,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.loader import load_python_file
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.util.files import rmdir
 
 
@@ -38,9 +38,16 @@ class InstallAPI:
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
+        if conanfile.info.invalid:
+            binary, reason = conanfile.info.invalid
+            msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
+            raise ConanInvalidConfiguration(msg)
+
         conanfile.folders.set_base_folders(source_folder, output_folder)
 
-        _do_deploys(self.conan_api, deps_graph, deploy, output_folder)
+        # The previous .set_base_folders has already decided between the source_folder and output
+        base_folder = conanfile.folders.base_build
+        _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         write_generators(conanfile)
@@ -77,14 +84,14 @@ def _find_deployer(d, cache_deploy_folder):
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
-def _do_deploys(conan_api, graph, deploy, output_folder):
+def _do_deploys(conan_api, graph, deploy, deploy_folder):
     # Handle the deploys
     cache = ClientCache(conan_api.cache_folder)
     for d in deploy or []:
         deployer = _find_deployer(d, cache.deployers_path)
         # IMPORTANT: Use always kwargs to not break if it changes in the future
         conanfile = graph.root.conanfile
-        deployer(conanfile=conanfile, output_folder=output_folder)
+        deployer(conanfile=conanfile, output_folder=deploy_folder)
 
 
 def full_deploy(conanfile, output_folder):

@@ -87,7 +87,7 @@ from conan import ConanFile
 class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
-    options = {"opt": "ANY"}
+    options = {"opt": ["ANY"]}
     default_options = {"opt": "b=c"}
 
     def build(self):
@@ -289,3 +289,49 @@ equal/1.0.0@user/testing:opt=a=b
         c.run("create . --name=pkg --version=0.1 -o pkg*:without_stacktrace=False")
         assert "pkg/0.1: without_stacktrace: False" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
+
+    def test_del_options_configure(self):
+        """
+        this test was failing because Options was protecting against removal of options with
+        already assigned values. This has been relaxed, to make possible this case
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                options = {
+                    "shared": [True, False],
+                    "fPIC": [True, False],
+                }
+                default_options = {
+                    "shared": False,
+                    "fPIC": True,
+                }
+                def configure(self):
+                    if self.options.shared:
+                        del self.options.fPIC
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=pkg --version=0.1")
+        c.save({"conanfile.py": GenConanfile("consumer", "1.0").with_requirement("pkg/0.1")},
+               clean_first=True)
+        c.run("install . -o pkg*:shared=True --build=missing")
+        assert "pkg/0.1" in c.out  # Real test is the above doesn't crash
+
+    def test_any(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class EqualerrorConan(ConanFile):
+                name = "equal"
+                version = "1.0.0"
+                options = {"opt": "ANY"}
+                default_options = {"opt": "b=c"}
+
+                def generate(self):
+                    self.output.warning("OPTION %s" % self.options.opt)
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        assert "Error while initializing options. 'b=c' is not a valid 'options.opt' value." in c.out
+        assert "Possible values are ['A', 'N', 'Y']" in c.out

@@ -1,79 +1,86 @@
-# coding=utf-8
-
 import textwrap
-import unittest
 
-import pytest
-
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-class ForbiddenRemoveTest(unittest.TestCase):
+class TestOtherCommands:
 
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_remove(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
+    def test_commands_not_blocked(self):
+        """ there is no reason to really block commands and operations over editable packages
+        except for others doing an install that depends on the editable
+        """
+        t = TestClient(default_server_user=True)
+        t.save({'conanfile.py': GenConanfile("lib", "0.1"),
+                "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        t.run('editable add . lib/0.1')
 
-            class APck(ConanFile):
-                pass
-            """)
-        ref = RecipeReference.loads('lib/version@user/name')
+        # Nothing in the cache
+        t.run("list recipes *")
+        assert "There are no matching recipe references" in t.out
+        t.run('list packages lib/0.1')
+        assert "There are no recipes" in t.out
+
+        t.run('export . ')
+        assert "lib/0.1: Exported revision" in t.out
+        t.run("list recipes *")
+        assert "lib/0.1" in t.out
+        t.run('list packages lib/0.1')
+        assert "There are no packages" in t.out  # One binary is listed
+
+        t.run('export-pkg .')
+        assert "lib/0.1: Calling package()" in t.out
+
+        t.run('list packages lib/0.1')
+        assert "lib/0.1" in t.out  # One binary is listed
+
+        t.run('upload lib/0.1 -r default')
+        assert "Uploading lib/0.1" in t.out
+
+        t.run("remove * -f")
+        # Nothing in the cache
+        t.run("list recipes *")
+        assert "There are no matching recipe references" in t.out
+        t.run('list packages lib/0.1')
+        assert "There are no recipes" in t.out
+
+    def test_create_editable(self):
+        """
+        test that an editable can be built with conan create
+        """
         t = TestClient()
-        t.save(files={'conanfile.py': conanfile,
-                      "mylayout": "", })
-        t.run("export . --name=lib --version=version --user=user --channel=name")
-        t.run('editable add . {}'.format(ref))
-        self.assertTrue(t.cache.installed_as_editable(ref))
-        t.run('remove {} --force'.format(ref), assert_error=True)
-        self.assertIn("Package 'lib/version@user/name' is installed as editable, remove it first "
-                      "using command 'conan editable remove lib/version@user/name'", t.out)
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           class Pkg(ConanFile):
+               name = "lib"
+               version = "0.1"
+               def build(self):
+                   self.output.info("MYBUILDFOLDER: {}".format(self.build_folder))
+               """)
+        t.save({'conanfile.py': conanfile,
+                "test_package/conanfile.py": GenConanfile().with_test("pass"),
+                "consumer/conanfile.txt": "[requires]\nlib/0.1"})
+        t.run('editable add . lib/0.1')
 
-        # Also with a pattern, but only a warning
-        t.run('remove lib* --force')
-        self.assertIn("WARN: Package 'lib/version@user/name' is installed as editable, "
-                      "remove it first using command 'conan editable remove lib/version@user/name'",
-                      t.out)
-        self.assertTrue(t.cache.installed_as_editable(ref))
+        t.run("list recipes *")
+        assert "There are no matching" in t.out
 
+        t.run("create .")
+        t.assert_listed_require({"lib/0.1": "Editable"})
+        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                            "EditableBuild")})
+        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+        t.run("list recipes *")
+        assert "lib/0.1" in t.out  # Because the create actually exports, TODO: avoid exporting?
 
-class ForbiddenCommandsTest(unittest.TestCase):
+        t.run("install consumer --build=*")
+        t.assert_listed_require({"lib/0.1": "Editable"})
+        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                            "EditableBuild")})
+        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
 
-    def setUp(self):
-        self.ref = RecipeReference.loads('lib/version@user/name')
-        self.t = TestClient(default_server_user=True)
-        self.t.save({'conanfile.py': GenConanfile()})
-        self.t.run('editable add . {}'.format(self.ref))
-
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_export(self):
-        self.t.run('export . {}'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_create(self):
-        self.t.run('create . {}'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_create_update(self):
-        self.t.run('create . {} --update'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_upload(self):
-        self.t.run('upload --force {} -r default'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_export_pkg(self):
-        self.t.run('export-pkg -f . {}'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
+        t.run("install consumer --build=editable")
+        t.assert_listed_require({"lib/0.1": "Editable"})
+        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                            "EditableBuild")})
+        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out

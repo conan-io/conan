@@ -27,13 +27,13 @@ def client():
 
 
 def test_override(client):
-    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
                "-s mingw*:compiler='gcc' -s mingw*:compiler.libcxx='libstdc++' "
                "-s mingw*:compiler.version=4.8")
 
     assert "COMPILER=> mingw gcc" in client.out
-    assert "COMPILER=> visual Visual Studio" in client.out
+    assert "COMPILER=> visual msvc" in client.out
 
     # CHECK CONANINFO FILE
     latest_rrev = client.cache.get_latest_recipe_reference(
@@ -51,24 +51,24 @@ def test_override(client):
     latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
     package_path = client.cache.pkg_layout(latest_prev).package()
     conaninfo = load(os.path.join(package_path, CONANINFO))
-    assert "compiler=Visual Studio" in conaninfo
-    assert "compiler.version=14" in conaninfo
+    assert "compiler=msvc" in conaninfo
+    assert "compiler.version=191" in conaninfo
 
 
 def test_non_existing_setting(client):
-    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
                "-s mingw/*:missingsetting='gcc' ", assert_error=True)
     assert "settings.missingsetting' doesn't exist" in client.out
 
 
 def test_override_in_non_existing_recipe(client):
-    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
                "-s MISSINGID:compiler='gcc' ")
 
-    assert "COMPILER=> mingw Visual Studio" in client.out
-    assert "COMPILER=> visual Visual Studio" in client.out
+    assert "COMPILER=> mingw msvc" in client.out
+    assert "COMPILER=> visual msvc" in client.out
 
 
 def test_exclude_patterns_settings():

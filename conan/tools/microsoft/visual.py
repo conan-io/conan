@@ -8,11 +8,23 @@ CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
 def msvc_version_to_vs_ide_version(version):
-    _visuals = {'190': '14',
+    _visuals = {'170': '11',
+                '180': '12',
+                '190': '14',
                 '191': '15',
                 '192': '16',
                 '193': '17'}
     return _visuals[str(version)]
+
+
+def msvc_version_to_toolset_version(version):
+    toolsets = {'170': 'v110',
+                '180': 'v120',
+                '190': 'v140',
+                '191': 'v141',
+                '192': 'v142',
+                "193": 'v143'}
+    return toolsets[str(version)]
 
 
 class VCVars:
@@ -29,7 +41,7 @@ class VCVars:
             return
 
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler != "Visual Studio" and compiler != "msvc":
+        if compiler != "msvc":
             return
 
         vs_version = vs_ide_version(conanfile)
@@ -72,13 +84,15 @@ def vs_ide_version(conanfile):
 
 def msvc_runtime_flag(conanfile):
     settings = conanfile.settings
-    compiler = settings.get_safe("compiler")
     runtime = settings.get_safe("compiler.runtime")
-    if compiler == "Visual Studio":
-        return runtime
-    if compiler == "msvc" or compiler == "intel-cc":
+    if runtime is not None:
+        if runtime == "static":
+            runtime = "MT"
+        elif runtime == "dynamic":
+            runtime = "MD"
+        else:
+            raise ConanException("compiler.runtime should be 'static' or 'dynamic'")
         runtime_type = settings.get_safe("compiler.runtime_type")
-        runtime = "MT" if runtime == "static" else "MD"
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         return runtime
@@ -156,20 +170,11 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     if int(vs_version) <= 14:
         return None
 
-    vcvars_ver = None
-    if compiler == "Visual Studio":
-        toolset = conanfile.settings.get_safe("compiler.toolset")
-        if toolset is not None:
-            vcvars_ver = {"v140": "14.0",
-                          "v141": "14.1",
-                          "v142": "14.2",
-                          "v143": "14.3"}.get(toolset)
-    else:
-        assert compiler == "msvc"
-        # Code similar to CMakeToolchain toolset one
-        compiler_version = str(conanfile.settings.compiler.version)
-        # The equivalent of compiler 192 is toolset 14.2
-        vcvars_ver = "14.{}".format(compiler_version[-1])
+    assert compiler == "msvc"
+    # Code similar to CMakeToolchain toolset one
+    compiler_version = str(conanfile.settings.compiler.version)
+    # The equivalent of compiler 192 is toolset 14.2
+    vcvars_ver = "14.{}".format(compiler_version[-1])
     return vcvars_ver
 
 
@@ -179,7 +184,7 @@ def is_msvc(conanfile):
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
     settings = conanfile.settings
-    return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
+    return settings.get_safe("compiler") == "msvc"
 
 
 def is_msvc_static_runtime(conanfile):

@@ -18,6 +18,7 @@ logging.captureWarnings(True)
 
 
 DEFAULT_TIMEOUT = (30, 60)  # connect, read timeouts
+INFINITE_TIMEOUT = -1
 
 
 class ConanRequester(object):
@@ -78,7 +79,7 @@ class ConanRequester(object):
         if self._proxies:
             if not self._should_skip_proxy(url):
                 kwargs["proxies"] = self._proxies
-        if self._timeout:
+        if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
         if not kwargs.get("headers"):
             kwargs["headers"] = {}

@@ -1,8 +1,6 @@
 import json
 import textwrap
 
-import pytest
-
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
@@ -103,26 +101,6 @@ class TestJsonOutput:
 class TestAdvancedCliOutput:
     """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES
     """
-    def test_scm_info(self):
-        # https://github.com/conan-io/conan/issues/8377
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class pkg(ConanFile):
-                scm = {"type": "git",
-                       "url": "some-url/path",
-                       "revision": "auto"}
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-
-        client.run("graph info .")
-        assert "revision: auto" in client.out
-        assert "url: some-url/path" in client.out
-
-        client.run("graph info . --format=json")
-        file_json = client.stdout
-        info_json = json.loads(file_json)
-        assert info_json["nodes"][0]["scm"]["type"] == "git"
 
     def test_python_requires(self):
         # https://github.com/conan-io/conan/issues/9277
@@ -200,3 +178,29 @@ class TestInfoRevisions:
         client.run("graph info --requires={}".format(ref))
         revision = client.recipe_revision(ref)
         assert f"ref: lib/1.0@conan/testing#{revision}" in client.out
+
+
+class TestInfoTestPackage:
+    # https://github.com/conan-io/conan/issues/10714
+
+    def test_tested_reference_str(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("tool", "0.1")})
+        client.run("export .")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class HelloConan(ConanFile):
+
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
+
+                def build_requirements(self):
+                    self.build_requires(self.tested_reference_str)
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        for args in ["", " --build=*"]:
+            client.run("graph info . " + args)
+            assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
+                   not in client.out

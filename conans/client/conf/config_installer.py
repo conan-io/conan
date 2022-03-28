@@ -55,12 +55,6 @@ def _process_zip_file(config, zippath, cache, tmp_folder, first_remove=False):
     _process_folder(config, tmp_folder, cache)
 
 
-def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
-    current_conan_conf.read(new_conan_conf_path)
-    with open(current_conan_conf.filename, "w") as f:
-        current_conan_conf.write(f)
-
-
 def _filecopy(src, filename, dst):
     # https://github.com/conan-io/conan/issues/6556
     # This is just a local convenience for "conan config install", using copyfile to avoid
@@ -81,9 +75,6 @@ def _process_file(directory, filename, config, cache, folder):
     if filename == "settings.yml":
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
-    elif filename == "conan.conf":
-        output.info("Processing conan.conf")
-        _handle_conan_conf(cache.config, os.path.join(directory, filename))
     elif filename == "remotes.json":
         output.info("Installing remotes.json")
         _filecopy(directory, filename, cache.cache_folder)

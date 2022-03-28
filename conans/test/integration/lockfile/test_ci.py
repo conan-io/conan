@@ -408,8 +408,6 @@ def test_multi_config_decentralized(client_setup):
         for elem in level:
             ref = elem["ref"]
             ref_without_rev = ref.split("#")[0]
-            if "@" not in ref:
-                ref = ref.replace("#", "@#")
             for package in elem["packages"]:
                 binary = package["binary"]
                 package_id = package["package_id"]

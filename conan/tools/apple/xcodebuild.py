@@ -31,7 +31,9 @@ class XcodeBuild(object):
             sdk = "{}{}".format(self._sdk, self._sdk_version)
         return "SDKROOT={}".format(sdk) if sdk else ""
 
-    def build(self, xcodeproj):
+    def build(self, xcodeproj, target=None):
+        target = "-target {}".format(target) if target else "-alltargets"
         cmd = "xcodebuild -project {} -configuration {} -arch {} " \
-              "{} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot, self._verbosity)
+              "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,
+                                self._verbosity, target)
         self._conanfile.run(cmd)

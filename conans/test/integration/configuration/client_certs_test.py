@@ -2,10 +2,8 @@ import os
 import textwrap
 import unittest
 
-import pytest
 from requests import Response
 
-from conans.client import tools
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestRequester
 from conans.util.files import save
@@ -38,27 +36,6 @@ class MyHttpRequester(TestRequester):
 
 
 class ClientCertsTest(unittest.TestCase):
-
-    @pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
-    def test_pic_client_certs(self):
-        # FIXME: We need a way to reference the current cache location in "global.conf"
-        # TODO: Discuss if dropping a "xxx.cert" file inthe cache would work as it is the default
-        client = TestClient(requester_class=MyHttpRequester)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --name=foo --version=1.0")
-
-        assert "KWARGS auth: None" in client.out
-
-        config = client.cache.config
-        tools.save(config.client_cert_path, "Fake cert")
-        tools.save(config.client_cert_key_path, "Fake key")
-
-        client.run("create . --name=foo --version=1.0")
-        assert "KWARGS cert: ('{}', '{}')".format(config.client_cert_path,
-                                                  config.client_cert_key_path).replace("\\", '\\\\') in client.out
-
-        # assert that the cacert file is created
-        self.assertTrue(os.path.exists(config.cacert_path))
 
     def test_pic_custom_path_client_certs(self):
         folder = temp_folder()

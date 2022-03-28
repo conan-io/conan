@@ -209,26 +209,32 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("apple-clang", "12"), "gnu98")
 
     def test_visual_cppstd_flags(self):
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "12", "11"), None)
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "12", "14"), None)
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "12", "17"), None)
+        self.assertEqual(_make_cppstd_flag("msvc", "170", "11"), None)
+        self.assertEqual(_make_cppstd_flag("msvc", "170", "14"), None)
+        self.assertEqual(_make_cppstd_flag("msvc", "170", "17"), None)
 
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "14", "11"), None)
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "14", "14"), '/std:c++14')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "14", "17"), '/std:c++latest')
+        self.assertEqual(_make_cppstd_flag("msvc", "180", "11"), None)
+        self.assertEqual(_make_cppstd_flag("msvc", "190", "14"), '/std:c++14')
+        self.assertEqual(_make_cppstd_flag("msvc", "190", "17"), '/std:c++latest')
 
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "11"), None)
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "14"), '/std:c++14')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "17"), '/std:c++17')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "20"), '/std:c++20')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "23"), '/std:c++latest')
+        self.assertEqual(_make_cppstd_flag("msvc", "191", "11"), None)
+        self.assertEqual(_make_cppstd_flag("msvc", "191", "14"), '/std:c++14')
+        self.assertEqual(_make_cppstd_flag("msvc", "191", "17"), '/std:c++17')
+        self.assertEqual(_make_cppstd_flag("msvc", "191", "20"), '/std:c++latest')
+
+        self.assertEqual(_make_cppstd_flag("msvc", "192", "17"), '/std:c++17')
+        self.assertEqual(_make_cppstd_flag("msvc", "192", "20"), '/std:c++latest')
+
+        self.assertEqual(_make_cppstd_flag("msvc", "193", "20"), '/std:c++20')
+        self.assertEqual(_make_cppstd_flag("msvc", "193", "23"), '/std:c++latest')
 
     def test_visual_cppstd_defaults(self):
-        self.assertEqual(_make_cppstd_default("Visual Studio", "11"), None)
-        self.assertEqual(_make_cppstd_default("Visual Studio", "12"), None)
-        self.assertEqual(_make_cppstd_default("Visual Studio", "13"), None)
-        self.assertEqual(_make_cppstd_default("Visual Studio", "14"), "14")
-        self.assertEqual(_make_cppstd_default("Visual Studio", "15"), "14")
+        self.assertEqual(_make_cppstd_default("msvc", "170"), None)
+        self.assertEqual(_make_cppstd_default("msvc", "180"), None)
+        self.assertEqual(_make_cppstd_default("msvc", "190"), "14")
+        self.assertEqual(_make_cppstd_default("msvc", "191"), "14")
+        self.assertEqual(_make_cppstd_default("msvc", "192"), "14")
+        self.assertEqual(_make_cppstd_default("msvc", "193"), "14")
 
     @pytest.mark.xfail(reason="Intel-cc compiler c++flags to be defined")
     def test_intel_visual_cppstd_flag(self):

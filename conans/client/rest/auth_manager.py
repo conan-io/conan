@@ -18,7 +18,6 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.user import update_localdb
 from conans.client.userio import UserInput
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
-from conans.util.log import logger
 
 LOGIN_RETRIES = 3
 
@@ -56,13 +55,13 @@ class ConanApiAuthManager(object):
                 try:
                     self._authenticate(remote, user, None)
                 except AuthenticationException as exc:
-                    logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
+                    # logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
                     self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
                 # (will be anonymous call but exporting who is calling)
-                logger.info("Token expired or not valid, cleaning the saved token and retrying")
+                # logger.info("Token expired or not valid, cleaning the saved token and retrying")
                 self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 

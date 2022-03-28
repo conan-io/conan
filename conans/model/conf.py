@@ -41,7 +41,7 @@ BUILT_IN_CONFS = {
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
-    "tools.google.bazel:config": "Define Bazel config file",
+    "tools.google.bazel:configs": "Define Bazel config file",
     "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
     "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
@@ -49,13 +49,23 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
+    "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
+    "tools.microsoft.bash:path": "The path to the shell to run when conanfile.win_bash==True",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
-    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet"
+    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
+    "tools.apple:sdk_path": "Path to the SDK to be used",
+    # Flags configuration
+    "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:cppflags": "List of extra CPP flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:ldflags": "List of extra LD flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
+    "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
 }
 
 
@@ -229,6 +239,8 @@ class Conf:
                 return self._get_boolean_value(v)
             elif check_type is str and not isinstance(v, str):
                 return str(v)
+            elif v is None:  # value was unset
+                return default
             elif check_type is not None and not isinstance(v, check_type):
                 raise ConanException("[conf] {name} must be a {type}-like object. "
                                      "The value '{value}' introduced is a {vtype} "

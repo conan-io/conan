@@ -25,8 +25,6 @@ def create(conan_api, parser, *args):
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
-    parser.add_argument("--require-override", action="append",
-                        help="Define a requirement override")
     parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                         help='Working directory for the build of the test project.')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -63,19 +61,16 @@ def create(conan_api, parser, *args):
             raise ConanException("--build-require should not be specified, test_package does it")
         root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
                                                              profile_host, profile_build,
-                                                             require_overrides=args.require_override,
                                                              remotes=remotes,
                                                              update=args.update,
                                                              lockfile=lockfile)
     else:
-        req_override = args.require_override
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
-                                                                profile_host=profile_host,
-                                                                require_overrides=req_override)
+                                                                profile_host=profile_host)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
@@ -104,33 +99,50 @@ def create(conan_api, parser, *args):
         lockfile.save(lockfile_out)
 
     if test_conanfile_path:
-        out.highlight("\n-------- Testing the package ----------")
-        if len(deps_graph.nodes) == 1:
-            raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
-                                 "use `self.tested_reference_str` to require the "
-                                 "package being created.".format(test_conanfile_path))
-        conanfile_folder = os.path.dirname(test_conanfile_path)
-        output_folder = os.path.join(conanfile_folder, "test_output")
+        _check_tested_reference_matches(deps_graph, ref, out)
+        test_package(conan_api, deps_graph, test_conanfile_path)
+
+
+def _check_tested_reference_matches(deps_graph, tested_ref, out):
+    """ Check the test_profile_override_conflict test. If we are testing a build require
+    but we specify the build require with a different version in the profile, it has priority,
+    it is correct but weird and likely a mistake"""
+    # https://github.com/conan-io/conan/issues/10453
+    direct_refs = [n.conanfile.ref for n in deps_graph.root.neighbors()]
+    # There is a reference with same name but different
+    missmatch = [ref for ref in direct_refs if ref.name == tested_ref.name and ref != tested_ref]
+    if missmatch:
+        out.warning("The package created was '{}' but the reference being "
+                    "tested is '{}'".format(missmatch[0], tested_ref))
+
+
+def test_package(conan_api, deps_graph, test_conanfile_path):
+    out = ConanOutput()
+    out.highlight("\n-------- Testing the package ----------")
+    if len(deps_graph.nodes) == 1:
+        raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
+                             "use `self.tested_reference_str` to require the "
+                             "package being created.".format(test_conanfile_path))
+    conanfile_folder = os.path.dirname(test_conanfile_path)
+    conanfile = deps_graph.root.conanfile
+    output_folder = os.path.join(conanfile_folder, conanfile.folders.test_output)
+    if conanfile.folders.test_output:
         shutil.rmtree(output_folder, ignore_errors=True)
         mkdir(output_folder)
-        conan_api.install.install_consumer(deps_graph=deps_graph,
-                                           source_folder=conanfile_folder,
-                                           output_folder=output_folder)
-        conanfile = deps_graph.root.conanfile
-        conanfile.folders.set_base_build(output_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(output_folder)
-        conanfile.folders.set_base_generators(output_folder)
+    conan_api.install.install_consumer(deps_graph=deps_graph,
+                                       source_folder=conanfile_folder,
+                                       output_folder=output_folder)
 
-        out.highlight("\n-------- Testing the package: Building ----------")
-        app = ConanApp(conan_api.cache_folder)
-        run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
+    out.highlight("\n-------- Testing the package: Building ----------")
+    app = ConanApp(conan_api.cache_folder)
+    conanfile.folders.set_base_package(conanfile.folders.base_build)
+    run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
-        out.highlight("\n-------- Testing the package: Running test() ----------")
-        conanfile.output.highlight("Running test()")
-        with conanfile_exception_formatter(conanfile, "test"):
-            with chdir(conanfile.build_folder):
-                conanfile.test()
+    out.highlight("\n-------- Testing the package: Running test() ----------")
+    conanfile.output.highlight("Running test()")
+    with conanfile_exception_formatter(conanfile, "test"):
+        with chdir(conanfile.build_folder):
+            conanfile.test()
 
 
 def _get_test_conanfile_path(tf, conanfile_path):

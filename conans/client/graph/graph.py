@@ -22,6 +22,7 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
+BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
 BINARY_ERROR = "ConfigurationError"
 

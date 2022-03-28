@@ -4,7 +4,6 @@ import unittest
 
 import pytest
 
-from conans.client import tools
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
@@ -86,45 +85,6 @@ class TestPackageTest(unittest.TestCase):
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
 
-    @pytest.mark.xfail(reason="conan.conf deprecation")
-    def test_build_folder_handling(self):
-        # FIXME: Decide what to do with CONAN_TEMP_TEST_FOLDER
-        test_conanfile = GenConanfile().with_test("pass")
-        # Create a package which can be tested afterwards.
-        client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1")},
-                    clean_first=True)
-        client.run("create . --user=lasote --channel=stable")
-
-        # Test the default behavior.
-        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(default_build_dir))
-
-        # Test if the specified build folder is respected.
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test -tbf=build_folder test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if using a temporary test folder can be enabled via the environment variable.
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        with tools.environment_update({"CONAN_TEMP_TEST_FOLDER": "True"}):
-            client.run("test test_package hello/0.1@lasote/stable")
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if using a temporary test folder can be enabled via the config file.
-        client.run("test test_package hello/0.1@lasote/stable")
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if the specified build folder is respected also when the use of
-        # temporary test folders is enabled in the config file.
-        client.run("test -tbf=test_package/build_folder test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
-                                                    "build_folder")))
-        self.assertFalse(os.path.exists(default_build_dir))
-
     def test_check_version(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
@@ -184,6 +144,8 @@ class HelloConan(ConanFile):
 from conan import ConanFile
 
 class HelloTestConan(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def test(self):
         self.output.warning("Tested ok!")
 ''', "hello/0.1@conan/stable")
@@ -326,3 +288,17 @@ def test_tested_reference_str():
     client.run("create . --name=foo --version=1.0")
     for method in ("generate", "build", "build_requirements", "test"):
         assert "At {}: foo/1.0".format(method) in client.out
+
+
+def test_folder_output():
+    """ the "conan test" command should also follow the test_output layout folder
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("create .")
+    c.save({"test_package/conanfile.py": GenConanfile().with_test("pass").with_settings("build_type")
+                                                       .with_generator("CMakeDeps")})
+    # c.run("create .")
+    c.run("test test_package hello/0.1@")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "test_package/test_output/hello-config.cmake"))

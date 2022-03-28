@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import traceback
 
 
 from conans.cli.output import ConanOutput
@@ -9,7 +8,6 @@ from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util.files import mkdir
-from conans.util.log import logger
 from conans.util.sha import check_with_algorithm_sum
 from conans.util.tracer import log_download
 
@@ -157,8 +155,6 @@ class FileDownloader(object):
             return written_chunks
 
         except Exception as e:
-            logger.debug(e.__class__)
-            logger.debug(traceback.format_exc())
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))

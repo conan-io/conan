@@ -46,6 +46,7 @@ class ConanFile:
     package_type = None
     # Run in windows bash
     win_bash = None
+    tested_reference_str = None
 
     _conan_is_consumer = False
 
@@ -54,7 +55,7 @@ class ConanFile:
         # something that can run commands, as os.sytem
 
         self.compatible_packages = []
-        self._conan_requester = None
+        self._conan_helpers = None
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
@@ -98,7 +99,6 @@ class ConanFile:
                 result[a] = v
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
-        result["scm"] = getattr(self, "scm", None)
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result.update(self.options.serialize())  # FIXME: The options contain an "options" already
@@ -218,9 +218,10 @@ class ConanFile:
     def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False,
             shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
+        command = self._conan_helpers.cmd_wrapper.wrap(command)
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
-                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                from conans.client.subsystems import run_in_windows_bash
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"

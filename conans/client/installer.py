@@ -8,7 +8,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_UPDATE
+    BINARY_UPDATE, BINARY_EDITABLE_BUILD
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -16,7 +16,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
-from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
@@ -260,7 +259,7 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference):
-        if package.binary == BINARY_EDITABLE:
+        if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
 
@@ -320,6 +319,9 @@ class BinaryInstaller(object):
         write_generators(conanfile)
         call_system_requirements(conanfile)
 
+        if node.binary == BINARY_EDITABLE_BUILD:
+            run_build_method(conanfile, self._hook_manager)
+
         for node in install_node.nodes:
             # Get source of information
             conanfile = node.conanfile
@@ -360,8 +362,6 @@ class BinaryInstaller(object):
             self._out.info("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
-
-        conanfile.user_info = UserInfo()
 
         with chdir(package_folder):
             with conanfile_exception_formatter(conanfile, "package_info"):

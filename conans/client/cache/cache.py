@@ -9,7 +9,7 @@ from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
+from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -20,14 +20,13 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
 
-CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
-GENERATORS_EXTENSION_FOLDER = "generators"
+PLUGINS_FOLDER = "plugins"
 DEPLOYERS_EXTENSION_FOLDER = "deploy"
 CUSTOM_COMMANDS_FOLDER = "commands"
 
@@ -179,13 +178,6 @@ class ClientCache(object):
             raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
-    def config(self):
-        if not self._config:
-            self.initialize_config()
-            self._config = ConanClientConfigParser(self.conan_conf_path)
-        return self._config
-
-    @property
     def new_config_path(self):
         return os.path.join(self.cache_folder, "global.conf")
 
@@ -210,10 +202,6 @@ class ClientCache(object):
         return LocalDB.create(localdb_filename, encryption_key=encryption_key)
 
     @property
-    def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
-
-    @property
     def profiles_path(self):
         return os.path.join(self.cache_folder, PROFILES_FOLDER)
 
@@ -222,12 +210,12 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
-    def generators_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, GENERATORS_EXTENSION_FOLDER)
-
-    @property
     def custom_commands_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
+
+    @property
+    def plugins_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
 
     @property
     def default_profile_path(self):
@@ -252,31 +240,6 @@ class ClientCache(object):
         self.initialize_settings()
         content = load(self.settings_path)
         return Settings.loads(content)
-
-    @property
-    def hooks(self):
-        """Returns a list of hooks inside the hooks folder"""
-        hooks = []
-        for hook_name in os.listdir(self.hooks_path):
-            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
-                hooks.append(hook_name[:-3])
-        return hooks
-
-    @property
-    def generators(self):
-        """Returns a list of generator paths inside the generators folder"""
-        generators = []
-        if os.path.exists(self.generators_path):
-            for path in os.listdir(self.generators_path):
-                generator = os.path.join(self.generators_path, path)
-                if os.path.isfile(generator) and generator.endswith(".py"):
-                    generators.append(generator)
-        return generators
-
-    def initialize_config(self):
-        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
-        if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, get_default_client_conf())
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

@@ -3,11 +3,10 @@ from collections import namedtuple
 from io import StringIO
 
 from conan import ConanFile
-from conans.cli.output import ConanOutput
+from conans.cli.conan_app import ConanFileHelpers
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.util.log import logger
 
 
 class LocalDBMock(object):
@@ -44,7 +43,6 @@ class RedirectedInputStream:
                             "There are no more inputs to be returned.\n"
                             "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
         ret = self.answers.pop(0)
-        logger.info("Testing: Reading fake input={}".format(ret))
         return ret
 
 
@@ -83,6 +81,11 @@ class MockConanfile(ConanFile):
         self.generators = []
         self.conf = Conf()
 
+        class MockConanInfo:
+            pass
+        self.info = MockConanInfo()
+        self.info.settings = settings  # Incomplete, only settings for CppstdMinCheck tests
+
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -95,6 +98,7 @@ class ConanFileMock(ConanFile):
         self.display_name = ""
         self._conan_node = None
         self.command = None
+        self._commands = []
         self.path = None
         self.settings = None
         self.settings_build = MockSettings({})
@@ -113,14 +117,21 @@ class ConanFileMock(ConanFile):
         self.env_scripts = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
+        self._conan_helpers = ConanFileHelpers(None, None)
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command
+        self._commands.append(command)
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
 
+    @property
+    def commands(self):
+        result = self._commands
+        self._commands = []
+        return result
 
 MockOptions = MockSettings
 

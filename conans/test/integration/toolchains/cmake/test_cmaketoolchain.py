@@ -223,3 +223,34 @@ def test_find_builddirs():
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
+
+
+def test_extra_flags_via_conf():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+
+        [conf]
+        tools.build:cxxflags=["--flag1", "--flag2"]
+        tools.build:cflags+=["--flag3", "--flag4"]
+        tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+        tools.build:exelinkflags=["--flag7", "--flag8"]
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " --flag1 --flag2")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain

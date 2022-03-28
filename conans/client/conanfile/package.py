@@ -2,10 +2,9 @@ import os
 
 from conan.tools.files.copy_pattern import report_copied_files
 from conans.cli.output import ScopedOutput
-from conans.errors import ConanException, conanfile_exception_formatter
+from conans.errors import ConanException, conanfile_exception_formatter, conanfile_remove_attr
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import save, mkdir, chdir
 
 
@@ -32,8 +31,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
 
     with conanfile_exception_formatter(conanfile, "package"):
         with chdir(conanfile.build_folder):
-            with conan_v2_property(conanfile, 'info',
-                                   "'self.info' access in package() method is deprecated"):
+            with conanfile_remove_attr(conanfile, ['info'], "package"):
                 conanfile.package()
 
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,

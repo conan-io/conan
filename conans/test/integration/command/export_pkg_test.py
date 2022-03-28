@@ -285,7 +285,6 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=hello --version=0.1 --user=lasote --channel=stable")
         conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
-                                  .with_import("from conans import tools") \
                                   .with_import("from conan.tools.files import copy, collect_libs") \
                                   .with_require("hello/0.1@lasote/stable")
 
@@ -460,6 +459,9 @@ def test_build_policy_never():
         """)
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})
+    client.run("export-pkg . --name=pkg --version=1.0")
+    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+    # check for https://github.com/conan-io/conan/issues/10736
     client.run("export-pkg . --name=pkg --version=1.0")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")

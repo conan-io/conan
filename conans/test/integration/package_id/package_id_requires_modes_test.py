@@ -223,52 +223,6 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn(f"hello2/2.3.8@lasote/stable:{package_id} -"
                       " Missing", self.client.out)
 
-    def test_toolset_visual_compatibility(self):
-        # By default is the same to build with native visual or the toolchain
-        for package_id in [None, "self.info.vs_toolset_compatible()"]:
-            self._export("hello", "1.2.0", package_id_text=package_id,
-                         channel="user/testing",
-                         settings=["compiler", ])
-            self.client.run('install --requires=hello/1.2.0@user/testing '
-                            ' -s compiler="Visual Studio" '
-                            ' -s compiler.version=14 --build=*')
-
-            # Should have binary available
-            self.client.run('install --requires=hello/1.2.0@user/testing'
-                            ' -s compiler="Visual Studio" '
-                            ' -s compiler.version=15 -s compiler.toolset=v140')
-
-            # Should NOT have binary available
-            self.client.run('install --requires=hello/1.2.0@user/testing '
-                            '-s compiler="Visual Studio" '
-                            '-s compiler.version=15 -s compiler.toolset=v120',
-                            assert_error=True)
-
-            self.assertIn("Missing prebuilt package for 'hello/1.2.0@user/testing'", self.client.out)
-
-            # Specify a toolset not involved with the visual version is ok, needed to build:
-            self.client.run('install --requires=hello/1.2.0@user/testing'
-                            ' -s compiler="Visual Studio" '
-                            ' -s compiler.version=15 -s compiler.toolset=v141_clang_c2 '
-                            '--build missing')
-
-    def test_toolset_visual_incompatibility(self):
-        # By default is the same to build with native visual or the toolchain
-        self._export("hello", "1.2.0", package_id_text="self.info.vs_toolset_incompatible()",
-                     channel="user/testing",
-                     settings=["compiler", ],
-                     )
-        self.client.run('install --requires=hello/1.2.0@user/testing '
-                        ' -s compiler="Visual Studio" '
-                        ' -s compiler.version=14 --build=*')
-
-        # Should NOT have binary available
-        self.client.run('install --requires=hello/1.2.0@user/testing'
-                        ' -s compiler="Visual Studio" '
-                        ' -s compiler.version=15 -s compiler.toolset=v140',
-                        assert_error=True)
-        self.assertIn("Missing prebuilt package for 'hello/1.2.0@user/testing'", self.client.out)
-
     def test_package_id_requires_patch_mode(self):
         """ Requirements shown in build missing error, must contains transitive packages
             For this test the follow graph has been used:

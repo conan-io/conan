@@ -4,6 +4,7 @@ import pytest
 import textwrap
 
 from conans.test.assets.autotools import gen_makefile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
@@ -87,6 +88,62 @@ class TestSubsystemsBuild:
         assert "__MINGW64__" in client.out
         assert "__CYGWIN__" not in client.out
         assert "__MSYS__" not in client.out
+
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
+    def test_mingw64_recipe(self):
+        """
+        A recipe with self.run_bash=True and msys2 configured, using mingw to build stuff with make
+        from the subsystem
+        """
+        client = TestClient()
+        makefile = gen_makefile(apps=["app"])
+        main_cpp = gen_function_cpp(name="main")
+        conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+        from conan.tools.layout import basic_layout
+        from conan.tools.files import copy
+        class HelloConan(ConanFile):
+            exports_sources = "*.cpp", "Makefile"
+            generators = "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                self.output.warning(self.build_folder)
+                auto = Autotools(self)
+                auto.make()
+
+            def package(self):
+                copy(self, "app*", self.build_folder, os.path.join(self.package_folder, "bin"))
+
+        """)
+        test_conanfile = textwrap.dedent("""
+                import os
+                from conan import ConanFile
+                class TestConan(ConanFile):
+
+                    def requirements(self):
+                        self.tool_requires(self.tested_reference_str)
+
+                    def test(self):
+                        self.run("app")
+                """)
+        profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "Makefile": makefile,
+                     "app.cpp": main_cpp,
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": profile})
+
+        client.run("create . --name foo --version 1.0 --profile:build myprofile")
+        assert "__MINGW64__" in client.out
+        assert "__CYGWIN__" not in client.out
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("mingw32")

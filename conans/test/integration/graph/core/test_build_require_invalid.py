@@ -12,13 +12,13 @@ class TestInvalidConfiguration:
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanInvalidConfiguration
+        from conan.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             settings = "os"
 
             def validate(self):
-                if self.settings.os == "Windows":
+                if self.info.settings.os == "Windows":
                     raise ConanInvalidConfiguration("Package does not work in Windows!")
        """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
@@ -73,13 +73,13 @@ class TestErrorConfiguration(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanErrorConfiguration
+        from conan.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
             settings = "os"
 
             def validate(self):
-                if self.settings.os == "Windows":
+                if self.info.settings.os == "Windows":
                     raise ConanErrorConfiguration("Package does not work in Windows!")
 
             def package_id(self):
@@ -95,20 +95,18 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.errors import ConanErrorConfiguration
+        from conan.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
             settings = "os"
 
             def validate(self):
-                if self.settings.os == "Windows":
+                if self.info.settings.os == "Windows":
                     raise ConanErrorConfiguration("Package does not work in Windows!")
 
-            def package_id(self):
+            def compatibility(self):
                if self.settings.os == "Windows":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.settings.os = "Linux"
-                   self.compatible_packages.append(compatible_pkg)
+                   return [{"settings": [("os", "Linux")]}]
         """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
     invalid = "ConfigurationError"
@@ -120,13 +118,13 @@ class TestInvalidBuildPackageID:
     """
     conanfile = textwrap.dedent("""
        from conan import ConanFile
-       from conans.errors import ConanInvalidConfiguration
+       from conan.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):
            settings = "os"
 
            def validate(self):
-               if self.settings.os == "Windows":
+               if self.info.settings.os == "Windows":
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
            def package_id(self):
@@ -179,20 +177,18 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
     """
     conanfile = textwrap.dedent("""
        from conan import ConanFile
-       from conans.errors import ConanInvalidConfiguration
+       from conan.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):
            settings = "os"
 
            def validate(self):
-               if self.settings.os == "Windows":
+               if self.info.settings.os == "Windows":
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
-           def package_id(self):
+           def compatibility(self):
                if self.settings.os == "Windows":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.settings.os = "Linux"
-                   self.compatible_packages.append(compatible_pkg)
+                   return [{"settings": [("os", "Linux")]}]
        """)
     linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
     windows_package_id = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"

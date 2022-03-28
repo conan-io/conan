@@ -12,9 +12,6 @@ from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
 
-from conans.util.log import logger
-
-
 _DIRTY_FOLDER = ".dirty"
 
 
@@ -84,7 +81,6 @@ def decode_text(text, encoding="auto"):
     if encoding == "auto":
         encoding, bom_length = _detect_encoding(text)
         if encoding is None:
-            logger.warning("can't decode %s" % str(text))
             return text.decode("utf-8", "ignore")  # Ignore not compatible characters
     return text[bom_length:].decode(encoding)
 
@@ -295,7 +291,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base):
-                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
+                # ConanOutput().warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux

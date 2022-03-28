@@ -1,4 +1,3 @@
-from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference, ref_matches
 
@@ -19,14 +18,24 @@ class _PackageOption:
         self._name = name
         self._value = value  # Value None = not defined
         # possible_values only possible origin is recipes
-        if possible_values is None or possible_values == "ANY":
+        if possible_values is None:
             self._possible_values = None
         else:
+            # This can contain "ANY"
             self._possible_values = [str(v) if v is not None else None for v in possible_values]
+
+    def dumps(self, scope=None):
+        if self._value is None:
+            return None
+        if scope:
+            return "%s:%s=%s" % (scope, self._name, self._value)
+        else:
+            return "%s=%s" % (self._name, self._value)
 
     def copy_conaninfo_option(self):
         # To generate a copy without validation, for package_id info.options value
-        return _PackageOption(self._name, self._value)
+        assert self._possible_values is not None  # this should always come from recipe, with []
+        return _PackageOption(self._name, self._value, self._possible_values + ["ANY"])
 
     def __bool__(self):
         if self._value is None:
@@ -42,10 +51,15 @@ class _PackageOption:
     def _check_valid_value(self, value):
         """ checks that the provided value is allowed by current restrictions
         """
-        if self._possible_values is not None and value not in self._possible_values:
-            msg = ("'%s' is not a valid 'options.%s' value.\nPossible values are %s"
-                   % (value, self._name, self._possible_values))
-            raise ConanException(msg)
+        if self._possible_values is None:  # validation not defined (profile)
+            return
+        if value in self._possible_values:
+            return
+        if value is not None and "ANY" in self._possible_values:
+            return
+        msg = ("'%s' is not a valid 'options.%s' value.\nPossible values are %s"
+               % (value, self._name, self._possible_values))
+        raise ConanException(msg)
 
     def __eq__(self, other):
         # To promote the other to string, and always compare as strings
@@ -68,9 +82,10 @@ class _PackageOption:
 
     def validate(self):
         # check that this has a valid option value defined
-        if self._value is None and self._possible_values is not None \
-                and None not in self._possible_values:
-            raise ConanException("'%s' value not defined" % self._name)
+        if self._value is not None:
+            return
+        if None not in self._possible_values:
+            raise ConanException("'options.%s' value not defined" % self._name)
 
 
 class _PackageOptions:
@@ -83,6 +98,14 @@ class _PackageOptions:
             self._data = {str(option): _PackageOption(str(option), None, possible_values)
                           for option, possible_values in recipe_options_definition.items()}
         self._freeze = False
+
+    def dumps(self, scope=None):
+        result = []
+        for _, package_option in sorted(list(self._data.items())):
+            dump = package_option.dumps(scope)
+            if dump:
+                result.append(dump)
+        return "\n".join(result)
 
     @property
     def possible_values(self):
@@ -138,10 +161,9 @@ class _PackageOptions:
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
         current_value = self._data.get(field)
-        if self._freeze and current_value.value is not None:
-            raise ConanException(f"Incorrect attempt to remove option '{field}' "
-                                 f"with current value '{current_value}'")
-
+        # It is always possible to remove an option, even if it is frozen (freeze=True),
+        # and it got a value, because it is the only way an option could be removed
+        # conditionally to other option value (like fPIC if shared)
         self._ensure_exists(field)
         del self._data[field]
 
@@ -199,7 +221,7 @@ class Options:
                     if len(tokens) == 2:
                         package, option = tokens
                         if "/" not in package and "*" not in package:
-                            msg = "The usage of package names `{}` in 'default_options' is " \
+                            msg = "The usage of package names `{}` in options is " \
                                   "deprecated, use a pattern like `{}/*` or `{}*` " \
                                   "instead".format(k, package, package)
                             raise ConanException(msg)
@@ -223,11 +245,14 @@ class Options:
             other_option=3
             OtherPack:opt3=12.1
         """
-        result = ["%s=%s" % (k, v) for k, v in self._package_options.items() if v is not None]
+        result = []
+        pkg_options_dumps = self._package_options.dumps()
+        if pkg_options_dumps:
+            result.append(pkg_options_dumps)
         for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
-            for key, value in pkg_option.items():
-                if value is not None:
-                    result.append("%s:%s=%s" % (pkg_pattern, key, value))
+            dep_pkg_option = pkg_option.dumps(scope=pkg_pattern)
+            if dep_pkg_option:
+                result.append(dep_pkg_option)
         return "\n".join(result)
 
     @staticmethod
@@ -305,8 +330,7 @@ class Options:
         result = Options()
         result._package_options = self._package_options.copy_conaninfo_options()
         # In most scenarios this should be empty at this stage, because it was cleared
-        for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
-            result._deps_package_options[pkg_pattern] = pkg_option.copy_conaninfo_options()
+        assert not self._deps_package_options
         return result
 
     def update(self, options=None, options_values=None):
@@ -378,15 +402,3 @@ class Options:
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
         return self_options, upstream_options
-
-    def validate(self):
-        # Check that all options have a value defined
-        return self._package_options.validate()
-
-    @property
-    def sha(self):
-        result = ["[options]"]
-        d = self.dumps()
-        if d:
-            result.append(d)
-        return '\n'.join(result)
