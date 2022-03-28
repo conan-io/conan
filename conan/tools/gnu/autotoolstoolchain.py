@@ -8,7 +8,7 @@ from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conans.errors import ConanException
-from conan.tools.microsoft import VCVars, is_msvc
+from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
 
 
 class AutotoolsToolchain:
@@ -39,7 +39,7 @@ class AutotoolsToolchain:
 
         self.cppstd = cppstd_flag(self._conanfile.settings)
         self.arch_flag = architecture_flag(self._conanfile.settings)
-        self.libcxx = self._get_libcxx_flag()
+        self.libcxx = libcxx_flag(conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
@@ -84,7 +84,7 @@ class AutotoolsToolchain:
         if not libcxx:
             return
 
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
+        compiler = settings.get_safe("compiler")
         if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
@@ -93,39 +93,10 @@ class AutotoolsToolchain:
                 return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _get_msvc_runtime_flag(self):
-        msvc_runtime_flag = None
-        if self._conanfile.settings.get_safe("compiler") == "msvc":
-            runtime_type = self._conanfile.settings.get_safe("compiler.runtime_type")
-            if runtime_type == "Release":
-                values = {"static": "MT", "dynamic": "MD"}
-            else:
-                values = {"static": "MTd", "dynamic": "MDd"}
-            runtime = values.get(self._conanfile.settings.get_safe("compiler.runtime"))
-            if runtime:
-                msvc_runtime_flag = "-{}".format(runtime)
-
-        return msvc_runtime_flag
-
-    def _get_libcxx_flag(self):
-        settings = self._conanfile.settings
-        libcxx = settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return
-
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
-        if compiler in ['clang', 'apple-clang']:
-            if libcxx in ['libstdc++', 'libstdc++11']:
-                return '-stdlib=libstdc++'
-            elif libcxx == 'libc++':
-                return '-stdlib=libc++'
-        elif compiler == 'sun-cc':
-            return ({"libCstd": "-library=Cstd",
-                     "libstdcxx": "-library=stdcxx4",
-                     "libstlport": "-library=stlport4",
-                     "libstdc++": "-library=stdcpp"}.get(libcxx))
-        elif compiler == "qcc":
-            return "-Y _%s" % str(libcxx)
+        flag = msvc_runtime_flag(self._conanfile)
+        if flag:
+            flag = "-{}".format(flag)
+        return flag
 
     @staticmethod
     def _filter_list_empty_fields(v):

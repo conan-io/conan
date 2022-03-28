@@ -81,11 +81,12 @@ compiler:
         toolset: [None, v110_xp, v120_xp, v140_xp, v141_xp]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
-                    "5.0", "6.0", "7.0", "7.1",
-                    "8", "9", "10", "11", "12", "13", "14", "15"]
+                  "5.0", "6.0", "7.0", "7.1",
+                  "8", "9", "10", "11", "12", "13", "14", "15"]
         libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
-        runtime: [None, MD, MT, MTd, MDd]
+        runtime: [None, MD, MT, MTd, MDd, static, dynamic]
+        runtime_type: [None, Debug, Release]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1"]
         libcxx: [libstdc++, libc++]
@@ -109,6 +110,7 @@ compiler:
 
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 """
+
 
 def get_default_settings_yml():
     return default_settings_yml
