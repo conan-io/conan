@@ -34,7 +34,7 @@ def conanfile():
 
 def test_cmake_make_program(conanfile):
     def run(command):
-        assert '-DCMAKE_MAKE_PROGRAM=C:/mymake.exe' in command
+        assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")

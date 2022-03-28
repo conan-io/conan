@@ -87,9 +87,9 @@ class CMake(object):
 
         if not variables:
             variables = {}
-        variables.update(self._cacheVariables)
+        self._cacheVariables.update(variables)
 
-        arg_list.extend(["-D{}={}".format(k, v) for k, v in variables.items()])
+        arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cacheVariables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
         command = " ".join(arg_list)
