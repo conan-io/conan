@@ -1,12 +1,11 @@
 import json
 import os
 import platform
-from typing import Dict
 
 from conans.util.files import save, load
 
 
-def _contents(conanfile, toolchain_file, cache_variables: Dict, generator):
+def _contents(conanfile, toolchain_file, cache_variables, generator):
     return {"version": 3,
             "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
             "configurePresets": [{
