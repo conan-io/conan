@@ -117,6 +117,11 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     t.run_command('"%s" -info "%s"' % (lipo, demo))
     assert "architecture: %s" % to_apple_arch(arch) in t.out
 
+    # only check for iOS because one of the macos build variants is usually native
+    if os_ == "iOS":
+        content = t.load("conan_meson_cross.ini")
+        assert "needs_exe_wrapper = true" in content
+
 
 @pytest.mark.tool("meson")
 # for Linux, build for x86 will require a multilib compiler
@@ -261,3 +266,7 @@ class AndroidMesonToolchainCrossTestCase(unittest.TestCase):
         self.assertIn("Class:                             %s" % expected_class, self.t.out)
         self.assertIn("OS/ABI:                            UNIX - System V", self.t.out)
         self.assertIn("Machine:                           %s" % expected_machine, self.t.out)
+
+        content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_cross.ini"))
+        self.assertIn("[project options]", content)
+        self.assertIn("needs_exe_wrapper = true")
