@@ -26,6 +26,7 @@ REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
+PLUGINS_FOLDER = "plugins"
 DEPLOYERS_EXTENSION_FOLDER = "deploy"
 CUSTOM_COMMANDS_FOLDER = "commands"
 
@@ -211,6 +212,10 @@ class ClientCache(object):
     @property
     def custom_commands_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
+
+    @property
+    def plugins_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
 
     @property
     def default_profile_path(self):

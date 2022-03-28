@@ -45,23 +45,19 @@ def compute_package_id(node, new_config):
                                       build_requires_info,
                                       python_requires=python_requires,
                                       default_python_requires_id_mode=python_mode)
+    conanfile.original_info = conanfile.info.clone()
 
     apple_clang_compatible = conanfile.info.apple_clang_compatible()
     if apple_clang_compatible:
         conanfile.compatible_packages.append(apple_clang_compatible)
 
-    run_package_id(conanfile)
+    run_validate_package_id(conanfile)
 
     info = conanfile.info
     node.package_id = info.package_id()
 
 
-def run_package_id(conanfile):
-    # Once we are done, call package_id() to narrow and change possible values
-    with conanfile_exception_formatter(conanfile, "package_id"):
-        with conanfile_remove_attr(conanfile, ['cpp_info'], "package_id"):
-            conanfile.package_id()
-
+def run_validate_package_id(conanfile):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate") and callable(conanfile.validate):
         with conanfile_exception_formatter(conanfile, "validate"):
@@ -72,3 +68,8 @@ def run_package_id(conanfile):
                     conanfile.info.invalid = BINARY_INVALID, str(e)
                 except ConanErrorConfiguration as e:
                     conanfile.info.invalid = BINARY_ERROR, str(e)
+
+    # Once we are done, call package_id() to narrow and change possible values
+    with conanfile_exception_formatter(conanfile, "package_id"):
+        with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+            conanfile.package_id()

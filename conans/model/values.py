@@ -12,6 +12,14 @@ class Values(object):
             return None
         return self._dict[attr]
 
+    def get_safe(self, attr):
+        # To provide the same inferface as regular Settings object
+        tokens = attr.split(".")
+        obj = self
+        for token in tokens[:-1]:
+            obj = getattr(obj, token)
+        return getattr(obj, tokens[-1])
+
     def __delattr__(self, attr):
         if attr not in self._dict:
             return
@@ -59,6 +67,18 @@ class Values(object):
             name, value = line.split("=", 1)
             result.append((name.strip(), value.strip()))
         return cls.from_list(result)
+
+    def update_values(self, values):
+        """ receives a list of tuples (compiler.version, value)
+        Necessary for binary_compatibility.py
+        """
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+            setattr(attr, list_settings[-1], value)
 
     def as_list(self, list_all=True):
         result = []

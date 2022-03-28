@@ -22,7 +22,7 @@ class TestValidate(unittest.TestCase):
                 settings = "os"
 
                 def validate(self):
-                    if self.settings.os == "Windows":
+                    if self.info.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
             """)
 
@@ -50,14 +50,12 @@ class TestValidate(unittest.TestCase):
                 settings = "os"
 
                 def validate(self):
-                    if self.settings.os == "Windows":
+                    if self.info.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
 
-                def package_id(self):
+                def compatibility(self):
                     if self.settings.os == "Windows":
-                        compatible_pkg = self.info.clone()
-                        compatible_pkg.settings.os = "Linux"
-                        self.compatible_packages.append(compatible_pkg)
+                        return [{"settings": [("os", "Linux")]}]
             """)
 
         client.save({"conanfile.py": conanfile})
@@ -114,14 +112,12 @@ class TestValidate(unittest.TestCase):
                settings = "os", "build_type"
 
                def validate(self):
-                   if self.settings.os == "Windows":
+                   if self.info.settings.os == "Windows":
                        raise ConanInvalidConfiguration("Windows not supported")
 
-               def package_id(self):
+               def compatibility(self):
                    if self.settings.build_type == "Debug" and self.settings.os != "Windows":
-                       compatible_pkg = self.info.clone()
-                       compatible_pkg.settings.build_type = "Release"
-                       self.compatible_packages.append(compatible_pkg)
+                       return [{"settings": [("build_type", "Release")]}]
                """)
 
         client.save({"conanfile.py": conanfile})
@@ -152,14 +148,12 @@ class TestValidate(unittest.TestCase):
                settings = "os", "build_type"
 
                def validate(self):
-                   if self.settings.os == "Windows":
+                   if self.info.settings.os == "Windows":
                        raise ConanInvalidConfiguration("Windows not supported")
 
-               def package_id(self):
+               def compatibility(self):
                    if self.settings.build_type == "Debug":
-                       compatible_pkg = self.info.clone()
-                       compatible_pkg.settings.build_type = "Release"
-                       self.compatible_packages.append(compatible_pkg)
+                       return [{"settings": [("build_type", "Release")]}]
                """)
 
         client.save({"conanfile.py": conanfile})
@@ -268,7 +262,7 @@ class TestValidate(unittest.TestCase):
               settings = "os"
 
               def validate(self):
-                  if self.settings.os == "Windows":
+                  if self.info.settings.os == "Windows":
                       raise ConanInvalidConfiguration("Windows not supported")
               """)
         client.save({"conanfile.py": conanfile})

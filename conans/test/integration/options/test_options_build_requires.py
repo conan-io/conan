@@ -132,7 +132,7 @@ def test_different_options_values_recipe_priority():
             default_options = {"shared": 1}
 
             def package_id(self):
-                self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
+                self.output.info("MYOPTION: {}-{}".format(self.context, self.info.options.shared))
         """)
     my_pkg = textwrap.dedent("""
         from conan import ConanFile

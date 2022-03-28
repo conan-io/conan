@@ -46,7 +46,6 @@ def test_meson_exe_template():
     client.run("build .")
 
     # Create works
-    print(client.current_folder)
     client.run("create .")
     assert "greet/0.1: Hello World Release!" in client.out
 
