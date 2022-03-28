@@ -129,7 +129,7 @@ def read_profile(profile_name, cwd, default_folder):
         class FullPathLoader(BaseLoader):
             """ Load absolute paths and relative paths to 'base_path'. """
             def __init__(self, base_path):
-                BaseLoader.__init__()
+                BaseLoader.__init__(self)
                 self.base_path = base_path
 
             def get_source(self, environment, template):
