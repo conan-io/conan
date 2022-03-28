@@ -113,9 +113,9 @@ class XcodeToolchain(object):
 
     @property
     def _flags_xcconfig_content(self):
-        cflags = "OTHER_CFLAGS[config=*][sdk=*][arch=*] = $(inherited) {}".format(" ".join(self._global_cflags)) if self._global_cflags else ""
-        cppflags = "OTHER_CPLUSPLUSFLAGS[config=*][sdk=*][arch=*] = $(inherited) {}".format(" ".join(self._global_cppflags)) if self._global_cppflags else ""
-        ldflags = "OTHER_LDFLAGS[config=*][sdk=*][arch=*] = $(inherited) {}".format(" ".join(self._global_ldflags)) if self._global_ldflags else ""
+        cflags = "OTHER_CFLAGS = $(inherited) {}".format(" ".join(self._global_cflags)) if self._global_cflags else ""
+        cppflags = "OTHER_CPLUSPLUSFLAGS = $(inherited) {}".format(" ".join(self._global_cppflags)) if self._global_cppflags else ""
+        ldflags = "OTHER_LDFLAGS = $(inherited) {}".format(" ".join(self._global_ldflags)) if self._global_ldflags else ""
         ret = self._flags_xconfig.format(cflags=cflags, cppflags=cppflags, ldflags=ldflags)
         return ret
 
