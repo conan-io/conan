@@ -72,7 +72,7 @@ class VSRuntimeBlock(Block):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
+        if compiler not in ("msvc", "intel-cc"):
             return
 
         config_dict = {}
@@ -89,11 +89,6 @@ class VSRuntimeBlock(Block):
         if build_type is None:
             return None
         runtime = settings.get_safe("compiler.runtime")
-        if compiler == "Visual Studio":
-            config_dict[build_type] = {"MT": "MultiThreaded",
-                                       "MTd": "MultiThreadedDebug",
-                                       "MD": "MultiThreadedDLL",
-                                       "MDd": "MultiThreadedDebugDLL"}[runtime]
         if compiler == "msvc" or compiler == "intel-cc":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
@@ -226,7 +221,7 @@ class ParallelBlock(Block):
         # TODO: Check this conf
 
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
+        if compiler != "msvc" or "Visual" not in self._toolchain.generator:
             return
 
         jobs = build_jobs(self._conanfile)
@@ -552,11 +547,7 @@ class GenericSystemBlock(Block):
             return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        if compiler == "Visual Studio":
-            subs_toolset = settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
-        elif compiler == "intel-cc":
+        if compiler == "intel-cc":
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             subs_toolset = settings.get_safe("compiler.toolset")
@@ -586,7 +577,7 @@ class GenericSystemBlock(Block):
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc")) and generator and "Visual" in generator:
+        if compiler == "msvc" and generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
