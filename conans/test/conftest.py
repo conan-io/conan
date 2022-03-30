@@ -119,6 +119,11 @@ tools_locations = {
     'premake': {},
     'apt_get': { "exe": "apt-get"},
     'brew': {},
+    'ndk': {
+        "exe": "ndk-build",
+        "default": "system",
+        "system": {},
+    },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
