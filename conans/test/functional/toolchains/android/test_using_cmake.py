@@ -55,7 +55,7 @@ def client():
 
 
 @pytest.mark.tool_cmake
-@pytest.mark.tool_ndk
+@pytest.mark.tool_android_ndk
 @pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_use_cmake_toolchain(client):
     """ This is the naive approach, we follow instruction from CMake in its documentation
