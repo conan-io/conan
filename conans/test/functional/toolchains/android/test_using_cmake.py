@@ -1,5 +1,5 @@
 import textwrap
-from sys import platform
+import platform
 
 import pytest
 from conan.tools.cmake import CMakeToolchain
