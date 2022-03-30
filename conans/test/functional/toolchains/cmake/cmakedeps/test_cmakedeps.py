@@ -332,7 +332,7 @@ def test_private_transitive():
     assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_system_dep():
     """This test creates a zlib package and use the installation CMake FindZLIB.cmake to locate
     the library of the package. That happens because:
