@@ -1,15 +1,16 @@
+import os
 import textwrap
 from collections import OrderedDict
 
 from jinja2 import Template
 
 from conan.tools.build import use_win_mingw
+from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
     SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
-from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -166,18 +167,8 @@ class CMakeToolchain(object):
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        self._writebuild(toolchain_file)
-
-    def _writebuild(self, toolchain_file):
-        result = {}
-        # TODO: Lets do it compatible with presets soon
-        if self.generator is not None:
-            result["cmake_generator"] = self.generator
-
-        result["cmake_toolchain_file"] = toolchain_file or self.filename
-
-        if result:
-            save_toolchain_args(result, namespace=self._namespace)
+        toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
+        write_cmake_presets(self._conanfile,toolchain , self.generator)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

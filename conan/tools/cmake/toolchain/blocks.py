@@ -464,6 +464,9 @@ class ExtraFlagsBlock(Block):
         {% if exelinkflags %}
         string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
+        {% if defines %}
+        add_definitions({% for define in defines %} {{ define }}{% endfor %})
+        {% endif %}
     """)
 
     def context(self):
@@ -472,11 +475,13 @@ class ExtraFlagsBlock(Block):
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
-            "exelinkflags": exelinkflags
+            "exelinkflags": exelinkflags,
+            "defines": ["-D{}".format(d) for d in defines]
         }
 
 

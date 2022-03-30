@@ -1,11 +1,12 @@
-import textwrap
+import os
 import platform
+import textwrap
 
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
-from conans.test.utils.tools import TestClient
 from conans.test.functional.toolchains.android._utils import create_library
+from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
@@ -47,15 +48,14 @@ def client():
             compiler.libcxx=c++_shared
             build_type=Release
             [conf]
-            tools.android:ndk_path=/usr/local/share/android-ndk
-        """)
-        # FIXME: The conf ndk_path is hardcoded, could be received from the conftest?
+            tools.android:ndk_path={ndk_path}
+        """.format(ndk_path=os.getenv("TEST_CONAN_ANDROID_NDK")))
     })
     return t
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.tool("ndk")
+@pytest.mark.tool("android_ndk")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
 def test_use_cmake_toolchain(client):
     """ This is the naive approach, we follow instruction from CMake in its documentation

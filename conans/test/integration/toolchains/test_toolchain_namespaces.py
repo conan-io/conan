@@ -2,6 +2,7 @@ import os
 import textwrap
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.files.files import load_toolchain_args
 from conans.test.utils.tools import TestClient
 
@@ -26,11 +27,9 @@ def test_cmake_namespace():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
-    assert os.path.isfile(os.path.join(client.current_folder,
-                                       "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE)))
-    content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
-    generator = content.get("cmake_generator")
-    toolchain_file = content.get("cmake_toolchain_file")
+    presets = load_cmake_presets(client.current_folder)
+    toolchain_file = presets["configurePresets"][0]["toolchainFile"]
+    generator = presets["configurePresets"][0]["generator"]
     client.run("build . ")
     assert generator in client.out
     assert toolchain_file in client.out
@@ -110,12 +109,11 @@ def test_autotools_namespace():
 def test_multiple_toolchains_one_recipe():
     # https://github.com/conan-io/conan/issues/9376
     client = TestClient()
-    namespaces = ["autotools", "bazel", "cmake"]
+    namespaces = ["autotools", "bazel"]
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.gnu import AutotoolsToolchain, Autotools
             from conan.tools.google import BazelToolchain, Bazel
-            from conan.tools.cmake import CMakeToolchain, CMake
 
             class Conan(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -126,8 +124,6 @@ def test_multiple_toolchains_one_recipe():
                     autotools.generate()
                     bazel = BazelToolchain(self, namespace='{1}')
                     bazel.generate()
-                    cmake = CMakeToolchain(self, namespace='{2}')
-                    cmake.generate()
 
                 def build(self):
                     autotools = Autotools(self, namespace='{0}')
@@ -136,9 +132,6 @@ def test_multiple_toolchains_one_recipe():
                     bazel = Bazel(self, namespace='{1}')
                     self.output.info(bazel._bazel_config)
                     self.output.info(bazel._bazelrc_path)
-                    cmake = CMake(self, namespace='{2}')
-                    self.output.info(cmake._generator)
-                    self.output.info(cmake._toolchain_file)
             """.format(*namespaces))
 
     client.save({"conanfile.py": conanfile})
@@ -156,7 +149,6 @@ def test_multiple_toolchains_one_recipe():
     check_args = {
         "autotools": ["configure_args", "make_args"],
         "bazel": ["bazel_configs", "bazelrc_path"],
-        "cmake": ["cmake_generator", "cmake_toolchain_file"]
     }
     checks = []
     for namespace in namespaces:

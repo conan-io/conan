@@ -106,13 +106,14 @@ class AutotoolsToolchain:
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ldflags = self._conanfile.conf.get("tools.build:ldflags", default=[], check_type=list)
-        cppflags = self._conanfile.conf.get("tools.build:cppflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "cppflags": cppflags,
-            "ldflags": ldflags
+            "defines": defines,
+            "ldflags": sharedlinkflags + exelinkflags
         }
 
     def environment(self):
@@ -129,7 +130,7 @@ class AutotoolsToolchain:
                            + self.build_type_flags + apple_flags + extra_flags["cflags"])
         self.ldflags.extend([self.arch_flag] + self.build_type_link_flags
                             + apple_flags + extra_flags["ldflags"])
-        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["cppflags"])
+        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
 
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
