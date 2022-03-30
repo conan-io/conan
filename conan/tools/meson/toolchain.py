@@ -208,11 +208,12 @@ class MesonToolchain(object):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ldflags = self._conanfile.conf.get("tools.build:ldflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "ldflags": ldflags
+            "ldflags": sharedlinkflags + exelinkflags
         }
 
     @staticmethod
