@@ -4,14 +4,23 @@ def is_multi_configuration(generator):
     return "Visual" in generator or "Xcode" in generator or "Multi-Config" in generator
 
 
-def get_file_name(conanfile, find_module_mode=False):
+def get_file_name(conanfile):
     """Get the name of the file for the find_package(XXX)"""
     # This is used by the CMakeToolchain to adjust the XXX_DIR variables and the CMakeDeps. Both
     # to know the file name that will have the XXX-config.cmake files.
-    if find_module_mode:
+    find_mode = get_find_mode(conanfile)
+    if find_mode == "module":
         ret = conanfile.cpp_info.get_property("cmake_module_file_name")
         if ret:
             return ret
     ret = conanfile.cpp_info.get_property("cmake_file_name")
     return ret or conanfile.ref.name
 
+
+def get_find_mode(conanfile):
+    """
+    :param conanfile: conanfile of the requirement
+    :return: "none" or "config" or "module" or "both"
+    """
+    tmp = conanfile.cpp_info.get_property("cmake_find_mode") or "both"
+    return tmp.lower()

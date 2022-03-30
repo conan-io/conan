@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_file_name
+from conan.tools.cmake.utils import get_file_name, get_find_mode
 
 """
 
@@ -169,9 +169,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
-                    ret.append(get_file_name(req, self.find_module_mode))
+                    ret.append(get_file_name(req))
         elif direct_host:
-            ret = [get_file_name(r, self.find_module_mode) for r in direct_host.values()]
+            ret = [get_file_name(r) for r in direct_host.values()]
 
         return ret
 
@@ -181,13 +181,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
-            dep_file_name = get_file_name(dep, self.find_module_mode)
-            find_mode = dep.cpp_info.get_property("cmake_find_mode")
+            dep_file_name = get_file_name(dep)
+            find_mode = get_find_mode(dep)
             values = {"none": "",
                       "config": "NO_MODULE",
                       "module": "MODULE",
                       "both": "NO_MODULE" if not self.find_module_mode else "MODULE"}
-            find_mode = find_mode or "both"
             ret[dep_file_name] = values[find_mode.lower()]
         return ret
 
