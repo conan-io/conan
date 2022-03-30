@@ -43,7 +43,7 @@ class XcodeToolchain(object):
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self.os_version = conanfile.settings.get_safe("os.version")
         self._global_defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        self._global_cppflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        self._global_cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         self._global_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
@@ -111,13 +111,13 @@ class XcodeToolchain(object):
 
     @property
     def _check_if_extra_flags(self):
-        return self._global_cflags or self._global_cppflags or self._global_ldflags
+        return self._global_cflags or self._global_cxxflags or self._global_ldflags
 
     @property
     def _flags_xcconfig_content(self):
         defines = "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {}".format(" ".join(self._global_defines)) if self._global_defines else ""
         cflags = "OTHER_CFLAGS = $(inherited) {}".format(" ".join(self._global_cflags)) if self._global_cflags else ""
-        cppflags = "OTHER_CPLUSPLUSFLAGS = $(inherited) {}".format(" ".join(self._global_cppflags)) if self._global_cppflags else ""
+        cppflags = "OTHER_CPLUSPLUSFLAGS = $(inherited) {}".format(" ".join(self._global_cxxflags)) if self._global_cxxflags else ""
         ldflags = "OTHER_LDFLAGS = $(inherited) {}".format(" ".join(self._global_ldflags)) if self._global_ldflags else ""
         ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags)
         return ret
