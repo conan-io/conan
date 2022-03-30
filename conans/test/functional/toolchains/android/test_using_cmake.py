@@ -56,7 +56,7 @@ def client():
 
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("android_ndk")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_use_cmake_toolchain(client):
     """ This is the naive approach, we follow instruction from CMake in its documentation
         https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
