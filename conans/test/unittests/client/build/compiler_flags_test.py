@@ -47,14 +47,16 @@ class CompilerFlagsTest(unittest.TestCase):
         settings = MockSettings({"compiler": "apple-clang",
                                  "arch": "x86_64",
                                  "os": "Macos",
-                                 "os.subsystem": "catalyst"})
-        self.assertEqual(architecture_flag(settings), "--target=x86_64-apple-ios-macabi")
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=x86_64-apple-ios13.1-macabi")
 
         settings = MockSettings({"compiler": "apple-clang",
                                  "arch": "armv8",
                                  "os": "Macos",
-                                 "os.subsystem": "catalyst"})
-        self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios-macabi")
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios13.1-macabi")
 
     @parameterized.expand([("gcc", "x86", "-m32"),
                            ("gcc", "x86_64", "-m64"),

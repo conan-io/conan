@@ -15,7 +15,7 @@ import six
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
-from conans.util.files import rmdir
+from conans.util.files import rmdir as _internal_rmdir
 
 if six.PY3:  # Remove this IF in develop2
     from shutil import which
@@ -59,6 +59,10 @@ def mkdir(conanfile, path):
     if os.path.exists(path):
         return
     os.makedirs(path)
+
+
+def rmdir(conanfile, path):
+    _internal_rmdir(path)
 
 
 def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
@@ -507,7 +511,7 @@ def swap_child_folder(parent_folder, child_folder):
             if os.path.isfile(path):
                 os.remove(path)
             else:
-                rmdir(path)
+                _internal_rmdir(path)
     child = os.path.join(parent_folder, child_folder)
     for f in os.listdir(child):
         shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))

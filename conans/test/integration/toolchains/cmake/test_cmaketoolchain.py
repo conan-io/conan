@@ -295,3 +295,34 @@ def test_apple_vars_overwrite_user_conf():
     assert "CMAKE_SYSTEM_VERSION 15.0" not in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
+
+    
+def test_extra_flags_via_conf():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+
+        [conf]
+        tools.build:cxxflags=["--flag1", "--flag2"]
+        tools.build:cflags+=["--flag3", "--flag4"]
+        tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+        tools.build:exelinkflags=["--flag7", "--flag8"]
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " --flag1 --flag2")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain

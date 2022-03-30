@@ -34,15 +34,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             platform: ANY
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
-        Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
-            sdk: [None, "macosx"]
-            sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3"]
-            subsystem: [None, catalyst]
-        Android:
-            api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+            version: &ios_version
+                     ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
                       "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                       "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
                       "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8",
@@ -64,6 +58,16 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             sdk: [None, "appletvos", "appletvsimulator"]
             sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
                           "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4"]
+        Macos:
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
+            sdk: [None, "macosx"]
+            sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3"]
+            subsystem:
+                None:
+                catalyst:
+                    ios_version: *ios_version
+        Android:
+            api_level: ANY
         FreeBSD:
         SunOS:
         AIX:
@@ -117,7 +121,8 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "8", "9", "10", "11", "12", "13", "14", "15"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
-            runtime: [None, MD, MT, MTd, MDd]
+            runtime: [None, MD, MT, MTd, MDd, static, dynamic]
+            runtime_type: [None, Debug, Release]
         apple-clang: &apple_clang
             version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1"]
             libcxx: [libstdc++, libc++]
