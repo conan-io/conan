@@ -27,7 +27,7 @@ def test_configure_args():
     client.run("create . ")
     # TODO: This check is ugly, because the command line is so different in each platform,
     #  and args_to_string() is doing crazy stuff
-    assert '-DMYVAR=MYVALUE' in client.out
+    assert '-DMYVAR="MYVALUE"' in client.out
     assert "--verbosebuild" in client.out
     assert "-something" in client.out
     assert "--testverbose" in client.out
