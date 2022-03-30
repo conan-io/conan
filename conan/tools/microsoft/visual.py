@@ -89,6 +89,9 @@ def msvc_runtime_flag(conanfile):
     runtime = settings.get_safe("compiler.runtime")
     if compiler == "Visual Studio":
         return runtime
+    if compiler == "clang" and runtime in ("MD", "MT", "MTd", "MDd"):
+        # TODO: Remove in 2.0
+        return runtime
     if runtime is not None:
         if runtime == "static":
             runtime = "MT"
