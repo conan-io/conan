@@ -120,6 +120,7 @@ tools_locations = {
     'apt_get': { "exe": "apt-get"},
     'brew': {},
     'ndk': {
+        "platform": "Darwin",
         "exe": "ndk-build",
         "default": "system",
         "system": {},
