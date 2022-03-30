@@ -1,5 +1,8 @@
 import os
+import platform
 import textwrap
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -231,6 +234,69 @@ def test_find_builddirs():
         assert "/path/to/builddir" in contents
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_cmaketoolchain_cmake_system_processor_cross_apple():
+    """
+    https://github.com/conan-io/conan/pull/10434
+    CMAKE_SYSTEM_PROCESSOR was not set when cross-building in Mac
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_apple_vars_overwrite_user_conf():
+    """
+        tools.cmake.cmaketoolchain:system_name and tools.cmake.cmaketoolchain:system_version
+        will be overwritten by the apple block
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain "
+               "-c tools.cmake.cmaketoolchain:system_name=tvOS "
+               "-c tools.cmake.cmaketoolchain:system_version=15.1 "
+               "-c tools.cmake.cmaketoolchain:system_processor=x86_64 ")
+
+    toolchain = client.load("conan_toolchain.cmake")
+
+    # should set the conf values but system/version are overwritten by the apple block
+    assert "CMAKE_SYSTEM_NAME tvOS" in toolchain
+    assert "CMAKE_SYSTEM_NAME iOS" not in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.1" in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.0" not in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
+
+    
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]

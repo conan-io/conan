@@ -228,4 +228,3 @@ def test_install_output_directories():
     layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
     toolchain = client.load(os.path.join(b_folder, layout_folder, "conan", "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
-

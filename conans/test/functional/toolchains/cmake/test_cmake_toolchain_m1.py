@@ -29,7 +29,10 @@ def test_m1(op_system):
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"])
+    custom_content = 'message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}") \n' \
+                     'message("CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}") \n'
+    cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"],
+                                custom_content=custom_content)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -56,6 +59,9 @@ def test_m1(op_system):
                  "m1": profile}, clean_first=True)
     client.run("install . --profile:build=default --profile:host=m1")
     client.run("build .")
+    system_name = 'Darwin' if op_system == 'Macos' else 'iOS'
+    assert "CMAKE_SYSTEM_NAME: {}".format(system_name) in client.out
+    assert "CMAKE_SYSTEM_PROCESSOR: arm64" in client.out
     main_path = "./cmake-build-release/main.app/main" if op_system == "iOS" \
         else "./cmake-build-release/main"
     client.run_command(main_path, assert_error=True)
