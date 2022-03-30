@@ -23,7 +23,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile) + self.suffix
+        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):
