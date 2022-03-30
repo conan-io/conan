@@ -70,7 +70,7 @@ class VirtualRunEnv:
 
         return runenv
 
-    def vars(self, scope="build"):
+    def vars(self, scope="run"):
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="run"):
