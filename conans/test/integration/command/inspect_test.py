@@ -514,3 +514,15 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --json=file.json")
         contents = client.load("file.json")
         self.assertIn('"settings": ["compiler", "os"]', contents)
+
+    def test_inspect_alias(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . pkg/0.1@")
+        client.run("alias pkg/latest@ pkg/0.1@")
+        client.run("inspect pkg/latest@ -a alias")
+        assert "alias: pkg/0.1" in client.out
+
+        client.run("inspect pkg/latest@ -a alias --json=myinspect")
+        myinspect = json.loads(client.load("myinspect"))
+        assert myinspect["alias"] == "pkg/0.1"

@@ -1,12 +1,12 @@
 import os
-import unittest
+
 
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5, save
 
 
-class ManifestTest(unittest.TestCase):
+class TestManifest:
 
     def test_tree_manifest(self):
         tmp_dir = temp_folder()
@@ -24,15 +24,14 @@ class ManifestTest(unittest.TestCase):
         manifest.save(tmp_dir)
         readed_manifest = FileTreeManifest.load(tmp_dir)
 
-        self.assertEqual(readed_manifest.time, manifest.time)
-        self.assertEqual(readed_manifest, manifest)
+        assert readed_manifest.time == manifest.time
+        assert readed_manifest == manifest
         # Not included the pycs or pyo
-        self.assertEqual(set(manifest.file_sums.keys()),
-                          set(["one.ext", "path/to/two.txt", "two.txt"]))
+        assert set(manifest.file_sums.keys()) == {"one.ext", "path/to/two.txt", "two.txt"}
 
         for filepath, md5readed in manifest.file_sums.items():
             content = files[filepath]
-            self.assertEqual(md5(content), md5readed)
+            assert md5(content) == md5readed
 
     def test_already_pyc_in_manifest(self):
         tmp_dir = temp_folder()
@@ -43,5 +42,10 @@ class ManifestTest(unittest.TestCase):
 
         read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
         # Not included the pycs or pyo
-        self.assertEqual(set(read_manifest.file_sums.keys()),
-                          set(["conanfile.py"]))
+        assert set(read_manifest.file_sums.keys()) == {"conanfile.py"}
+
+    def test_special_chars(self):
+        tmp_dir = temp_folder()
+        save(os.path.join(tmp_dir, "conanmanifest.txt"), "1478122267\nsome: file.py: 123\n")
+        read_manifest = FileTreeManifest.load(tmp_dir)
+        assert read_manifest.file_sums["some: file.py"] == "123"

@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -6,7 +7,8 @@ import pytest
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -23,6 +25,7 @@ def conanfile():
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
+        # The layout describes where the sources are, not force them to be there
         tools.save("source.h", "foo")
 
     def build(self):
@@ -114,8 +117,10 @@ def test_cache_in_layout(conanfile):
     client.run("create . base/1.0@")
 
     client.save({"conanfile.py": conanfile})
+    client.run("create . lib/1.0@")
+    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
+    pref = PackageReference(ref, package_id)
     sf = client.cache.package_layout(ref).source()
     bf = client.cache.package_layout(ref).build(pref)
     pf = client.cache.package_layout(ref).package(pref)
@@ -123,7 +128,6 @@ def test_cache_in_layout(conanfile):
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")
 
-    client.run("create . lib/1.0@")
     # Check folders match with the declared by the layout
     assert "Source folder: {}".format(source_folder) in client.out
     assert "Build folder: {}".format(build_folder) in client.out
@@ -138,7 +142,7 @@ def test_cache_in_layout(conanfile):
 
     # Search the package in the cache
     client.run("search lib/1.0@")
-    assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out
+    assert "Package_ID: {}".format(package_id) in client.out
 
     # Install the package and check the build info
     client.run("install lib/1.0@ -g txt")
@@ -169,11 +173,9 @@ def test_same_conanfile_local(conanfile):
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
-    client.run("package .  -if=install")
-    # By default, the "package" folder is still used (not breaking)
-    pf = os.path.join(client.current_folder, "package")
-    assert "Package folder: {}".format(pf) in client.out
-    assert os.path.exists(os.path.join(pf, "LICENSE"))
+    client.run("package .  -if=install", assert_error=True)
+    assert "The usage of the 'conan package' local method is disabled when using " \
+           "layout()" in client.out
 
 
 def test_imports():
@@ -221,3 +223,86 @@ def test_imports():
     client.save({"conanfile.py": conan_file})
     client.run("create . consumer/1.0@ ")
     assert "Built and imported!" in client.out
+
+
+def test_cpp_package():
+    client = TestClient()
+
+    conan_hello = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            def package(self):
+                save(self, os.path.join(self.package_folder, "foo/include/foo.h"), "")
+                save(self, os.path.join(self.package_folder,"foo/libs/foo.lib"), "")
+
+            def layout(self):
+                self.cpp.package.includedirs = ["foo/include"]
+                self.cpp.package.libdirs = ["foo/libs"]
+                self.cpp.package.libs = ["foo"]
+             """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
+
+    conan_consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "hello/1.0"
+            generators = "CMakeDeps"
+            def generate(self):
+                info = self.dependencies["hello"].cpp_info
+                self.output.warn("**includedirs:{}**".format(info.includedirs))
+                self.output.warn("**libdirs:{}**".format(info.libdirs))
+                self.output.warn("**libs:{}**".format(info.libs))
+        """)
+
+    client.save({"conanfile.py": conan_consumer})
+    client.run("install .")
+    out = str(client.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['foo/include']**" in out
+    assert "**libdirs:['foo/libs']**" in out
+    assert "**libs:['foo']**" in out
+    cmake = client.load("hello-release-x86_64-data.cmake")
+
+    assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
+    assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake
+    assert 'set(hello_LIBS_RELEASE foo)' in cmake
+
+
+def test_git_clone_with_source_layout():
+    client = TestClient()
+    repo = temp_folder()
+    conanfile = textwrap.dedent("""
+           import os
+           from conans import ConanFile
+           class Pkg(ConanFile):
+               exports_sources = "*.txt"
+
+               def layout(self):
+                   self.folders.source = "src"
+
+               def source(self):
+                   self.run('git clone "{}" .')
+       """).format(repo.replace("\\", "/"))
+
+    client.save({"conanfile.py": conanfile,
+                 "myfile.txt": "My file is copied"})
+    with client.chdir(repo):
+        client.save({"cloned.txt": "foo"}, repo)
+        client.init_git_repo()
+
+    client.run("create . hello/1.0@")
+    sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
+    assert os.path.exists(os.path.join(sf, "myfile.txt"))
+    # The conanfile is cleared from the root before cloning
+    assert not os.path.exists(os.path.join(sf, "conanfile.py"))
+    assert not os.path.exists(os.path.join(sf, "cloned.txt"))
+
+    assert os.path.exists(os.path.join(sf, "src", "cloned.txt"))
+    assert not os.path.exists(os.path.join(sf, "src", "myfile.txt"))

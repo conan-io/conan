@@ -10,6 +10,7 @@ from conans.client.build.meson import Meson
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools import args_to_string, environment_append
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.settings import Settings
 from conans.test.utils.mocks import MockDepsCppInfo, ConanFileMock
 from conans.test.utils.test_files import temp_folder
@@ -36,7 +37,7 @@ class MesonTest(unittest.TestCase):
         conan_file.should_build = False
         conan_file.should_test = False
         conan_file.should_install = False
-        conan_file.package_folder = os.path.join(self.tempdir, "my_cache_package_folder")
+        conan_file.folders.set_base_package(os.path.join(self.tempdir, "my_cache_package_folder"))
         meson = Meson(conan_file)
         meson.configure()
         self.assertIsNone(conan_file.command)
@@ -60,6 +61,16 @@ class MesonTest(unittest.TestCase):
             meson.test()
             self.assertIsNone(conan_file.command)
 
+    def test_conf_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.build:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        meson = Meson(conanfile)
+        meson.test()
+        self.assertIsNone(conanfile.command)
+
     def test_folders(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
@@ -71,9 +82,9 @@ class MesonTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = settings
-        conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
-        conan_file.package_folder = package_folder
+        conan_file.folders.set_base_source(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conan_file.folders.set_base_build(os.path.join(self.tempdir, "my_cache_build_folder"))
+        conan_file.folders.set_base_package(package_folder)
         meson = Meson(conan_file)
 
         defs = {
@@ -172,11 +183,26 @@ class MesonTest(unittest.TestCase):
         self.assertEqual("meson install -C \"%s\"" % build_expected,
                          conan_file.command)
 
+    def test_other_backend(self):
+        conan_file = ConanFileMock()
+        conan_file.deps_cpp_info = MockDepsCppInfo()
+        conan_file.settings = Settings()
+        conan_file.folders.set_base_package(os.getcwd())
+        meson = Meson(conan_file, backend="vs")
+        meson.configure()
+        self.assertIn("--backend=vs", conan_file.command)
+        meson.build()
+        self.assertIn("meson compile -C", conan_file.command)
+        meson.install()
+        self.assertIn("meson compile -C", conan_file.command)
+        meson.test()
+        self.assertIn("meson compile -C", conan_file.command)
+
     def test_prefix(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = Settings()
-        conan_file.package_folder = os.getcwd()
+        conan_file.folders.set_base_package(os.getcwd())
         expected_prefix = '-Dprefix="%s"' % os.getcwd()
         meson = Meson(conan_file)
         meson.configure()
@@ -190,7 +216,6 @@ class MesonTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = Settings()
-        conan_file.package_folder = None
         meson = Meson(conan_file)
         meson.configure()
         self.assertNotIn('-Dprefix', conan_file.command)
@@ -214,7 +239,6 @@ class MesonTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = settings
-        conan_file.package_folder = None
         meson = Meson(conan_file)
         meson.configure()
         meson.build()

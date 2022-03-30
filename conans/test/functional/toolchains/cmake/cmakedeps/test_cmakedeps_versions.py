@@ -9,8 +9,8 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture(scope="module")
 def hello_client():
     client = TestClient()
-    client.run("new hello/1.1 -s")
-    client.run("create .")
+    client.run("new hello/1.1 --template=cmake_lib")
+    client.run("create . -tf=None")
     return client
 
 
@@ -44,12 +44,13 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
         """).format(name=name, version=version, params=params)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
-            settings = "build_type"
             requires = "hello/1.1"
-            generators = "CMakeDeps"
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeDeps", "CMakeToolchain"
 
             def build(self):
                 cmake = CMake(self)
@@ -78,12 +79,13 @@ def test_no_version_file(hello_client):
         """)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
-            settings = "build_type"
+            settings = "os", "compiler", "arch", "build_type"
             requires = "hello/1.1"
-            generators = "CMakeDeps"
+            generators = "CMakeDeps", "CMakeToolchain"
 
             def build(self):
                 cmake = CMake(self)

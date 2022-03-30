@@ -2,14 +2,13 @@ import json
 import os
 import pytest
 
-
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
-from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.model.conf import BUILT_IN_CONFS
 
 
 def _assert_dict_subset(expected, actual):
@@ -188,6 +187,29 @@ def test_config_home_short_home_dir_contains_cache_dir():
         assert client.cache.config.short_paths_home == short_path_home_folder
 
 
+def test_config_user_home_short_path():
+    """ When general.user_home_short is configured, short_paths MUST obey its path
+    """
+    short_folder = os.path.join(temp_folder(), "short").replace("\\", "/")
+    with environment_append({"CONAN_USER_HOME_SHORT": ""}):
+        client = TestClient()
+        client.run("config set general.user_home_short='{}'".format(short_folder))
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("create . foobar/0.1.0@user/testing")
+        assert client.cache.config.short_paths_home == short_folder
+
+
+def test_config_user_home_short_none():
+    """ When general.user_home_short is None, short_paths MUST use cache folder
+    """
+    with environment_append({"CONAN_USER_HOME_SHORT": ""}):
+        client = TestClient()
+        client.run('config set general.user_home_short=None')
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("create . foobar/0.1.0@user/testing")
+        assert client.cache.config.short_paths_home == "None"
+
+
 def test_init():
     """ config init MUST initialize conan.conf, remotes, settings and default profile
     """
@@ -223,6 +245,6 @@ def test_config_list():
     """
     client = TestClient()
     client.run('config list')
-    assert "Supported Conan *experimental* conan.conf properties:" in client.out
-    for key, value in DEFAULT_CONFIGURATION.items():
-        assert "{}: {}".format(key, value) in client.out
+    assert "Supported Conan *experimental* global.conf and [conf] properties:" in client.out
+    for key, description in BUILT_IN_CONFS.items():
+        assert "{}: {}".format(key, description) in client.out

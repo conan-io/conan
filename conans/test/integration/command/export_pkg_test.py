@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import textwrap
 import unittest
 from textwrap import dedent
@@ -345,8 +346,9 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        pref = PackageReference(ref, package_id)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -395,8 +397,9 @@ class TestConan(ConanFile):
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
                    "--source-folder=src")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        pref = PackageReference(ref, package_id)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -618,7 +621,7 @@ class TestConan(ConanFile):
         self.assertIn("Can't build while installing", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
         layout = client.cache.package_layout(ref)
-        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         build_folder = layout.build(pref)
         self.assertTrue(is_dirty(build_folder))
         self.assertTrue(layout.package_is_dirty(pref))
@@ -657,5 +660,19 @@ def test_build_policy_never():
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install pkg/1.0@ --build")
-    assert "pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
+    assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out
+
+
+def test_build_policy_never_missing():
+    # https://github.com/conan-io/conan/issues/9798
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
+                 "consumer.txt": "[requires]\npkg/1.0"})
+    client.run("export . pkg/1.0@")
+
+    client.run("install pkg/1.0@ --build", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out
+
+    client.run("install pkg/1.0@ --build=missing", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out

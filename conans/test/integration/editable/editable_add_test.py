@@ -3,6 +3,7 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -77,3 +78,11 @@ class CreateEditablePackageTest(unittest.TestCase):
         self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
         t.run('install {}'.format(ref))
         self.assertIn("Installing package: {}".format(ref), t.out)
+
+    def test_search(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . "lib/0.1@"')
+        t.run('search lib/0.1@', assert_error=True)
+        assert "Package in editable mode cannot list binaries" in t.out
+

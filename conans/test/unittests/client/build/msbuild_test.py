@@ -92,7 +92,8 @@ class MSBuildTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             msbuild.get_command("dummy.sln", targets="sometarget")
 
-    @parameterized.expand([("16", "v142"),
+    @parameterized.expand([("17", "v143"),
+                           ("16", "v142"),
                            ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
@@ -110,7 +111,8 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    @parameterized.expand([("v142",),
+    @parameterized.expand([("v143",),
+                           ("v142",),
                            ("v141",),
                            ("v140",),
                            ("v120",),

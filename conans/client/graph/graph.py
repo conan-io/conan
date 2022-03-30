@@ -249,6 +249,7 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
+        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def add_node(self, node):

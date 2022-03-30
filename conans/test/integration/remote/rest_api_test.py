@@ -1,7 +1,6 @@
 import os
 import platform
 import unittest
-from random import randrange
 
 import pytest
 import requests
@@ -20,7 +19,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.test.assets.cpp_test_files import cpp_hello_source_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
@@ -121,7 +120,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans digest
         digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "0acb2be9768f174f223c81568da74fbe")
+        self.assertEqual(digest.summary_hash, "6fae00c91be4d09178af3c6fdc4d59e9")
         self.assertEqual(digest.time, 123123123)
 
     def test_get_package(self):
@@ -266,7 +265,8 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = cpp_hello_source_files(3, [1, 12])
+        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
+                 "hello.cpp": "hello"}
         if base_files:
             files.update(base_files)
 
@@ -274,14 +274,14 @@ class RestApiTest(unittest.TestCase):
         abs_paths = {}
         for filename, content in files.items():
             abs_path = os.path.join(tmp_dir, filename)
-            save(abs_path, content)
+            save(abs_path, str(content))
             abs_paths[filename] = abs_path
 
         self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
-        files = cpp_hello_source_files(3, [1, 12])
+        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12")}
         if base_files:
             files.update(base_files)
         content = """

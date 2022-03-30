@@ -90,9 +90,13 @@ class Profile(object):
             result.append("[conf]")
             result.append(self.conf.dumps())
 
+        if self.buildenv:
+            result.append("[buildenv]")
+            result.append(self.buildenv.dumps())
+
         return "\n".join(result).replace("\n\n", "\n")
 
-    def compose(self, other):
+    def compose_profile(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
         # this is the opposite
@@ -116,7 +120,7 @@ class Profile(object):
             self.build_requires[pattern] = list(existing.values())
 
         self.conf.update_conf_definition(other.conf)
-        self.buildenv.compose(other.buildenv)
+        self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

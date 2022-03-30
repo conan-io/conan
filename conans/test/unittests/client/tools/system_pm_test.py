@@ -9,7 +9,7 @@ from conans.client.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidSystemRequirements
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
 
@@ -427,7 +427,7 @@ class SystemPackageToolTest(unittest.TestCase):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as exc:
+            with self.assertRaises(ConanInvalidSystemRequirements) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)
@@ -469,7 +469,7 @@ class SystemPackageToolTest(unittest.TestCase):
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out,
                                     default_mode="verify")
-            with self.assertRaises(ConanException) as exc:
+            with self.assertRaises(ConanInvalidSystemRequirements) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)

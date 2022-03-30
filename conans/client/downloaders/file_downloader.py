@@ -26,17 +26,18 @@ def check_checksum(file_path, md5, sha1, sha256):
 
 class FileDownloader(object):
 
-    def __init__(self, requester, output, verify, config):
+    def __init__(self, requester, output, verify, config_retry, config_retry_wait):
         self._output = output
         self._requester = requester
         self._verify_ssl = verify
-        self._config = config
+        self._config_retry = config_retry
+        self._config_retry_wait = config_retry_wait
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, md5=None, sha1=None, sha256=None):
-        retry = retry if retry is not None else self._config.retry
+        retry = retry if retry is not None else self._config_retry
         retry = retry if retry is not None else 2
-        retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else self._config_retry_wait
         retry_wait = retry_wait if retry_wait is not None else 0
 
         if file_path and not os.path.isabs(file_path):

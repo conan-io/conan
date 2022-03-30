@@ -247,3 +247,18 @@ class TestValidate(unittest.TestCase):
                       "exist for this configuration):", client.out)
         self.assertIn("dep/0.1: Invalid ID: Windows not supported", client.out)
         self.assertIn("pkg/0.1: Invalid ID: Invalid transitive dependencies", client.out)
+
+    def test_validate_export(self):
+        # https://github.com/conan-io/conan/issues/9797
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.errors import ConanInvalidConfiguration
+
+            class TestConan(ConanFile):
+                def validate(self):
+                    raise ConanInvalidConfiguration("never ever")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("export-pkg . test/1.0@", assert_error=True)
+        assert "Invalid ID: never ever" in c.out

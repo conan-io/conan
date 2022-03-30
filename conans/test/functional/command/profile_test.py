@@ -23,9 +23,11 @@ class ProfileTest(unittest.TestCase):
         client.run("profile new myprofile --detect")
         client.run("profile update options.Pkg:myoption=123 myprofile")
         client.run("profile update env.Pkg2:myenv=123 myprofile")
+        client.run("profile update conf.tools.ninja:jobs=10 myprofile")
         client.run("profile show myprofile")
         self.assertIn("Pkg:myoption=123", client.out)
         self.assertIn("Pkg2:myenv=123", client.out)
+        self.assertIn("tools.ninja:jobs=10", client.out)
         profile = str(client.out).splitlines()[2:]
         client.save({"conanfile.txt": "",
                      "mylocalprofile": "\n".join(profile)})
@@ -75,7 +77,8 @@ class ProfileTest(unittest.TestCase):
                        options=[("MyOption", "32")])
         create_profile(client.cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
-                            ("CC", "/path/tomy/gcc_build")])
+                            ("CC", "/path/tomy/gcc_build")],
+                       conf=["tools.ninja:jobs=10", "tools.gnu.make:jobs=20"])
         client.run("profile show profile1")
         self.assertIn("[settings]\nos=Windows", client.out)
         self.assertIn("MyOption=32", client.out)
@@ -83,6 +86,8 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("CC=/path/tomy/gcc_build", client.out)
         self.assertIn("CXX=/path/tomy/g++_build", client.out)
         self.assertIn("package:VAR=value", client.out)
+        self.assertIn("tools.ninja:jobs=10", client.out)
+        self.assertIn("tools.gnu.make:jobs=20", client.out)
 
     def test_profile_update_and_get(self):
         client = TestClient()
@@ -131,6 +136,18 @@ class ProfileTest(unittest.TestCase):
         client.run("profile get env.OneMyEnv ./MyProfile")
         self.assertEqual(client.out, "MYVALUe\n")
 
+        client.run("profile update conf.tools.ninja:jobs=10 ./MyProfile")
+        self.assertIn("[conf]\ntools.ninja:jobs=10", load(pr_path))
+
+        client.run("profile get conf.tools.ninja:jobs ./MyProfile")
+        self.assertEqual(client.out, "10\n")
+
+        client.run("profile update conf.tools.gnu.make:jobs=20 ./MyProfile")
+        self.assertIn("tools.gnu.make:jobs=20", load(pr_path))
+
+        client.run("profile get conf.tools.gnu.make:jobs ./MyProfile")
+        self.assertEqual(client.out, "20\n")
+
         # Now try the remove
 
         client.run("profile remove settings.os ./MyProfile")
@@ -147,6 +164,10 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("Package:MyOption", load(pr_path))
         self.assertIn("Package:OtherOption", load(pr_path))
 
+        client.run("profile remove conf.tools.gnu.make:jobs ./MyProfile")
+        self.assertNotIn("tools.gnu.make:jobs", load(pr_path))
+        self.assertIn("tools.ninja:jobs", load(pr_path))
+
         client.run("profile remove env.OneMyEnv ./MyProfile")
         self.assertNotIn("OneMyEnv", load(pr_path))
 
@@ -159,6 +180,9 @@ class ProfileTest(unittest.TestCase):
 
         client.run("profile remove env.foo ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.out)
+
+        client.run("profile remove conf.MyConf ./MyProfile", assert_error=True)
+        self.assertIn("Profile key 'conf.MyConf' doesn't exist", client.out)
 
     def test_profile_update_env(self):
         client = TestClient()
@@ -238,7 +262,6 @@ class ProfileTest(unittest.TestCase):
 
 
 class DetectCompilersTest(unittest.TestCase):
-    @pytest.mark.tool_compiler
     def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",

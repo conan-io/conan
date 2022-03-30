@@ -19,7 +19,7 @@ from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
-from conans.util.files import list_folder_subdirs, load
+from conans.util.files import list_folder_subdirs, load, save_files
 from conans.util.files import save
 from conans import __version__ as client_version
 
@@ -36,6 +36,8 @@ conan_vars1 = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
+[recipe_hash]
+  hash1
 '''
 
 conan_vars1b = '''
@@ -46,6 +48,8 @@ conan_vars1b = '''
     compiler.libcxx=libstdc++
 [options]
     use_Qt=True
+[recipe_hash]
+  hash1
 '''
 
 conan_vars1c = '''
@@ -79,6 +83,8 @@ conan_vars1d = '''
     libc.version=2.29
 [options]
     use_Qt=True
+[recipe_hash]
+  hash1
 '''
 
 conan_vars2 = '''
@@ -88,6 +94,8 @@ conan_vars2 = '''
     arch=x64
     os=Ubuntu
     version=15.04
+[recipe_hash]
+  hash1
 '''
 
 conan_vars3 = '''
@@ -96,6 +104,8 @@ conan_vars3 = '''
     USE_CONFIG=False
 [settings]
     os=Darwin
+[recipe_hash]
+  hash1
 '''
 
 conan_vars4 = """[settings]
@@ -108,26 +118,36 @@ conan_vars4 = """[settings]
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_winx86 = """[settings]
   os_build=Windows
   arch_build=x86
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_winx64 = """[settings]
   os_build=Windows
   arch_build=x86_64
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_linx86 = """[settings]
   os_build=Linux
   arch_build=x86
+[recipe_hash]
+  hash1
 """
 
 conan_vars_tool_linx64 = """[settings]
   os_build=Linux
   arch_build=x86_64
+[recipe_hash]
+  hash1
 """
 
 
@@ -1580,3 +1600,42 @@ class SearchRemoteAllTestCase(unittest.TestCase):
         self.assertIn("all: http://fake", self.client.out)
         self.client.run("search -r {} {}".format(self.remote_name, self.reference))
         self.assertIn("Existing recipe in remote 'all':", self.client.out)  # Searching in 'all'
+
+
+class TestMixConan1and2:
+    def test_mix(self):
+        """ what happens when the server contains binaries for both Conan 1.X and 2.0?
+        Only binaries from 1.X should be shown when "conan search <ref>"
+        """
+        c = TestClient(default_server_user=True)
+        server_store = c.servers["default"].server_store
+
+        c.run("search * -r=default")
+        assert "There are no packages" in c.out
+
+        ref = ConanFileReference.loads("pkg/0.1#rev1")
+        dest_path = server_store.export(ref)
+        save_files(files={"conanfile.py": str(GenConanfile())}, path=dest_path)
+        manifest = FileTreeManifest.create(dest_path)
+        manifest.save(dest_path)
+        server_store.update_last_revision(ref)
+        c.run("search * -r=default")
+        assert "pkg/0.1" in c.out
+        c.run("search pkg/0.1@ -r=default")
+        assert "There are no packages for reference" in c.out
+
+        # Create a binary for 1.X
+        def create_binary(package_id, conaninfo):
+            pref = PackageReference(ref, package_id, "prev1")
+            package_path = server_store.package(pref)
+            save_files(files={"conaninfo.txt": conaninfo}, path=package_path)
+            package_manifest = FileTreeManifest.create(dest_path)
+            package_manifest.save(dest_path)
+            server_store.update_last_package_revision(pref)
+
+        create_binary("package_id_1X", "[recipe_hash]\nhash1")
+        create_binary("package_id_20", "")
+
+        c.run("search pkg/0.1@ -r=default")
+        assert "Package_ID: package_id_1X" in c.out
+        assert "package_id_20" not in c.out

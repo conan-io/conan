@@ -314,6 +314,146 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
 
+    def test_override(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+
+        # The original (unresolved) graph shows the requirements how they are
+        # specified in the package recipes.  The graph contains conflicts:
+        # There are three different versions of PkgA and two different versions
+        # of PkgB.
+        #
+        # The overridden (resolved) graph shows the requirements after
+        # conflicts have been resolved by overriding required package versions
+        # in package PkgE.  This graph contains only one version per package.
+        #
+        # Original (unresolved) graph:       :  Overridden (resolved) graph:
+        # ============================       :  ============================
+        #                                    :
+        # PkgA/0.1   PkgA/0.2    PkgA/0.3    :                       PkgA/0.3
+        #    |          |           |\____   :       __________________/|
+        #    |          |           |     \  :      /                   |
+        # PkgB/0.1      |        PkgB/0.3 |  :  PkgB/0.1                |
+        #    |\____     | _________/      |  :     |\_______   ________/|
+        #    |     \    |/                |  :     |        \ /         |
+        #    |     | PkgC/0.2             |  :     |      PkgC/0.2      |
+        #    |     |    |                 |  :     |         |          |
+        #    |     |    |                 |  :     |         |          |
+        # PkgD/0.1 |    |                 |  :  PkgD/0.1     |          |
+        #    | ___/____/_________________/   :     | _______/__________/
+        #    |/                              :     |/
+        # PkgE/0.1                           :  PkgE/0.1
+
+        # PkgA/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.1!",
+        })
+        client.run("export . PkgA/0.1@user/channel")
+
+        # PkgA/0.2
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.2!",
+        })
+        client.run("export . PkgA/0.2@user/channel")
+
+        # PkgA/0.3
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.3!",
+        })
+        client.run("export . PkgA/0.3@user/channel")
+
+        # PkgB/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
+            "myfile.txt": "This is PkgB/0.1!",
+        })
+        client.run("export . PkgB/0.1@user/channel")
+
+        # PkgB/0.3
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.3@user/channel"'),
+            "myfile.txt": "This is PkgB/0.3!",
+        })
+        client.run("export . PkgB/0.3@user/channel")
+
+        # PkgC/0.2
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.dedent("""
+                # This comment line is required to yield the correct indentation
+                    def requirements(self):
+                        self.requires("PkgA/0.2@user/channel", override=True)
+                        self.requires("PkgB/0.3@user/channel", override=False)
+                """)),
+            "myfile.txt": "This is PkgC/0.2!",
+        })
+        client.run("export . PkgC/0.2@user/channel")
+
+        # PkgD/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"'),
+            "myfile.txt": "This is PkgD/0.1!",
+        })
+        client.run("export . PkgD/0.1@user/channel")
+
+        # PkgE/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.dedent("""
+                # This comment line is required to yield the correct indentation
+                    def requirements(self):
+                        self.requires("PkgA/0.3@user/channel", override=True)
+                        self.requires("PkgB/0.1@user/channel", override=True)
+                        self.requires("PkgC/0.2@user/channel", override=False)
+                        self.requires("PkgD/0.1@user/channel", override=False)
+                """)),
+            "myfile.txt": "This is PkgE/0.1!",
+        })
+        client.run("export . PkgE/0.1@user/channel")
+
+        client.run("lock create --reference=PkgE/0.1@user/channel --lockfile-out=master.lock")
+
+        while True:
+            client.run("lock build-order master.lock --json=build_order.json")
+            json_file = os.path.join(client.current_folder, "build_order.json")
+            to_build = json.loads(load(json_file))
+            if not to_build:
+                break
+            ref, _, _, _ = to_build[0].pop(0)
+            client.run("lock create --reference=%s --lockfile=master.lock "
+                       "--lockfile-out=derived.lock" % ref)
+            client.run("install %s --build=%s --lockfile=derived.lock "
+                       "--lockfile-out=update.lock" % (ref, ref))
+            client.run("lock update master.lock update.lock")
+
+        client.run("install PkgE/0.1@user/channel --lockfile=master.lock")
+        filtered_output = [
+            line for line in str(client.out).splitlines()
+            if any(pattern in line for pattern in ["SELF FILE", "DEP FILE"])
+        ]
+        expected_output = [
+            "PkgA/0.3@user/channel: SELF FILE: This is PkgA/0.3!",
+            "PkgB/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgB/0.1@user/channel: SELF FILE: This is PkgB/0.1!",
+            "PkgC/0.2@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgC/0.2@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgC/0.2@user/channel: SELF FILE: This is PkgC/0.2!",
+            "PkgD/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgD/0.1@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgD/0.1@user/channel: SELF FILE: This is PkgD/0.1!",
+            "PkgE/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgE/0.1@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgE/0.1@user/channel: DEP FILE PkgC: This is PkgC/0.2!",
+            "PkgE/0.1@user/channel: DEP FILE PkgD: This is PkgD/0.1!",
+            "PkgE/0.1@user/channel: SELF FILE: This is PkgE/0.1!",
+        ]
+        self.assertListEqual(
+            sorted(filtered_output),
+            sorted(expected_output),
+            msg = "Original client output:\n%s" % client.out,
+        )
+
     def test_options(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -703,6 +843,128 @@ class CIBuildRequiresTest(unittest.TestCase):
         self.assertNotIn("br/0.", client.out)
 
         client.run("install PkgD/0.1@user/channel --build -pr=myprofile")
+        self.assertIn("br/0.2", client.out)
+        self.assertNotIn("br/0.1", client.out)
+
+
+class CIBuildRequiresTwoProfilesTest(unittest.TestCase):
+    def test_version_ranges(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        myprofile_host = textwrap.dedent("""
+            [settings]
+            os=Linux
+            [build_requires]
+            br/[>=0.1]
+            """)
+        myprofile_build = textwrap.dedent("""
+           [settings]
+           os=Windows
+           """)
+        conanfile_os = textwrap.dedent("""
+            from conans import ConanFile, load
+            from conans.tools import save
+            import os
+            class Pkg(ConanFile):
+                settings = "os"
+                {requires}
+
+                keep_imports = True
+                def imports(self):
+                    self.copy("myfile.txt", folder=True)
+                def package(self):
+                    save(os.path.join(self.package_folder, "myfile.txt"),
+                         "%s %s" % (self.name, self.settings.os))
+                    self.copy("*myfile.txt")
+                def package_info(self):
+                    self.output.info("MYOS=%s!!!" % self.settings.os)
+                    self.output.info("SELF FILE: %s"
+                        % load(os.path.join(self.package_folder, "myfile.txt")))
+                    for d in os.listdir(self.package_folder):
+                        p = os.path.join(self.package_folder, d, "myfile.txt")
+                        if os.path.isfile(p):
+                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
+                """)
+        files = {
+            "profile_host": myprofile_host,
+            "profile_build": myprofile_build,
+            "br/conanfile.py": conanfile_os.format(requires=""),
+            "pkga/conanfile.py": conanfile_os.format(requires=""),
+            "pkgb/conanfile.py": conanfile_os.format(requires='requires="PkgA/[*]"'),
+            "pkgc/conanfile.py": conanfile_os.format(requires='requires="PkgB/[*]"'),
+            "pkgd/conanfile.py": conanfile_os.format(requires='requires="PkgC/[*]"'),
+        }
+        client.save(files)
+        # Note the creating of BR is in the BUILD profile
+        client.run("create br br/0.1@ --build-require -pr:h=profile_host -pr:b=profile_build")
+        assert "br/0.1: SELF FILE: br Linux" not in client.out
+        client.run("create pkga PkgA/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgb PkgB/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgc PkgC/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgd PkgD/0.1@ -pr:h=profile_host -pr:b=profile_build")
+
+        self.assertIn("PkgD/0.1: SELF FILE: PkgD Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgA: PkgA Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgB: PkgB Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgC: PkgC Linux", client.out)
+
+        # Go back to main orchestrator
+        client.run("lock create --reference=PkgD/0.1@ --build -pr:h=profile_host -pr:b=profile_build"
+                   " --lockfile-out=conan.lock")
+
+        # Do a change in br
+        client.run("create br br/0.2@ ")
+
+        client.run("lock build-order conan.lock --json=build_order.json")
+        self.assertIn("br/0.1", client.out)
+        self.assertNotIn("br/0.2", client.out)
+        master_lockfile = client.load("conan.lock")
+
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+        if client.cache.config.revisions_enabled:
+            build_order = [[['br/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                             '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '5']],
+                           [['PkgA/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                             'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '4']],
+                           [['PkgB/0.1@#4b1da86739946fe16a9545d1f6bc9022',
+                             '4a87f1e30266a1c1c685c0904cfb137a3dba11c7', 'host', '3']],
+                           [['PkgC/0.1@#3e1048668b2a795f6742d04971f11a7d',
+                             '50ad117314ca51a58e427a26f264e27e79b94cd4', 'host', '2']],
+                           [['PkgD/0.1@#e6cc0ca095ca32bba1a6dff0af6f4eb3',
+                             'e66cc39a683367fdd17218bdbab7d6e95c0414e1', 'host', '1']]]
+        else:
+            build_order = [[['br/0.1@', '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '5']],
+                           [['PkgA/0.1@', 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '4']],
+                           [['PkgB/0.1@', '4a87f1e30266a1c1c685c0904cfb137a3dba11c7', 'host', '3']],
+                           [['PkgC/0.1@', '50ad117314ca51a58e427a26f264e27e79b94cd4', 'host', '2']],
+                           [['PkgD/0.1@', 'e66cc39a683367fdd17218bdbab7d6e95c0414e1', 'host', '1']]]
+
+        self.assertEqual(to_build, build_order)
+        lock_fileaux = master_lockfile
+        while to_build:
+            for ref, _, build, _ in to_build[0]:
+                client_aux = TestClient(cache_folder=client.cache_folder)
+                client_aux.save({LOCKFILE: lock_fileaux})
+                is_build_require = "--build-require" if build == "build" else ""
+                client_aux.run("install %s --build=%s --lockfile=conan.lock "
+                               "--lockfile-out=conan.lock %s" % (ref, ref, is_build_require))
+                assert "br/0.1: SELF FILE: br Windows" in client_aux.out
+                self.assertIn("br/0.1", client_aux.out)
+                self.assertNotIn("br/0.2", client_aux.out)
+                lock_fileaux = client_aux.load(LOCKFILE)
+                client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
+                client.run("lock update conan.lock new_lock/conan.lock")
+
+            client.run("lock build-order conan.lock --json=build_order.json")
+            lock_fileaux = client.load(LOCKFILE)
+            to_build = json.loads(client.load("build_order.json"))
+
+        client.run("install PkgD/0.1@ --lockfile=conan.lock")
+        # No build require at all
+        self.assertNotIn("br/0.", client.out)
+
+        client.run("install PkgD/0.1@ --build  -pr:h=profile_host -pr:b=profile_build")
         self.assertIn("br/0.2", client.out)
         self.assertNotIn("br/0.1", client.out)
 

@@ -13,7 +13,7 @@ def _get_profile_keys(key):
     tmp = key.split(".")
     first_key = tmp[0]
     rest_key = ".".join(tmp[1:]) if len(tmp) > 1 else None
-    if first_key not in ("build_requires", "settings", "options", "env"):
+    if first_key not in ("build_requires", "settings", "options", "env", "conf"):
         raise ConanException("Invalid specified key: %s" % key)
 
     return first_key, rest_key
@@ -67,6 +67,8 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
         profile.options.update(tmp)
     elif first_key == "env":
         profile.env_values.update_replace(rest_key, value)
+    elif first_key == "conf":
+        profile.conf.update(rest_key, value)
     elif first_key == "build_requires":
         raise ConanException("Edit the profile manually to change the build_requires")
 
@@ -89,6 +91,8 @@ def cmd_profile_get(profile_name, key, cache_profiles_path):
             if ":" in rest_key:
                 package, var = rest_key.split(":")
             return profile.env_values.data[package][var]
+        elif first_key == "conf":
+            return profile.conf[rest_key]
         elif first_key == "build_requires":
             raise ConanException("List the profile manually to see the build_requires")
     except KeyError:
@@ -112,6 +116,8 @@ def cmd_profile_delete_key(profile_name, key, cache_profiles_path):
             profile.options.remove(name, package)
         elif first_key == "env":
             profile.env_values.remove(name, package)
+        elif first_key == "conf":
+            del profile.conf[rest_key]
         elif first_key == "build_requires":
             raise ConanException("Edit the profile manually to delete a build_require")
     except KeyError:

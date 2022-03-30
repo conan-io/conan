@@ -4,10 +4,8 @@ import textwrap
 import unittest
 from datetime import datetime
 
-
 from conans import __version__ as client_version
-
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save, load
 
 
@@ -204,6 +202,7 @@ class InfoTest(unittest.TestCase):
             return "\n".join([line for line in str(output).splitlines()
                               if not line.strip().startswith("Creation date") and
                               not line.strip().startswith("ID") and
+                              not line.strip().startswith("Context") and
                               not line.strip().startswith("BuildID") and
                               not line.strip().startswith("export_folder") and
                               not line.strip().startswith("build_folder") and
@@ -404,7 +403,7 @@ class InfoTest2(unittest.TestCase):
                    assert_error=True)  # Re-uses debug from MyInstall folder
 
         self.assertIn("--install-folder cannot be used together with a"
-                      " host profile (-s, -o, -e or -pr)", client.out)
+                      " host profile (-s, -o, -e, -pr or -c)", client.out)
 
     def test_graph_html_embedded_visj(self):
         client = TestClient()
@@ -657,3 +656,67 @@ def test_scm_info():
     info_json = json.loads(file_json)
     node = info_json[0]
     assert node["scm"] == {"type": "git", "url": "some-url/path", "revision": "some commit hash"}
+
+
+class TestInfoContext:
+    # https://github.com/conan-io/conan/issues/9121
+
+    def test_context_info(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run("info .")
+        assert "Context: host" in client.out
+
+        client.run("info . --json=file.json")
+        info = json.loads(client.load("file.json"))
+        assert info[0]["context"] == "host"
+
+    def test_context_build(self):
+        client = TestClient()
+        client.save({"cmake/conanfile.py": GenConanfile(),
+                     "pkg/conanfile.py": GenConanfile().with_build_requires("cmake/1.0")})
+
+        client.run("create cmake cmake/1.0@")
+        client.run("export pkg pkg/1.0@")
+
+        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --dry-build")
+        assert "cmake/1.0\n"\
+               "    ID: {}\n"\
+               "    BuildID: None\n"\
+               "    Context: build".format(NO_SETTINGS_PACKAGE_ID) in client.out
+
+        assert "pkg/1.0\n" \
+               "    ID: {}\n" \
+               "    BuildID: None\n" \
+               "    Context: host".format(NO_SETTINGS_PACKAGE_ID) in client.out
+
+        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --dry-build --json=file.json")
+        info = json.loads(client.load("file.json"))
+        assert info[0]["reference"] == "cmake/1.0"
+        assert info[0]["context"] == "build"
+        assert info[1]["reference"] == "pkg/1.0"
+        assert info[1]["context"] == "host"
+
+
+class TestInfoPythonRequires:
+    # https://github.com/conan-io/conan/issues/9277
+
+    def test_python_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . tool/0.1@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                python_requires = "tool/0.1"
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run("info .")
+        assert "Python-requires:" in client.out
+        assert "tool/0.1#f3367e0e7d170aa12abccb175fee5f97" in client.out
+
+        client.run("info . --json=file.json")
+        info = json.loads(client.load("file.json"))
+        assert info[0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']

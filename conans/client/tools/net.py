@@ -87,11 +87,12 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
+    download_cache = config.download_cache if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, config=config,
-                       user_download=True, use_cache=bool(config and checksum), url=file_url,
+        run_downloader(requester=requester, output=out, verify=verify,
+                       user_download=True, download_cache=download_cache, url=file_url,
                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")

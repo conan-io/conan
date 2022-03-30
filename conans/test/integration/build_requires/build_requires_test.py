@@ -451,3 +451,79 @@ class package(ConanFile):
                     .with_build_requires("harfbuzz/1.0@test/test")})
         client.run("install . --build=missing")
         self.assertIn("ZLIBS LIBS: ['myzlib']", client.out)
+
+
+def test_dependents_new_buildenv():
+    client = TestClient()
+    boost = textwrap.dedent("""
+        from conans import ConanFile
+        class Boost(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define_path("PATH", "myboostpath")
+        """)
+    other = textwrap.dedent("""
+        from conans import ConanFile
+        class Other(ConanFile):
+            requires = "boost/1.0"
+            def package_info(self):
+                self.buildenv_info.append_path("PATH", "myotherpath")
+                self.buildenv_info.prepend_path("PATH", "myotherprepend")
+        """)
+    consumer = textwrap.dedent("""
+       from conans import ConanFile
+       from conan.tools.env import VirtualBuildEnv
+       import os
+       class Lib(ConanFile):
+           build_requires = {}
+           def generate(self):
+               build_env = VirtualBuildEnv(self).vars()
+               with build_env.apply():
+                   self.output.info("LIB PATH %s" % os.getenv("PATH"))
+       """)
+    client.save({"boost/conanfile.py": boost,
+                 "other/conanfile.py": other,
+                 "consumer/conanfile.py": consumer.format('"boost/1.0", "other/1.0"'),
+                 "profile_define": "[buildenv]\nPATH=(path)profilepath",
+                 "profile_append": "[buildenv]\nPATH+=(path)profilepath",
+                 "profile_prepend": "[buildenv]\nPATH=+(path)profilepath"})
+    client.run("create boost boost/1.0@")
+    client.run("create other other/1.0@")
+    client.run("install consumer")
+    result = os.pathsep.join(["myotherprepend", "myboostpath", "myotherpath"])
+    assert "LIB PATH {}".format(result) in client.out
+
+    # Now test if we declare in different order, still topological order should be respected
+    client.save({"consumer/conanfile.py": consumer.format('"other/1.0", "boost/1.0"')})
+    client.run("install consumer")
+    assert "LIB PATH {}".format(result) in client.out
+
+    client.run("install consumer -pr=profile_define")
+    assert "LIB PATH profilepath" in client.out
+    client.run("install consumer -pr=profile_append")
+    result = os.pathsep.join(["myotherprepend", "myboostpath", "myotherpath", "profilepath"])
+    assert "LIB PATH {}".format(result) in client.out
+    client.run("install consumer -pr=profile_prepend")
+    result = os.pathsep.join(["profilepath", "myotherprepend", "myboostpath", "myotherpath"])
+    assert "LIB PATH {}".format(result) in client.out
+
+
+def test_tool_requires_conanfile_txt():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+
+    build_req = textwrap.dedent("""
+        from conans import ConanFile
+        class BuildReqConan(ConanFile):
+            pass
+        """)
+
+    client.save({"conanfile.py": build_req})
+    client.run("export . build_req/1.0@test/test")
+
+    consumer = textwrap.dedent("""
+                [tool_requires]
+                build_req/1.0@test/test
+            """)
+    client.save({"conanfile.txt": consumer}, clean_first=True)
+    client.run("install . --build=missing")
+    assert "Applying build-requirement: build_req/1.0@test/test" in client.out

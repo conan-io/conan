@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 from textwrap import dedent
 
@@ -14,7 +15,7 @@ from conans.errors import ConanException
 from conans.model.workspace import Workspace
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load, save
+from conans.util.files import save
 
 conanfile_build = """from conans import ConanFile, CMake
 class Pkg(ConanFile):
@@ -155,7 +156,6 @@ class WorkspaceTest(unittest.TestCase):
                                    "does not define path"):
             Workspace(path, None)
 
-    @pytest.mark.tool_compiler
     def test_simple(self):
         client = TestClient()
 
@@ -192,7 +192,7 @@ class WorkspaceTest(unittest.TestCase):
             for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
-    @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
+    @parameterized.expand([("csv",), ("list",), ("abbreviated_list",)])
     @pytest.mark.tool_cmake
     def test_multiple_roots(self, root_attribute_format):
         # https://github.com/conan-io/conan/issues/4720
@@ -245,7 +245,6 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
-    @pytest.mark.tool_compiler
     def test_transitivity(self):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
@@ -809,7 +808,6 @@ class Pkg(ConanFile):
         conanbuildinfo = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
-    @pytest.mark.tool_compiler
     def test_per_package_layout(self):
         client = TestClient()
 
@@ -850,11 +848,10 @@ class Pkg(ConanFile):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
 
-        cmake = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
-        self.assertIn("myincludeC", cmake)
-        self.assertIn("myincludeB", cmake)
+        conanbuildcmake = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
+        self.assertIn("myincludeC", conanbuildcmake)
+        self.assertIn("myincludeB", conanbuildcmake)
 
-    @pytest.mark.tool_compiler
     def test_generators(self):
         client = TestClient()
 
@@ -1063,8 +1060,8 @@ class Pkg(ConanFile):
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})
-        client.run(
-            "workspace install conanws.yml --install-folder=ws_install --build Tool/0.1@user/testing")
+        client.run("workspace install conanws.yml --install-folder=ws_install "
+                   "--build Tool/0.1@user/testing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
                                                     "conanworkspace.cmake")))
 
@@ -1072,3 +1069,66 @@ class Pkg(ConanFile):
         client = TestClient()
         client.run("workspace", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+
+def test_error_imports():
+    # https://github.com/conan-io/conan/issues/9263
+    c = TestClient()
+    conanws = dedent("""
+       editables:
+           liba/0.1:
+               path: liba
+           libb/0.1:
+               path: libb
+       layout: layout
+       root: libb/0.1
+       """)
+    libb = textwrap.dedent("""
+        from conans import ConanFile
+        class LibB(ConanFile):
+            requires = "liba/0.1"
+            generator = "cmake"
+
+            def imports(self):
+                self.copy("*.txt")
+            """)
+    layout = dedent("""
+        [build_folder]
+        build
+        """)
+    c.save({"liba/conanfile.py": GenConanfile(),
+            "liba/filea.txt": "HelloA!",
+            "libb/conanfile.py": libb,
+            "conanws.yml": conanws,
+            "layout": layout})
+    c.run("workspace install conanws.yml")
+    assert c.load("libb/build/filea.txt") == "HelloA!"
+
+
+def test_error_imports_modern():
+    # https://github.com/conan-io/conan/issues/9263
+    c = TestClient()
+    conanws = dedent("""
+       editables:
+           liba/0.1:
+               path: liba
+           libb/0.1:
+               path: libb
+       root: libb/0.1
+       """)
+    libb = textwrap.dedent("""
+        from conans import ConanFile
+        class LibB(ConanFile):
+            requires = "liba/0.1"
+            generator = "cmake"
+            def layout(self):
+                pass
+            def imports(self):
+                self.copy("*.txt")
+            """)
+    c.save({"liba/conanfile.py": GenConanfile(),
+            "liba/filea.txt": "HelloA!",
+            "libb/conanfile.py": libb,
+            "conanws.yml": conanws})
+    c.run("workspace install conanws.yml")
+    assert c.load("libb/filea.txt") == "HelloA!"

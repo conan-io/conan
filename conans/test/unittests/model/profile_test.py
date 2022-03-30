@@ -119,17 +119,17 @@ def test_update_build_requires():
     profile2 = Profile()
     profile2.build_requires["*"] = ["zlib/1.2.8"]
 
-    profile.compose(profile2)
+    profile.compose_profile(profile2)
     assert profile.build_requires["*"] == ["zlib/1.2.8"]
 
     profile3 = Profile()
     profile3.build_requires["*"] = ["zlib/1.2.11"]
 
-    profile.compose(profile3)
+    profile.compose_profile(profile3)
     assert profile.build_requires["*"] == ["zlib/1.2.11"]
 
     profile4 = Profile()
     profile4.build_requires["*"] = ["cmake/2.7"]
 
-    profile.compose(profile4)
+    profile.compose_profile(profile4)
     assert profile.build_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]

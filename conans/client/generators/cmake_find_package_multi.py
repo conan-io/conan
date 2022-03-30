@@ -31,8 +31,8 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         """)
 
     targets_template = textwrap.dedent("""
-        if(NOT TARGET {name}::{name})
-            add_library({name}::{name} INTERFACE IMPORTED)
+        if(NOT TARGET {namespace}::{name})
+            add_library({namespace}::{name} INTERFACE IMPORTED)
         endif()
 
         # Load the debug and release library finders
@@ -47,23 +47,23 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     # This template takes the "name" of the target name::name and configs = ["Release", "Debug"..]
     target_properties = Template("""
 # Assign target properties
-set_property(TARGET {{name}}::{{name}}
+set_property(TARGET {{namespace}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
                                     ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
              {%- endfor %})
-set_property(TARGET {{name}}::{{name}}
+set_property(TARGET {{namespace}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>
              {%- endfor %})
-set_property(TARGET {{name}}::{{name}}
+set_property(TARGET {{namespace}}::{{name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>
              {%- endfor %})
-set_property(TARGET {{name}}::{{name}}
+set_property(TARGET {{namespace}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
@@ -166,14 +166,14 @@ endforeach()
     components_targets_tpl = Template(textwrap.dedent("""\
         {%- for comp_name, comp in components %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
-            add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ comp_name }})
+            add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
         endif()
 
         {%- endfor %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-            add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+            add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
         endif()
 
         # Load the debug and release library finders
@@ -184,9 +184,9 @@ endforeach()
             include(${f})
         endforeach()
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+        if({{ pkg_filename }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_filename+'_FIND_COMPONENTS}' }})
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -237,20 +237,20 @@ endforeach()
 
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
                         {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS_LIST', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:
                          {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config)}}
@@ -263,7 +263,7 @@ endforeach()
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+            set_property(TARGET {{ namespace }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                          {%- for config in configs %}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
@@ -312,6 +312,7 @@ endforeach()
             self._validate_components(cpp_info)
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
+            pkg_namespace = pkg_findname
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
@@ -329,11 +330,12 @@ endforeach()
                 ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
+                    namespace=pkg_namespace,
                     version=cpp_info.version,
                     public_deps_names=pkg_public_deps_filenames
                 )
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
-                    filename=pkg_filename, name=pkg_findname)
+                    filename=pkg_filename, name=pkg_findname, namespace=pkg_namespace)
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
@@ -347,7 +349,7 @@ endforeach()
                 pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
-                pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+                pkg_components = " ".join(["{p}::{c}".format(p=pkg_namespace, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
                 global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                                  build_type_suffix=build_type_suffix,
@@ -364,6 +366,7 @@ endforeach()
                 ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = variables
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
+                    namespace=pkg_namespace,
                     pkg_filename=pkg_filename,
                     components=components,
                     build_type=build_type
@@ -371,6 +374,7 @@ endforeach()
                 ret["{}Targets.cmake".format(pkg_filename)] = targets
                 target_config = self.components_config_tpl.render(
                     pkg_name=pkg_findname,
+                    namespace=pkg_namespace,
                     pkg_filename=pkg_filename,
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
@@ -392,7 +396,7 @@ endforeach()
         else:
             return "{}ConfigVersion.cmake".format(pkg_filename)
 
-    def _config(self, filename, name, version, public_deps_names):
+    def _config(self, filename, name, namespace, version, public_deps_names):
         # Builds the XXXConfig.cmake file for one package
 
         # The common macros
@@ -403,7 +407,8 @@ endforeach()
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.render(name=name, configs=self.configurations)
+        targets_props = self.target_properties.render(name=name, namespace=namespace,
+                                                      configs=self.configurations)
         # Add build modules
         build_modules_block = self.build_modules.render(name=name, configs=self.configurations)
         # The find_dependencies_block

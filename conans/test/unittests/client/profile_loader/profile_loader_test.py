@@ -7,6 +7,7 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
@@ -448,3 +449,31 @@ def test_profile_load_relative_path_pardir():
                                       default_profile_folder)
     assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
     assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+
+
+def test_profile_buildenv():
+    tmp = temp_folder()
+    txt = textwrap.dedent("""
+        [buildenv]
+        MyVar1=My Value; 11
+        MyVar1+=MyValue12
+        MyPath1=(path)/some/path11
+        MyPath1+=(path)/other path/path12
+        """)
+    profile, _ = get_profile(tmp, txt)
+    buildenv = profile.buildenv
+    env = buildenv.get_profile_env(None)
+    conanfile = ConanFileMock()
+    env_vars = env.vars(conanfile)
+    assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
+    assert env_vars.get("MyPath1") == "/some/path11{}/other path/path12".format(os.pathsep)
+
+
+def test_profile_tool_requires():
+    tmp = temp_folder()
+    txt = textwrap.dedent("""
+        [tool_requires]
+        tool/0.1
+        """)
+    profile, _ = get_profile(tmp, txt)
+    assert profile.build_requires["*"] == [ConanFileReference.loads("tool/0.1")]

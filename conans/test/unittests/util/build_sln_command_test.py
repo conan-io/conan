@@ -179,6 +179,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:UseEnv=false '
                                            '/p:Platform="ARM" '
+                                           '/p:PlatformToolset="v143" '
                                            '/verbosity:minimal '
                                            '/p:ForceImportBeforeCppTargets='), command)
         path_tmp = command.split("/p:ForceImportBeforeCppTargets=")[1][1:-1]  # remove quotes

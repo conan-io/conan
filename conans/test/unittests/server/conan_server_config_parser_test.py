@@ -72,3 +72,36 @@ demo: %s
 
         server_config = ConanServerConfigParser(tmp_dir)
         self.assertEqual(server_config.public_url, "v1")
+
+    def test_custom_server_folder_path(self):
+        tmp_dir = temp_folder()
+        server_dir = os.path.join(tmp_dir, ".custom_conan_server")
+        mkdir(server_dir)
+        conf_path = os.path.join(server_dir, "server.conf")
+        server_conf = """
+[server]
+
+[write_permissions]
+
+[users]
+        """
+        save(conf_path, server_conf)
+        server_config = ConanServerConfigParser(server_dir, is_custom_path=True)
+        self.assertEqual(server_config.conan_folder, server_dir)
+
+    def test_custom_server_path_has_custom_data_path(self):
+        tmp_dir = temp_folder()
+        server_dir = os.path.join(tmp_dir, ".custom_conan_server")
+        mkdir(server_dir)
+        conf_path = os.path.join(server_dir, "server.conf")
+        server_conf = """
+[server]
+disk_storage_path: ./custom_data
+
+[write_permissions]
+
+[users]
+        """
+        save(conf_path, server_conf)
+        server_config = ConanServerConfigParser(server_dir, is_custom_path=True)
+        self.assertEqual(server_config.disk_storage_path, os.path.join(server_dir, "custom_data"))

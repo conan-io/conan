@@ -587,15 +587,24 @@ class ConanInfo(object):
         runtime_type = compatible.settings.compiler.runtime_type
 
         compatible.settings.compiler = "Visual Studio"
-        version = str(version)[:4]
-        _visuals = {'19.0': '14',
-                    '19.1': '15',
-                    '19.2': '16'}
-        compatible.settings.compiler.version = _visuals[version]
+        from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
+        visual_version = msvc_version_to_vs_ide_version(version)
+        compatible.settings.compiler.version = visual_version
         runtime = "MT" if runtime == "static" else "MD"
-        if  runtime_type == "Debug":
+        if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         compatible.settings.compiler.runtime = runtime
+        return compatible
+
+    def apple_clang_compatible(self):
+        # https://github.com/conan-io/conan/pull/10797
+        # apple-clang compiler version 13 will be compatible with 13.0
+        if not self.settings.compiler or \
+           (self.settings.compiler != "apple-clang" and self.settings.compiler.version != "13"):
+            return
+
+        compatible = self.clone()
+        compatible.settings.compiler.version = "13.0"
         return compatible
 
     def vs_toolset_compatible(self):

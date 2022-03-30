@@ -1,6 +1,9 @@
+import platform
 import textwrap
 import time
 import unittest
+
+import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -186,6 +189,7 @@ class CompatibleIDsTest(unittest.TestCase):
             [settings]
             compiler = intel
             compiler.version = 16
+            compiler.update = 311
             compiler.base = Visual Studio
             compiler.base.version = 8
             compiler.base.runtime = MD
@@ -195,10 +199,9 @@ class CompatibleIDsTest(unittest.TestCase):
                      "visual_profile": visual_profile})
         client.run("create . %s --profile visual_profile" % ref.full_str())
         client.run("install %s -pr intel_profile" % ref.full_str())
-        self.assertIn("Bye/0.1@us/ch: Main binary package '2ef6f6c768dd0f332dc252"
-                      "b72c30dee116632302' missing. Using compatible package "
-                      "'1151fe341e6b310f7645a76b4d3d524342835acc'",
-                      client.out)
+        self.assertIn("Bye/0.1@us/ch: Main binary package 'e47bdfb622243eda5b530bf2656b129862d7b47f'"
+                      " missing. Using compatible package "
+                      "'1151fe341e6b310f7645a76b4d3d524342835acc'", client.out)
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
 
     def test_wrong_base_compatible(self):
@@ -494,6 +497,64 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
+    def test_compatible_lockfile(self):
+        # https://github.com/conan-io/conan/issues/9002
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def package_id(self):
+                    if self.settings.os == "Windows":
+                        compatible_pkg = self.info.clone()
+                        compatible_pkg.settings.os = "Linux"
+                        self.compatible_packages.append(compatible_pkg)
+                def package_info(self):
+                    self.output.info("PackageInfo!: OS: %s!" % self.settings.os)
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable -s os=Linux")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
+                      " created", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
+        client.run("lock create conanfile.py -s os=Windows --lockfile-out=deps.lock")
+        client.run("install conanfile.py --lockfile=deps.lock")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("pkg/0.1@user/stable:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+
+    def test_compatible_diamond(self):
+        # https://github.com/conan-io/conan/issues/9880
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                {}
+                settings = "build_type"
+                def package_id(self):
+                    if self.settings.build_type == "Debug":
+                        compatible_pkg = self.info.clone()
+                        compatible_pkg.settings.build_type = "Release"
+                        self.compatible_packages.append(compatible_pkg)
+                """)
+
+        client.save({"pkga/conanfile.py": conanfile.format(""),
+                     "pkgb/conanfile.py": conanfile.format('requires = ("pkga/0.1", "private"), '),
+                     "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
+                     "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
+                     })
+        client.run("create pkga pkga/0.1@ -s build_type=Release")
+        client.run("create pkgb pkgb/0.1@ -s build_type=Release")
+        client.run("create pkgc pkgc/0.1@ -s build_type=Release")
+
+        client.run("install pkgd -s build_type=Debug")
+        assert "pkga/0.1: Main binary package '5a67a79dbc25fd0fa149a0eb7a20715189a0d988' missing" \
+               in client.out
+        assert "pkga/0.1:4024617540c4f240a6a5e8911b0de9ef38a11a72 - Cache" in client.out
+
 
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
@@ -502,7 +563,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
@@ -518,3 +579,28 @@ def test_msvc_visual_incompatible():
     save(client.cache.new_config_path, new_config)
     client.run("install pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
+def test_apple_clang_compatible():
+    """
+    From apple-clang version 13 we detect apple-clang version as 13 and we make
+    this compiler version compatible with 13.0
+    """
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run('create . pkg/0.1@ -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
+               '-s build_type=Release -s arch=x86_64')
+    client.run("install pkg/0.1@ -pr=profile")
+    assert "Using compatible package" in client.out

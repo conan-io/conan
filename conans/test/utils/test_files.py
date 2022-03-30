@@ -73,9 +73,9 @@ def scan_folder(folder):
     return sorted(scanned_files)
 
 
-def tgz_with_contents(files):
+def tgz_with_contents(files, output_path=None):
     folder = temp_folder()
-    file_path = os.path.join(folder, "myfile.tar.gz")
+    file_path = output_path or os.path.join(folder, "myfile.tar.gz")
 
     with open(file_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps("myfile.tar.gz", mode="w", fileobj=tgz_handle)

@@ -135,6 +135,7 @@ class CMakeFindPackageCommonMacros:
                     list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
                     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                         # Create a micro-target for each lib/a found
+                        string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
                         set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
                         if(NOT TARGET ${_LIB_NAME})
                             # Create a micro-target for each lib/a found

@@ -93,6 +93,8 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file):
+        if conan_file.build_policy == "never":  # this package has been export-pkg
+            return False
         if self.missing or self.outdated:
             return True
         if conan_file.build_policy_missing:

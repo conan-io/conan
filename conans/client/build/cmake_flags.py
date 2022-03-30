@@ -53,17 +53,27 @@ def get_generator(conanfile):
             return None
         return "Unix Makefiles"
 
+    cmake_years = {'8': '8 2005',
+                   '9': '9 2008',
+                   '10': '10 2010',
+                   '11': '11 2012',
+                   '12': '12 2013',
+                   '14': '14 2015',
+                   '15': '15 2017',
+                   '16': '16 2019',
+                   '17': '17 2022'}
+
+    if compiler == "msvc":
+        if compiler_version is None:
+            raise ConanException("compiler.version must be defined")
+        from conan.tools.microsoft.visual import vs_ide_version
+        vs_version = vs_ide_version(conanfile)
+        return "Visual Studio %s" % cmake_years[vs_version]
+
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
         major_version = version.split('.', 1)[0]
-        _visuals = {'8': '8 2005',
-                    '9': '9 2008',
-                    '10': '10 2010',
-                    '11': '11 2012',
-                    '12': '12 2013',
-                    '14': '14 2015',
-                    '15': '15 2017',
-                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
+        _visuals = cmake_years.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
