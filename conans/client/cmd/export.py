@@ -2,7 +2,7 @@ import os
 import shutil
 
 from conan.tools.files import copy
-from conan.tools.files.copy_pattern import report_copied_files
+from conan.tools.files.copy_pattern import report_files_copied
 from conans.cli.output import ScopedOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
@@ -140,7 +140,7 @@ def export_source(conanfile, destination_source_folder):
 
     output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
-    report_copied_files(copied, package_output)
+    report_files_copied(copied, package_output)
     _run_method(conanfile, "export_sources", destination_source_folder)
 
 
@@ -167,7 +167,7 @@ def export_recipe(conanfile, destination_folder):
         tmp = copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
                    excludes=excluded_exports)
         copied.extend(tmp)
-    report_copied_files(copied, package_output)
+    report_files_copied(copied, package_output)
 
     _run_method(conanfile, "export", destination_folder)
 
