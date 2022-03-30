@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -68,6 +69,8 @@ class MesonToolchain(object):
 
     def __init__(self, conanfile, backend=None):
         self._conanfile = conanfile
+        self._os = self._conanfile.settings.get_safe("os")
+
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
@@ -159,28 +162,47 @@ class MesonToolchain(object):
         self.apple_min_version_flag = []
 
         self._resolve_apple_flags()
+        self._resolve_android_cross_compilation()
 
     def _resolve_apple_flags(self):
-        conanfile = self._conanfile
-        os_ = conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
+        if not is_apple_os(self._os):
             return
-
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+        sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
         # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and os_ != "Macos":
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if not os_sdk and self._os != "Macos":
             raise ConanException("Please, specify a suitable value for os.sdk.")
 
         # Calculating the main Apple flags
-        arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
         self.apple_arch_flag = ["-arch", arch] if arch else []
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
-        self.apple_min_version_flag = [apple_min_version_flag(conanfile)]
+        self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
+
+    def _resolve_android_cross_compilation(self):
+        if not self.cross_build or not self.cross_build["host"]["system"] == "android":
+            return
+
+        ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
+        if not ndk_path:
+            raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
+                                 "configuration field.")
+
+        arch = self._conanfile.settings.get_safe("arch")
+        os_build = self.cross_build["build"]["system"]
+        ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "{}-x86_64".format(os_build), "bin")
+        android_api_level = self._conanfile.settings.get_safe("os.api_level")
+        android_target = {'armv7': 'armv7a-linux-androideabi',
+                          'armv8': 'aarch64-linux-android',
+                          'x86': 'i686-linux-android',
+                          'x86_64': 'x86_64-linux-android'}.get(arch)
+        self.c = os.path.join(ndk_bin, "{}{}-clang".format(android_target, android_api_level))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++".format(android_target, android_api_level))
+        self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
         # Now, it's time to get all the flags defined by the user
