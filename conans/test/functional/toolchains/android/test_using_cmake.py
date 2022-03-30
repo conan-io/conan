@@ -1,4 +1,6 @@
 import textwrap
+from sys import platform
+
 import pytest
 from conan.tools.cmake import CMakeToolchain
 from conans.test.utils.tools import TestClient
@@ -53,6 +55,7 @@ def client():
 
 @pytest.mark.tool_cmake
 @pytest.mark.tool_ndk
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
 def test_use_cmake_toolchain(client):
     """ This is the naive approach, we follow instruction from CMake in its documentation
         https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
