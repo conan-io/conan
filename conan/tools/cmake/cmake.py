@@ -58,7 +58,7 @@ class CMake(object):
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
         self._generator = cmake_presets["configurePresets"][0]["generator"]
         self._toolchain_file = cmake_presets["configurePresets"][0]["toolchainFile"]
-        self._cacheVariables = cmake_presets["configurePresets"][0]["cacheVariables"]
+        self._cache_variables = cmake_presets["configurePresets"][0]["cacheVariables"]
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -87,9 +87,9 @@ class CMake(object):
 
         if not variables:
             variables = {}
-        self._cacheVariables.update(variables)
+        self._cache_variables.update(variables)
 
-        arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cacheVariables.items()])
+        arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
         command = " ".join(arg_list)
