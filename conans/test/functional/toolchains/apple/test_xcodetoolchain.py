@@ -44,6 +44,7 @@ pbxproj = textwrap.dedent("""
             4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conan_config.xcconfig; sourceTree = "<group>"; };
             4130DB6727BE8D0300BDEE84 /* conantoolchain.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conantoolchain.xcconfig; sourceTree = "<group>"; };
             4130DB6827BE8D0300BDEE84 /* conandeps.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = conandeps.xcconfig; sourceTree = "<group>"; };
+            416ED66527F1FFAE00664526 /* conan_global_flags.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = conan_global_flags.xcconfig; sourceTree = "<group>"; };
     /* End PBXFileReference section */
 
     /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +86,7 @@ pbxproj = textwrap.dedent("""
             4130DB6927BE8D0D00BDEE84 /* conan */ = {
                 isa = PBXGroup;
                 children = (
+                    416ED66527F1FFAE00664526 /* conan_global_flags.xcconfig */,
                     4130DB6627BE8D0300BDEE84 /* conan_config.xcconfig */,
                     4130DB6527BE8D0300BDEE84 /* conan_hello_debug_x86_64_macosx_12_1.xcconfig */,
                     4130DB5F27BE8D0300BDEE84 /* conan_hello_release_x86_64_macosx_12_1.xcconfig */,
@@ -372,7 +374,8 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
     sdk_version = "11.3"
     settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version={} -s compiler.cppstd={} " \
-               "-s compiler.libcxx=libc++ -s os.version={} ".format(sdk_version, cppstd, min_version)
+               "-s compiler.libcxx=libc++ -s os.version={} " \
+               "-c 'tools.build:cflags=[\"-fstack-protector-strong\"]'".format(sdk_version, cppstd, min_version)
 
     client.run("create . -s build_type=Release {} --build=missing".format(settings))
     assert "main __x86_64__ defined" in client.out
@@ -380,3 +383,4 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     assert "minos {}".format(min_version) in client.out
     assert "sdk {}".format(sdk_version) in client.out
     assert "libc++" in client.out
+    assert " -fstack-protector-strong -" in client.out

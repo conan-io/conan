@@ -53,3 +53,21 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_na
         assert 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(condition, os_version) in toolchain_vars
     if cppstd:
         assert 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(condition, clang_cppstd) in toolchain_vars
+
+
+def test_toolchain_flags():
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
+    cmd = "install . -c 'tools.build:cxxflags=[\"flag1\"]' " \
+          "-c 'tools.build:defines=[\"MYDEFINITION\"]' " \
+          "-c 'tools.build:cflags=[\"flag2\"]' " \
+          "-c 'tools.build:sharedlinkflags=[\"flag3\"]' " \
+          "-c 'tools.build:exelinkflags=[\"flag4\"]'"
+    client.run(cmd)
+    conan_global_flags = client.load("conan_global_flags.xcconfig")
+    assert "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MYDEFINITION" in conan_global_flags
+    assert "OTHER_CFLAGS = $(inherited) flag2" in conan_global_flags
+    assert "OTHER_CPLUSPLUSFLAGS = $(inherited) flag1" in conan_global_flags
+    assert "OTHER_LDFLAGS = $(inherited) flag3 flag4" in conan_global_flags
+    conan_global_file = client.load("conan_config.xcconfig")
+    assert '#include "conan_global_flags.xcconfig"' in conan_global_file

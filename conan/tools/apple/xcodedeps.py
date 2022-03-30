@@ -39,14 +39,15 @@ def _xcconfig_conditional(settings):
     return "[config={}][arch={}][sdk={}]".format(settings.get_safe("build_type"), architecture, sdk_condition)
 
 
-def _add_include_to_file_or_create(filename, template, include):
+def _add_includes_to_file_or_create(filename, template, files_to_include):
     if os.path.isfile(filename):
         content = load(filename)
     else:
         content = template
 
-    if include not in content:
-        content = content + '#include "{}"\n'.format(include)
+    for include in files_to_include:
+        if include not in content:
+            content = content + '#include "{}"\n'.format(include)
 
     return content
 
@@ -194,9 +195,9 @@ class XcodeDeps(object):
 
     @property
     def _global_xconfig_content(self):
-        return _add_include_to_file_or_create(GLOBAL_XCCONFIG_FILENAME,
-                                              GLOBAL_XCCONFIG_TEMPLATE,
-                                              self.general_name)
+        return _add_includes_to_file_or_create(GLOBAL_XCCONFIG_FILENAME,
+                                               GLOBAL_XCCONFIG_TEMPLATE,
+                                               [self.general_name])
 
     def _content(self):
         result = {}
