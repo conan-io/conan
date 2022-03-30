@@ -4,7 +4,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import cppstd_flag
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
-    _add_include_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
+    _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
 from conans.util.files import save
 
 
@@ -90,17 +90,17 @@ class XcodeToolchain(object):
 
     @property
     def _agreggated_xconfig_content(self):
-        return _add_include_to_file_or_create(self._agreggated_xconfig_filename,
-                                              self._agreggated_xconfig,
-                                              self._vars_xconfig_filename)
+        return _add_includes_to_file_or_create(self._agreggated_xconfig_filename,
+                                               self._agreggated_xconfig,
+                                               [self._vars_xconfig_filename])
 
     @property
     def _global_xconfig_content(self):
-        content = _add_include_to_file_or_create(GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE,
-                                                 self._agreggated_xconfig_filename)
+        files_to_include = [self._agreggated_xconfig_filename]
         if self._check_if_extra_flags:
-            content = _add_include_to_file_or_create(GLOBAL_XCCONFIG_FILENAME, content,
-                                                     self._flags_xcconfig_filename)
+            files_to_include.append(self._flags_xcconfig_filename)
+        content = _add_includes_to_file_or_create(GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE,
+                                                  files_to_include)
         return content
 
     @property
