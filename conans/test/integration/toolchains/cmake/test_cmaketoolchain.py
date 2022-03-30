@@ -246,6 +246,7 @@ def test_extra_flags_via_conf():
         tools.build:cflags+=["--flag3", "--flag4"]
         tools.build:sharedlinkflags=+["--flag5", "--flag6"]
         tools.build:exelinkflags=["--flag7", "--flag8"]
+        tools.build:defines=["D1", "D2"]
         """)
 
     client = TestClient(path_with_spaces=False)
@@ -260,3 +261,4 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
+    assert 'add_definitions( -DD1 -DD2)' in toolchain

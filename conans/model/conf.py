@@ -43,8 +43,7 @@ BUILT_IN_CONFS = {
     # Flags configuration
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
-    "tools.build:cppflags": "List of extra CPP flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
-    "tools.build:ldflags": "List of extra LD flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
+    "tools.build:defines": "List of extra definition flags used by different toolchains like AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
     "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
 }
