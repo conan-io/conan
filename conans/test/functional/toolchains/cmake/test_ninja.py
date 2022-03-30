@@ -4,6 +4,7 @@ import platform
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
@@ -215,8 +216,10 @@ def test_ninja_conf():
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("install . -pr=profile")
-    conanbuild = load_toolchain_args(client.current_folder)
-    assert conanbuild["cmake_generator"] == "Ninja"
+    presets = load_cmake_presets(client.current_folder)
+    generator = presets["configurePresets"][0]["generator"]
+
+    assert generator == "Ninja"
     vcvars = client.load("conanvcvars.bat")
     assert "2017" in vcvars
 

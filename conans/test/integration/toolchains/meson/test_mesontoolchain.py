@@ -82,7 +82,8 @@ def test_extra_flags_via_conf():
         [conf]
         tools.build:cxxflags=["-flag1", "-flag2"]
         tools.build:cflags=["-flag3", "-flag4"]
-        tools.build:ldflags=["-flag5", "-flag6"]
+        tools.build:sharedlinkflags+=["-flag5"]
+        tools.build:exelinkflags+=["-flag6"]
    """)
     t = TestClient()
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",

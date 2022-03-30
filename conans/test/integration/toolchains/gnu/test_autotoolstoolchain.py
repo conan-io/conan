@@ -21,8 +21,9 @@ def test_extra_flags_via_conf():
         [conf]
         tools.build:cxxflags=["--flag1", "--flag2"]
         tools.build:cflags+=["--flag3", "--flag4"]
-        tools.build:ldflags+=["--flag5", "--flag6"]
-        tools.build:cppflags+=["DEF1", "DEF2"]
+        tools.build:sharedlinkflags+=["--flag5"]
+        tools.build:exelinkflags+=["--flag6"]
+        tools.build:defines+=["DEF1", "DEF2"]
         """ % os_)
     client = TestClient()
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
