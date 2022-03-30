@@ -119,7 +119,10 @@ tools_locations = {
     'premake': {},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
-    'android_ndk': {},
+    'android_ndk': {
+        "platform": "Darwin",
+        "exe": "ndk-build",
+    },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
@@ -146,10 +149,7 @@ except ImportError as e:
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
-    'android_ndk': {
-        'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'},
-        'Windows': {'TEST_CONAN_ANDROID_NDK': 'C:\\Users\\conan\\Documents\\android-ndk-r24-windows\\android-ndk-r24'}
-    }
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
 }
 
 
@@ -196,8 +196,8 @@ def _get_tool(name, version):
         cached = tool_path, tool_env
 
         # Check this particular tool is installed
-        if name in ("visual_studio", "android_ndk"):
-            if name == "visual_studio" and not vswhere():  # TODO: Missing version detection
+        if name == "visual_studio":
+            if not vswhere():  # TODO: Missing version detection
                 cached = True
         else:  # which based detection
             old_environ = None

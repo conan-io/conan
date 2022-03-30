@@ -158,15 +158,15 @@ def test_windows_cross_compiling_x86():
                                                  ('x86_64', 'x86_64')])
 @pytest.mark.tool_meson
 @pytest.mark.tool_android_ndk
-@pytest.mark.skipif(platform.system() == "Linux", reason="Linux CI is not prepared yet")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     profile_host = textwrap.dedent("""
     include(default)
 
     [settings]
-    os = {os}
-    os.api_level = {os_api_level}
+    os = Android
+    os.api_level = 21
     arch = {arch}
 
     [conf]
@@ -176,8 +176,6 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     profile_host = profile_host.format(
-        os="Android",
-        os_api_level="21",
         arch=arch,
         ndk_path=os.getenv("TEST_CONAN_ANDROID_NDK")
     )
