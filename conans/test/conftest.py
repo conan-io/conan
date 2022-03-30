@@ -117,13 +117,11 @@ tools_locations = {
         }
     },
     'premake': {},
-    'apt_get': { "exe": "apt-get"},
+    'apt_get': {"exe": "apt-get"},
     'brew': {},
-    'ndk': {
+    'android_ndk': {
         "platform": "Darwin",
         "exe": "ndk-build",
-        "default": "system",
-        "system": {},
     },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
@@ -150,7 +148,8 @@ except ImportError as e:
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
 }
 
 
