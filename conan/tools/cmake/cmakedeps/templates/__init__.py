@@ -75,9 +75,6 @@ class CMakeDepsFileTemplate(object):
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_file_name(self):
-        return get_file_name(self.conanfile)
-
     @staticmethod
     def _get_target_default_name(req, component_name="", suffix=""):
         return "{name}{suffix}::{cname}{suffix}".format(cname=component_name or req.ref.name,
