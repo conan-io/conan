@@ -63,11 +63,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
             # Check that we have not already called a find_package with the transitive dependency
             if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
-            {% if is_module %}
-                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED MODULE)
-            {% else %}
-                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED NO_MODULE)
-            {% endif %}
+                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED ${${_DEPENDENCY}_FIND_MODE})
             endif()
         endforeach()
 
