@@ -3,6 +3,7 @@ from mock import mock
 from mock.mock import Mock
 
 from conan.tools.cmake import CMake
+from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.files.files import save_toolchain_args
 from conans import ConanFile, Settings
 from conans.model.conf import Conf
@@ -32,14 +33,15 @@ def conanfile():
 
 
 def test_cmake_make_program(conanfile):
-    save_toolchain_args({"cmake_generator": "MinGW Makefiles"},
-                        generators_folder=conanfile.folders.generators_folder)
-
     def run(command):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
+
     with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-        cmake = CMake(conanfile)
-        cmake.configure()
+        write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles")
+
+    cmake = CMake(conanfile)
+    cmake.configure()
+

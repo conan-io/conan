@@ -2,6 +2,7 @@ import os
 import platform
 
 from conan.tools.build import build_jobs
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
 from conan.tools.files.files import load_toolchain_args
@@ -54,9 +55,10 @@ class CMake(object):
         self._conanfile = conanfile
         self._namespace = namespace
 
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder, namespace=self._namespace)
-        self._generator = toolchain_file_content.get("cmake_generator")
-        self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
+        cmake_presets = load_cmake_presets(conanfile.generators_folder)
+        self._generator = cmake_presets["configurePresets"][0]["generator"]
+        self._toolchain_file = cmake_presets["configurePresets"][0]["toolchainFile"]
+        self._cache_variables = cmake_presets["configurePresets"][0]["cacheVariables"]
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -82,16 +84,12 @@ class CMake(object):
         if self._conanfile.package_folder:
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
-        if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
-            # It seems these don't work in the toolchain file, they need to be here in command line
-            arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
-            cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program", default=None)
-            if cmake_make_program:
-                cmake_make_program = cmake_make_program.replace("\\", "/")
-                arg_list.append('-DCMAKE_MAKE_PROGRAM="{}"'.format(cmake_make_program))
 
-        if variables:
-            arg_list.extend(["-D{}={}".format(k, v) for k, v in variables.items()])
+        if not variables:
+            variables = {}
+        self._cache_variables.update(variables)
+
+        arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
         command = " ".join(arg_list)
