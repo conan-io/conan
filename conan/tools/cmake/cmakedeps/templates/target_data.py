@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
+    FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name, get_find_mode
 """
@@ -175,8 +177,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
     def _get_dependencies_find_modes(self):
-        from conan.tools.cmake.cmakedeps.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, \
-            FIND_MODE_MODULE, FIND_MODE_BOTH
         ret = {}
         if self.conanfile.is_build_context:
             return ret

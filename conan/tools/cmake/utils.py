@@ -1,4 +1,4 @@
-
+from conan.tools.cmake.cmakedeps import FIND_MODE_MODULE
 
 
 def is_multi_configuration(generator):
@@ -11,7 +11,6 @@ def get_file_name(conanfile, forced_module_mode=None):
     """Get the name of the file for the find_package(XXX)"""
     # This is used by the CMakeToolchain to adjust the XXX_DIR variables and the CMakeDeps. Both
     # to know the file name that will have the XXX-config.cmake files.
-    from conan.tools.cmake.cmakedeps.cmakedeps import FIND_MODE_MODULE
     if forced_module_mode or get_find_mode(conanfile) == FIND_MODE_MODULE:
         ret = conanfile.cpp_info.get_property("cmake_module_file_name")
         if ret:
