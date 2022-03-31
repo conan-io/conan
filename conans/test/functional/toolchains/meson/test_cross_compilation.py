@@ -154,8 +154,8 @@ def test_windows_cross_compiling_x86():
                                                  ('armv7', 'arm'),
                                                  ('x86', 'i386'),
                                                  ('x86_64', 'x86_64')])
-@pytest.mark.tool_meson
-@pytest.mark.tool_android_ndk
+@pytest.mark.tool("meson")
+@pytest.mark.tool("android_ndk")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
