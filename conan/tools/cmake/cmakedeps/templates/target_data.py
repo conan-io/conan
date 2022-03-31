@@ -3,7 +3,6 @@ import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name, get_find_mode
-
 """
 
 foo-release-x86_64-data.cmake
@@ -176,6 +175,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
     def _get_dependencies_find_modes(self):
+        from conan.tools.cmake.cmakedeps.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, \
+            FIND_MODE_MODULE, FIND_MODE_BOTH
         ret = {}
         if self.conanfile.is_build_context:
             return ret
@@ -183,11 +184,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         for dep in deps.values():
             dep_file_name = get_file_name(dep)
             find_mode = get_find_mode(dep)
-            values = {"none": "",
-                      "config": "NO_MODULE",
-                      "module": "MODULE",
-                      "both": "NO_MODULE" if not self.find_module_mode else "MODULE"}
-            ret[dep_file_name] = values[find_mode.lower()]
+            default_value = "NO_MODULE" if not self.find_module_mode else "MODULE"
+            values = {
+                FIND_MODE_NONE: "",
+                FIND_MODE_CONFIG: "NO_MODULE",
+                FIND_MODE_MODULE: "MODULE",
+                # When the dependency is "both" or not defined, we use the one is forced
+                # by self.find_module_mode (creating modules files-> modules, config -> config)
+                FIND_MODE_BOTH: default_value,
+                None: default_value}
+            ret[dep_file_name] = values[find_mode]
         return ret
 
 
