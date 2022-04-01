@@ -8,9 +8,9 @@ from jinja2 import Template
 from conan.tools._compilers import architecture_flag
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
+from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.build.cross_building import cross_building
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
 from conans.errors import ConanException
