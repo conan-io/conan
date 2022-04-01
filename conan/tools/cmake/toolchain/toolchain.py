@@ -109,10 +109,9 @@ class CMakeToolchain(object):
         {{ iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
         """)
 
-    def __init__(self, conanfile, generator=None, namespace=None):
+    def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
-        self._namespace = namespace
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 

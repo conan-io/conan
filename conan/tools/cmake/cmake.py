@@ -48,12 +48,11 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile):
         _validate_recipe(conanfile)
 
         # Store a reference to useful data
         self._conanfile = conanfile
-        self._namespace = namespace
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
         self._generator = cmake_presets["configurePresets"][0]["generator"]
