@@ -2,7 +2,7 @@
 
 import unittest
 
-from conan.tools.files.copy_pattern import report_copied_files
+from conan.tools.files.copy_pattern import report_files_copied
 from conans.cli.output import ConanOutput
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
@@ -25,7 +25,7 @@ class ReportCopiedFilesTestCase(unittest.TestCase):
                      'no_ext2',
                      'a/other.txt']
 
-            report_copied_files(files, ConanOutput())
+            report_files_copied(files, ConanOutput())
             lines = sorted(str(output).splitlines())
             self.assertEqual("Copied 7 '.pdf' files", lines[2])
             self.assertEqual("Copied 2 files: no_ext1, no_ext2", lines[1])

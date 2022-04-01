@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 import pytest
 
@@ -42,17 +43,25 @@ def test_basic(relative_path):
 @pytest.mark.parametrize("relative_path", [False, True])
 def test_path(relative_path):
     client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Pkg(ConanFile):
+            def export(self):
+                copy(self, "*", src=os.path.join(self.recipe_folder, "..", "source"),
+                     dst=os.path.join(self.export_folder, "source"))
+            """)
     if relative_path:
-        client.save({"conan/conanfile.py": GenConanfile().with_exports("../source*"),
+        client.save({"conan/conanfile.py": conanfile,
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
             client.run("export ../conan --name=hello --version=0.1 --user=lasote --channel=stable")
     else:
-        client.save({"current/conanfile.py": GenConanfile().with_exports("../source*"),
+        client.save({"current/conanfile.py": conanfile,
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
             client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
-
     ref = RecipeReference("hello", "0.1", "lasote", "stable")
     latest_rrev = client.cache.get_latest_recipe_reference(ref)
     ref_layoyt = client.cache.ref_layout(latest_rrev)
@@ -62,6 +71,6 @@ def test_path(relative_path):
     for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp']:
         assert os.path.exists(os.path.join(reg_path, name))
 
-    expected_sums = {'conanfile.py': 'bebe98b13c5a958732a6bbe2a9d068f3',
+    expected_sums = {'conanfile.py': '6cdb33126a0408bffc0ad0ada66cb061',
                      'source/main.cpp': '76c0a7a9d385266e27d69d3875f6ac19'}
     assert expected_sums == manif.file_sums

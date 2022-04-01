@@ -316,4 +316,46 @@ class CompatibleIDsTest(unittest.TestCase):
         assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \
                in client.out
         client.assert_listed_binary({"pkga/0.1":
-                                         ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
+                                    ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
+
+
+class TestNewCompatibility:
+
+    def test_compatible_setting(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler"
+
+                def compatibility(self):
+                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                        return [{"settings": [("compiler.version", v)]}
+                                for v in ("4.8", "4.7", "4.6")]
+
+                def package_info(self):
+                    self.output.info("PackageInfo!: Gcc version: %s!"
+                                     % self.settings.compiler.version)
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+        # Create package with gcc 4.8
+        c.run("create .  -pr=myprofile -s compiler.version=4.8")
+        assert "pkg/0.1: Package '40761d41da4685cba51efd7d1785c1e18370260e' created" in c.out
+
+        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
+        c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("install . -pr=myprofile")
+        assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
+        c.assert_listed_binary({"pkg/0.1": ("40761d41da4685cba51efd7d1785c1e18370260e", "Cache")})
+        assert "pkg/0.1: Already installed!" in c.out

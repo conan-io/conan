@@ -101,11 +101,15 @@ class ExportSettingsTest(unittest.TestCase):
     def test_code_parent(self):
         # when referencing the parent, the relative folder "sibling" will be kept
         base = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
-    exports = "../*.txt"
+    def export(self):
+        copy(self, "*.txt", src=os.path.join(self.recipe_folder, ".."),
+             dst=self.export_folder)
 """
         for conanfile in (base, base.replace("../*.txt", "../sibling*")):
             client = TestClient()
@@ -123,11 +127,15 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
-    exports = "../sibling/*.txt"
+    def export(self):
+        copy(self, "*.txt", src=os.path.join(self.recipe_folder, "..", "sibling"),
+             dst=self.export_folder)
 """
         files = {"recipe/conanfile.py": conanfile,
                  "sibling/file.txt": "Hello World!"}
@@ -144,11 +152,21 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
-                exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+                # exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+                def export_sources(self):
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "test", "src"),
+                         dst=self.export_sources_folder)
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "cpp"),
+                         dst=self.export_sources_folder)
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "include"),
+                         dst=self.export_sources_folder)
+
             """)
         client.save({"recipe/conanfile.py": conanfile,
                      "test/src/file.txt": "Hello World!",

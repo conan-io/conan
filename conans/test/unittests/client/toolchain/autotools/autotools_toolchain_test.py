@@ -437,8 +437,9 @@ def test_extra_flags_via_conf():
     conanfile = ConanFileMock()
     conanfile.conf.define("tools.build:cxxflags", ["--flag1", "--flag2"])
     conanfile.conf.define("tools.build:cflags", ["--flag3", "--flag4"])
-    conanfile.conf.define("tools.build:ldflags", ["--flag5", "--flag6"])
-    conanfile.conf.define("tools.build:cppflags", ["DEF1", "DEF2"])
+    conanfile.conf.define("tools.build:sharedlinkflags", ["--flag5"])
+    conanfile.conf.define("tools.build:exelinkflags", ["--flag6"])
+    conanfile.conf.define("tools.build:defines", ["DEF1", "DEF2"])
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
