@@ -125,14 +125,14 @@ def test_deploy_reference():
 
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
-    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    header = c.load("output/host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
     # Testing that we can deploy to the current folder too
     c.save({}, clean_first=True)
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
-    header = c.load("host/pkg/1.0/None/None/include/hi.h")
+    header = c.load("host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
 
@@ -144,14 +144,14 @@ def test_deploy_overwrite():
     c.run("create .")
 
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    header = c.load("output/host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
     # modify the package
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "bye")})
     c.run("create .")
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/None/None/include/hi.h")
+    header = c.load("output/host/pkg/1.0/include/hi.h")
     assert "bye" in header
 
 
@@ -166,7 +166,7 @@ def test_deploy_editable():
     c.run("editable add . pkg/1.0")
 
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/None/None/src/include/hi.h")
+    header = c.load("output/host/pkg/1.0/src/include/hi.h")
     assert "hi" in header
 
 
