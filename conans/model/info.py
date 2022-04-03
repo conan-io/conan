@@ -366,7 +366,7 @@ class ConanInfo(object):
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.invalid = None
-        result.settings = settings.copy()
+        result.settings = settings.copy_conaninfo_settings()
         result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
         result.build_requires = build_requires_info

@@ -58,6 +58,18 @@ class SettingsItem(object):
             result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
 
+    def copy_conaninfo_settings(self):
+        """ deepcopy, recursive
+        """
+        result = SettingsItem({}, name=self._name)
+        result._value = self._value
+        if not isinstance(self._definition, dict):
+            result._definition = self._definition[:] + ["ANY"]
+        else:
+            result._definition = {k: v.copy_conaninfo_settings()
+                                  for k, v in self._definition.items()}
+        return result
+
     def __bool__(self):
         if not self._value:
             return False
@@ -170,6 +182,12 @@ class Settings(object):
             result._data[k] = v.copy()
         return result
 
+    def copy_conaninfo_settings(self):
+        result = Settings({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            result._data[k] = v.copy_conaninfo_settings()
+        return result
+
     @staticmethod
     def loads(text):
         try:
@@ -229,7 +247,7 @@ class Settings(object):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
-        assert isinstance(vals, list), vals
+        assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
             attr = self
@@ -258,3 +276,23 @@ class Settings(object):
         to_remove = [k for k in self._data if k not in constraint_def]
         for k in to_remove:
             del self._data[k]
+
+    @property
+    def sha(self):
+        # FIXME: This should fail if trying to hash a not defined value (None not in range)
+        result = ["[settings]"]
+        for (name, value) in self.values_list:
+            # It is important to discard None values, so migrations in settings can be done
+            # without breaking all existing packages SHAs, by adding a first "None" option
+            # that doesn't change the final sha
+            if value != "None":
+                result.append("%s=%s" % (name, value))
+        return '\n'.join(result)
+
+    def dumps(self):
+        """ produces a text string with lines containine a flattened version:
+        compiler.arch = XX
+        compiler.arch.speed = YY
+        """
+        return "\n".join(["%s=%s" % (field, value)
+                          for (field, value) in self.values_list])
