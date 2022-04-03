@@ -28,7 +28,6 @@ def undefined_value(name):
 class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
-    - "ANY", as string to accept any value
     - List ["None", "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
@@ -41,10 +40,8 @@ class SettingsItem(object):
             for k, v in definition.items():
                 k = str(k)
                 self._definition[k] = Settings(v, name, k)
-        elif definition == "ANY":
-            self._definition = "ANY"
         else:
-            # list or tuple of possible values
+            # list or tuple of possible values, it can include "ANY"
             self._definition = [str(v) for v in definition]
 
     def __contains__(self, value):
@@ -69,16 +66,11 @@ class SettingsItem(object):
     def __str__(self):
         return str(self._value)
 
-    def _not_any(self):
-        return self._definition != "ANY" and "ANY" not in self._definition
-
     def __eq__(self, other):
         if other is None:
             return self._value is None
-        other = str(other)
-        if self._not_any() and other not in self.values_range:
-            raise ConanException(bad_value_msg(self._name, other, self.values_range))
-        return other == self.__str__()
+        other = self._validate(other)
+        return other == self._value
 
     def __delattr__(self, item):
         """ This is necessary to remove libcxx subsetting from compiler in config()
@@ -86,6 +78,12 @@ class SettingsItem(object):
         """
         child_setting = self._get_child(self._value)
         delattr(child_setting, item)
+
+    def _validate(self, value):
+        value = str(value)
+        if "ANY" not in self._definition and value not in self._definition:
+            raise ConanException(bad_value_msg(self._name, value, self._definition))
+        return value
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
@@ -113,10 +111,7 @@ class SettingsItem(object):
 
     @value.setter
     def value(self, v):
-        v = str(v)
-        if self._not_any() and v not in self.values_range:
-            raise ConanException(bad_value_msg(self._name, v, self.values_range))
-        self._value = v
+        self._value = self._validate(v)
 
     @property
     def values_range(self):
@@ -228,9 +223,6 @@ class Settings(object):
         return result
 
     def items(self):
-        return self.values_list
-
-    def iteritems(self):
         return self.values_list
 
     def update_values(self, vals):
