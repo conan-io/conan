@@ -40,12 +40,12 @@ os:
             catalyst:
                 ios_version: *ios_version
     Android:
-        api_level: ANY
+        api_level: [ANY]
     FreeBSD:
     SunOS:
     AIX:
     Arduino:
-        board: ANY
+        board: [ANY]
     Emscripten:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
