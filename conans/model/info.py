@@ -1,16 +1,11 @@
-import os
-
 from conans.client.graph.graph import BINARY_INVALID
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
-from conans.model.settings import undefined_value
 from conans.model.values import Values
-from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
-from conans.util.files import load
 from conans.util.sha import sha1
 
 
@@ -219,9 +214,11 @@ class RequirementsInfo(UserRequirementsDict):
         for r in self._data.values():
             r.full_package_mode()
 
-    def recipe_revision_mode(self):
+    def full_mode(self):
         for r in self._data.values():
-            r.recipe_revision_mode()
+            r.full_mode()
+
+    recipe_revision_mode = full_mode  # to not break everything and help in upgrade
 
 
 class PythonRequireInfo(object):
@@ -282,12 +279,14 @@ class PythonRequireInfo(object):
         self._channel = self._ref.channel
         self._revision = None
 
-    def recipe_revision_mode(self):
+    def full_mode(self):
         self._name = self._ref.name
         self._version = self._ref.version
         self._user = self._ref.user
         self._channel = self._ref.channel
         self._revision = self._ref.revision
+
+    recipe_revision_mode = full_mode
 
 
 class PythonRequiresInfo(object):
@@ -341,9 +340,11 @@ class PythonRequiresInfo(object):
         for r in self._refs:
             r.full_recipe_mode()
 
-    def recipe_revision_mode(self):
+    def full_mode(self):
         for r in self._refs:
-            r.recipe_revision_mode()
+            r.full_mode()
+
+    recipe_revision_mode = full_mode
 
 
 class ConanInfo(object):
@@ -365,7 +366,6 @@ class ConanInfo(object):
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.invalid = None
-        result.full_settings = settings
         result.settings = settings.copy()
         result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
@@ -406,29 +406,7 @@ class ConanInfo(object):
 
     def clone(self):
         q = self.copy()
-        q.full_settings = self.full_settings.copy()
         return q
-
-    def __eq__(self, other):
-        """ currently just for testing purposes
-        """
-        return self.dumps() == other.dumps()
-
-    @staticmethod
-    def load_file(conan_info_path):
-        """ load from file
-        """
-        try:
-            config_text = load(conan_info_path)
-        except IOError:
-            raise ConanException("Does not exist %s" % conan_info_path)
-        else:
-            return ConanInfo.loads(config_text)
-
-    @staticmethod
-    def load_from_package(package_folder):
-        info_path = os.path.join(package_folder, CONANINFO)
-        return ConanInfo.load_file(info_path)
 
     def package_id(self):
         """ The package_id of a conans is the sha1 of its specific requirements,
@@ -474,14 +452,3 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
-
-    def apple_clang_compatible(self):
-        # https://github.com/conan-io/conan/pull/10797
-        # apple-clang compiler version 13 will be compatible with 13.0
-        if not self.settings.compiler or \
-           (self.settings.compiler != "apple-clang" and self.settings.compiler.version != "13"):
-            return
-
-        compatible = self.clone()
-        compatible.settings.compiler.version = "13.0"
-        return compatible

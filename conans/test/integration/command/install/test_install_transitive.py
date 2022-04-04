@@ -7,7 +7,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE_TXT, CONANINFO
 from conans.test.utils.tools import TestClient,  GenConanfile
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 @pytest.fixture()
@@ -68,13 +68,13 @@ def test_reuse(client):
 
         hello0 = client.get_latest_pkg_layout(PkgReference(ref, id0)).package()
         hello0_info = os.path.join(hello0, CONANINFO)
-        hello0_conan_info = ConanInfo.load_file(hello0_info)
+        hello0_conan_info = ConanInfo.loads(load(hello0_info))
         assert lang == hello0_conan_info.options.language
 
         pref1 = PkgReference(RecipeReference.loads("hello1/0.1@lasote/stable"), id1)
         hello1 = client.get_latest_pkg_layout(pref1).package()
         hello1_info = os.path.join(hello1, CONANINFO)
-        hello1_conan_info = ConanInfo.load_file(hello1_info)
+        hello1_conan_info = ConanInfo.loads(load(hello1_info))
         assert lang == hello1_conan_info.options.language
 
 
@@ -88,13 +88,13 @@ def test_upper_option(client):
     hello0 = client.get_latest_pkg_layout(pref).package()
 
     hello0_info = os.path.join(hello0, CONANINFO)
-    hello0_conan_info = ConanInfo.load_file(hello0_info)
+    hello0_conan_info = ConanInfo.loads(load(hello0_info))
     assert 1 == hello0_conan_info.options.language
 
     pref1 = client.get_latest_package_reference(RecipeReference.loads("hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
-    hello1_conan_info = ConanInfo.load_file(hello1_info)
+    hello1_conan_info = ConanInfo.loads(load(hello1_info))
     assert 0 == hello1_conan_info.options.language
 
 
@@ -107,13 +107,13 @@ def test_inverse_upper_option(client):
     hello0 = client.get_latest_pkg_layout(pref).package()
 
     hello0_info = os.path.join(hello0, CONANINFO)
-    hello0_conan_info = ConanInfo.load_file(hello0_info)
+    hello0_conan_info = ConanInfo.loads(load(hello0_info))
     assert "language=0" == hello0_conan_info.options.dumps()
 
     pref1 = client.get_latest_package_reference(RecipeReference.loads("hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
-    hello1_conan_info = ConanInfo.load_file(hello1_info)
+    hello1_conan_info = ConanInfo.loads(load(hello1_info))
     assert "language=1" == hello1_conan_info.options.dumps()
 
 
@@ -134,11 +134,11 @@ def test_upper_option_txt(client):
     pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
     hello0_info = os.path.join(hello0, CONANINFO)
-    hello0_conan_info = ConanInfo.load_file(hello0_info)
+    hello0_conan_info = ConanInfo.loads(load(hello0_info))
     assert 1 == hello0_conan_info.options.language
 
     pref1 = client.get_latest_package_reference(RecipeReference.loads("hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
-    hello1_conan_info = ConanInfo.load_file(hello1_info)
+    hello1_conan_info = ConanInfo.loads(load(hello1_info))
     assert 0 == hello1_conan_info.options.language

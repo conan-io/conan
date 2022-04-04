@@ -24,7 +24,7 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual("os=Windows", settings.values.dumps())
 
     def test_any(self):
-        yml = "os: ANY"
+        yml = "os: [ANY]"
         settings = Settings.loads(yml)
         with self.assertRaisesRegex(ConanException, "'settings.os' value not defined"):
             settings.validate()  # Raise exception if unset
@@ -135,7 +135,7 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.values.sha, other_settings.values.sha)
 
     def test_any(self):
-        data = {"target": "ANY"}
+        data = {"target": ["ANY"]}
         sut = Settings(data)
         sut.target = "native"
         self.assertTrue(sut.target == "native")

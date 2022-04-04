@@ -5,7 +5,6 @@ class Values(object):
     def __init__(self, value="values"):
         self._value = str(value)
         self._dict = {}  # {key: Values()}
-        self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
 
     def __getattr__(self, attr):
         if attr not in self._dict:
