@@ -1,5 +1,5 @@
-from conans.cli.api.model import UploadBundle
-from conans.cli.api.subapi import api_method
+from conan.api.model import UploadBundle
+from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.cmd.uploader import UploadChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker

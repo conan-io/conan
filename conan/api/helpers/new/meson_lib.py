@@ -1,4 +1,4 @@
-from conans.cli.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
+from conan.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_sources_v2 = """import os
 from conan import ConanFile

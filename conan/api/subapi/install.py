@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.api.subapi import api_method
+from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators

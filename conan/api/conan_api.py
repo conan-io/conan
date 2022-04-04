@@ -1,18 +1,18 @@
 import sys
 
 from conans import __version__ as client_version
-from conans.cli.api.subapi.config import ConfigAPI
-from conans.cli.api.subapi.download import DownloadAPI
-from conans.cli.api.subapi.export import ExportAPI
-from conans.cli.api.subapi.install import InstallAPI
-from conans.cli.api.subapi.graph import GraphAPI
-from conans.cli.api.subapi.new import NewAPI
-from conans.cli.api.subapi.profiles import ProfilesAPI
-from conans.cli.api.subapi.list import ListAPI
-from conans.cli.api.subapi.remotes import RemotesAPI
-from conans.cli.api.subapi.remove import RemoveAPI
-from conans.cli.api.subapi.search import SearchAPI
-from conans.cli.api.subapi.upload import UploadAPI
+from conan.api.subapi.config import ConfigAPI
+from conan.api.subapi.download import DownloadAPI
+from conan.api.subapi.export import ExportAPI
+from conan.api.subapi.install import InstallAPI
+from conan.api.subapi.graph import GraphAPI
+from conan.api.subapi.new import NewAPI
+from conan.api.subapi.profiles import ProfilesAPI
+from conan.api.subapi.list import ListAPI
+from conan.api.subapi.remotes import RemotesAPI
+from conan.api.subapi.remove import RemoveAPI
+from conan.api.subapi.search import SearchAPI
+from conan.api.subapi.upload import UploadAPI
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
 from conans.client.userio import init_colorama
