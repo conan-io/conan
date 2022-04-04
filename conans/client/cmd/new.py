@@ -411,6 +411,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         elif template == "bazel_exe":
             from conans.assets.templates.new_v2_bazel import get_bazel_exe_files
             files = get_bazel_exe_files(name, version, package_name)
+        elif template == "autotools_lib":
+            from conans.assets.templates.new_v2_autotools import get_autotools_lib_files
+            files = get_autotools_lib_files(name, version, package_name)
+        elif template == "autotools_exe":
+            from conans.assets.templates.new_v2_autotools import get_autotools_exe_files
+            files = get_autotools_exe_files(name, version, package_name)
         else:
             if not os.path.isabs(template):
                 template = os.path.join(cache.cache_folder, "templates", "command/new", template)
