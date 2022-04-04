@@ -101,7 +101,7 @@ def _check_for_compiler(conanfile):
     if not compiler:
         raise ConanException('Qbs: need compiler to be set in settings')
 
-    if compiler not in ['Visual Studio', 'gcc', 'clang']:
+    if compiler not in ['msvc', 'gcc', 'clang']:
         raise ConanException('Qbs: compiler {} not supported'.format(compiler))
 
 
