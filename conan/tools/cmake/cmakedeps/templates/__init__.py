@@ -23,7 +23,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
+        return get_file_name(self.conanfile, forced_module_mode=self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):
@@ -74,9 +74,6 @@ class CMakeDepsFileTemplate(object):
     @property
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
-
-    def get_file_name(self):
-        return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
     @staticmethod
     def _get_target_default_name(req, component_name="", suffix=""):

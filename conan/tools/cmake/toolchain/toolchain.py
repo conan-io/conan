@@ -93,7 +93,11 @@ class CMakeToolchain(object):
 
         # Variables
         {% for it, value in variables.items() %}
+        {% if value is boolean %}
+        set({{ it }} {{ value|cmake_value }} CACHE BOOL "Variable {{ it }} conan-toolchain defined")
+        {% else %}
         set({{ it }} {{ value|cmake_value }} CACHE STRING "Variable {{ it }} conan-toolchain defined")
+        {% endif %}
         {% endfor %}
         # Variables  per configuration
         {{ iterate_configs(variables_config, action='set') }}
@@ -160,7 +164,7 @@ class CMakeToolchain(object):
     def generate(self):
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
-            save(self.filename, self.content)
+            save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()

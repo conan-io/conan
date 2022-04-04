@@ -3,7 +3,6 @@ import re
 import textwrap
 
 import pytest
-import six
 
 from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
@@ -12,7 +11,6 @@ from conans.util.files import rmdir, save_files
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicCapture:
     """ base Git capture operations. They do not raise (unless errors)
     """
@@ -90,7 +88,6 @@ class TestGitBasicCapture:
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitCaptureSCM:
     """ test the get_url_and_commit() high level method intended for SCM capturing
     into conandata.yaml
@@ -165,7 +162,6 @@ class TestGitCaptureSCM:
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicClone:
     """ base Git cloning operations
     """
@@ -213,7 +209,6 @@ class TestGitBasicClone:
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlow:
     """ Build the full new SCM approach:
     - export() captures the URL and commit with get_url_and_commit(
@@ -310,7 +305,6 @@ class TestGitBasicSCMFlow:
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlowSubfolder:
     """ Same as above, but conanfile.py put in "conan" subfolder in the root
     """
@@ -379,7 +373,6 @@ class TestGitBasicSCMFlowSubfolder:
 
 
 @pytest.mark.tool("git")
-@pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitMonorepoSCMFlow:
     """ Build the full new SCM approach:
     Same as above but with a monorepo with multiple subprojects
