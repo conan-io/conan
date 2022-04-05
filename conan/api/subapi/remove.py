@@ -1,5 +1,5 @@
-from conans.cli.api.model import Remote
-from conans.cli.api.subapi import api_method
+from conan.api.model import Remote
+from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

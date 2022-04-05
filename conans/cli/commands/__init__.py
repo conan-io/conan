@@ -4,7 +4,7 @@ import os
 from json import JSONEncoder
 from typing import List
 
-from conans.cli.api.model import Remote, PkgConfiguration
+from conan.api.model import Remote, PkgConfiguration
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 

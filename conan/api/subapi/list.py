@@ -1,6 +1,6 @@
 from typing import Dict
 
-from conans.cli.api.model import Remote, PkgConfiguration
+from conan.api.model import Remote, PkgConfiguration
 from conans.cli.conan_app import ConanApp
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference

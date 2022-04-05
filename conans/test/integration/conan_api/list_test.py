@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TurboTestClient

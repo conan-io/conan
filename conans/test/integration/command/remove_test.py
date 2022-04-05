@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

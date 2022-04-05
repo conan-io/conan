@@ -82,7 +82,7 @@ class TestRemotes:
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
         self._add_remote("remote2")
-        with patch("conans.cli.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
             self.client.run("search whatever")
         expected_output = textwrap.dedent(f"""\
         remote1:

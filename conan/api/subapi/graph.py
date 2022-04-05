@@ -1,4 +1,4 @@
-from conans.cli.api.subapi import api_method
+from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer

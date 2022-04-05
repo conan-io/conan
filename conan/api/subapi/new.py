@@ -3,7 +3,7 @@ import os
 
 from jinja2 import Template
 
-from conans.cli.api.subapi import api_method
+from conan.api.subapi import api_method
 from conans.util.files import load
 from conans import __version__
 
@@ -17,15 +17,15 @@ class NewAPI:
 
     @api_method
     def get_builtin_template(self, template_name):
-        from conans.cli.api.helpers.new.alias_new import alias_file
-        from conans.cli.api.helpers.new.cmake_exe import cmake_exe_files
-        from conans.cli.api.helpers.new.cmake_lib import cmake_lib_files
-        from conans.cli.api.helpers.new.meson_lib import meson_lib_files
-        from conans.cli.api.helpers.new.meson_exe import meson_exe_files
-        from conans.cli.api.helpers.new.msbuild_lib import msbuild_lib_files
-        from conans.cli.api.helpers.new.msbuild_exe import msbuild_exe_files
-        from conans.cli.api.helpers.new.bazel_lib import bazel_lib_files
-        from conans.cli.api.helpers.new.bazel_exe import bazel_exe_files
+        from conan.api.helpers.new.alias_new import alias_file
+        from conan.api.helpers.new.cmake_exe import cmake_exe_files
+        from conan.api.helpers.new.cmake_lib import cmake_lib_files
+        from conan.api.helpers.new.meson_lib import meson_lib_files
+        from conan.api.helpers.new.meson_exe import meson_exe_files
+        from conan.api.helpers.new.msbuild_lib import msbuild_lib_files
+        from conan.api.helpers.new.msbuild_exe import msbuild_exe_files
+        from conan.api.helpers.new.bazel_lib import bazel_lib_files
+        from conan.api.helpers.new.bazel_exe import bazel_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,

@@ -104,7 +104,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
             if remote:
                 raise exc
             return []
-        with patch("conans.cli.api.subapi.search.SearchAPI.recipes", new=boom_if_remote):
+        with patch("conan.api.subapi.search.SearchAPI.recipes", new=boom_if_remote):
             self.client.run('list recipes whatever -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:

@@ -2,7 +2,7 @@ import json
 import os
 from urllib.parse import urlparse
 
-from conans.cli.api.model import Remote
+from conan.api.model import Remote
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.files import load, save
