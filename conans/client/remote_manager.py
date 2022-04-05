@@ -227,9 +227,9 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
+        packages = self._call_remote(remote, "search_packages", ref)
         # Avoid serializing conaninfo in server side
-        packages = {pid: ConanInfo.loads(base64.b64decode(data["content"].encode("utf-8")).decode("utf-8")).serialize_min()
+        packages = {pid: ConanInfo.loads(data["content"]).serialize_min()
                     if "content" in data else data
                     for pid, data in packages.items()}
         # Filter packages without recipe_hash, those are 1.X packages, the 2.0 are disregarded
