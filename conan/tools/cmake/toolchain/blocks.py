@@ -157,7 +157,7 @@ class GLibCXXBlock(Block):
         string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
-        add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        add_compile_definitions(_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
         {% endif %}
         """)
 
@@ -545,7 +545,7 @@ class ExtraFlagsBlock(Block):
         string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
         {% if defines %}
-        add_definitions({% for define in defines %} {{ define }}{% endfor %})
+        add_compile_definitions({% for define in defines %} {{ define }}{% endfor %})
         {% endif %}
     """)
 
@@ -561,7 +561,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": ["-D{}".format(d) for d in defines]
+            "defines": defines
         }
 
 
