@@ -5,6 +5,8 @@ conanfile_sources_v2 = textwrap.dedent("""
 
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools
+    from conan.tools.gnu.layout import autotools_layout
+    from conan.tools.files import chdir
 
 
     class {package_name}Conan(ConanFile):
@@ -23,29 +25,26 @@ conanfile_sources_v2 = textwrap.dedent("""
         options = {{"shared": [True, False], "fPIC": [True, False]}}
         default_options = {{"shared": False, "fPIC": True}}
 
-        exports_sources = "configure.ac", "Makefile.am", "{name}.cpp", "{name}.h"
+        exports_sources = "configure.ac", "Makefile.am", "src/*"
 
         def config_options(self):
             if self.settings.os == "Windows":
                 del self.options.fPIC
 
         def layout(self):
-            self.folders.build = "."
-            self.folders.generators = os.path.join(self.folders.build, "conan")
-            self.cpp.build.bindirs = ["."]
-            self.cpp.build.libdirs = ["."]
-            self.folders.source = "."
+            autotools_layout(self)
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
             at_toolchain.generate()
 
         def build(self):
-            self.run("aclocal")
-            self.run("autoconf")
-            self.run("automake --add-missing --foreign")
+            with chdir(self, self.source_folder):
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
             autotools = Autotools(self)
-            autotools.configure()
+            autotools.configure(self.source_folder)
             autotools.make()
 
         def package(self):
@@ -164,11 +163,15 @@ configure_ac = textwrap.dedent("""
     AC_PROG_CXX
     AC_PROG_RANLIB
     AM_PROG_AR
-    AC_CONFIG_FILES([Makefile])
+    AC_CONFIG_FILES([Makefile src/Makefile])
     AC_OUTPUT
     """)
 
 makefile_am = textwrap.dedent("""
+    SUBDIRS = src
+    """)
+
+makefile_am_lib = textwrap.dedent("""
     lib_LIBRARIES = lib{name}.a
     lib{name}_a_SOURCES = {name}.cpp {name}.h
     include_HEADERS = {name}.h
@@ -179,7 +182,9 @@ test_conanfile = textwrap.dedent("""
 
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
+    from conan.tools.gnu.layout import autotools_layout
     from conan.tools.build import cross_building
+    from conan.tools.files import chdir
 
 
     class {package_name}TestConan(ConanFile):
@@ -194,19 +199,16 @@ test_conanfile = textwrap.dedent("""
             self.requires(self.tested_reference_str)
 
         def build(self):
-            self.run("aclocal")
-            self.run("autoconf")
-            self.run("automake --add-missing --foreign")
+            with chdir(self, self.source_folder):
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
             autotools = Autotools(self)
-            autotools.configure()
+            autotools.configure(self.source_folder)
             autotools.make()
 
         def layout(self):
-            self.folders.build = "."
-            self.folders.generators = os.path.join(self.folders.build, "conan")
-            self.cpp.build.bindirs = ["."]
-            self.cpp.build.libdirs = ["."]
-            self.folders.source = "."
+            autotools_layout(self)
 
         def test(self):
             if not cross_building(self):
@@ -241,8 +243,9 @@ test_makefile_am = textwrap.dedent("""
 def get_autotools_lib_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_sources_v2.format(name=name, version=version,
                                                          package_name=package_name),
-             "{}.cpp".format(name): source_cpp.format(name=name, version=version),
-             "{}.h".format(name): source_h.format(name=name, version=version),
+             "src/Makefile.am": makefile_am_lib.format(name=name, version=version),
+             "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
+             "src/{}.h".format(name): source_h.format(name=name, version=version),
              "configure.ac": configure_ac.format(name=name, version=version),
              "Makefile.am": makefile_am.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile.format(name=name, version=version,
