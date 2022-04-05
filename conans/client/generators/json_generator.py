@@ -72,10 +72,10 @@ class JsonGenerator(Generator):
         res["name"] = depname
 
         # FIXME: trick for NewCppInfo objects when declared layout
-        if cpp_info.version is None:
-            try:
+        try:
+            if cpp_info.version is None:
                 res["version"] = self.conanfile.dependencies.get(depname).ref.version
-            except Exception:
-                pass
+        except Exception:
+            pass
 
         return res
