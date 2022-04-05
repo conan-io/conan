@@ -38,8 +38,6 @@ def test_simple_cmake_mingw():
     [env]
     CC=gcc
     CXX=g++
-    [conf]
-    tools.cmake.cmaketoolchain:generator=Ninja
     """})
     client.run("create . --profile=mingw")
 
