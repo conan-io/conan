@@ -24,6 +24,7 @@ def test_simple_cmake_mingw():
     client.save({"mingw": """
 
     [settings]
+    os=Windows
     arch=x86_64
     build_type=Release
     compiler=gcc
