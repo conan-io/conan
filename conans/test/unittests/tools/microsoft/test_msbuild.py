@@ -139,7 +139,9 @@ def test_resource_compile():
           <PreprocessorDefinitions>
              MYTEST=MYVALUE;%(PreprocessorDefinitions)
           </PreprocessorDefinitions>
+          <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
         </ResourceCompile>"""
+
     props_file = load(props_file)  # Remove all blanks and CR to compare
     props_file = "".join(s.strip() for s in props_file.splitlines())
     assert "".join(s.strip() for s in expected.splitlines()) in props_file
