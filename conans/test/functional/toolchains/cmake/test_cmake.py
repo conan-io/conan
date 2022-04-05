@@ -15,6 +15,33 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.tool_mingw64
+@pytest.mark.tool_cmake(version="3.15")
+def test_simple_cmake_mingw():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    client.save({"mingw": """
+
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.exception=seh
+    compiler.libcxx=libstdc++11
+    compiler.threads=win32
+    compiler.version=11.2
+    cppstd=17
+    [options]
+    [build_requires]
+    [env]
+    CC=gcc
+    CXX=g++
+    [conf]
+    tools.cmake.cmaketoolchain:generator=Ninja
+    """})
+    client.run("create . --profile=mingw")
+
+
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
