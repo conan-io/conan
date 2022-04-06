@@ -1,3 +1,4 @@
+import argparse
 import os
 import shutil
 
@@ -36,6 +37,10 @@ def create(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
+    if not lockfile and args.lockfile_out:
+        raise argparse.ArgumentError(lockfile, "Specify --lockfile with a valid file "
+                                               "if you use --lockfile-out or use 'conan lock create'"
+                                               " to create a new lockfile")
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
