@@ -47,7 +47,7 @@ class NewAPI:
 
     @api_method
     def get_home_template(self, template_name):
-        """ load a template from the Conan home templates/command/new folder
+        """ Load a template from the Conan home templates/command/new folder
         """
         folder_template = os.path.join(self.conan_api.home_folder, "templates", "command/new",
                                        template_name)

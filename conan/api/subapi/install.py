@@ -18,9 +18,9 @@ class InstallAPI:
     @api_method
     def install_binaries(self, deps_graph, remotes=None, update=False):
         """ Install binaries for dependency graph
-        @param deps_graph: Dependency graph to intall packages for
-        @param remotes:
-        @param update:
+        :param: deps_graph: Dependency graph to intall packages for
+        :param: remotes:
+        :param: update:
         """
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes(remotes, update=update)
@@ -56,7 +56,7 @@ class InstallAPI:
 
 # TODO: Look for a better location for the deployers code
 def _find_deployer(d, cache_deploy_folder):
-    """ implements the logic of finding a deployer, with priority:
+    """ Implements the logic of finding a deployer, with priority:
     - 1) absolute paths
     - 2) relative to cwd
     - 3) in the cache/extensions/deploy folder
