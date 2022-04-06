@@ -97,7 +97,7 @@ source_cpp = textwrap.dedent("""
 
         // Libstdc++
         #if defined _GLIBCXX_USE_CXX11_ABI
-        std::cout << "  {name}/{version}: _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI <<  << std::endl;
+        std::cout << "  {name}/{version}: _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI << std::endl;
         #endif
 
         // COMPILER VERSIONS
