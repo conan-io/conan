@@ -74,7 +74,8 @@ makefile_am = textwrap.dedent("""
 makefile_am_lib = textwrap.dedent("""
     lib_LIBRARIES = lib{name}.a
     lib{name}_a_SOURCES = {name}.cpp {name}.h
-    include_HEADERS = {name}.h
+    lib{name}_a_HEADERS = {name}.h
+    lib{name}_adir = $(includedir)
     """)
 
 test_conanfile = textwrap.dedent("""
