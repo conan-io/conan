@@ -42,9 +42,7 @@ conanfile_lib = textwrap.dedent("""
 
         def build(self):
             with chdir(self, self.source_folder):
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
+                self.run("autoreconf --force --install")
             autotools = Autotools(self)
             autotools.configure(self.source_folder)
             autotools.make()
@@ -101,9 +99,7 @@ test_conanfile = textwrap.dedent("""
 
         def build(self):
             with chdir(self, self.source_folder):
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
+                self.run("autoreconf --force --install")
             autotools = Autotools(self)
             autotools.configure(self.source_folder)
             autotools.make()
@@ -184,9 +180,7 @@ conanfile_exe = textwrap.dedent("""
 
         def build(self):
             with chdir(self, self.source_folder):
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
+                self.run("autoreconf --force --install")
             autotools = Autotools(self)
             autotools.configure(self.source_folder)
             autotools.make()
