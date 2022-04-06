@@ -38,6 +38,11 @@ conanfile_lib = textwrap.dedent("""
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
+            if self.options.shared:
+                at_toolchain.configure_args.extend(["--enable-shared", "--disable-static"])
+            else:
+                at_toolchain.configure_args.extend(["--disable-shared", "--enable-static",
+                                                    "--with-pic" if self.options.get_safe("fPIC", True) else "--without-pic"])
             at_toolchain.generate()
 
         def build(self):
@@ -59,8 +64,8 @@ configure_ac = textwrap.dedent("""
     AC_INIT([{name}], [{version}], [])
     AM_INIT_AUTOMAKE([-Wall -Werror foreign])
     AC_PROG_CXX
-    AC_PROG_RANLIB
     AM_PROG_AR
+    LT_INIT
     AC_CONFIG_FILES([Makefile src/Makefile])
     AC_OUTPUT
     """)
@@ -70,10 +75,10 @@ makefile_am = textwrap.dedent("""
     """)
 
 makefile_am_lib = textwrap.dedent("""
-    lib_LIBRARIES = lib{name}.a
-    lib{name}_a_SOURCES = {name}.cpp {name}.h
-    lib{name}_a_HEADERS = {name}.h
-    lib{name}_adir = $(includedir)
+    lib_LTLIBRARIES = lib{name}.la
+    lib{name}_la_SOURCES = {name}.cpp {name}.h
+    lib{name}_la_HEADERS = {name}.h
+    lib{name}_ladir = $(includedir)
     """)
 
 test_conanfile = textwrap.dedent("""
