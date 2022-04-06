@@ -5,7 +5,7 @@ conanfile_lib = textwrap.dedent("""
 
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools
-    from conan.tools.gnu.layout import autotools_layout
+    from conan.tools.layout import basic_layout
     from conan.tools.files import chdir
 
 
@@ -32,7 +32,7 @@ conanfile_lib = textwrap.dedent("""
                 del self.options.fPIC
 
         def layout(self):
-            autotools_layout(self)
+            basic_layout(self)
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
@@ -182,7 +182,7 @@ test_conanfile = textwrap.dedent("""
 
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
-    from conan.tools.gnu.layout import autotools_layout
+    from conan.tools.layout import basic_layout
     from conan.tools.build import cross_building
     from conan.tools.files import chdir
 
@@ -208,7 +208,7 @@ test_conanfile = textwrap.dedent("""
             autotools.make()
 
         def layout(self):
-            autotools_layout(self)
+            basic_layout(self)
 
         def test(self):
             if not cross_building(self):
@@ -261,7 +261,7 @@ conanfile_exe = textwrap.dedent("""
 
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools
-    from conan.tools.gnu.layout import autotools_layout
+    from conan.tools.layout import basic_layout
     from conan.tools.files import chdir
 
 
@@ -283,7 +283,7 @@ conanfile_exe = textwrap.dedent("""
         exports_sources = "configure.ac", "Makefile.am", "src/*"
 
         def layout(self):
-            autotools_layout(self)
+            basic_layout(self)
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
