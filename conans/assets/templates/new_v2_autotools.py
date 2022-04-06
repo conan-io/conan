@@ -221,16 +221,6 @@ test_conanfile_exe = textwrap.dedent("""
                 self.run("{name}", env="conanrun")
     """)
 
-configure_ac_exe = textwrap.dedent("""
-    AC_INIT([{name}], [{version}], [])
-    AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-    AC_PROG_CXX
-    AC_PROG_RANLIB
-    AM_PROG_AR
-    AC_CONFIG_FILES([Makefile src/Makefile])
-    AC_OUTPUT
-    """)
-
 makefile_am_exe = textwrap.dedent("""
     bin_PROGRAMS = {name}
     {name}_SOURCES = main.cpp {name}.cpp {name}.h
@@ -244,9 +234,8 @@ def get_autotools_exe_files(name, version, package_name="Pkg"):
              "src/main.cpp": test_main.format(name=name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
              "src/{}.h".format(name): source_h.format(name=name, version=version),
-             "configure.ac": configure_ac_exe.format(name=name, version=version),
+             "configure.ac": configure_ac.format(name=name, version=version),
              "Makefile.am": makefile_am.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_exe.format(name=name, version=version,
                                                                     package_name=package_name)}
     return files
-
