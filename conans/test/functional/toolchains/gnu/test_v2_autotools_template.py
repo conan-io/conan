@@ -20,9 +20,17 @@ def test_autotools_lib_template():
     client.run("create . -s build_type=Debug")
     assert "hello/0.1: Hello World Debug!" in client.out
 
-    # # Create + shared works
-    # client.run("create . -o hello:shared=True")
-    # assert "hello/0.1: Hello World Release!" in client.out
+    # Create + shared works
+    client.save({}, clean_first=True)
+    client.run("new hello/0.1 --template=autotools_lib")
+    client.run("create . -o hello:shared=True")
+    assert "hello/0.1: Hello World Release!" in client.out
+    if platform.system() == "Darwin":
+        client.run_command("otool -l test_package/build-release/main")
+        assert "libhello.0.dylib" in client.out
+    else:
+        client.run_command("ldd test_package/build-release/main")
+        assert "libhello.so.0" in client.out
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
