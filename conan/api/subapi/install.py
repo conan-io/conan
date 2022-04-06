@@ -18,9 +18,9 @@ class InstallAPI:
     @api_method
     def install_binaries(self, deps_graph, remotes=None, update=False):
         """ Install binaries for dependency graph
-        :param: deps_graph: Dependency graph to intall packages for
-        :param: remotes:
-        :param: update:
+        :param deps_graph: Dependency graph to intall packages for
+        :param remotes:
+        :param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes(remotes, update=update)
