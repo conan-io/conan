@@ -6,7 +6,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conan.tools._compilers import architecture_flag
-from conan.tools.apple.apple import is_apple_os, to_apple_arch
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, is_apple_cross_building
 from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
@@ -328,7 +328,63 @@ class AppleSystemBlock(Block):
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
         set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
+        {% if enable_bitcode is defined and enable_bitcode is sameas true %}
+        # Bitcode
+        set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE YES)
+        set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE bitcode)
+        {% endif %}
+        {% if enable_arc is defined and enable_arc is sameas true %}
+        # ARC
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+        {% elif enable_arc is defined and enable_arc is sameas false %}
+        # ARC
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC NO)
+        {% endif %}
+        {% if enable_visibility is defined and enable_visibility is sameas true %}
+        # Visibility
+        set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN YES)
+        {% elif enable_visibility is defined and enable_visibility is sameas false %}
+        # Visibility
+        set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN NO)
+        {% endif %}
+        {% if common_flags|length > 0 %}
+        string(APPEND CONAN_CXX_FLAGS "{% for flag in common_flags %} {{ flag }}{% endfor %}")
+        string(APPEND CONAN_C_FLAGS "{% for flag in common_flags %} {{ flag }}{% endfor %}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS "{% for flag in common_flags %} {{ flag }}{% endfor %}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS "{% for flag in common_flags %} {{ flag }}{% endfor %}")
+        {% endif %}
         """)
+
+    def _get_xcode_common_flags(self):
+        """
+        Adding Xcode flags if enabled Bitcode, ARC or Visibility via conf.
+
+        :return: `dict` with common flags and boolean values if enabled bitcode, arc or visibility.
+        """
+        # Issue related: https://github.com/conan-io/conan/issues/9448
+        enable_bitcode = self._conanfile.conf.get("tools.apple:enable_bitcode",
+                                                  default=self._conanfile.settings.get_safe('os') in ["watchOS", "tvOS"],
+                                                  check_type=bool)
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        enable_visibility = self._conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
+        common_flags = []
+        if enable_bitcode:
+            if self._conanfile.settings.get_safe('build_type') == "Debug":
+                common_flags.append("-fembed-bitcode-marker")
+            else:
+                common_flags.append("-fembed-bitcode")
+        if enable_arc:
+            common_flags.append("-fobjc-arc")
+        elif enable_arc is False:
+            common_flags.append("-fno-objc-arc")
+        if enable_visibility is False:
+            common_flags.append("-fvisibility=hidden")
+        return {
+            "common_flags": common_flags,
+            "enable_bitcode": enable_bitcode,
+            "enable_arc": enable_arc,
+            "enable_visibility": enable_visibility
+        }
 
     def _apple_sdk_name(self):
         """
@@ -357,7 +413,7 @@ class AppleSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
+        if not is_apple_os(os_):
             return None
 
         arch = self._conanfile.settings.get_safe("arch")
@@ -378,6 +434,7 @@ class AppleSystemBlock(Block):
             # macOS like iOS, tvOS, or watchOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
+        ctxt_toolchain.update(self._get_xcode_common_flags())
         return ctxt_toolchain
 
 
@@ -719,12 +776,6 @@ class GenericSystemBlock(Block):
                     (arch_build == "ppc64") and (arch_host == "ppc32")):
                 return cmake_system_name_map.get(os_host, os_host)
 
-    def _is_apple_cross_building(self):
-        os_host = self._conanfile.settings.get_safe("os")
-        arch_host = self._conanfile.settings.get_safe("arch")
-        arch_build = self._conanfile.settings_build.get_safe("arch")
-        return os_host in ('iOS', 'watchOS', 'tvOS') or (os_host == 'Macos' and arch_host != arch_build)
-
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
         if user_toolchain is not None:
@@ -740,7 +791,7 @@ class GenericSystemBlock(Block):
             if system_name is None:  # Try to deduce
                 _system_version = None
                 _system_processor = None
-                if self._is_apple_cross_building():
+                if is_apple_cross_building(self._conanfile):
                     # cross-build in Macos also for M1
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
