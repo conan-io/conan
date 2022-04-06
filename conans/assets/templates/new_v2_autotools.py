@@ -1,5 +1,7 @@
 import textwrap
 
+from conans.assets.templates.new_v2_cmake import source_cpp, source_h, test_main
+
 conanfile_lib = textwrap.dedent("""
     import os
 
@@ -53,108 +55,6 @@ conanfile_lib = textwrap.dedent("""
 
         def package_info(self):
             self.cpp_info.libs = ["{name}"]
-    """)
-
-source_h = textwrap.dedent("""
-    #pragma once
-
-    #ifdef _WIN32
-      #define {name}_EXPORT __declspec(dllexport)
-    #else
-      #define {name}_EXPORT
-    #endif
-
-    {name}_EXPORT void {name}();
-    """)
-
-source_cpp = textwrap.dedent("""
-    #include <iostream>
-    #include "{name}.h"
-
-    void {name}(){{
-        #ifdef NDEBUG
-        std::cout << "{name}/{version}: Hello World Release!" << std::endl;
-        #else
-        std::cout << "{name}/{version}: Hello World Debug!" << std::endl;
-        #endif
-
-        // ARCHITECTURES
-        #ifdef _M_X64
-        std::cout << "  {name}/{version}: _M_X64 defined" << std::endl;
-        #endif
-
-        #ifdef _M_IX86
-        std::cout << "  {name}/{version}: _M_IX86 defined" << std::endl;
-        #endif
-
-        #if __i386__
-        std::cout << "  {name}/{version}: __i386__ defined" << std::endl;
-        #endif
-
-        #if __x86_64__
-        std::cout << "  {name}/{version}: __x86_64__ defined" << std::endl;
-        #endif
-
-        // Libstdc++
-        #if defined _GLIBCXX_USE_CXX11_ABI
-        std::cout << "  {name}/{version}: _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI << std::endl;
-        #endif
-
-        // COMPILER VERSIONS
-        #if _MSC_VER
-        std::cout << "  {name}/{version}: _MSC_VER" << _MSC_VER << std::endl;
-        #endif
-
-        #if _MSVC_LANG
-        std::cout << "  {name}/{version}: _MSVC_LANG" << _MSVC_LANG << std::endl;
-        #endif
-
-        #if __cplusplus
-        std::cout << "  {name}/{version}: __cplusplus" << __cplusplus << std::endl;
-        #endif
-
-        #if __INTEL_COMPILER
-        std::cout << "  {name}/{version}: __INTEL_COMPILER" << __INTEL_COMPILER << std::endl;
-        #endif
-
-        #if __GNUC__
-        std::cout << "  {name}/{version}: __GNUC__" << __GNUC__ << std::endl;
-        #endif
-
-        #if __GNUC_MINOR__
-        std::cout << "  {name}/{version}: __GNUC_MINOR__" << __GNUC_MINOR__ << std::endl;
-        #endif
-
-        #if __clang_major__
-        std::cout << "  {name}/{version}: __clang_major__" << __clang_major__ << std::endl;
-        #endif
-
-        #if __clang_minor__
-        std::cout << "  {name}/{version}: __clang_minor__" << __clang_minor__ << std::endl;
-        #endif
-
-        #if __apple_build_version__
-        std::cout << "  {name}/{version}: __apple_build_version__" << __apple_build_version__ << std::endl;
-        #endif
-
-        // SUBSYSTEMS
-
-        #if __MSYS__
-        std::cout << "  {name}/{version}: __MSYS__" << __MSYS__ << std::endl;
-        #endif
-
-        #if __MINGW32__
-        std::cout << "  {name}/{version}: __MINGW32__" << __MINGW32__ << std::endl;
-        #endif
-
-        #if __MINGW64__
-        std::cout << "  {name}/{version}: __MINGW64__" << __MINGW64__ << std::endl;
-        #endif
-
-        #if __CYGWIN__
-        std::cout << "  {name}/{version}: __CYGWIN__" << __CYGWIN__ << std::endl;
-        #endif
-    }}
     """)
 
 configure_ac = textwrap.dedent("""
@@ -216,14 +116,6 @@ test_conanfile = textwrap.dedent("""
                 self.run(cmd, env="conanrun")
     """)
 
-main = textwrap.dedent("""
-    #include "{name}.h"
-
-    int main() {{
-        {name}();
-    }}
-    """)
-
 test_configure_ac = textwrap.dedent("""
     AC_INIT([main], [1.0], [])
     AM_INIT_AUTOMAKE([-Wall -Werror foreign])
@@ -250,7 +142,7 @@ def get_autotools_lib_files(name, version, package_name="Pkg"):
              "Makefile.am": makefile_am.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile.format(name=name, version=version,
                                                                 package_name=package_name),
-             "test_package/main.cpp": main.format(name=name),
+             "test_package/main.cpp": test_main.format(name=name),
              "test_package/configure.ac": test_configure_ac.format(name=name, version=version),
              "test_package/Makefile.am": test_makefile_am.format(name=name, version=version)}
     return files
@@ -349,7 +241,7 @@ def get_autotools_exe_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_exe.format(name=name, version=version,
                                                   package_name=package_name),
              "src/Makefile.am": makefile_am_exe.format(name=name, version=version),
-             "src/main.cpp": main.format(name=name),
+             "src/main.cpp": test_main.format(name=name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
              "src/{}.h".format(name): source_h.format(name=name, version=version),
              "configure.ac": configure_ac_exe.format(name=name, version=version),
