@@ -115,6 +115,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
+
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
@@ -127,6 +128,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
+
+        # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+        set_property(TARGET {{root_target_name}}
+                     PROPERTY INTERFACE_LINK_DIRECTORIES
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
 
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
@@ -147,6 +153,10 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix)}}
                      {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
         set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
+
+        # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix)}}> APPEND)
 
         {%- endfor %}
 

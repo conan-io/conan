@@ -13,7 +13,6 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-
 class CMakeDeps(object):
 
     def __init__(self, conanfile):
