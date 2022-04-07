@@ -226,7 +226,7 @@ def _get_link_order_from_cmake(content):
         if 'main.cpp.o -o example' in line:
             _, links = line.split("main.cpp.o -o example")
             for it_lib in links.split():
-                if it_lib.startswith("-L") or it_lib.startswith("-Wl,"):
+                if it_lib.startswith("-L") or it_lib.startswith("-Wl,-rpath"):
                     continue
                 elif it_lib.startswith("-l"):
                     libs.append(it_lib[2:])
