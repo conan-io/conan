@@ -4,13 +4,6 @@
 from conans.util.runners import check_output_runner
 
 
-def is_apple_cross_building(conanfile):
-    os_host = conanfile.settings.get_safe("os")
-    arch_host = conanfile.settings.get_safe("arch")
-    arch_build = conanfile.settings_build.get_safe("arch")
-    return os_host in ('iOS', 'watchOS', 'tvOS') or (os_host == 'Macos' and arch_host != arch_build)
-
-
 def is_apple_os(os_):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
