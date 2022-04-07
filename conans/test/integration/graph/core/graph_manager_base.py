@@ -2,7 +2,7 @@ import os
 import textwrap
 import unittest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options
