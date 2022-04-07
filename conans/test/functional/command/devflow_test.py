@@ -232,6 +232,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
+    @pytest.mark.tool_cmake
     def test_build_local_different_folders(self):
         # Real build, needed to ensure that the generator is put in the correct place and
         # cmake finds it, using an install_folder different from build_folder

@@ -204,8 +204,9 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(ref2)
 
         # Get the info about this ConanFileReference
-        info = self.api.search_packages(ref1, None)
-        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(), info["1F23223EFDA"])
+        info = self.api.search_packages(ref1)
+        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(),
+                         ConanInfo.loads(info["1F23223EFDA"]["content"]).serialize_min())
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
@@ -239,7 +240,7 @@ class RestApiTest(unittest.TestCase):
             self.assertTrue(os.path.exists(folder))
             folders[sha] = folder
 
-        data = self.api.search_packages(ref, None)
+        data = self.api.search_packages(ref)
         self.assertEqual(len(data), 5)
 
         self.api.remove_packages(ref, ["1"])

@@ -57,13 +57,11 @@ class ClientCommonRouter(object):
             query = "?%s" % urlencode(params)
         return self.base_url + "%s%s" % (self.routes.common_search, query)
 
-    def search_packages(self, ref, query=None):
+    def search_packages(self, ref):
         """URL search packages for a recipe"""
         route = self.routes.common_search_packages_revision \
             if ref.revision else self.routes.common_search_packages
         url = _format_ref(route, ref)
-        if query:
-            url += "?%s" % urlencode({"q": query})
         return self.base_url + url
 
     def oauth_authenticate(self):
@@ -92,9 +90,9 @@ class ClientV1Router(ClientCommonRouter):
             ret[filename] = url.replace("v1/files/", "v1/files{}/".format(self._matrix_params_str))
         return ret
 
-    def search_packages(self, ref, query=None):
+    def search_packages(self, ref):
         ref = ref.copy_clear_rev()
-        return super(ClientV1Router, self).search_packages(ref, query)
+        return super(ClientV1Router, self).search_packages(ref)
 
     def remove_recipe(self, ref):
         """Remove recipe"""

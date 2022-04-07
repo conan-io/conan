@@ -33,9 +33,8 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 info_path = os.path.join(server_store.package(pref), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
-                conan_info_content = load(info_path)
-                encoded = base64.b64encode(conan_info_content.encode("utf-8")).decode("utf-8")
-                result[package_id] = {"content": encoded}
+                content = load(info_path)
+                result[package_id] = {"content": content}
             except Exception as exc:  # FIXME: Too wide
                 logger.error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
@@ -61,7 +60,8 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
     if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
         raise RecipeNotFoundException(ref)
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
-    return filter_packages(query, infos)
+    assert query is None, "The server is not filtering packages remotely anymore"
+    return infos
 
 
 class SearchService(object):
