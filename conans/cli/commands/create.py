@@ -86,6 +86,7 @@ def create(conan_api, parser, *args):
         build_modes = [ref.repr_notime()]
     else:
         build_modes = args.build
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
