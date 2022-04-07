@@ -328,6 +328,9 @@ class AppleSystemBlock(Block):
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
         set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
+        set(BITCODE "")
+        set(FOBJC_ARC "")
+        set(VISIBILITY "")
         {% if enable_bitcode is defined and enable_bitcode is sameas true %}
         # Bitcode ON
         set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
@@ -339,7 +342,6 @@ class AppleSystemBlock(Block):
         {% endif %}
         {% elif enable_bitcode is defined and enable_bitcode is sameas false %}
         # Bitcode OFF
-        set(BITCODE "")
         set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
         {% endif %}
         {% if enable_arc is defined and enable_arc is sameas true %}
