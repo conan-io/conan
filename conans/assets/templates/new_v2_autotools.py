@@ -38,11 +38,6 @@ conanfile_lib = textwrap.dedent("""
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
-            if self.options.shared:
-                at_toolchain.configure_args.extend(["--enable-shared", "--disable-static"])
-            else:
-                at_toolchain.configure_args.extend(["--disable-shared", "--enable-static",
-                                                    "--with-pic" if self.options.get_safe("fPIC", True) else "--without-pic"])
             at_toolchain.generate()
 
         def build(self):
