@@ -4,6 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.tools import get_lib_file_path
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.util.files import save
@@ -139,7 +140,7 @@ class BazelDeps(object):
 
         libs = {}
         for lib in cpp_info.libs:
-            real_path = self._get_lib_file_paths(cpp_info.libdirs, lib)
+            real_path = get_lib_file_path(cpp_info.libdirs, lib, self._conanfile)
             if real_path:
                 libs[lib] = _relativize_path(real_path, package_folder)
 
@@ -157,22 +158,6 @@ class BazelDeps(object):
         }
         content = Template(template).render(**context)
         return content
-
-    def _get_lib_file_paths(self, libdirs, lib):
-        for libdir in libdirs:
-            if not os.path.exists(libdir):
-                self._conanfile.output.warning("The library folder doesn't exist: {}".format(libdir))
-                continue
-            files = os.listdir(libdir)
-            for f in files:
-                name, ext = os.path.splitext(f)
-                if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
-                    if ext != ".lib" and name.startswith("lib"):
-                        name = name[3:]
-                if lib == name:
-                    return os.path.join(libdir, f)
-        self._conanfile.output.warning("The library {} cannot be found in the "
-                                       "dependency".format(lib))
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
         if dependency.package_folder is None:

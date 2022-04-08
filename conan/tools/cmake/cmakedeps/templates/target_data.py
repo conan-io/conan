@@ -1,10 +1,13 @@
 import os
+import re
 import textwrap
 
+from conan.tools import get_lib_file_path
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name, get_find_mode
+
 """
 
 foo-release-x86_64-data.cmake
@@ -100,8 +103,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
-
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
+
+               ### INFORMATION ABOUT THE LIBRARIES
+              {%- for cmake_name, real_path, lib_type in global_cpp.libs_info %}
+
+              list(APPEND {{ pkg_name }}_LIBS_VAR_NAMES{{ config_suffix }} {{ cmake_name }})
+              set({{ pkg_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} {{ real_path }})
+              set({{ pkg_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} {{ lib_type }})
+              {%- endfor %}
+
 
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
 
@@ -115,6 +126,15 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_C{{ config_suffix }} "{{ cpp.cflags_list }}")
               set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} "{{ cpp.cxxflags_list }}")
               set({{ pkg_name }}_{{ comp_variable_name }}_LIBS{{ config_suffix }} {{ cpp.libs }})
+
+              ### INFORMATION ABOUT THE LIBRARIES
+              {%- for cmake_name, real_path, lib_type in cpp.libs_info %}
+
+              list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LIBS_NAMES{{ config_suffix }} {cmake_name})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{cmake_name}_REAL_PATH{{ config_suffix }} {{ real_path }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{cmake_name}_TYPE{{ config_suffix }} {{ lib_type }})
+              {%- endfor %}
+
               set({{ pkg_name }}_{{ comp_variable_name }}_SYSTEM_LIBS{{ config_suffix }} {{ cpp.system_libs }})
               set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ cpp.framework_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS{{ config_suffix }} {{ cpp.frameworks }})
@@ -134,7 +154,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder)
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile)
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -144,8 +164,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
-            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
-                                                self.conanfile.package_folder)
+            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self.conanfile)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -199,7 +218,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 class _TargetDataContext(object):
 
-    def __init__(self, cpp_info, pfolder_var_name, package_folder):
+    def __init__(self, cpp_info, pfolder_var_name, conanfile):
+        self._conanfile = conanfile
+        package_folder = conanfile.package_folder
 
         def join_paths(paths):
             """
@@ -236,13 +257,6 @@ class _TargetDataContext(object):
                                    replace('"', '\\"'))
                                    for v in values)
 
-        def join_paths_single_var(values):
-            """
-            semicolon-separated list of dirs:
-            e.g: set(LIBFOO_INCLUDE_DIR "/path/to/included/dir;/path/to/included/dir2")
-            """
-            return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
-
         self.include_paths = join_paths(cpp_info.includedirs)
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
@@ -251,6 +265,8 @@ class _TargetDataContext(object):
         self.src_paths = join_paths(cpp_info.srcdirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
+        self.libs_info = [self._get_lib_info(cpp_info.libdirs, lib)
+                          for lib in cpp_info.libs]
         self.system_libs = join_flags(" ", cpp_info.system_libs)
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
@@ -274,3 +290,29 @@ class _TargetDataContext(object):
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)
+
+    def _get_lib_info(self, libdirs, lib):
+
+        ret_path = get_lib_file_path(libdirs, lib, self._conanfile)
+        libname = os.path.basename(ret_path)
+        ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", libname)
+
+        ext = libname.split(".", 1)
+        ret_type = "UNKNOWN"
+        if len(ext) > 1:
+            ext = ext[1]
+            # FIXME: Slightly week comparison?
+            if ext == "so" or ext == "dylib" or ext.startswith("so.") or ext.startswith("dylib."):
+                ret_type = "SHARED"
+            if ext == "a":
+                ret_path = "STATIC"
+            if ext == "lib":
+                if hasattr(self._conanfile, 'settings_build'):
+                    os_build = self._conanfile.settings_build.get_safe('os')
+                else:
+                    os_build = self._conanfile.settings.get_safe('os_build')
+                # FIXME: Find the DLL in the bindirs?
+                if os_build == "Windows" and self._conanfile.options.shared:
+                    ret_type = "SHARED"
+        return ret_cmake_name, ret_path, ret_type
+
