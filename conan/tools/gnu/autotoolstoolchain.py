@@ -8,6 +8,7 @@ from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conans.errors import ConanException
 from conans.tools import args_to_string
 
 
@@ -168,11 +169,16 @@ class AutotoolsToolchain:
 
     def _shared_static_args(self):
         args = []
-        if self._conanfile.options.get_safe("shared"):
-            args.extend(["--enable-shared", "--disable-static"])
-        else:
-            args.extend(["--disable-shared", "--enable-static",
-                         "--with-pic" if self._conanfile.options.get_safe("fPIC", True) else "--without-pic"])
+        try:
+            shared = self._conanfile.options.shared
+            if shared:
+                args.extend(["--enable-shared", "--disable-static"])
+            else:
+                args.extend(["--disable-shared", "--enable-static",
+                             "--with-pic" if self._conanfile.options.get_safe("fPIC",
+                                                                              True) else "--without-pic"])
+        except ConanException:
+            pass
         return args
 
     def generate_args(self):
