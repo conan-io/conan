@@ -44,6 +44,9 @@ class MSBuildToolchain(object):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
         self.compile_options = {}
+        self.cxxflags = []
+        self.cflags = []
+        self.ldflags = []
         self.configuration = conanfile.settings.build_type
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
@@ -123,18 +126,18 @@ class MSBuildToolchain(object):
 
     @property
     def context_config_toolchain(self):
+
         def format_macro(key, value):
             return '%s=%s' % (key, value) if value is not None else key
 
-        # FIXME: self.preprocessor_definitions is a dict but tools.build:defines is a list
+        extra_flags = self._get_extra_flags()
         preprocessor_definitions = "".join(["%s;" % format_macro(k, v)
                                             for k, v in self.preprocessor_definitions.items()])
-        extra_flags = self._get_extra_flags()
-        defines = preprocessor_definitions + "".join("%s;" % d for d in extra_flags["preprocessor_definitions"])
-        cxxflags = extra_flags["cxxflags"]
-        cflags = extra_flags["cxxflags"]
-        sharedlinkflags = extra_flags["sharedlinkflags"]
-        exelinkflags = extra_flags["exelinkflags"]
+        defines = preprocessor_definitions + "".join("%s;" % d for d in extra_flags["defines"])
+        self.cxxflags.extend(extra_flags["cxxflags"])
+        self.cflags.extend(extra_flags["cflags"])
+        self.ldflags.extend(extra_flags["sharedlinkflags"] + extra_flags["exelinkflags"])
+
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
@@ -151,8 +154,8 @@ class MSBuildToolchain(object):
                                   for k, v in self.compile_options.items())
         return {
             'defines': defines,
-            'compiler_flags': " ".join(cxxflags + cflags),
-            'linker_flags': " ".join(sharedlinkflags + exelinkflags),
+            'compiler_flags': " ".join(self.cxxflags + self.cflags),
+            'linker_flags': " ".join(self.ldflags),
             "cppstd": cppstd,
             "runtime_library": runtime_library,
             "toolset": toolset,
@@ -220,7 +223,7 @@ class MSBuildToolchain(object):
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "preprocessor_definitions": defines,
+            "defines": defines,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags
         }
