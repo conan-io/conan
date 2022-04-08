@@ -57,7 +57,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    set(_LIB_TYPE ${${package_name}_LIB_${_LIBRARY_VAR_NAME}_TYPE${config_suffix}})
                    set(_REAL_PATH ${${package_name}_LIB_${_LIBRARY_VAR_NAME}_REAL_PATH${config_suffix}})
                    add_library(${_LIBRARY_VAR_NAME} ${_LIB_TYPE} IMPORTED)
-                   set_target_properties(${_LIBRARY_VAR_NAME} PROPERTIES IMPORTED_LOCATION "${_REAL_PATH}")
+                   set_target_properties(${_LIBRARY_VAR_NAME} PROPERTIES IMPORTED_LOCATION ${_REAL_PATH})
                    list(APPEND _CONAN_ACTUAL_TARGETS ${_LIBRARY_VAR_NAME})
                else()
                    conan_message(STATUS "Skipping already existing target: ${_LIBRARY_VAR_NAME}")

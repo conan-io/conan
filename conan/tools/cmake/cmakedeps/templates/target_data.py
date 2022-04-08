@@ -130,9 +130,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ### INFORMATION ABOUT THE LIBRARIES
               {%- for cmake_name, real_path, lib_type in cpp.libs_info %}
 
-              list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LIBS_NAMES{{ config_suffix }} {cmake_name})
-              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{cmake_name}_REAL_PATH{{ config_suffix }} {{ real_path }})
-              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{cmake_name}_TYPE{{ config_suffix }} {{ lib_type }})
+              list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LIBS_VAR_NAMES{{ config_suffix }} {{ cmake_name }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} "{{ real_path }}")
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} "{{ lib_type }}")
               {%- endfor %}
 
               set({{ pkg_name }}_{{ comp_variable_name }}_SYSTEM_LIBS{{ config_suffix }} {{ cpp.system_libs }})
@@ -265,8 +265,8 @@ class _TargetDataContext(object):
         self.src_paths = join_paths(cpp_info.srcdirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
-        self.libs_info = [self._get_lib_info(cpp_info.libdirs, lib)
-                          for lib in cpp_info.libs]
+        self.libs_info = list(filter(None, [self._get_lib_info(cpp_info.libdirs, lib)
+                              for lib in cpp_info.libs]))
         self.system_libs = join_flags(" ", cpp_info.system_libs)
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
@@ -293,7 +293,9 @@ class _TargetDataContext(object):
 
     def _get_lib_info(self, libdirs, lib):
 
-        path = get_lib_file_path(libdirs, lib, self._conanfile)
+        path = get_lib_file_path(libdirs, lib)
+        if not path:
+            return None
         libname = os.path.basename(path)
         ret_path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
         ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", libname)

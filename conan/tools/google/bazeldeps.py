@@ -140,7 +140,7 @@ class BazelDeps(object):
 
         libs = {}
         for lib in cpp_info.libs:
-            real_path = get_lib_file_path(cpp_info.libdirs, lib, self._conanfile)
+            real_path = get_lib_file_path(cpp_info.libdirs, lib)
             if real_path:
                 libs[lib] = _relativize_path(real_path, package_folder)
 

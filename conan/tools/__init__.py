@@ -1,13 +1,16 @@
 import os
 
+from conans.cli.output import ConanOutput
+
 CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
 CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
 
 
-def get_lib_file_path(libdirs, lib, conanfile):
+def get_lib_file_path(libdirs, lib):
+    output = ConanOutput()
     for libdir in libdirs:
         if not os.path.exists(libdir):
-            conanfile.output.warning("The library folder doesn't exist: {}".format(libdir))
+            output.warning("The library folder doesn't exist: {}".format(libdir))
             continue
         files = os.listdir(libdir)
         for f in files:
@@ -17,4 +20,4 @@ def get_lib_file_path(libdirs, lib, conanfile):
                     name = name[3:]
             if lib == name:
                 return os.path.join(libdir, f)
-    conanfile.output.warning("The library {} cannot be found in the dependency".format(lib))
+    output.warning("The library {} cannot be found in the dependency".format(lib))
