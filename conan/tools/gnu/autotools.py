@@ -16,6 +16,7 @@ class Autotools(object):
                                                      namespace=namespace)
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
+        self.default_configure_install_args = True
 
     def configure(self, build_script_folder=None):
         """
@@ -23,7 +24,7 @@ class Autotools(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
         configure_args = []
-        if self._conanfile.package_folder:
+        if self.default_configure_install_args and self._conanfile.package_folder:
             def _get_cpp_info_value(name):
                 # Why not taking cpp.build? because this variables are used by the "cmake install"
                 # that correspond to the package folder (even if the root is the build directory)
