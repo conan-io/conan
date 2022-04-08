@@ -49,8 +49,9 @@ def test_autotools_lib_template():
 def test_autotools_exe_template():
     client = TestClient(path_with_spaces=False)
     client.run("new greet/0.1 --template=autotools_exe")
-
-    # TODO: check if we can make it work with the local flow
+    # Local flow works
+    client.run("install . -if=install")
+    client.run("build . -if=install")
 
     # Create works
     client.run("create .")
@@ -58,3 +59,4 @@ def test_autotools_exe_template():
 
     client.run("create . -s build_type=Debug")
     assert "greet/0.1: Hello World Debug!" in client.out
+
