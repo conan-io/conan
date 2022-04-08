@@ -109,8 +109,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               {%- for cmake_name, real_path, lib_type in global_cpp.libs_info %}
 
               list(APPEND {{ pkg_name }}_LIBS_VAR_NAMES{{ config_suffix }} {{ cmake_name }})
-              set({{ pkg_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} {{ real_path }})
-              set({{ pkg_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} {{ lib_type }})
+              set({{ pkg_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} "{{ real_path }}")
+              set({{ pkg_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} "{{ lib_type }}")
               {%- endfor %}
 
 
@@ -293,8 +293,9 @@ class _TargetDataContext(object):
 
     def _get_lib_info(self, libdirs, lib):
 
-        ret_path = get_lib_file_path(libdirs, lib, self._conanfile)
-        libname = os.path.basename(ret_path)
+        path = get_lib_file_path(libdirs, lib, self._conanfile)
+        libname = os.path.basename(path)
+        ret_path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
         ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", libname)
 
         ext = libname.split(".", 1)
@@ -305,7 +306,7 @@ class _TargetDataContext(object):
             if ext == "so" or ext == "dylib" or ext.startswith("so.") or ext.startswith("dylib."):
                 ret_type = "SHARED"
             if ext == "a":
-                ret_path = "STATIC"
+                ret_type = "STATIC"
             if ext == "lib":
                 if hasattr(self._conanfile, 'settings_build'):
                     os_build = self._conanfile.settings_build.get_safe('os')
@@ -314,5 +315,5 @@ class _TargetDataContext(object):
                 # FIXME: Find the DLL in the bindirs?
                 if os_build == "Windows" and self._conanfile.options.shared:
                     ret_type = "SHARED"
-        return ret_cmake_name, ret_path, ret_type
 
+        return ret_cmake_name, ret_path, ret_type
