@@ -4,6 +4,7 @@ from conan.tools.build import build_jobs
 from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
+from conans.tools import args_to_string
 
 
 class Autotools(object):
@@ -21,6 +22,24 @@ class Autotools(object):
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
+        configure_args = []
+        if self._conanfile.package_folder:
+            def _get_cpp_info_value(name):
+                # Why not taking cpp.build? because this variables are used by the "cmake install"
+                # that correspond to the package folder (even if the root is the build directory)
+                elements = getattr(self._conanfile.cpp.package, name)
+                return elements[0] if elements else None
+
+            # If someone want arguments but not the defaults can pass them in args manually
+            configure_args.extend(["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
+                                   "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                                   "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
+                                   "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
+                                   "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                                   "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
+                                   "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
+
+        self._configure_args = args_to_string(configure_args) + self._configure_args
         source = self._conanfile.source_folder
         if build_script_folder:
             source = os.path.join(self._conanfile.source_folder, build_script_folder)
