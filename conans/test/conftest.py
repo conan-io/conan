@@ -156,9 +156,9 @@ default_profiles = {
     "Darwin": textwrap.dedent("""\
         [settings]
         os=Macos
-        arch=x86_64
+        arch=armv8
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         """)
