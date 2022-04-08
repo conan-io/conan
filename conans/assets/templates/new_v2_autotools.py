@@ -54,6 +54,7 @@ conanfile_lib = textwrap.dedent("""
 
         def package(self):
             autotools = Autotools(self)
+            autotools.configure(self.source_folder)
             autotools.install()
 
         def package_info(self):
@@ -192,6 +193,7 @@ conanfile_exe = textwrap.dedent("""
 
         def package(self):
             autotools = Autotools(self)
+            autotools.configure(self.source_folder)
             autotools.install()
         """)
 
