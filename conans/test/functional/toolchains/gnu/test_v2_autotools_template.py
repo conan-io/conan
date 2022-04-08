@@ -1,7 +1,10 @@
 import platform
+import re
+import os
 
 import pytest
 
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 
 
@@ -11,7 +14,15 @@ def test_autotools_lib_template():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=autotools_lib")
 
-    # TODO: check if we can make it work with the local flow
+    # Local flow works
+    client.run("install . -if=install")
+    client.run("build . -if=install")
+
+    client.run("export-pkg . hello/0.1@ -if=install")
+    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+    assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
     # Create works
     client.run("create .")
