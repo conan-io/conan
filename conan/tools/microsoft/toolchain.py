@@ -42,8 +42,6 @@ class MSBuildToolchain(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.compiler_flags = []
-        self.linker_flags = []
         self.preprocessor_definitions = {}
         self.compile_options = {}
         self.configuration = conanfile.settings.build_type
@@ -65,6 +63,7 @@ class MSBuildToolchain(object):
     def generate(self):
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
+        # Writing the props files
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
@@ -127,12 +126,15 @@ class MSBuildToolchain(object):
         def format_macro(key, value):
             return '%s=%s' % (key, value) if value is not None else key
 
+        # FIXME: self.preprocessor_definitions is a dict but tools.build:defines is a list
         preprocessor_definitions = "".join(["%s;" % format_macro(k, v)
                                             for k, v in self.preprocessor_definitions.items()])
         extra_flags = self._get_extra_flags()
-        defines = preprocessor_definitions + "".join("%s;" % d for d in extra_flags["defines"])
-        compiler_flags = self.compiler_flags + extra_flags["compiler_flags"]
-        linker_flags = self.linker_flags + extra_flags["linker_flags"]
+        defines = preprocessor_definitions + "".join("%s;" % d for d in extra_flags["preprocessor_definitions"])
+        cxxflags = extra_flags["cxxflags"]
+        cflags = extra_flags["cxxflags"]
+        sharedlinkflags = extra_flags["sharedlinkflags"]
+        exelinkflags = extra_flags["exelinkflags"]
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
@@ -149,8 +151,8 @@ class MSBuildToolchain(object):
                                   for k, v in self.compile_options.items())
         return {
             'defines': defines,
-            'compiler_flags': " ".join(compiler_flags),
-            'linker_flags': " ".join(linker_flags),
+            'compiler_flags': " ".join(cxxflags + cflags),
+            'linker_flags': " ".join(sharedlinkflags + exelinkflags),
             "cppstd": cppstd,
             "runtime_library": runtime_library,
             "toolset": toolset,
@@ -216,7 +218,9 @@ class MSBuildToolchain(object):
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return {
-            "compiler_flags": cflags + cxxflags,
-            "defines": defines,
-            "linker_flags": sharedlinkflags + exelinkflags,
+            "cxxflags": cxxflags,
+            "cflags": cflags,
+            "preprocessor_definitions": defines,
+            "sharedlinkflags": sharedlinkflags,
+            "exelinkflags": exelinkflags
         }
