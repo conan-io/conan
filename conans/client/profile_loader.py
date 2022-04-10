@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan.tools.env.environment import ProfileEnvironment
+from conans.client.loader import load_python_file
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
@@ -54,6 +55,12 @@ class ProfileLoader:
             raise ConanException(msg.format(default_profile))
         return default_profile
 
+    def _load_profile_plugin(self):
+        profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
+        if os.path.isfile(profile_plugin):
+            mod, _ = load_python_file(profile_plugin)
+            return mod.profile
+
     def from_cli_args(self, profiles, settings, options, env, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
@@ -66,6 +73,10 @@ class ProfileLoader:
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
         # Only after everything has been aggregated, try to complete missing settings
+        profile_plugin = self._load_profile_plugin()
+        if profile_plugin is not None:
+            profile_plugin(result)
+
         result.process_settings(self._cache)
         return result
 

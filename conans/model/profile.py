@@ -2,7 +2,6 @@ import copy
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client import settings_preprocessor
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -41,12 +40,6 @@ class Profile(object):
         assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
         self.processed_settings.values = Values.from_list(list(self.settings.items()))
-
-        settings_preprocessor.preprocess(self.processed_settings)
-        # Redefine the profile settings values with the preprocessed ones
-        # FIXME: Simplify the values.as_list()
-        self.settings = OrderedDict(self.processed_settings.values.as_list())
-        # Per-package settings cannot be processed here, until composed not possible
 
     def dumps(self):
         result = ["[settings]"]
