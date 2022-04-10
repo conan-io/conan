@@ -123,7 +123,7 @@ class GLibCXXBlock(Block):
         string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
-        add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        add_compile_definitions(_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
         {% endif %}
         """)
 
@@ -233,10 +233,10 @@ class AndroidSystemBlock(Block):
 
     template = textwrap.dedent("""
         # New toolchain things
-        set(ANDROID_PLATFORM {{ ANDROID_PLATFORM }})
-        set(ANDROID_STL {{ ANDROID_STL }})
-        set(ANDROID_ABI {{ ANDROID_ABI }})
-        include({{ ANDROID_NDK_PATH }}/build/cmake/android.toolchain.cmake)
+        set(ANDROID_PLATFORM {{ android_platform }})
+        set(ANDROID_STL {{ android_stl }})
+        set(ANDROID_ABI {{ android_abi }})
+        include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
         """)
 
     def context(self):
@@ -259,10 +259,10 @@ class AndroidSystemBlock(Block):
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'ANDROID_PLATFORM': self._conanfile.settings.os.api_level,
-            'ANDROID_ABI': android_abi,
-            'ANDROID_STL': libcxx_str,
-            'ANDROID_NDK_PATH': android_ndk_path,
+            'android_platform': self._conanfile.settings.os.api_level,
+            'android_abi': android_abi,
+            'android_stl': libcxx_str,
+            'android_ndk_path': android_ndk_path,
         }
         return ctxt_toolchain
 
@@ -270,13 +270,13 @@ class AndroidSystemBlock(Block):
 class AppleSystemBlock(Block):
     template = textwrap.dedent("""
         # Set the architectures for which to build.
-        set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
+        set(CMAKE_OSX_ARCHITECTURES {{ cmake_osx_architectures }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
-        set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
-        {% if CMAKE_OSX_DEPLOYMENT_TARGET is defined %}
+        set(CMAKE_OSX_SYSROOT {{ cmake_osx_sysroot }} CACHE STRING "" FORCE)
+        {% if cmake_osx_deployment_target is defined %}
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ CMAKE_OSX_DEPLOYMENT_TARGET }}" CACHE STRING "")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
         """)
 
@@ -296,16 +296,16 @@ class AppleSystemBlock(Block):
 
         ctxt_toolchain = {}
         if host_sdk_name:
-            ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
+            ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
         if host_architecture:
-            ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
+            ctxt_toolchain["cmake_osx_architectures"] = host_architecture
 
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
             # Despite the OSX part in the variable name(s) they apply also to other SDKs than
             # macOS like iOS, tvOS, or watchOS.
-            ctxt_toolchain["CMAKE_OSX_DEPLOYMENT_TARGET"] = host_os_version
+            ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
         return ctxt_toolchain
 
@@ -452,7 +452,7 @@ class ExtraFlagsBlock(Block):
         string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
         {% if defines %}
-        add_definitions({% for define in defines %} {{ define }}{% endfor %})
+        add_compile_definitions({% for define in defines %} {{ define }}{% endfor %})
         {% endif %}
     """)
 
@@ -468,7 +468,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": ["-D{}".format(d) for d in defines]
+            "defines": defines
         }
 
 
