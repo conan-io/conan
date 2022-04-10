@@ -40,12 +40,12 @@ class Profile(object):
     def process_settings(self, cache):
         assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
-        self.processed_settings.values = Values.from_list(list(self.settings.items()))
+        self.processed_settings.update_values(list(self.settings.items()))
 
         settings_preprocessor.preprocess(self.processed_settings)
         # Redefine the profile settings values with the preprocessed ones
         # FIXME: Simplify the values.as_list()
-        self.settings = OrderedDict(self.processed_settings.values.as_list())
+        self.settings = OrderedDict(self.processed_settings.values_list)
         # Per-package settings cannot be processed here, until composed not possible
 
     def dumps(self):

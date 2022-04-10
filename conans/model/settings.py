@@ -229,10 +229,6 @@ class Settings(object):
         self._data[field].value = value
 
     @property
-    def values(self):
-        return Values.from_list(self.values_list)
-
-    @property
     def values_list(self):
         result = []
         for field in self.fields:
@@ -254,11 +250,6 @@ class Settings(object):
             for setting in list_settings[:-1]:
                 attr = getattr(attr, setting)
             setattr(attr, list_settings[-1], str(value))
-
-    @values.setter
-    def values(self, vals):
-        assert isinstance(vals, Values)
-        self.update_values(vals.as_list())
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
