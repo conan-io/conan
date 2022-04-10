@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.cli.api.model import Remote
+from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest

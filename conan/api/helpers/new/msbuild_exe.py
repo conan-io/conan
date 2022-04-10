@@ -1,4 +1,4 @@
-from conans.cli.api.helpers.new.msbuild_lib import vcxproj, sln_file
+from conan.api.helpers.new.msbuild_lib import vcxproj, sln_file
 
 test_main = """#include "{{name}}.h"
 
