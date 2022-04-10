@@ -4,7 +4,6 @@ from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
-from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.sha import sha1
 
@@ -380,7 +379,17 @@ class ConanInfo(object):
                               raise_unexpected_field=False)
         result = ConanInfo()
         result.invalid = None
-        result.settings = Values.loads(parser.settings)
+
+        def _loads_settings(settings_text):
+            settings_result = []
+            for line in settings_text.splitlines():
+                if not line.strip():
+                    continue
+                name, value = line.split("=", 1)
+                settings_result.append((name.strip(), value.strip()))
+            return settings_result
+
+        result.settings = _loads_settings(parser.settings)
         result.options = Options.loads(parser.options)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
@@ -442,7 +451,8 @@ class ConanInfo(object):
         """
         This info will be shown in search results.
         """
-        conan_info_json = {"settings": dict(self.settings.serialize()),
+        # self.settings is already a simple serialized list, it has been loaded from conaninfo.txt
+        conan_info_json = {"settings": dict(self.settings),
                            "options": dict(self.options.serialize())["options"],
                            "requires": self.requires.serialize()
                            }

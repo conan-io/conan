@@ -6,7 +6,6 @@ from conans.client import settings_preprocessor
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.model.values import Values
 
 
 class Profile(object):

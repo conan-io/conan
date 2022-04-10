@@ -1,7 +1,6 @@
 import yaml
 
 from conans.errors import ConanException
-from conans.model.values import Values
 
 
 def bad_value_msg(name, value, value_range):
@@ -152,6 +151,7 @@ class SettingsItem(object):
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+        # FIXME: Avoid management of "None" as string if possible
         if parent_value == "None" and definition:
             raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
