@@ -7,7 +7,7 @@ from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
-from conans.util.files import save, load
+from conans.util.files import save
 
 my_hook = """
 def pre_export(output, **kwargs):
@@ -62,26 +62,23 @@ def post_download_package(output, **kwargs):
 
 class HookManagerTest(unittest.TestCase):
 
-    def _init(self):
+    def _init(self, hook_content):
         temp_dir = temp_folder()
         hook_path = os.path.join(temp_dir, "hook_my_hook.py")
-        save(hook_path, my_hook)
+        save(hook_path, hook_content)
         hook_manager = HookManager(temp_dir)
-        return hook_manager, hook_path
+        return hook_manager
 
     def test_load(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            hook_manager, _ = self._init()
-            self.assertEqual({}, hook_manager.hooks)
-            hook_manager.load_hooks()
+            hook_manager = self._init(my_hook)
             self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
 
     def test_check_output(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            hook_manager, _ = self._init()
-            hook_manager.load_hooks()
+            hook_manager = self._init(my_hook)
             methods = hook_manager.hooks.keys()
             for method in methods:
                 hook_manager.execute(method)
@@ -90,27 +87,24 @@ class HookManagerTest(unittest.TestCase):
     def test_no_error_with_no_method(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            hook_manager, hook_path = self._init()
             other_hook = """
 def my_custom_function():
     pass
 """
-            save(hook_path, other_hook)
-            self.assertEqual(other_hook, load(hook_path))
+            hook_manager = self._init(other_hook)
             hook_manager.execute("pre_source")
             self.assertEqual("", output)
 
     def test_exception_in_method(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            hook_manager, hook_path = self._init()
-            my_hook = """
+            other_hook = """
 from conan.errors import ConanException
 
 def pre_build(output, **kwargs):
     raise Exception("My custom exception")
 """
-            save(hook_path, my_hook)
+            hook_manager = self._init(other_hook)
             with self.assertRaisesRegex(ConanException, "My custom exception"):
                 hook_manager.execute("pre_build")
             # Check traceback output
