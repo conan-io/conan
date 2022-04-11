@@ -331,33 +331,33 @@ class AppleSystemBlock(Block):
         set(BITCODE "")
         set(FOBJC_ARC "")
         set(VISIBILITY "")
-        {% if enable_bitcode is defined and enable_bitcode is sameas true %}
+        {% if enable_bitcode %}
         # Bitcode ON
         set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
         set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
-        {% if enable_bitcode_marker is sameas true %}
+        {% if enable_bitcode_marker %}
         set(BITCODE "-fembed-bitcode-marker")
         {% else %}
         set(BITCODE "-fembed-bitcode")
         {% endif %}
-        {% elif enable_bitcode is defined and enable_bitcode is sameas false %}
+        {% elif enable_bitcode is not none %}
         # Bitcode OFF
         set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
         {% endif %}
-        {% if enable_arc is defined and enable_arc is sameas true %}
+        {% if enable_arc %}
         # ARC ON
         set(FOBJC_ARC "-fobjc-arc")
         set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")
-        {% elif enable_arc is defined and enable_arc is sameas false %}
+        {% elif enable_arc is not none %}
         # ARC OFF
         set(FOBJC_ARC "-fno-objc-arc")
         set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")
         {% endif %}
-        {% if enable_visibility is defined and enable_visibility is sameas true %}
+        {% if enable_visibility %}
         # Visibility ON
         set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")
         set(VISIBILITY "-fvisibility=default")
-        {% elif enable_visibility is defined and enable_visibility is sameas false %}
+        {% elif enable_visibility is not none %}
         # Visibility OFF
         set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")
         set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")
