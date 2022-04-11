@@ -18,7 +18,7 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
-    if env:
+    if env and env != ["conanbuild"]:
         # Passing env invalidates the conanfile.environment_scripts
         env_win = [env] if not isinstance(env, list) else env
         env_shell = []
