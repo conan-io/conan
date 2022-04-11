@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
@@ -13,7 +14,7 @@ from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
-from conans.util.files import load, mkdir
+from conans.util.files import load, mkdir, save
 
 
 def _unquote(text):
@@ -57,9 +58,22 @@ class ProfileLoader:
 
     def _load_profile_plugin(self):
         profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
-        if os.path.isfile(profile_plugin):
-            mod, _ = load_python_file(profile_plugin)
-            return mod.profile
+        if not os.path.isfile(profile_plugin):
+            profile_process = textwrap.dedent("""
+                def profile_plugin(profile):
+                    settings = profile.settings
+                    if settings.get("compiler") == "msvc" and settings.get("compiler.runtime"):
+                        if settings.get("compiler.runtime_type") is None:
+                            runtime = "Debug" if settings.get("build_type") == "Debug" else "Release"
+                            try:
+                                settings["compiler.runtime_type"] = runtime
+                            except ConanException:
+                                pass
+                """)
+            save(profile_plugin, profile_process)
+        mod, _ = load_python_file(profile_plugin)
+        if hasattr(mod, "profile_plugin"):
+            return mod.profile_plugin
 
     def from_cli_args(self, profiles, settings, options, env, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
