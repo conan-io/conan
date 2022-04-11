@@ -43,10 +43,10 @@ class Profile(object):
 
     def dumps(self):
         result = ["[settings]"]
-        for name, value in self.settings.items():
+        for name, value in sorted(self.settings.items()):
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
-            for name, value in values.items():
+            for name, value in sorted(values.items()):
                 result.append("%s:%s=%s" % (package, name, value))
 
         result.append("[options]")
