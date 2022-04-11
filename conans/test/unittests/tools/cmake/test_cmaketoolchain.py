@@ -398,7 +398,7 @@ def test_libcxx_abi_flag():
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=0' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=0' in content
     c.settings.compiler.libcxx = "libstdc++11"
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -407,13 +407,13 @@ def test_libcxx_abi_flag():
     # recipe workaround for older distros
     toolchain.blocks["libcxx"].values["glibcxx"] = "1"
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
     # but maybe the conf is better
     c.conf.define("tools.gnu:define_libcxx11_abi", True)
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
 
 @pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [

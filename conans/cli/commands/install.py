@@ -45,7 +45,7 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
-def graph_compute(args, conan_api, strict=False):
+def graph_compute(args, conan_api, strict=False, allow_error=False):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -95,6 +95,11 @@ def graph_compute(args, conan_api, strict=False):
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
+    if deps_graph.error:
+        if allow_error:
+            return deps_graph, lockfile
+        raise deps_graph.error
+
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
