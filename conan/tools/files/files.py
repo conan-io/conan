@@ -168,7 +168,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
 def rename(conanfile, src, dst):
     """
-    rename a file or folder to avoid "Access is denied" error on Windows
+    Rename a file or folder to avoid "Access is denied" error on Windows
+
     :param conanfile: conanfile object
     :param src: Source file or folder
     :param dst: Destination file or folder
@@ -254,14 +255,14 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
           strip_root=False):
     """
     Unzip a zipped file
+
     :param filename: Path to the zip file
     :param destination: Destination folder (or file for .gz files)
-    :param keep_permissions: Keep the zip permissions. WARNING: Can be
-    dangerous if the zip was not created in a NIX system, the bits could
-    produce undefined permission schema. Use this option only if you are sure
-    that the zip was created correctly.
-    :param pattern: Extract only paths matching the pattern. This should be a
-    Unix shell-style wildcard, see fnmatch documentation for more details.
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the
+        zip was not created in a NIX system, the bits could produce undefined permission
+        schema. Use this option only if you are sure that the zip was created correctly.
+    :param pattern: Extract only paths matching the pattern. This should be a Unix
+        shell-style wildcard, see fnmatch documentation for more details.
     :param flat: If all the contents are in a single dir, flat that directory.
     :return:
     """

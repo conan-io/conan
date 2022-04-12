@@ -81,9 +81,8 @@ class SearchAPI:
 
     @api_method
     def package_revisions(self, expression, query=None, remote=None):
-        """
-        Resolve an expression like lib*/1*#*:9283*, filtering by query and obtaining all the package
-        revisions
+        """ Resolve an expression like lib*/1*#*:9283*, filtering by query and obtaining all the package revisions
+
         :param expression: lib*/1*#*:9283*
         :param query: package configuration query like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :param remote: Remote object
