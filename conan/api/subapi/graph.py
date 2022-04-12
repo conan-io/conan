@@ -138,6 +138,5 @@ class GraphAPI:
         """
         conan_app = ConanApp(self.conan_api.cache_folder)
         conan_app.load_remotes(remotes, update=update)
-        graph.report_graph_error()
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile)

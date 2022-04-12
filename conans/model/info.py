@@ -287,6 +287,9 @@ class PythonRequireInfo(object):
 
     recipe_revision_mode = full_mode
 
+    def unrelated_mode(self):
+        self._name = self._version = self._user = self._channel = self._revision = None
+
 
 class PythonRequiresInfo(object):
 
