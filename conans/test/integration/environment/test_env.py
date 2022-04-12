@@ -579,7 +579,6 @@ def test_skip_virtualbuildenv_run():
     # Build require
     conanfile = textwrap.dedent(r"""
            from conan import ConanFile
-           from conan.tools.env import Environment
            class Pkg(ConanFile):
                def package_info(self):
                    self.buildenv_info.define("FOO", "BAR")
@@ -592,7 +591,6 @@ def test_skip_virtualbuildenv_run():
     conanfile = textwrap.dedent(r"""
                import os
                from conan import ConanFile
-               from conan.tools.env import Environment
                class Consumer(ConanFile):
                    tool_requires = "pkg/1.0"
                    exports_sources = "my_script.sh"
