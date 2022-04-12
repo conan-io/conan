@@ -131,7 +131,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
             # Set the libraries.
             set_target_properties(${target_name} PROPERTIES IMPORTED_LOCATION ${imported_loc})
             if(NOT imported_imp_lib STREQUAL "")
-                set_target_properties(${target_name} PROPERTIES IMPORTED_LOCATION ${imported_imp_lib})
+                set_target_properties(${target_name} PROPERTIES IMPORTEDIMP_LIB ${imported_imp_lib})
             endif()
 
         endfunction()
