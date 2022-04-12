@@ -59,6 +59,17 @@ class SettingsItem(object):
 
     def copy_conaninfo_settings(self):
         """ deepcopy, recursive
+        This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
+        values, but not all, just the "final" values without subsettings.
+        We cannot let usres manipulate to random strings
+        things that contain subsettings like ``compiler``, because that would leave the thing
+        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        anymore. So with this change the options are:
+        - If you need more "binary-compatible" descriptions of a compiler, lets say like
+        "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
+        that you want for it.
+        - Settings that are "final" (lists), like build_type, or arch or compiler.version they
+        can get any value without issues.
         """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
