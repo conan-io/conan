@@ -16,11 +16,11 @@ def test_change_branch_in_root_commit():
     c.run_command('git config user.name myname')
     c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
-    c.run_command("git commit -m 'initial commit'")
+    c.run_command('git commit -m "initial commit"')
     c.run_command("git checkout -b change_branch")
     c.save({"subfolder/subfolder.txt": "CHANGED"})
     c.run_command("git add .")
-    c.run_command("git commit -m 'second commit'")
+    c.run_command('git commit -m "second commit"')
     c.run_command("git checkout master")
     c.run_command("git merge --no-ff change_branch -m 'Merge branch'")
 
@@ -40,16 +40,16 @@ def test_multi_folder_repo():
     c.run_command('git config user.name myname')
     c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
-    c.run_command("git commit -m 'lib_a commit'")
+    c.run_command('git commit -m "lib_a commit"')
     c.save({"lib_b/conanfile.py": ""})
     c.run_command("git add .")
-    c.run_command("git commit -m 'lib_b commit'")
+    c.run_command('git commit -m "lib_b commit"')
     c.save({"lib_c/conanfile.py": ""})
     c.run_command("git add .")
-    c.run_command("git commit -m 'lib_c commit'")
+    c.run_command('git commit -m "lib_c commit"')
     c.save({"root_change": ""})
     c.run_command("git add .")
-    c.run_command("git commit -m 'root change'")
+    c.run_command('git commit -m "root change"')
 
     # Git object for lib_a
     git = Git(conanfile, folder=os.path.join(c.current_folder, "lib_a"))
@@ -74,7 +74,7 @@ def test_multi_folder_repo():
     # New commit in A
     c.save({"lib_a/conanfile.py": "CHANGED"})
     c.run_command("git add .")
-    c.run_command("git commit -m 'lib_a commit2'")
+    c.run_command('git commit -m "lib_a commit2"')
 
     # Git object for lib_a
     git = Git(conanfile, folder=os.path.join(c.current_folder, "lib_a"))
