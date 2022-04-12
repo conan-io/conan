@@ -317,5 +317,7 @@ class _TargetDataContext(object):
                 # FIXME: Find the DLL in the bindirs?
                 if os_build == "Windows" and self._conanfile.options.shared:
                     ret_type = "SHARED"
+                else:
+                    ret_type = "STATIC"
 
         return ret_cmake_name, ret_path, ret_type
