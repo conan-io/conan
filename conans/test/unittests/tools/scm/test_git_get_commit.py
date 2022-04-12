@@ -13,6 +13,8 @@ def test_change_branch_in_root_commit():
     conanfile = MockConanfile({})
     c.save({"root.txt": "", "subfolder/subfolder.txt": ""})
     c.run_command("git init .")
+    c.run_command('git config user.name myname')
+    c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
     c.run_command("git commit -m 'initial commit'")
     c.run_command("git checkout -b change_branch")
@@ -35,6 +37,8 @@ def test_multi_folder_repo():
     conanfile = MockConanfile({})
     c.save({"lib_a/conanfile.py": ""})
     c.run_command("git init .")
+    c.run_command('git config user.name myname')
+    c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
     c.run_command("git commit -m 'lib_a commit'")
     c.save({"lib_b/conanfile.py": ""})
@@ -69,7 +73,6 @@ def test_multi_folder_repo():
 
     # New commit in A
     c.save({"lib_a/conanfile.py": "CHANGED"})
-    c.run_command("git init .")
     c.run_command("git add .")
     c.run_command("git commit -m 'lib_a commit2'")
 
