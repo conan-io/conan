@@ -26,8 +26,8 @@ def test_change_branch_in_root_commit():
     commit_conan = git.get_commit()
 
     c.run_command("git rev-parse HEAD")
-    commit_real = str(c.out)
-    assert commit_real in commit_conan
+    commit_real = str(c.out).splitlines()[0]
+    assert commit_conan == commit_real
 
 
 def test_multi_folder_repo():
@@ -63,6 +63,10 @@ def test_multi_folder_repo():
     # All different
     assert len({commit_libA, commit_libB, commit_libC, commit_root}) == 4
 
+    c.run_command("git rev-parse HEAD")
+    commit_real = str(c.out).splitlines()[0]
+    assert commit_root == commit_real
+
     # New commit in A
     c.save({"lib_a/conanfile.py": "CHANGED"})
     c.run_command("git init .")
@@ -86,3 +90,7 @@ def test_multi_folder_repo():
     assert new_commit_libB == commit_libB
     assert new_commit_libC == commit_libC
     assert new_commit_root != commit_root
+
+    c.run_command("git rev-parse HEAD")
+    commit_real = str(c.out).splitlines()[0]
+    assert new_commit_root == commit_real
