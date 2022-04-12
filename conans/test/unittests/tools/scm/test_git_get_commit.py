@@ -22,7 +22,7 @@ def test_change_branch_in_root_commit():
     c.run_command("git add .")
     c.run_command('git commit -m "second commit"')
     c.run_command("git checkout master")
-    c.run_command("git merge --no-ff change_branch -m 'Merge branch'")
+    c.run_command('git merge --no-ff change_branch -m "Merge branch"')
 
     git = Git(conanfile, folder=c.current_folder)
     commit_conan = git.get_commit()
