@@ -96,7 +96,8 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict,
+                                         allow_error=True)
     if not args.format:
         print_graph_info(deps_graph, args.filter, args.package_filter)
 

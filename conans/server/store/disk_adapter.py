@@ -13,7 +13,7 @@ class ServerDiskAdapter(object):
     for conan operations"""
     def __init__(self, base_url, base_storage_path):
         """
-        :param: base_url Base url for generate urls to download and upload operations"""
+        :param base_url Base url for generate urls to download and upload operations"""
 
         self.base_url = base_url
         # URLs are generated removing this base path

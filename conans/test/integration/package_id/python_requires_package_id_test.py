@@ -57,16 +57,19 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def test_unrelated_conf(self):
         # change the policy in conan.conf
-        self.client2.run("config set general.default_python_requires_id_mode=unrelated_mode")
-        self.client2.run("create . pkg/0.1@")
+        save(self.client2.cache.new_config_path,
+             "core.package_id:default_python_mode=unrelated_mode")
+        self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.assertIn("pkg/0.1:c941ae50e2daf4a118c393591cfef6a55cd1cfad - Build", self.client2.out)
+        self.client2.assert_listed_binary({"pkg/0.1": ("6e8459b64df7b6506a13ccaeaec024bc5d365968",
+                                                       "Build")})
 
         # with any change the package id doesn't change
-        self.client.run("export . tool/1.1.2@")
-        self.client2.run("create . pkg/0.1@ --build missing")
+        self.client.run("export . --name=tool --version=1.1.2")
+        self.client2.run("create . --name=pkg --version=0.1 --build missing")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.assertIn("pkg/0.1:c941ae50e2daf4a118c393591cfef6a55cd1cfad - Cache", self.client2.out)
+        self.client2.assert_listed_binary({"pkg/0.1": ("6e8459b64df7b6506a13ccaeaec024bc5d365968",
+                                                       "Cache")})
 
     def test_change_mode_package_id(self):
         # change the policy in package_id

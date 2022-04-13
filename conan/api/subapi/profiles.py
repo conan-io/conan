@@ -12,24 +12,24 @@ class ProfilesAPI:
 
     def get_default_host(self):
         """
-        @return: the path to the default "host" profile, either in the cache or as defined by
-        the user in configuration
+        :return: the path to the default "host" profile, either in the cache or as defined
+            by the user in configuration
         """
         loader = ProfileLoader(self._cache)
         return loader.get_default_host()
 
     def get_default_build(self):
         """
-        @return: the path to the default "build" profile, either in the cache or as defined by
-        the user in configuration
+        :return: the path to the default "build" profile, either in the cache or as
+            defined by the user in configuration
         """
         loader = ProfileLoader(self._cache)
         return loader.get_default_build()
 
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
-        """ Computes a Profile as the result of aggregating all the user arguments, first
-        it loads the "profiles", composing them in order (last profile has priority), and finally
-        adding the individual settings, options (priority over the profiles)
+        """ Computes a Profile as the result of aggregating all the user arguments, first it
+        loads the "profiles", composing them in order (last profile has priority), and
+        finally adding the individual settings, options (priority over the profiles)
         """
         assert profiles and isinstance(profiles, list), "Please provide at least 1 profile"
         loader = ProfileLoader(self._cache)
@@ -41,8 +41,8 @@ class ProfilesAPI:
 
     def get_path(self, profile, cwd=None, exists=True):
         """
-        @return: the resolved path of the given profile name, that could be in the cache, or
-        local, depending on the "cwd"
+        :return: the resolved path of the given profile name, that could be in the cache,
+            or local, depending on the "cwd"
         """
         loader = ProfileLoader(self._cache)
         profile_path = loader.get_profile_path(profile, cwd, exists=exists)
@@ -50,8 +50,8 @@ class ProfilesAPI:
 
     def list(self):
         """
-        list all the profiles file sin the cache
-        @return: an alphabetically ordered list of profile files in the default cache location
+        List all the profiles file sin the cache
+        :return: an alphabetically ordered list of profile files in the default cache location
         """
         profiles = []
         profiles_path = self._cache.profiles_path
@@ -67,7 +67,7 @@ class ProfilesAPI:
 
     def detect(self):
         """
-        @return: an automatically detected Profile, with a "best guess" of the system settings
+        :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
         from conans.client.conf.detect import detect_defaults_settings
