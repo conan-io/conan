@@ -2,7 +2,7 @@ import os
 import re
 import textwrap
 
-from conan.tools import get_lib_file_path
+from conan.tools import get_lib_file_path, get_dll_file_path
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
@@ -105,12 +105,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
 
-               ### INFORMATION ABOUT THE LIBRARIES
-              {%- for cmake_name, real_path, lib_type in global_cpp.libs_info %}
+              ### INFORMATION ABOUT THE LIBRARIES
+              set({{ pkg_name }}_LIBS_VAR_NAMES{{ config_suffix }} "")
+              {%- for cmake_name, ret_imported_location, ret_implib_path, lib_type in global_cpp.libs_info %}
+              {%   set lib_var_name = pkg_name + '_' + cmake_name + config_suffix %}
 
-              list(APPEND {{ pkg_name }}_LIBS_VAR_NAMES{{ config_suffix }} {{ cmake_name }})
-              set({{ pkg_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} "{{ real_path }}")
-              set({{ pkg_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} "{{ lib_type }}")
+              list(APPEND {{ pkg_name }}_LIBS_VAR_NAMES{{ config_suffix }} "{{ lib_var_name }}")
+              set({{ lib_var_name }}_IMPORTED_LOCATION "{{ ret_imported_location }}")
+              {% if ret_implib_path %}
+              set({{ lib_var_name }}_IMPLIB_PATH "{{ ret_implib_path }}")
+              {% endif %}
+              set({{ lib_var_name }}_TYPE "{{ lib_type }}")
               {%- endfor %}
 
 
@@ -128,11 +133,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_LIBS{{ config_suffix }} {{ cpp.libs }})
 
               ### INFORMATION ABOUT THE LIBRARIES
-              {%- for cmake_name, real_path, lib_type in cpp.libs_info %}
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_VAR_NAMES{{ config_suffix }} "")
+              {%- for cmake_name, ret_imported_location, ret_implib_path, lib_type in cpp.libs_info %}
+              {%   set lib_var_name = pkg_name + '_' + comp_variable_name + '_' + cmake_name + config_suffix %}
 
-              list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LIBS_VAR_NAMES{{ config_suffix }} {{ cmake_name }})
-              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{{ cmake_name }}_REAL_PATH{{ config_suffix }} "{{ real_path }}")
-              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_{{ cmake_name }}_TYPE{{ config_suffix }} "{{ lib_type }}")
+              list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LIBS_VAR_NAMES{{ config_suffix }} "{{ lib_var_name }}")
+              set({{ lib_var_name }}_IMPORTED_LOCATION "{{ ret_imported_location }}")
+              {% if ret_implib_path %}
+              set({{ lib_var_name }}_IMPLIB_PATH "{{ ret_implib_path }}")
+              {% endif %}
+              set({{ lib_var_name }}_TYPE "{{ lib_type }}")
               {%- endfor %}
 
               set({{ pkg_name }}_{{ comp_variable_name }}_SYSTEM_LIBS{{ config_suffix }} {{ cpp.system_libs }})
@@ -265,8 +275,8 @@ class _TargetDataContext(object):
         self.src_paths = join_paths(cpp_info.srcdirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
-        self.libs_info = list(filter(None, [self._get_lib_info(cpp_info.libdirs, lib)
-                              for lib in cpp_info.libs]))
+        self.libs_info = list(filter(None, [self._get_lib_info(cpp_info, libname)
+                              for libname in cpp_info.libs]))
         self.system_libs = join_flags(" ", cpp_info.system_libs)
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
@@ -291,33 +301,40 @@ class _TargetDataContext(object):
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)
 
-    def _get_lib_info(self, libdirs, lib):
+    def _get_lib_info(self, cppinfo, libname):
 
-        path = get_lib_file_path(libdirs, lib)
+        path = get_lib_file_path(cppinfo.libdirs, libname)
         if not path:
             return None
-        libname = os.path.basename(path)
-        ret_path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-        ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", libname)
+        lib_filename = os.path.basename(path)
+        path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", lib_filename)
 
-        ext = libname.split(".", 1)
+        ext = lib_filename.split(".", 1)
         ret_type = "UNKNOWN"
+        ret_implib_path = None
+        ret_imported_location = path
+
         if len(ext) > 1:
-            ext = ext[1]
+            ext = ext[1].lower()
             # FIXME: Slightly week comparison?
             if ext == "so" or ext == "dylib" or ext.startswith("so.") or ext.startswith("dylib."):
                 ret_type = "SHARED"
             if ext == "a":
                 ret_type = "STATIC"
+                ret_imported_location = path
             if ext == "lib":
                 if hasattr(self._conanfile, 'settings_build'):
                     os_build = self._conanfile.settings_build.get_safe('os')
                 else:
                     os_build = self._conanfile.settings.get_safe('os_build')
-                # FIXME: Find the DLL in the bindirs?
                 if os_build == "Windows" and self._conanfile.options.shared:
                     ret_type = "SHARED"
+                    ret_implib_path = path
+                    # FIXME: This is very week, only matching if dll name starts with the same
+                    implib_name, _ = os.path.splitext(lib_filename)
+                    ret_imported_location = get_dll_file_path(cppinfo.bindirs, implib_name)
                 else:
                     ret_type = "STATIC"
 
-        return ret_cmake_name, ret_path, ret_type
+        return ret_cmake_name, ret_imported_location, ret_implib_path, ret_type

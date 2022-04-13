@@ -65,8 +65,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
                                       {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
-                                      "{{ config_suffix }}"  # config_suffix
-                                      "{{ pkg_name }}")    # package_name
+                                      "{{ config_suffix }}")  # config_suffix
 
         foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
             list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_FRAMEWORK})
@@ -100,8 +99,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
-                                      "{{ config_suffix }}"
-                                      "{{ pkg_name }}_{{ comp_variable_name }}")
+                                      "{{ config_suffix }}")
 
         set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
         {%- endfor %}
