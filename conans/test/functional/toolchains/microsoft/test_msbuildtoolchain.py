@@ -40,6 +40,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     client.save({
         "myprofile": profile
     })
+    # Let's import manually the created conantoolchain_release_x64.props
     replace_in_file(MagicMock(), os.path.join(client.current_folder, "hello.vcxproj"),
                     r'  <ImportGroup Label="PropertySheets">', toolchain_props)
     client.run("create . -pr myprofile -tf None")
