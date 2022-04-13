@@ -308,7 +308,6 @@ class _TargetDataContext(object):
             return None
         lib_filename = os.path.basename(path)
         path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-        ret_cmake_name = libname
 
         ext = lib_filename.split(".", 1)
         ret_type = "UNKNOWN"
@@ -337,4 +336,4 @@ class _TargetDataContext(object):
                 else:
                     ret_type = "STATIC"
 
-        return ret_cmake_name, ret_imported_location, ret_implib_path, ret_type
+        return libname, ret_imported_location, ret_implib_path, ret_type
