@@ -28,3 +28,7 @@ def get_find_mode(conanfile):
     if tmp is None:
         return None
     return tmp.lower()
+
+
+def cmake_norm_path(path):
+    return path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
