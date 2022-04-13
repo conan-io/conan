@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -7,6 +9,7 @@ def test_conaninfo_special_chars():
 
     t = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
+    # coding=utf-8
     from conan import ConanFile
 
     class Recipe(ConanFile):
