@@ -44,7 +44,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     replace_in_file(MagicMock(), os.path.join(client.current_folder, "hello.vcxproj"),
                     r'  <ImportGroup Label="PropertySheets">', toolchain_props)
     client.run("create . -pr myprofile -tf None")
-    assert "/analyze:quiet /doc src/hell.cpp" in client.out
-    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile x64\Release\hell.obj" in client.out
+    assert "/analyze:quiet /doc src/hello.cpp" in client.out
+    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile x64\Release\hello.obj" in client.out
     assert "/D DEF1 /D DEF2" in client.out
     assert "Build succeeded." in client.out
