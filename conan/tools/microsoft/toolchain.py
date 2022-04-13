@@ -130,13 +130,13 @@ class MSBuildToolchain(object):
         def format_macro(key, value):
             return '%s=%s' % (key, value) if value is not None else key
 
-        extra_flags = self._get_extra_flags()
+        cxxflags, cflags, defines, sharedlinkflags, exelinkflags = self._get_extra_flags()
         preprocessor_definitions = "".join(["%s;" % format_macro(k, v)
                                             for k, v in self.preprocessor_definitions.items()])
-        defines = preprocessor_definitions + "".join("%s;" % d for d in extra_flags["defines"])
-        self.cxxflags.extend(extra_flags["cxxflags"])
-        self.cflags.extend(extra_flags["cflags"])
-        self.ldflags.extend(extra_flags["sharedlinkflags"] + extra_flags["exelinkflags"])
+        defines = preprocessor_definitions + "".join("%s;" % d for d in defines)
+        self.cxxflags.extend(cxxflags)
+        self.cflags.extend(cflags)
+        self.ldflags.extend(sharedlinkflags + exelinkflags)
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
@@ -220,10 +220,4 @@ class MSBuildToolchain(object):
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        return {
-            "cxxflags": cxxflags,
-            "cflags": cflags,
-            "defines": defines,
-            "sharedlinkflags": sharedlinkflags,
-            "exelinkflags": exelinkflags
-        }
+        return cxxflags, cflags, defines, sharedlinkflags, exelinkflags
