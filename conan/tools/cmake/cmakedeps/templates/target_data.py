@@ -6,7 +6,7 @@ from conan.tools import get_lib_file_path, get_dll_file_path
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_file_name, get_find_mode
+from conan.tools.cmake.utils import get_file_name, get_find_mode, cmake_norm_path
 
 """
 
@@ -247,10 +247,10 @@ class _TargetDataContext(object):
                 if package_folder is not None and p.startswith(package_folder):
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
                     rel = p[len(package_folder):]
-                    rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")
+                    rel = cmake_norm_path(rel.replace('\\', '/').replace('$', '\\$')).lstrip("/")
                     norm_path = ("${%s}/%s" % (pfolder_var_name, rel))
                 else:
-                    norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                    norm_path = cmake_norm_path(p)
                 ret.append('"{}"'.format(norm_path))
 
             return "\n\t\t\t".join(ret)
@@ -307,7 +307,7 @@ class _TargetDataContext(object):
         if not path:
             return None
         lib_filename = os.path.basename(path)
-        path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        path = cmake_norm_path(path)
 
         ext = lib_filename.split(".", 1)
         ret_type = "UNKNOWN"
@@ -333,6 +333,7 @@ class _TargetDataContext(object):
                     # FIXME: This is very week, only matching if dll name starts with the same
                     implib_name, _ = os.path.splitext(lib_filename)
                     ret_imported_location = get_dll_file_path(cppinfo.bindirs, implib_name)
+                    ret_imported_location = cmake_norm_path(ret_imported_location)
                 else:
                     ret_type = "STATIC"
 
