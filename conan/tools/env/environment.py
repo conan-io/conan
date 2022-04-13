@@ -192,10 +192,13 @@ class Environment:
         self._values[name].remove(value)
 
     def compose_env(self, other):
-        """
-        self has precedence, the "other" will add/append if possible and not conflicting, but
-        self mandates what to do. If self has define(), without placeholder, that will remain
-        :type other: Environment
+        """ 
+        ``self`` has precedence, the "other" will add/append if possible and not
+        conflicting, but ``self`` mandates what to do. If ``self`` has ``define()``, without
+        placeholder, that will remain
+
+        :param other: the "other" environment
+        :type other: class:`Environment`
         """
         for k, v in other._values.items():
             existing = self._values.get(k)
@@ -208,7 +211,8 @@ class Environment:
 
     def __eq__(self, other):
         """
-        :type other: Environment
+        :param other: the "other" environment
+        :type other: class:`Environment`
         """
         return other._values == self._values
 
@@ -240,7 +244,7 @@ class EnvVars:
         return v.get_value(self._subsystem, self._pathsep)
 
     def items(self):
-        """returns {str: str} (varname: value)"""
+        """returns ``{str: str}`` (varname: value)"""
         return {k: v.get_value(self._subsystem, self._pathsep)
                 for k, v in self._values.items()}.items()
 
