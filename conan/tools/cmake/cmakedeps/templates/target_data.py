@@ -336,4 +336,5 @@ class _TargetDataContext(object):
                 else:
                     ret_type = "STATIC"
 
-        return libname, ret_imported_location, ret_implib_path, ret_type
+        ret_libname = re.sub("[^0-9a-zA-Z]+", "_", libname)
+        return ret_libname, ret_imported_location, ret_implib_path, ret_type

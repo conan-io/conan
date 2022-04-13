@@ -32,5 +32,5 @@ def get_dll_file_path(bindirs, implib_name):
         files = os.listdir(bindir)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext == ".dll" and name.startswith(implib_name):
+            if ext.lower() == ".dll" and name.lower().startswith(implib_name.lower()):
                 return os.path.join(bindir, f)

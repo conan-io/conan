@@ -16,6 +16,7 @@ Check that the link order of libraries is preserved when using CMake generators
 
 
 conanfile = Template(textwrap.dedent("""
+    import platform
     from conans import ConanFile
 
     class Recipe(ConanFile):
@@ -30,16 +31,20 @@ conanfile = Template(textwrap.dedent("""
         {% endif %}
 
         def build(self):
-            with open("lib" + self.name + ".a", "w+") as f:
-                f.write("fake library content")
-            with open(self.name + ".lib", "w+") as f:
-                f.write("fake library content")
+            if platform.system() != "Windows":
+                with open("lib" + self.name + ".a", "w+") as f:
+                    f.write("fake library content")
+            else:
+                with open(self.name + ".lib", "w+") as f:
+                    f.write("fake library content")
 
             {% for it in libs_extra %}
-            with open("lib{{ it }}.a", "w+") as f:
-                f.write("fake library content")
-            with open("{{ it }}.lib", "w+") as f:
-                f.write("fake library content")
+            if platform.system() != "Windows":
+                with open("lib{{ it }}.a", "w+") as f:
+                    f.write("fake library content")
+            else:
+                with open("{{ it }}.lib", "w+") as f:
+                    f.write("fake library content")
             {% endfor %}
 
         def package(self):
