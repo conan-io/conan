@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import textwrap
 
@@ -326,13 +327,17 @@ class _TargetDataContext(object):
                 if hasattr(self._conanfile, 'settings_build'):
                     os_build = self._conanfile.settings_build.get_safe('os')
                 else:
-                    os_build = self._conanfile.settings.get_safe('os_build')
+                    os_build = platform.system()
                 if os_build == "Windows" and self._conanfile.options.shared:
                     ret_type = "SHARED"
                     ret_implib_path = path
                     # FIXME: This is very week, only matching if dll name starts with the same
                     implib_name, _ = os.path.splitext(lib_filename)
                     ret_imported_location = get_dll_file_path(cppinfo.bindirs, implib_name)
+                    # If we don't manage to locate the DLL then pass imported location to the lib
+                    if not ret_imported_location:
+                        ret_implib_path = None
+                        ret_imported_location = path
                 else:
                     ret_type = "STATIC"
 
