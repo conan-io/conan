@@ -308,7 +308,7 @@ class _TargetDataContext(object):
             return None
         lib_filename = os.path.basename(path)
         path = path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-        ret_cmake_name = re.sub("[^0-9a-zA-Z]+", "_", lib_filename)
+        ret_cmake_name = libname
 
         ext = lib_filename.split(".", 1)
         ret_type = "UNKNOWN"
