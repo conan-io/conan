@@ -2,9 +2,13 @@
 
 import textwrap
 
+import pytest
+import six
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_conaninfo_special_chars():
 
     t = TestClient(default_server_user=True)
