@@ -359,7 +359,7 @@ class BinaryInstaller(object):
             # but better make sure here, and be able to report the actual folder in case
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
-            self._out.info("Package folder %s" % node.conanfile.package_folder)
+            node.conanfile.output.info("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
 

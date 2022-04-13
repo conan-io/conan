@@ -706,6 +706,11 @@ class TestClient(object):
                                str(self.out)).group(1)
         return package_id
 
+    def created_package_reference(self, ref):
+        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
+        return PkgReference.loads(pref)
+
     def exported_recipe_revision(self):
         return re.search(r"Exported revision: (\S+)", str(self.out)).group(1)
 
