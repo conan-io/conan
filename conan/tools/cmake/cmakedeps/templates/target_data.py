@@ -320,10 +320,10 @@ class _TargetDataContext(object):
             # FIXME: Slightly week comparison?
             if ext == "so" or ext == "dylib" or ext.startswith("so.") or ext.startswith("dylib."):
                 ret_type = "SHARED"
-            if ext == "a":
+            elif ext == "a":
                 ret_type = "STATIC"
                 ret_imported_location = path
-            if ext == "lib":
+            elif ext == "lib":
                 if hasattr(self._conanfile, 'settings_build'):
                     os_build = self._conanfile.settings_build.get_safe('os')
                 else:
@@ -341,6 +341,7 @@ class _TargetDataContext(object):
                         ret_imported_location = path
                 else:
                     ret_type = "STATIC"
+                    ret_imported_location = path
 
         ret_libname = re.sub("[^0-9a-zA-Z]+", "_", libname)
         return ret_libname, ret_imported_location, ret_implib_path, ret_type

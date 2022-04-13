@@ -18,6 +18,8 @@ def get_lib_file_path(libdirs, lib_name):
             if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
+            else:
+                continue
             if lib_name == name:
                 return os.path.join(libdir, f)
     output.warning("The library {} cannot be found in the dependency".format(lib_name))
