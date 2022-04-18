@@ -1,10 +1,13 @@
 import os
 
+import pytest
+
 from conan.tools.scm import Git
 from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("git")
 def test_change_branch_in_root_commit():
     """
     https://github.com/conan-io/conan/issues/10971#issuecomment-1089316912
@@ -32,6 +35,7 @@ def test_change_branch_in_root_commit():
     assert commit_conan == commit_real
 
 
+@pytest.mark.tool("git")
 def test_multi_folder_repo():
     c = TestClient()
     conanfile = MockConanfile({})
