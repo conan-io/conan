@@ -91,7 +91,7 @@ class BinaryCompatibility:
 
     def compatibles(self, conanfile):
         compat_infos = []
-        if hasattr(conanfile, "compatibility") and callable(conanfile.compatibility):
+        if hasattr(conanfile, "compatibility"):
             with conanfile_exception_formatter(conanfile, "compatibility"):
                 recipe_compatibles = conanfile.compatibility()
                 compat_infos.extend(self._compatible_infos(conanfile, recipe_compatibles))
@@ -102,6 +102,8 @@ class BinaryCompatibility:
         result = OrderedDict()
         for c in compat_infos:
             conanfile.info = c
+            conanfile.settings = c.settings
+            conanfile.options = c.options
             run_validate_package_id(conanfile)
             pid = c.package_id()
             if pid not in result and not c.invalid:

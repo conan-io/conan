@@ -236,11 +236,6 @@ class ConanFile:
 
         return retcode
 
-    def package_id(self):
-        """ modify the binary info, typically to narrow values
-        e.g.: self.info.settings.compiler = "Any" => All compilers will generate same ID
-        """
-
     def test(self):
         """ test the generated executable.
         E.g.  self.run("./example")

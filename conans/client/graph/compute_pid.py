@@ -55,7 +55,7 @@ def compute_package_id(node, new_config):
 
 def run_validate_package_id(conanfile):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
-    if hasattr(conanfile, "validate") and callable(conanfile.validate):
+    if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
             with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
@@ -66,6 +66,7 @@ def run_validate_package_id(conanfile):
                     conanfile.info.invalid = BINARY_ERROR, str(e)
 
     # Once we are done, call package_id() to narrow and change possible values
-    with conanfile_exception_formatter(conanfile, "package_id"):
-        with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
-            conanfile.package_id()
+    if hasattr(conanfile, "package_id"):
+        with conanfile_exception_formatter(conanfile, "package_id"):
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "package_id"):
+                conanfile.package_id()
