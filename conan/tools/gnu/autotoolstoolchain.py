@@ -169,10 +169,10 @@ class AutotoolsToolchain:
     def _shared_static_args(self):
         args = []
         if self._conanfile.options.get_safe("shared", False):
-           args.extend(["--enable-shared", "--disable-static"])
+            args.extend(["--enable-shared", "--disable-static"])
         else:
-           args.extend(["--disable-shared", "--enable-static",
-                        "--with-pic" if self._conanfile.options.get_safe("fPIC", True)
+            args.extend(["--disable-shared", "--enable-static", "--with-pic"
+                        if self._conanfile.options.get_safe("fPIC", True)
                         else "--without-pic"])
         return args
 

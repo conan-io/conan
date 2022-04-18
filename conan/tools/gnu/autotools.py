@@ -40,7 +40,7 @@ class Autotools(object):
                                    "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
                                    "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
 
-        self._configure_args = self._configure_args + args_to_string(configure_args)
+        self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args))
         source = self._conanfile.source_folder
         if build_script_folder:
             source = os.path.join(self._conanfile.source_folder, build_script_folder)
