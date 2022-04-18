@@ -1,6 +1,3 @@
-import fnmatch
-
-from conans.client import settings_preprocessor
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -55,7 +52,6 @@ def _initialize_conanfile(conanfile, profile, ref):
         if pkg_settings:
             tmp_settings.update_values(pkg_settings)
             # if the global settings are composed with per-package settings, need to preprocess
-            settings_preprocessor.preprocess(tmp_settings)
 
     try:
         tmp_settings.constrained(conanfile.settings)
