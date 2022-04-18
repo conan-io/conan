@@ -393,14 +393,14 @@ def test_xcodedeps_dashes_names_and_arch():
 @pytest.mark.tool_xcodebuild
 def test_xcodedeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent('''
         from conans import ConanFile
 
         class HelloLib(ConanFile):
             def package_info(self):
-                self.cpp_info.defines.append('USER_CONFIG="user_config.h"')
+                self.cpp_info.defines.append("USER_CONFIG=\\"user_config.h\\"")
                 self.cpp_info.defines.append('OTHER="other.h"')
-        """)
+        ''')
     client.save({"conanfile.py": conanfile})
     client.run("export . hello/1.0@")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
