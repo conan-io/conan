@@ -328,7 +328,7 @@ class _TargetDataContext(object):
                     os_build = self._conanfile.settings_build.get_safe('os')
                 else:
                     os_build = platform.system()
-                if os_build == "Windows" and self._conanfile.options.shared:
+                if os_build == "Windows" and self._conanfile.options.get_safe("shared"):
                     ret_type = "SHARED"
                     ret_implib_path = path
                     # FIXME: This is very week, only matching if dll name starts with the same
