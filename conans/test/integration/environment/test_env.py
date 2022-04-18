@@ -585,8 +585,7 @@ def test_skip_virtualbuildenv_run():
            """)
     client = TestClient()
     client.save({"pkg.py": conanfile})
-    # client.run("create pkg.py --name pkg --version 1.0")
-    client.run("create pkg.py pkg/1.0@ -pr:h=default -pr:b=default")
+    client.run("create pkg.py --name pkg --version 1.0")
 
     # consumer
     conanfile = textwrap.dedent(r"""
@@ -604,8 +603,7 @@ def test_skip_virtualbuildenv_run():
                """)
     my_script = 'echo FOO is $FOO'
     client.save({"conanfile.py": conanfile, "my_script.sh": my_script})
-    # client.run("create . --name consumer --version 1.0")
-    client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
+    client.run("create . --name consumer --version 1.0")
     assert "FOO is BAR" in client.out
 
     # If we pass env=None no "conanbuild" is applied
@@ -613,6 +611,5 @@ def test_skip_virtualbuildenv_run():
     conanfile = conanfile.replace(".format(path))",
                                   ".format(path), env=None)")
     client.save({"conanfile.py": conanfile})
-    # client.run("create . --name consumer --version 1.0")
-    client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
+    client.run("create . --name consumer --version 1.0")
     assert "FOO is BAR" not in client.out
