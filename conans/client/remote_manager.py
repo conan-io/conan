@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-from collections import OrderedDict
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -12,8 +11,11 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
     PackageNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import rmdir
+from conans.model.info import ConanInfo
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import mkdir, tar_extract, touch_folder, rmdir
+from conans.util.files import mkdir, tar_extract, touch_folder
+
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
@@ -161,14 +163,12 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref):
-        infos = self._call_remote(remote, "search_packages", ref)
-        ret = OrderedDict()
-        for package_id, data in infos.items():
-            # FIXME: we don't have the package reference, it uses the latest, we could check
-            #        here doing N requests or improve the Artifactory API.
-            if not data.get("recipe_hash"):  # To filter out Conan 1.X packages in same repo
-                ret[PkgReference(ref, package_id)] = data
-        return ret
+        packages = self._call_remote(remote, "search_packages", ref)
+        # Avoid serializing conaninfo in server side
+        packages = {PkgReference(ref, pid): ConanInfo.loads(data["content"]).serialize_min()
+                    if "content" in data else data
+                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        return packages
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)
