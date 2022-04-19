@@ -3,26 +3,6 @@ import json
 from conans.model import Generator
 
 
-def serialize_cpp_info(cpp_info):
-    keys = [
-        "version",
-        "description",
-        "rootpath",
-        "sysroot",
-        "include_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
-        "libs",
-        "system_libs",
-        "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags",
-        "frameworks", "framework_paths", "names", "filenames",
-        "build_modules", "build_modules_paths"
-    ]
-    res = {}
-    for key in keys:
-        res[key] = getattr(cpp_info, key)
-    res["cppflags"] = cpp_info.cxxflags  # Backwards compatibility
-    return res
-
-
 def serialize_user_info(user_info):
     res = {}
     for key, value in user_info.items():
@@ -51,10 +31,10 @@ class JsonGenerator(Generator):
     def get_dependencies_info(self):
         res = []
         for depname, cpp_info in self.deps_build_info.dependencies:
-            serialized_info = serialize_cpp_info(cpp_info)
-            serialized_info["name"] = depname
+            serialized_info = self.serialize_cpp_info(depname, cpp_info)
             for cfg, cfg_cpp_info in cpp_info.configs.items():
-                serialized_info.setdefault("configs", {})[cfg] = serialize_cpp_info(cfg_cpp_info)
+                serialized_info.setdefault("configs", {})[cfg] = self.serialize_cpp_info(depname,
+                                                                                         cfg_cpp_info)
             res.append(serialized_info)
         return res
 
@@ -71,3 +51,31 @@ class JsonGenerator(Generator):
             for key, value in self.conanfile.options[req].items():
                 options[req][key] = value
         return options
+
+    def serialize_cpp_info(self, depname, cpp_info):
+        keys = [
+            "version",
+            "description",
+            "rootpath",
+            "sysroot",
+            "include_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
+            "libs",
+            "system_libs",
+            "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags",
+            "frameworks", "framework_paths", "names", "filenames",
+            "build_modules", "build_modules_paths"
+        ]
+        res = {}
+        for key in keys:
+            res[key] = getattr(cpp_info, key)
+        res["cppflags"] = cpp_info.cxxflags  # Backwards compatibility
+        res["name"] = depname
+
+        # FIXME: trick for NewCppInfo objects when declared layout
+        try:
+            if cpp_info.version is None:
+                res["version"] = self.conanfile.dependencies.get(depname).ref.version
+        except Exception:
+            pass
+
+        return res
