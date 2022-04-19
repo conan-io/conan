@@ -312,7 +312,7 @@ class RestV1Methods(RestCommonMethods):
         if not package_ids and ret.status_code == 404:
             # Double check if it is a 404 because there are no packages
             try:
-                if not self.search_packages(ref, query=None):
+                if not self.search_packages(ref):
                     return namedtuple("_", ['status_code', 'content'])(200, b'')
             except Exception as e:
                 logger.warning("Unexpected error searching {} packages"
