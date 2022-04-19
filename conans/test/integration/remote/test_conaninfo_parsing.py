@@ -19,8 +19,8 @@ def test_conaninfo_special_chars():
     class Recipe(ConanFile):
         name = "weird_info"
         version = "1.0"
-        options = {"ññ¨¨&是": ['是"是', "是是是"]}
-        default_options = {"ññ¨¨&是": '是"是'}
+        options = {"ññ¨¨&是": ['是"是', '][{}"是是是']}
+        default_options = {"ññ¨¨&是": '][{}"是是是'}
 
     """)
 
@@ -29,4 +29,4 @@ def test_conaninfo_special_chars():
     t.run("upload * -c -r default --all")
 
     t.run('search weird_info/1.0@ -r default')
-    assert 'ññ¨¨&是: 是"是' in t.out
+    assert 'ññ¨¨&是: ][{}"是是是' in t.out
