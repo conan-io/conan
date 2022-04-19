@@ -510,8 +510,11 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
         output.highlight("Calling %s()" % method)
         copier = FileCopier([origin_folder], destination_folder)
         conanfile.copy = copier
-        folder_name = "%s_folder" % method
-        setattr(conanfile, folder_name, destination_folder)
+        if method == "export_sources":
+            conanfile.folders._base_source = destination_folder
+        else:
+            folder_name = "%s_folder" % method
+            setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
         try:
             # TODO: Poor man attribute control access. Convert to nice decorator
@@ -521,6 +524,7 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
                     export_method()
         finally:
             conanfile.default_options = default_options
-            delattr(conanfile, folder_name)
+            if method == "export":
+                delattr(conanfile, folder_name)
         export_method_output = ScopedOutput("%s %s() method" % (output.scope, method), output)
         copier.report(export_method_output)
