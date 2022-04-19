@@ -216,10 +216,20 @@ class ConanServiceTest(unittest.TestCase):
         self.assertEqual(info, [ref3.copy_clear_rev()])
 
         info = self.search_service.search_packages(ref2, None)
-        self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n'}})
+        self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
+                                                'full_requires': [],
+                                                'options': {'use_Qt': 'False'},
+                                                'recipe_hash': None,
+                                                'settings': {}
+                                                }})
 
         info = self.search_service.search_packages(ref3, None)
-        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n'}})
+        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n',
+                                                'full_requires': [],
+                                                'options': {'use_Qt': 'True'},
+                                                'recipe_hash': None,
+                                                'settings': {}}
+                                })
 
     def test_remove(self):
         ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
