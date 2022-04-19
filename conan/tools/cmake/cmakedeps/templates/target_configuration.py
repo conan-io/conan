@@ -26,12 +26,16 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
+        is_win = hasattr(self.conanfile, "settings_build") and \
+            self.conanfile.settings_build.get_safe("os") == "Windows"
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
-                "configuration": self.cmakedeps.configuration}
+                "configuration": self.cmakedeps.configuration,
+                "set_interface_link_directories":
+                    self.cmakedeps.set_interface_link_directories and is_win}
 
     @property
     def template(self):
@@ -129,11 +133,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
+        {%- if set_interface_link_directories %}
+
         # This is only used for '#pragma comment(lib, "foo")' (automatic link)
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
-
+        {%- endif %}
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
         {%- for comp_variable_name, comp_target_name in components_names %}
@@ -154,11 +160,14 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
         set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
 
+        {%- if set_interface_link_directories %}
         # This is only used for '#pragma comment(lib, "foo")' (automatic link)
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix)}}> APPEND)
 
+        {%- endif %}
         {%- endfor %}
+
 
         """)
 
