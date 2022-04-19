@@ -36,7 +36,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     tools.build:defines+=["DEF1", "DEF2"]
     """)
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=msbuild_exe")
+    client.run("new msbuild_exe -d name=hello -d version=0.1")
     client.save({
         "myprofile": profile
     })

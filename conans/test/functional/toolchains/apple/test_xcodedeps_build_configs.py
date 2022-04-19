@@ -402,7 +402,7 @@ def test_xcodedeps_definitions_escape():
                 self.cpp_info.defines.append('OTHER="other.h"')
         ''')
     client.save({"conanfile.py": conanfile})
-    client.run("export . hello/1.0@")
+    client.run("export . --name=hello --version=1.0")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     main = textwrap.dedent("""
                                 #include <stdio.h>
