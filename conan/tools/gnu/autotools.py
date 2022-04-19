@@ -5,11 +5,12 @@ from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
+from conan.tools.files import chdir
 
 
 class Autotools(object):
 
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile, namespace=None, build_script_folder=""):
         self._conanfile = conanfile
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
@@ -17,8 +18,9 @@ class Autotools(object):
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
         self.default_configure_install_args = True
+        self.build_script_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
 
-    def configure(self, build_script_folder=None):
+    def configure(self):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
@@ -42,11 +44,8 @@ class Autotools(object):
 
         self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args)) \
                                if configure_args else self._configure_args
-        source = self._conanfile.source_folder
-        if build_script_folder:
-            source = os.path.join(self._conanfile.source_folder, build_script_folder)
 
-        configure_cmd = "{}/configure".format(source)
+        configure_cmd = "{}/configure".format(self.build_script_folder)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
         configure_cmd = subsystem_path(subsystem, configure_cmd)
         cmd = '"{}" {}'.format(configure_cmd, self._configure_args)
@@ -66,7 +65,18 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self):
+        # FIXME: we have to run configure twice because the local flow won't work otherwise
+        #  because there's no package_folder until the package step
+        self.configure()
         self.make(target="install")
+
+    def autoreconf(self, args=None):
+        command = ["autoreconf"]
+        args = args or ["--force", "--install"]
+        command.extend(args)
+        command = join_arguments(command)
+        with chdir(self, self._conanfile.source_folder):
+            self._conanfile.run(command)
 
     def _use_win_mingw(self):
         if hasattr(self._conanfile, 'settings_build'):

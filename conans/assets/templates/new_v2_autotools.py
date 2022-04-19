@@ -41,15 +41,13 @@ conanfile_lib = textwrap.dedent("""
             at_toolchain.generate()
 
         def build(self):
-            with chdir(self, self.source_folder):
-                self.run("autoreconf --force --install")
             autotools = Autotools(self)
-            autotools.configure(self.source_folder)
+            autotools.autoreconf()
+            autotools.configure()
             autotools.make()
 
         def package(self):
             autotools = Autotools(self)
-            autotools.configure(self.source_folder)
             autotools.install()
 
         def package_info(self):
@@ -99,10 +97,9 @@ test_conanfile = textwrap.dedent("""
             self.requires(self.tested_reference_str)
 
         def build(self):
-            with chdir(self, self.source_folder):
-                self.run("autoreconf --force --install")
             autotools = Autotools(self)
-            autotools.configure(self.source_folder)
+            autotools.autoreconf()
+            autotools.configure()
             autotools.make()
 
         def layout(self):
@@ -180,15 +177,13 @@ conanfile_exe = textwrap.dedent("""
             at_toolchain.generate()
 
         def build(self):
-            with chdir(self, self.source_folder):
-                self.run("autoreconf --force --install")
             autotools = Autotools(self)
-            autotools.configure(self.source_folder)
+            autotools.autoreconf()
+            autotools.configure()
             autotools.make()
 
         def package(self):
             autotools = Autotools(self)
-            autotools.configure(self.source_folder)
             autotools.install()
         """)
 
