@@ -390,7 +390,7 @@ def test_xcodedeps_dashes_names_and_arch():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 def test_xcodedeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent('''
