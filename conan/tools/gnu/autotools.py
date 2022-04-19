@@ -20,13 +20,13 @@ class Autotools(object):
         self.default_configure_install_args = True
         self.build_script_folder = None
 
-    def configure(self, build_script_folder=""):
+    def configure(self, build_script_folder=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
         self.build_script_folder = self.build_script_folder or os.path.join(self._conanfile.source_folder,
-                                                                            build_script_folder)
+                                                                            build_script_folder or "")
         configure_args = []
         if self.default_configure_install_args and self._conanfile.package_folder:
             def _get_cpp_info_value(name):
