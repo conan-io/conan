@@ -262,11 +262,11 @@ class ConanFile(object):
         """points to the base source folder when calling source() and to the cache export sources
         folder while calling the exports_sources() method. Prepared in case we want to introduce a
         'no_copy_export_sources' and point to the right location always."""
-        return self.folders._base_export_sources
+        return self.folders.base_export_sources
 
     @property
     def export_folder(self):
-        return self.folders._base_export
+        return self.folders.base_export
 
     @property
     def build_folder(self):
