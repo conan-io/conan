@@ -13,22 +13,30 @@ class SearchAPI:
         self.conan_api = conan_api
 
     @api_method
-    def recipes(self, query: str, remote=None, only_none_user_channel=False):
+    def recipes(self, query: str, remote=None):
+        only_none_user_channel = False
+        if query and query.endswith("@"):
+            only_none_user_channel = True
+            query = query[:-1]
+
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
-            return app.remote_manager.search_recipes(remote, query)
+            refs = app.remote_manager.search_recipes(remote, query)
         else:
             references = search_recipes(app.cache, query)
             # For consistency with the remote search, we return references without revisions
             # user could use further the API to look for the revisions
-            ret = []
+            refs = []
             for r in references:
                 r.revision = None
                 r.timestamp = None
-                if r not in ret:
-                    if not only_none_user_channel or (r.user is None and r.channel is None):
-                        ret.append(r)
-            return ret
+                if r not in refs:
+                    refs.append(r)
+        ret = []
+        for r in refs:
+            if not only_none_user_channel or (r.user is None and r.channel is None):
+                ret.append(r)
+        return ret
 
     @api_method
     def recipe_revisions(self, expression, remote=None, none_revision_allowed=True):
@@ -54,8 +62,10 @@ class SearchAPI:
                 # First resolve any * in the regular reference, doing a search
                 if any(["*" in field for field in (ref.name, str(ref.version),
                                                    ref.user or "", ref.channel or "")]):
-                    refs = self.recipes(str(ref), remote,
-                                        only_none_user_channel=expression.endswith("@"))
+                    query = str(ref)
+                    if expression.endswith("@"):
+                        query += "@"
+                    refs = self.recipes(query, remote)
                 else:
                     refs = [ref]
 
