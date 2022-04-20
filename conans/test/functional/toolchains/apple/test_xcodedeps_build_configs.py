@@ -394,7 +394,7 @@ def test_xcodedeps_dashes_names_and_arch():
 def test_xcodedeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent('''
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloLib(ConanFile):
             def package_info(self):
