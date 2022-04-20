@@ -25,8 +25,10 @@ class Autotools(object):
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
-        self.build_script_folder = self.build_script_folder or os.path.join(self._conanfile.source_folder,
-                                                                            build_script_folder or "")
+        configure_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
+            if build_script_folder else self._conanfile.source_folder
+
+        self.build_script_folder = self.build_script_folder or os.path.join(configure_folder)
         configure_args = []
         if self.default_configure_install_args and self._conanfile.package_folder:
             def _get_cpp_info_value(name):
