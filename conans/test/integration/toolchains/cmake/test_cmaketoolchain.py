@@ -327,4 +327,4 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
-    assert 'add_compile_definitions( D1 D2)' in toolchain
+    assert 'add_compile_definitions( "D1" "D2")' in toolchain
