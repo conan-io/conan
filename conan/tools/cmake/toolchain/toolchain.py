@@ -49,7 +49,8 @@ class Variables(OrderedDict):
         for config, data in self._configuration_types.items():
             for key, var in data.items():
                 if isinstance(var, six.string_types):
-                    data[key] = str(var).replace('"', '\\"')
+                    data[key] = '"{}"'.format(str(var).replace('"', '\\"'))
+
 
 class CMakeToolchain(object):
 
@@ -104,8 +105,8 @@ class CMakeToolchain(object):
         {{ iterate_configs(variables_config, action='set') }}
 
         # Preprocessor definitions
-        {% for definition in preprocessor_definitions %}
-        add_compile_definitions("{{ definition }}")
+        {% for it, value in preprocessor_definitions.items() %}
+        add_compile_definitions("{{ it }}={{ value }}")
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
@@ -141,14 +142,13 @@ class CMakeToolchain(object):
     def _context(self):
         """ Returns dict, the context for the template
         """
-        preprocessor_definitions = ["{}={}".format(key, value)
-                                    for key, value in self.preprocessor_definitions.items()]
+        self.preprocessor_definitions.quote_preprocessor_strings()
 
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
-            "preprocessor_definitions": preprocessor_definitions,
+            "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
             "conan_blocks": blocks
         }
