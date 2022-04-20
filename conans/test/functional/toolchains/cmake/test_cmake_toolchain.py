@@ -295,7 +295,8 @@ def test_cmake_toolchain_definitions_complex_strings():
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install . -pr=./profile -if=install")
     client.run("build . -if=install")
-    client.run_command("cmake-build-release/example")
+    exe = "cmake-build-release/example" if platform.system() != "Windows" else "build/Release/example"
+    client.run_command(exe)
     assert 'escape=partially "escaped"' in client.out
     assert 'spaces=me you' in client.out
     assert 'foobar=bazbuz' in client.out
