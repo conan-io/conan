@@ -42,6 +42,14 @@ class Variables(OrderedDict):
                 ret.setdefault(k, []).append((conf, v))
         return ret
 
+    def quote_preprocessor_strings(self):
+        for key, var in self.items():
+            if isinstance(var, six.string_types):
+                self[key] = str(var).replace('"', '\\"')
+        for config, data in self._configuration_types.items():
+            for key, var in data.items():
+                if isinstance(var, six.string_types):
+                    data[key] = str(var).replace('"', '\\"')
 
 class CMakeToolchain(object):
 
@@ -62,7 +70,7 @@ class CMakeToolchain(object):
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
                 {% elif action=='add_compile_definitions' %}
-                add_compile_definitions("{{ it }}={{ genexpr.str }}")
+                add_compile_definitions({{ it }}={{ genexpr.str }})
                 {% endif %}
             {% endfor %}
         {% endmacro %}
@@ -133,8 +141,9 @@ class CMakeToolchain(object):
     def _context(self):
         """ Returns dict, the context for the template
         """
-        preprocessor_definitions = ["{}={}".format(key, str(value).replace('"', '\\"')) for
-                                    key, value in self.preprocessor_definitions.items()]
+        preprocessor_definitions = ["{}={}".format(key, value)
+                                    for key, value in self.preprocessor_definitions.items()]
+
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
