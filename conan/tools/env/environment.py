@@ -389,9 +389,16 @@ class EnvVars:
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
+            active_bash = self._conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            if active_bash and is_ps1:
+                raise ConanException("Cannot define both tools.microsoft.bash:active and "
+                                     "tools.env.virtualenv:powershell at the same time")
             if is_ps1:
                 filename = filename + ".ps1"
+                is_bat = False
+            elif active_bash:
+                filename = filename + ".sh"
                 is_bat = False
             else:
                 filename = filename + (".bat" if is_bat else ".sh")

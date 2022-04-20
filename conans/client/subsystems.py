@@ -103,6 +103,14 @@ def deduce_subsystem(conanfile, scope):
     if not str(the_os).startswith("Windows"):
         return None
 
+    active_bash = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
+    if active_bash:
+        subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+        if subsystem is None:
+            raise ConanException("tools.microsoft.bash:subsystem must be defined "
+                                 "if tools.microsoft.bash:active")
+        return subsystem
+
     if subsystem is None and not scope.startswith("build"):  # "run" scope do not follow win_bash
         return WINDOWS
 

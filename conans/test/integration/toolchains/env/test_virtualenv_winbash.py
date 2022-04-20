@@ -67,6 +67,26 @@ def test_virtualenv_deactivated(client, win_bash):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_virtualenv_inside_bash(client):
+    conanfile = str(GenConanfile().with_settings("os").with_class_attribute("win_bash = True")
+                    .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
+                    .with_require("foo/1.0"))
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Windows -s:h os=Windows -c tools.microsoft.bash:active=True")
+    # Assert there is no "bat" files generated because the environment can and will be run inside
+    # the bash
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    build_contents = client.load("conanbuildenv.sh")
+    assert "/cygdrive/c/path/to/ar" in build_contents
+    assert "$PATH:/cygdrive/c/path/to/something" in build_contents
+
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    run_contents = client.load("conanrunenv.sh")
+    assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_nowinbash_virtual_msys(client):
     # Make sure the "tools.microsoft.bash:subsystem=msys2" is ignored if not win_bash
     conanfile = str(GenConanfile().with_settings("os")
