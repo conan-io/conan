@@ -264,6 +264,7 @@ class ConanFile(object):
         layout()) points.
         This can be necessary in the source() or build() methods to locate where exported sources
         are, like patches or entire files that will be used to complete downloaded sources"""
+        # TODO: We need to clean this ugly way of defining the export folders
         return self.folders._base_source
 
     @property

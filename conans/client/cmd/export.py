@@ -511,6 +511,7 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
         copier = FileCopier([origin_folder], destination_folder)
         conanfile.copy = copier
         if method == "export_sources":
+            # TODO: We need to clean this ugly way of defining the export folders
             conanfile.folders._base_source = destination_folder
         else:
             folder_name = "%s_folder" % method
