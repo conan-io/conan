@@ -58,16 +58,16 @@ class SearchAPI:
             if not ref.revision and "#" in expression:
                 # Something like "foo/var#" without specifying revision
                 raise ConanException("Specify a recipe revision")
+
+            # First resolve any * in the regular reference, doing a search
+            if any(["*" in field for field in (ref.name, str(ref.version),
+                                               ref.user or "", ref.channel or "")]):
+                query = str(ref)
+                if expression.endswith("@"):
+                    query += "@"
+                refs = self.recipes(query, remote)
             else:
-                # First resolve any * in the regular reference, doing a search
-                if any(["*" in field for field in (ref.name, str(ref.version),
-                                                   ref.user or "", ref.channel or "")]):
-                    query = str(ref)
-                    if expression.endswith("@"):
-                        query += "@"
-                    refs = self.recipes(query, remote)
-                else:
-                    refs = [ref]
+                refs = [ref]
 
         # Second, for the got references, check revisions matching.
         ret = []
