@@ -35,7 +35,7 @@ def test_exports_sources_patch():
                 path = os.path.join(self.source_folder, "CMakeLists.txt")
                 cmake = load(self, path)
                 self.output.info("MYCMAKE-BUILD: {}".format(cmake))
-                path = os.path.join(self.export_source_folder, "patches/mypatch")
+                path = os.path.join(self.export_sources_folder, "patches/mypatch")
                 cmake = load(self, path)
                 self.output.info("MYPATCH-BUILD: {}".format(cmake))
             """)
