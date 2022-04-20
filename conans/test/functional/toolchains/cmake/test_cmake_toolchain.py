@@ -233,16 +233,16 @@ def test_install_output_directories():
 def test_cmake_toolchain_definitions_complex_strings():
     # https://github.com/conan-io/conan/issues/11043
     client = TestClient(path_with_spaces=False)
-    profile = textwrap.dedent('''
+    profile = textwrap.dedent(r'''
         include(default)
         [conf]
-        tools.build:defines+=["escape=partially \\\"escaped\\\""]
+        tools.build:defines+=["escape=partially \"escaped\""]
         tools.build:defines+=["spaces=me you"]
         tools.build:defines+=["foobar=bazbuz"]
         tools.build:defines+=["answer=42"]
     ''')
 
-    conanfile = textwrap.dedent('''
+    conanfile = textwrap.dedent(r'''
         from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
 
@@ -252,7 +252,7 @@ def test_cmake_toolchain_definitions_complex_strings():
 
             def generate(self):
                 tc = CMakeToolchain(self)
-                tc.preprocessor_definitions["escape2"] = "partially \\\"escaped\\\""
+                tc.preprocessor_definitions["escape2"] = "partially \"escaped\""
                 tc.preprocessor_definitions["spaces2"] = "me you"
                 tc.preprocessor_definitions["foobar2"] = "bazbuz"
                 tc.preprocessor_definitions["answer2"] = 42
