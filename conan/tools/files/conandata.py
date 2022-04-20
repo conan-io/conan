@@ -11,8 +11,6 @@ def update_conandata(conanfile, data):
     this only works for updating the conandata on the export() method, it seems it would
     be plain wrong to try to change it anywhere else
     """
-    if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
-        raise ConanException("The 'update_conandata()' can only be used in the 'export()' method")
     path = os.path.join(conanfile.export_folder, "conandata.yml")
     if os.path.exists(path):
         conandata = load(path)
