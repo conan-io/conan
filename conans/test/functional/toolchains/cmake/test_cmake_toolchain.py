@@ -233,7 +233,6 @@ def test_install_output_directories():
 def test_cmake_toolchain_definitions_complex_strings():
     # https://github.com/conan-io/conan/issues/11043
     client = TestClient(path_with_spaces=False)
-    client.current_folder = '/private/var/folders/hr/t3_1lzj9145g383b4zyj67d40000gn/T/tmp46iwlzxfconans/pathwithoutspaces'
     profile = textwrap.dedent('''
         include(default)
         [conf]
