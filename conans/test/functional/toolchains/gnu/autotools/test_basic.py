@@ -218,3 +218,28 @@ def test_install_output_directories():
     p_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(p_folder, "mybin", "main"))
     assert not os.path.exists(os.path.join(p_folder, "bin"))
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool_autotools()
+def test_autotools_with_pkgconfigdeps():
+    client = TurboTestClient(path_with_spaces=False)
+    client.run("new hello/1.0 --template cmake_lib")
+    client.run("create .")
+
+    consumer_conanfile = textwrap.dedent("""
+        [requires]
+        hello/1.0
+
+        [generators]
+        AutotoolsToolchain
+        PkgConfigDeps
+    """)
+
+    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+    configure_ac = gen_configure_ac()
+    client.save({"conanfile.txt": consumer_conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.cpp": main}, clean_first=True)
