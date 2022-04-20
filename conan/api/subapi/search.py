@@ -13,7 +13,7 @@ class SearchAPI:
         self.conan_api = conan_api
 
     @api_method
-    def recipes(self, query: str, remote=None):
+    def recipes(self, query: str, remote=None, only_none_user_channel=False):
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
             return app.remote_manager.search_recipes(remote, query)
@@ -26,7 +26,8 @@ class SearchAPI:
                 r.revision = None
                 r.timestamp = None
                 if r not in ret:
-                    ret.append(r)
+                    if not only_none_user_channel or (r.user is None and r.channel is None):
+                        ret.append(r)
             return ret
 
     @api_method
@@ -49,15 +50,14 @@ class SearchAPI:
             if not ref.revision and "#" in expression:
                 # Something like "foo/var#" without specifying revision
                 raise ConanException("Specify a recipe revision")
-            if not ref.user and "@" in expression:
-                # Something like "foo/var@" without specifying user/channel
-                raise ConanException("Specify a user/channel or remove the '@'")
-            # First resolve any * in the regular reference, doing a search
-            if any(["*" in field for field in (ref.name, str(ref.version),
-                                               ref.user or "", ref.channel or "")]):
-                refs = self.recipes(str(ref), remote)  # Do not return revisions
             else:
-                refs = [ref]
+                # First resolve any * in the regular reference, doing a search
+                if any(["*" in field for field in (ref.name, str(ref.version),
+                                                   ref.user or "", ref.channel or "")]):
+                    refs = self.recipes(str(ref), remote,
+                                        only_none_user_channel=expression.endswith("@"))
+                else:
+                    refs = [ref]
 
         # Second, for the got references, check revisions matching.
         ret = []

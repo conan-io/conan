@@ -861,3 +861,30 @@ def test_upload_package_selection(populate_client):
         tmp.revision = None
         client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
         assert prev.repr_notime() not in client.out
+
+
+def test_upload_only_without_user_channel():
+    """
+    check that we can upload only the packages without user and channel
+    https://github.com/conan-io/conan/issues/10579
+    """
+    c = TestClient(default_server_user=True)
+
+    c.save({"conanfile.py": GenConanfile("lib", "1.0")})
+    c.run('create .')
+    c.run("create . --user=user --channel=channel")
+    c.run("list recipes *")
+    assert "lib/1.0@user/channel" in c.out
+
+    c.run('upload */*@ -c -r=default')
+    assert "Uploading lib/1.0" in c.out  # FAILS!
+    assert "lib/1.0@user/channel" not in c.out
+    c.run("search * -r=default")
+    assert "lib/1.0" in c.out
+    assert "lib/1.0@user/channel" not in c.out
+
+    c.run('upload */*@user/channel -c -r=default')
+    assert "Uploading lib/1.0@user/channel" in c.out
+    c.run("search * -r=default")
+    assert "lib/1.0@user/channel" in c.out
+    assert "lib/1.0" in c.out
