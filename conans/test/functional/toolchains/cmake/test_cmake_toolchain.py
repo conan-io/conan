@@ -228,3 +228,80 @@ def test_install_output_directories():
     layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
     toolchain = client.load(os.path.join(b_folder, layout_folder, "conan", "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
+
+
+def test_cmake_toolchain_definitions_complex_strings():
+    # https://github.com/conan-io/conan/issues/11043
+    client = TestClient(path_with_spaces=False)
+    client.current_folder = '/private/var/folders/hr/t3_1lzj9145g383b4zyj67d40000gn/T/tmp46iwlzxfconans/pathwithoutspaces'
+    profile = textwrap.dedent('''
+        include(default)
+        [conf]
+        tools.build:defines+=["escape=partially \\\"escaped\\\""]
+        tools.build:defines+=["spaces=me you"]
+        tools.build:defines+=["foobar=bazbuz"]
+        tools.build:defines+=["answer=42"]
+    ''')
+
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.preprocessor_definitions["escape2"] = "partially \\\"escaped\\\""
+                tc.preprocessor_definitions["spaces2"] = "me you"
+                tc.preprocessor_definitions["foobar2"] = "bazbuz"
+                tc.preprocessor_definitions["answer2"] = 42
+                tc.generate()
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent("""
+        #include <stdio.h>
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("%s=%s", #x, STR(x))
+        int main(int argc, char *argv[]) {
+            SHOW_DEFINE(escape);
+            SHOW_DEFINE(spaces);
+            SHOW_DEFINE(foobar);
+            SHOW_DEFINE(answer);
+            SHOW_DEFINE(escape2);
+            SHOW_DEFINE(spaces2);
+            SHOW_DEFINE(foobar2);
+            SHOW_DEFINE(answer2);
+            return 0;
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        set(CMAKE_CXX_STANDARD 11)
+        add_executable(example src/main.cpp)
+        """)
+
+    client.save({"conanfile.py": conanfile, "profile": profile, "src/main.cpp": main,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install . -pr=./profile -if=install")
+    client.run("build . -if=install")
+    client.run_command("cmake-build-release/example")
+    assert 'escape=partially "escaped"' in client.out
+    assert 'spaces=me you' in client.out
+    assert 'foobar=bazbuz' in client.out
+    assert 'answer=42' in client.out
+    assert 'escape2=partially "escaped"' in client.out
+    assert 'spaces2=me you' in client.out
+    assert 'foobar2=bazbuz' in client.out
+    assert 'answer2=42' in client.out
