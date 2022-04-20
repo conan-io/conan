@@ -57,7 +57,6 @@ class Folders(object):
         self._base_generators = output_folder or base_folder
         self._base_imports = output_folder or base_folder
 
-        self._base_export = output_folder or base_folder
         self._base_export_sources = output_folder or base_folder
 
     @property

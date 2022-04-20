@@ -831,7 +831,6 @@ class ConanAPIV1(object):
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
         conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_export(source_folder)
         conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)

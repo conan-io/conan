@@ -90,15 +90,13 @@ class TestExportFoldersAvailability:
         assert "Running export, value {}!".format(cache_exports) in client.out
 
         client.run("install .")
-        # This might be a bit unexpected but self.source_folder is also defined in generate()
-        # so it looks consistent with having declared the export_sources_folder
-        assert "Running generate, value {}!".format(client.current_folder) in client.out
+        assert "Running generate, value None!" in client.out
 
         client.run("source .")
-        assert "Running source, value {}!".format(client.current_folder) in client.out
+        assert "Running source, value None!" in client.out
 
         client.run("build .")
-        assert "Running build, value {}!".format(client.current_folder) in client.out
+        assert "Running build, value None!" in client.out
 
     def test_export_folder_availability_create(self):
         conanfile = textwrap.dedent('''
@@ -134,11 +132,9 @@ class TestExportFoldersAvailability:
         client.run("create . foo/1.0@")
         assert "Running export_sources, value None!" in client.out
         assert "Running export, value {}!".format(cache_exports) in client.out
-        cache_base_source = client.cache.package_layout(ConanFileReference.loads("foo/1.0")).source()
-        assert "Running generate, value {}!".format(cache_base_source) in client.out
-        assert "Running source, value {}!".format(cache_base_source) in client.out
-        assert "Running build, value {}!".format(cache_base_source) in client.out
-
+        assert "Running generate, value None!" in client.out
+        assert "Running source, value None!" in client.out
+        assert "Running build, value None!" in client.out
 
     def test_export_sources_folder_availability_create(self):
         conanfile = textwrap.dedent('''

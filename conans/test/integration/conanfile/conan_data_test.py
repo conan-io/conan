@@ -298,6 +298,22 @@ class TestConanDataUpdate:
         assert "pkg/0.1: 0.1-url: myurl!!" in c.out
         assert "pkg/0.1: 0.2-url: new!!" in c.out
 
+    def test_conandata_update_error(self):
+        """ test the update_conandata() helper fails if used outside export()
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import update_conandata
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def source(self):
+                    update_conandata(self, {})
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create .", assert_error=True)
+        assert "The 'update_conandata()' can only be used in the 'export()' method" in c.out
 
     def test_conandata_create_if_not_exist(self):
         """ test the update_conandata() creates the file if it doesn't exist
