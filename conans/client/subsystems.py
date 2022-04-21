@@ -14,19 +14,26 @@ SFU = 'sfu'  # Windows Services for UNIX
 
 
 def run_in_windows_bash(conanfile, command, cwd=None, env="conanbuild"):
+    print("I AM RUNING IN WIN BASH!!!!!!!!!!!!!!!!!********************")
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
     env_win = []
     env_shell = []
-    if env:
-        if env == "conanbuild":
-            env_shell = ["conanbuild.sh"]
-            env_win = ["conanbuild.bat"]
-        else:
-            # Passing env invalidates the conanfile.environment_scripts
-            env_win = [env] if not isinstance(env, list) else env
-            env_shell = []
+
+    if not isinstance(env, list):
+        env = [env]
+
+    for env_file in env:
+        if env_file.lower().endswith(".sh"):
+            env_shell.append(env_file)
+        elif env_file.lower().endswith(".bat"):
+            env_win.append(env_file)
+        else:  # Simple name like "conanrunenv", add both, not existing one will be not used
+            path_bat = "{}.bat".format(env_file)
+            path_sh = "{}.sh".format(env_file)
+            env_win.append(path_bat)
+            env_shell.append(path_sh)
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
@@ -57,12 +64,10 @@ def run_in_windows_bash(conanfile, command, cwd=None, env="conanbuild"):
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
     cwd_inside = subsystem_path(subsystem, cwd)
-    wrapped_user_cmd = command
-    if env_shell:
-        # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
-        # first and there could be commands that we want to skip
-        wrapped_user_cmd = environment_wrap_command(env_shell, command,
-                                                    cwd=conanfile.generators_folder)
+    # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
+    # first and there could be commands that we want to skip
+    wrapped_user_cmd = environment_wrap_command(env_shell, command,
+                                                cwd=conanfile.generators_folder)
     inside_command = 'cd "{cwd_inside}" && ' \
                      '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,
                                                  wrapped_user_cmd=wrapped_user_cmd)

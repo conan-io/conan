@@ -1,8 +1,6 @@
 import os
 import platform
-import textwrap
 
-import mock
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -68,7 +66,7 @@ def test_virtualenv_deactivated(client, win_bash):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_virtualenv_inside_bash(client):
-    conanfile = str(GenConanfile().with_settings("os").with_class_attribute("win_bash = True")
+    conanfile = str(GenConanfile().with_settings("os")
                     .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
                     .with_require("foo/1.0"))
 
