@@ -1,3 +1,4 @@
+import os
 import types
 
 import pytest
@@ -10,6 +11,8 @@ from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.env_info import EnvValues
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
 
 
 @pytest.fixture
@@ -383,7 +386,7 @@ def test_libcxx_abi_flag():
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=0' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=0' in content
     c.settings.compiler.libcxx = "libstdc++11"
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -392,13 +395,13 @@ def test_libcxx_abi_flag():
     # recipe workaround for older distros
     toolchain.blocks["libcxx"].values["glibcxx"] = "1"
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
     # but maybe the conf is better
     c.conf["tools.gnu:define_libcxx11_abi"] = True
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
 
 @pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
@@ -462,3 +465,17 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
         assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
+
+
+def test_variables_types(conanfile):
+    generator_folder = temp_folder()
+    conanfile.folders.set_base_generators(generator_folder)
+    # This is a trick for 1.X to use base_generator and not install folder
+    conanfile.folders.generators = "here"
+
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.variables["FOO"] = True
+    toolchain.generate()
+
+    contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
+    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents

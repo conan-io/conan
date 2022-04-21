@@ -296,7 +296,7 @@ def test_apple_vars_overwrite_user_conf():
     assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
 
-    
+
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -327,4 +327,4 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
-    assert 'add_definitions( -DD1 -DD2)' in toolchain
+    assert 'add_compile_definitions( D1 D2)' in toolchain

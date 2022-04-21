@@ -2,37 +2,8 @@ import os
 import textwrap
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.files.files import load_toolchain_args
 from conans.test.utils.tools import TestClient
-
-
-def test_cmake_namespace():
-    client = TestClient()
-    namespace = "somename"
-    conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.cmake import CMakeToolchain, CMake
-
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                def generate(self):
-                    cmake = CMakeToolchain(self, namespace='{0}')
-                    cmake.generate()
-                def build(self):
-                    cmake = CMake(self, namespace='{0}')
-                    self.output.info(cmake._generator)
-                    self.output.info(cmake._toolchain_file)
-            """.format(namespace))
-
-    client.save({"conanfile.py": conanfile})
-    client.run("install . ")
-    presets = load_cmake_presets(client.current_folder)
-    toolchain_file = presets["configurePresets"][0]["toolchainFile"]
-    generator = presets["configurePresets"][0]["generator"]
-    client.run("build . ")
-    assert generator in client.out
-    assert toolchain_file in client.out
 
 
 def test_bazel_namespace():

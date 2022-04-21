@@ -387,3 +387,36 @@ def test_xcodedeps_dashes_names_and_arch():
     assert os.path.exists(os.path.join(client.current_folder,
                                        "conan_hello_dashes_vars_release_arm64.xcconfig"))
     client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_xcodebuild
+def test_xcodedeps_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent('''
+        from conans import ConanFile
+
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\\"user_config.h\\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . hello/1.0@")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    main = textwrap.dedent("""
+                                #include <stdio.h>
+                                #define STR(x)   #x
+                                #define SHOW_DEFINE(x) printf("%s=%s", #x, STR(x))
+                                int main(int argc, char *argv[]) {
+                                    SHOW_DEFINE(USER_CONFIG);
+                                    SHOW_DEFINE(OTHER);
+                                    return 0;
+                                }
+                                """)
+    create_xcode_project(client, "app", main)
+    client.run("install . --build=missing -g XcodeDeps")
+    client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig")
+    client.run_command("build/Release/app")
+    assert 'USER_CONFIG="user_config.h"' in client.out
+    assert 'OTHER="other.h"' in client.out

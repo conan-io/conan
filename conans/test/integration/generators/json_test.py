@@ -13,6 +13,9 @@ class JsonTest(unittest.TestCase):
 
 class HelloConan(ConanFile):
     exports_sources = "*.h"
+    description = "foo"
+    def layout(self):
+        pass
     def package(self):
         self.copy("*.h", dst="include")
     def package_info(self):
@@ -26,7 +29,8 @@ class HelloConan(ConanFile):
         client.run("install Hello/0.1@lasote/testing -g json")
         conan_json = client.load("conanbuildinfo.json")
         data = json.loads(conan_json)
-
+        self.assertEqual(data["dependencies"][0]["version"], "0.1")
+        self.assertIsNone(data["dependencies"][0]["description"])
         self.assertEqual(data["deps_env_info"]["MY_ENV_VAR"], "foo")
         self.assertEqual(data["deps_user_info"]["Hello"]["my_var"], "my_value")
 
@@ -103,9 +107,6 @@ class HelloConan(ConanFile):
         self.assertEqual(deps_info_release["libs"], ["Hello"])
 
         # FIXME: There are _null_ nodes
-        self.assertEqual(deps_info_debug["version"], None)
-        self.assertEqual(deps_info_release["version"], None)
-
         self.assertEqual(deps_info_debug["description"], None)
         self.assertEqual(deps_info_release["description"], None)
 

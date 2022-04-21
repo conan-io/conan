@@ -349,6 +349,9 @@ class PythonRequireInfo(object):
         self._channel = self._ref.channel
         self._revision = self._ref.revision
 
+    def unrelated_mode(self):
+        self._name = self._version = self._user = self._channel = self._revision = None
+
 
 class PythonRequiresInfo(object):
 

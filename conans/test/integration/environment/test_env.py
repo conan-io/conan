@@ -545,3 +545,47 @@ def test_deactivate_location():
 
     assert os.path.exists(os.path.join(client.current_folder, "myfolder",
                                        "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires sh")
+def test_skip_virtualbuildenv_run():
+    # Build require
+    conanfile = textwrap.dedent(r"""
+           from conan import ConanFile
+           class Pkg(ConanFile):
+               def package_info(self):
+                   self.buildenv_info.define("FOO", "BAR")
+           """)
+    client = TestClient()
+    client.save({"pkg.py": conanfile})
+    # client.run("create pkg.py --name pkg --version 1.0")
+    client.run("create pkg.py pkg/1.0@ -pr:h=default -pr:b=default")
+
+    # consumer
+    conanfile = textwrap.dedent(r"""
+               import os
+               from conan import ConanFile
+               class Consumer(ConanFile):
+                   tool_requires = "pkg/1.0"
+                   exports_sources = "my_script.sh"
+                   # This can be removed at Conan 2
+                   generators = "VirtualBuildEnv"
+                   def build(self):
+                       path = os.path.join(self.source_folder, "my_script.sh")
+                       os.chmod(path, 0o777)
+                       self.run("'{}'".format(path))
+               """)
+    my_script = 'echo FOO is $FOO'
+    client.save({"conanfile.py": conanfile, "my_script.sh": my_script})
+    # client.run("create . --name consumer --version 1.0")
+    client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
+    assert "FOO is BAR" in client.out
+
+    # If we pass env=None no "conanbuild" is applied
+    # self.run("'{}'".format(path), env=None)
+    conanfile = conanfile.replace(".format(path))",
+                                  ".format(path), env=None)")
+    client.save({"conanfile.py": conanfile})
+    # client.run("create . --name consumer --version 1.0")
+    client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
+    assert "FOO is BAR" not in client.out
