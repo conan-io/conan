@@ -19,15 +19,15 @@ from conans.util.files import decode_text
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 checksum_deploy=False, matrix_params=False):
+                 checksum_deploy=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, requester,
-                                            config, verify_ssl,  matrix_params)
+                                            config, verify_ssl)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"), self._matrix_params)
+        return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)

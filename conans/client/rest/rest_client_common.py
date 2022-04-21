@@ -59,15 +59,13 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 matrix_params=False):
+    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl):
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
-        self._matrix_params = matrix_params
 
     @property
     def auth(self):

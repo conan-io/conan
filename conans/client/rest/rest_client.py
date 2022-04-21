@@ -1,4 +1,4 @@
-from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
+from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
 
@@ -55,11 +55,10 @@ class RestApiClient(object):
             raise ConanException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
-        matrix_params = self._capable(MATRIX_PARAMS)
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
         return RestV2Methods(self._remote_url, self._token, self._custom_headers,
                              self._requester, self._config, self._verify_ssl,
-                             checksum_deploy, matrix_params)
+                             checksum_deploy)
 
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
