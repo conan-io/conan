@@ -124,6 +124,38 @@ class TarExtractPlainTest(unittest.TestCase):
                     tgz.addfile(tarinfo=info, fileobj=file_handler)
             tgz.close()
 
+    def test_linkame_striproot_folder(self):
+        tmp_folder = temp_folder()
+        other_tmp_folder = temp_folder()
+        save(os.path.join(other_tmp_folder, "foo.txt"), "")
+        tgz_path = os.path.join(tmp_folder, "foo.tgz")
+
+        with open(tgz_path, "wb") as tgz_handle:
+            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+
+            # Regular file
+            info = tarfile.TarInfo(name="common/foo.txt")
+            info.name = "common/subfolder/foo.txt"
+            info.path = "common/subfolder/foo.txt"
+            with open(os.path.join(other_tmp_folder, "foo.txt"), 'rb') as file_handler:
+                tgz.addfile(tarinfo=info, fileobj=file_handler)
+
+            # A hardlink to the regular file
+            info = tarfile.TarInfo(name="common/foo.txt")
+            info.linkname = "common/subfolder/foo.txt"
+            info.linkpath = "common/subfolder/foo.txt"
+            info.name = "common/subfolder/bar/foo.txt"
+            info.path = "common/subfolder/bar/foo.txt"
+            info.type = b'1'  # This indicates a hardlink to the tgz file "common/subfolder/foo.txt"
+            tgz.addfile(tarinfo=info, fileobj=None)
+            tgz.close()
+
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+        untargz(tgz_path, destination=tmp_folder, strip_root=True)
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+
     def test_plain_tgz(self):
 
         tmp_folder = temp_folder()
