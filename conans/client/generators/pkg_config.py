@@ -119,7 +119,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             [include_dirs_flags,
              cpp_info.cxxflags,
              cpp_info.cflags,
-             ["-D%s" % d for d in cpp_info.defines]]))
+             ["-D%s" % d.replace('"', '\\"') for d in cpp_info.defines]]))
 
         if requires_gennames:
             public_deps = " ".join(requires_gennames)

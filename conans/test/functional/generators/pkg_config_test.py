@@ -4,6 +4,8 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -320,3 +322,21 @@ def test_components_and_package_pc_creation_order():
     assert "Requires:" not in pc_content
     pc_content = client.load("pkgb.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
+
+
+@pytest.mark.tool_pkg_config
+def test_pkg_config_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conans import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\"user_config.h\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . hello/1.0@")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g pkg_config")
+    client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
+    assert r'-DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out
