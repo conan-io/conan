@@ -49,7 +49,7 @@ class Variables(OrderedDict):
         for config, data in self._configuration_types.items():
             for key, var in data.items():
                 if isinstance(var, six.string_types):
-                    data[key] = '"{}"'.format(str(var).replace('"', '\\"'))
+                    data[key] = str(var).replace('"', '\\"')
 
 
 class CMakeToolchain(object):
@@ -61,8 +61,11 @@ class CMakeToolchain(object):
             {% for it, values in var_config.items() %}
                 {% set genexpr = namespace(str='') %}
                 {% for conf, value in values -%}
+                set(CONAN_DEF_{{ it }} "{{ value }}")
+                {% endfor %}
+                {% for conf, value in values -%}
                     {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,' + value|string + ',' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + it|string + '},' %}
                     {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
@@ -70,7 +73,7 @@ class CMakeToolchain(object):
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_compile_definitions' %}
+                {% elif action=='add_compile_definitions' -%}
                 add_compile_definitions({{ it }}={{ genexpr.str }})
                 {% endif %}
             {% endfor %}
