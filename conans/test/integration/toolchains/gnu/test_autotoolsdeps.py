@@ -7,8 +7,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
-@pytest.mark.tool_autotools()
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
 def test_link_lib_correct_order():
     client = TestClient()
     liba = GenConanfile().with_name("liba").with_version("0.1")
