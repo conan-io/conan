@@ -230,6 +230,7 @@ def test_install_output_directories():
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 
+@pytest.mark.tool_cmake
 def test_cmake_toolchain_definitions_complex_strings():
     # https://github.com/conan-io/conan/issues/11043
     client = TestClient(path_with_spaces=False)
