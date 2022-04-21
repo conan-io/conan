@@ -1,5 +1,6 @@
 import glob
 import os
+import platform
 import textwrap
 
 import pytest
@@ -602,6 +603,7 @@ def test_components_and_package_pc_creation_order():
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Needs pkg-config")
 @pytest.mark.tool_pkg_config
 def test_pkg_configdeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
