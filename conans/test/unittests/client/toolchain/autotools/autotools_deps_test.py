@@ -5,11 +5,12 @@ from collections import OrderedDict
 import mock
 from mock import Mock
 
-from conan.tools.gnu import AutotoolsDeps
 from conan import ConanFile
-from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.dependencies import ConanFileDependencies
+from conan.tools.gnu import AutotoolsDeps
 from conans.model.build_info import CppInfo
+from conans.model.conanfile_interface import ConanFileInterface
+from conans.model.conf import ConfDefinition
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
 from conans.test.utils.mocks import MockSettings
@@ -78,6 +79,7 @@ def test_foo():
              "compiler.libcxx": "libstdc++11",
              "compiler.version": "7.1",
              "cppstd": "17"})
+        consumer.conf = ConfDefinition().get_conanfile_conf(None)
         deps = AutotoolsDeps(consumer)
 
         env = deps.environment

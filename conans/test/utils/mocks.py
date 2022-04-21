@@ -109,6 +109,7 @@ class ConanFileMock(ConanFile):
         self.captured_env = {}
         self.folders = Folders()
         self.folders.set_base_source(".")
+        self.folders.set_base_export_sources(".")
         self.folders.set_base_build(".")
         self.folders.set_base_generators(".")
         self.cpp = Infos()
