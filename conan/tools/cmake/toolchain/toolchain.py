@@ -61,11 +61,11 @@ class CMakeToolchain(object):
             {% for it, values in var_config.items() %}
                 {% set genexpr = namespace(str='') %}
                 {% for conf, value in values -%}
-                set(CONAN_DEF_{{ it }} "{{ value }}")
+                set(CONAN_DEF_{{ conf }}{{ it }} "{{ value }}")
                 {% endfor %}
                 {% for conf, value in values -%}
                     {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + it|string + '},' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + conf|string + it|string + '},' %}
                     {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}

@@ -38,8 +38,8 @@ class Base(unittest.TestCase):
                 tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
                 tc.preprocessor_definitions["MYDEFINE"] = "\"MYDEF_VALUE\""
                 tc.preprocessor_definitions["MYDEFINEINT"] = 42
-                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
-                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "\"MYDEF_DEBUG\""
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "\"MYDEF_RELEASE\""
                 tc.preprocessor_definitions.debug["MYDEFINEINT_CONFIG"] = 421
                 tc.preprocessor_definitions.release["MYDEFINEINT_CONFIG"] = 422
                 tc.generate()
