@@ -256,6 +256,15 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions["spaces2"] = "me you"
                 tc.preprocessor_definitions["foobar2"] = "bazbuz"
                 tc.preprocessor_definitions["answer2"] = 42
+                tc.preprocessor_definitions.release["escape_release"] = "partially \"escaped\""
+                tc.preprocessor_definitions.release["spaces_release"] = "me you"
+                tc.preprocessor_definitions.release["foobar_release"] = "bazbuz"
+                tc.preprocessor_definitions.release["answer_release"] = 42
+
+                tc.preprocessor_definitions.debug["escape_debug"] = "partially \"escaped\""
+                tc.preprocessor_definitions.debug["spaces_debug"] = "me you"
+                tc.preprocessor_definitions.debug["foobar_debug"] = "bazbuz"
+                tc.preprocessor_definitions.debug["answer_debug"] = 42
                 tc.generate()
 
             def layout(self):
@@ -280,6 +289,17 @@ def test_cmake_toolchain_definitions_complex_strings():
             SHOW_DEFINE(spaces2);
             SHOW_DEFINE(foobar2);
             SHOW_DEFINE(answer2);
+            #ifdef NDEBUG
+            SHOW_DEFINE(escape_release);
+            SHOW_DEFINE(spaces_release);
+            SHOW_DEFINE(foobar_release);
+            SHOW_DEFINE(answer_release);
+            #else
+            SHOW_DEFINE(escape_debug);
+            SHOW_DEFINE(spaces_debug);
+            SHOW_DEFINE(foobar_debug);
+            SHOW_DEFINE(answer_debug);
+            #endif
             return 0;
         }
         """)
@@ -295,7 +315,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install . -pr=./profile -if=install")
     client.run("build . -if=install")
-    exe = "cmake-build-release/example" if platform.system() != "Windows" else r"build\MyRelease\example.exe"
+    exe = "cmake-build-release/example" if platform.system() != "Windows" else r"build\Release\example.exe"
     client.run_command(exe)
     assert 'escape=partially "escaped"' in client.out
     assert 'spaces=me you' in client.out
@@ -305,3 +325,16 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'spaces2=me you' in client.out
     assert 'foobar2=bazbuz' in client.out
     assert 'answer2=42' in client.out
+    assert 'escape_release=partially "escaped"' in client.out
+    assert 'spaces_release=me you' in client.out
+    assert 'foobar_release=bazbuz' in client.out
+    assert 'answer_release=42' in client.out
+
+    client.run("install . -pr=./profile -if=install -s build_type=Debug")
+    client.run("build . -if=install -s build_type=Debug")
+    exe = "cmake-build-debug/example" if platform.system() != "Windows" else r"build\Debug\example.exe"
+    client.run_command(exe)
+    assert 'escape_debug=partially "escaped"' in client.out
+    assert 'spaces_debug=me you' in client.out
+    assert 'foobar_debug=bazbuz' in client.out
+    assert 'answer_debug=42' in client.out
