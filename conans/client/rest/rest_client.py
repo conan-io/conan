@@ -5,17 +5,15 @@ from conans.errors import AuthenticationException, ConanException
 
 class RestApiClientFactory(object):
 
-    def __init__(self, requester, config, artifacts_properties=None):
+    def __init__(self, requester, config):
         self._requester = requester
         self._config = config
-        self._artifacts_properties = artifacts_properties
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
         tmp = RestApiClient(remote, token, refresh_token, custom_headers,
                             self._requester, self._config,
-                            self._cached_capabilities,
-                            self._artifacts_properties)
+                            self._cached_capabilities)
         return tmp
 
 
@@ -25,7 +23,7 @@ class RestApiClient(object):
     """
 
     def __init__(self, remote, token, refresh_token, custom_headers, requester,
-                 config, cached_capabilities, artifacts_properties=None):
+                 config, cached_capabilities):
 
         # Set to instance
         self._token = token
@@ -35,7 +33,6 @@ class RestApiClient(object):
         self._requester = requester
 
         self._verify_ssl = remote.verify_ssl
-        self._artifacts_properties = artifacts_properties
         self._config = config
 
         # This dict is shared for all the instances of RestApiClient
@@ -45,8 +42,7 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV2Methods(self._remote_url, self._token, self._custom_headers,
-                                self._requester, self._config, self._verify_ssl,
-                                self._artifacts_properties)
+                                self._requester, self._config, self._verify_ssl)
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
         return capability in capabilities
@@ -63,7 +59,7 @@ class RestApiClient(object):
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
         return RestV2Methods(self._remote_url, self._token, self._custom_headers,
                              self._requester, self._config, self._verify_ssl,
-                             self._artifacts_properties, checksum_deploy, matrix_params)
+                             checksum_deploy, matrix_params)
 
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
@@ -91,7 +87,7 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,
-                               self._requester, self._verify_ssl, self._artifacts_properties)
+                               self._requester, self._config, self._verify_ssl)
 
         if self._refresh_token and self._token:
             token, refresh_token = api_v2.refresh_token(self._token, self._refresh_token)

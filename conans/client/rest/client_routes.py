@@ -1,8 +1,7 @@
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
 from conans.model.recipe_ref import RecipeReference
 from conans.model.rest_routes import RestRoutes
-from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
 def _format_ref(url, ref, matrix_params=""):
@@ -20,28 +19,13 @@ def _format_pref(url, pref, matrix_params=""):
     return url
 
 
-def _remove_put_prefix(artifacts_properties):
-    len_prefix = len(ARTIFACTS_PROPERTIES_PUT_PREFIX)
-    for key, value in artifacts_properties.items():
-        if key.startswith(ARTIFACTS_PROPERTIES_PUT_PREFIX):
-            key = key[len_prefix:]
-        yield key, value
-
-
 class ClientV2Router:
     """Builds urls for v2"""
 
-    def __init__(self, root_url, artifacts_properties, matrix_params):
+    def __init__(self, root_url, matrix_params):
         self.root_url = root_url
         self.base_url = "{}/v2/".format(root_url)
         self.routes = RestRoutes(matrix_params=matrix_params)
-
-        if artifacts_properties:
-            props_dict = dict(_remove_put_prefix(artifacts_properties))
-            self._matrix_params_str = ";" + ";".join(["{}={}".format(key, quote(value, safe=''))
-                                                      for key, value in props_dict.items()])
-        else:
-            self._matrix_params_str = ""
 
     def ping(self):
         # FIXME: The v2 ping is not returning capabilities
@@ -75,15 +59,13 @@ class ClientV2Router:
     def common_check_credentials(self):
         return self.base_url + self.routes.common_check_credentials
 
-    def recipe_file(self, ref, path, add_matrix_params=False):
+    def recipe_file(self, ref, path):
         """Recipe file url"""
-        matrix_params = self._matrix_params_str if add_matrix_params else ""
-        return self.base_url + self._for_recipe_file(ref, path, matrix_params=matrix_params)
+        return self.base_url + self._for_recipe_file(ref, path, matrix_params="")
 
-    def package_file(self, pref, path, add_matrix_params=False):
+    def package_file(self, pref, path):
         """Package file url"""
-        matrix_params = self._matrix_params_str if add_matrix_params else ""
-        return self.base_url + self._for_package_file(pref, path, matrix_params=matrix_params)
+        return self.base_url + self._for_package_file(pref, path, matrix_params="")
 
     def remove_recipe(self, ref):
         """Remove recipe url"""
