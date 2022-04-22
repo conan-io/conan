@@ -74,8 +74,8 @@ def profile_plugin(profile):
 def _check_correct_cppstd(settings):
     from conan.tools.scm import Version
     def _error():
-        from conan.errors import ConanInvalidConfiguration
-        raise ConanInvalidConfiguration("The provided compiler.cppstd is not supported with the specified compiler")
+        from conan.errors import ConanException
+        raise ConanException("The provided compiler.cppstd is not supported with the specified compiler")
     cppstd = settings.get("compiler.cppstd")
     version = settings.get("compiler.version")
 
