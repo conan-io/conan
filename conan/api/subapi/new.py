@@ -26,6 +26,8 @@ class NewAPI:
         from conan.api.helpers.new.msbuild_exe import msbuild_exe_files
         from conan.api.helpers.new.bazel_lib import bazel_lib_files
         from conan.api.helpers.new.bazel_exe import bazel_exe_files
+        from conan.api.helpers.new.autotools_lib import autotools_lib_files
+        from conan.api.helpers.new.autoools_exe import autotools_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
@@ -34,6 +36,8 @@ class NewAPI:
                          "msbuild_exe": msbuild_exe_files,
                          "bazel_lib": bazel_lib_files,
                          "bazel_exe": bazel_exe_files,
+                         "autotools_lib": autotools_lib_files,
+                         "autotools_exe": autotools_exe_files,
                          "alias": alias_file}
         template_files = new_templates.get(template_name)
         return template_files

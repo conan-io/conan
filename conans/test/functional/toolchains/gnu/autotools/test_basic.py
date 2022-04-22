@@ -2,6 +2,7 @@ import os
 import platform
 import textwrap
 import time
+import re
 
 import pytest
 
@@ -217,3 +218,30 @@ def test_install_output_directories():
     p_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(p_folder, "mybin", "main"))
     assert not os.path.exists(os.path.join(p_folder, "bin"))
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool("autotools")
+def test_autotools_with_pkgconfigdeps():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=hello -d version=1.0")
+    client.run("create .")
+
+    consumer_conanfile = textwrap.dedent("""
+        [requires]
+        hello/1.0
+        [generators]
+        AutotoolsToolchain
+        PkgConfigDeps
+    """)
+    client.save({"conanfile.txt": consumer_conanfile}, clean_first=True)
+    client.run("install .")
+
+    client.run_command(". ./conanautotoolstoolchain.sh && "
+                       "pkg-config --cflags hello && "
+                       "pkg-config --libs-only-l hello && "
+                       "pkg-config --libs-only-L --libs-only-other hello")
+
+    assert re.search("I.*/p/include", str(client.out))
+    assert "-lhello" in client.out
+    assert re.search("L.*/p/lib", str(client.out))

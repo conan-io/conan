@@ -5,7 +5,6 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conan.tools.files.files import load_toolchain_args
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
@@ -232,3 +231,98 @@ def test_install_output_directories():
     layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
     toolchain = client.load(os.path.join(b_folder, layout_folder, "conan", "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
+
+
+class TestAutoLinkPragma:
+    # TODO: This is a CMakeDeps test, not a CMakeToolchain test, move it to the right place
+
+    test_cf = textwrap.dedent("""
+        import os
+
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout, CMakeDeps
+        from conan.tools.build import cross_building
+
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+            apply_env = False
+            test_type = "explicit"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.generate()
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def layout(self):
+                cmake_layout(self)
+
+            def test(self):
+                if not cross_building(self):
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "example")
+                    self.run(cmd, env="conanrun")
+        """)
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
+    @pytest.mark.tool("cmake")
+    def test_autolink_pragma_components(self):
+        """https://github.com/conan-io/conan/issues/10837
+
+        NOTE: At the moment the property cmake_set_interface_link_directories is only read at the
+        global cppinfo, not in the components"""
+
+        client = TestClient()
+        client.run("new cmake_lib -d name=hello -d version=1.0")
+        cf = client.load("conanfile.py")
+        cf = cf.replace('self.cpp_info.libs = ["hello"]', """
+            self.cpp_info.components['my_component'].includedirs.append('include')
+            self.cpp_info.components['my_component'].libdirs.append('lib')
+            self.cpp_info.components['my_component'].libs = []
+            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
+        """)
+        hello_h = client.load("include/hello.h")
+        hello_h = hello_h.replace("#define HELLO_EXPORT __declspec(dllexport)",
+                                  '#define HELLO_EXPORT __declspec(dllexport)\n'
+                                  '#pragma comment(lib, "hello")')
+
+        test_cmakelist = client.load("test_package/CMakeLists.txt")
+        test_cmakelist = test_cmakelist.replace("target_link_libraries(example hello::hello)",
+                                                "target_link_libraries(example hello::my_component)")
+        client.save({"conanfile.py": cf,
+                     "include/hello.h": hello_h,
+                     "test_package/CMakeLists.txt": test_cmakelist,
+                     "test_package/conanfile.py": self.test_cf})
+
+        client.run("create .")
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
+    @pytest.mark.tool("cmake")
+    def test_autolink_pragma_without_components(self):
+        """https://github.com/conan-io/conan/issues/10837"""
+        client = TestClient()
+        client.run("new cmake_lib -d name=hello -d version=1.0")
+        cf = client.load("conanfile.py")
+        cf = cf.replace('self.cpp_info.libs = ["hello"]', """
+            self.cpp_info.includedirs.append('include')
+            self.cpp_info.libdirs.append('lib')
+            self.cpp_info.libs = []
+            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
+        """)
+        hello_h = client.load("include/hello.h")
+        hello_h = hello_h.replace("#define HELLO_EXPORT __declspec(dllexport)",
+                                  '#define HELLO_EXPORT __declspec(dllexport)\n'
+                                  '#pragma comment(lib, "hello")')
+
+        client.save({"conanfile.py": cf,
+                     "include/hello.h": hello_h,
+                     "test_package/conanfile.py": self.test_cf})
+
+        client.run("create .")
