@@ -19,7 +19,6 @@ class CMakeDeps(object):
         self._conanfile = conanfile
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
-        self.set_interface_link_directories = False
 
         # Activate the build config files for the specified libraries
         self.build_context_activated = []
