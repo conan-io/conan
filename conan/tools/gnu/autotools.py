@@ -10,7 +10,7 @@ from conan.tools.files import chdir
 
 class Autotools(object):
 
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile, namespace=None, build_script_folder=None):
         self._conanfile = conanfile
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
@@ -18,17 +18,14 @@ class Autotools(object):
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
         self.default_configure_install_args = True
-        self.build_script_folder = None
+        self.build_script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
+            if build_script_folder else self._conanfile.source_folder
 
-    def configure(self, build_script_folder=None):
+    def configure(self):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
-        configure_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
-            if build_script_folder else self._conanfile.source_folder
-
-        self.build_script_folder = self.build_script_folder or os.path.join(configure_folder)
         configure_args = []
         if self.default_configure_install_args and self._conanfile.package_folder:
             def _get_cpp_info_value(name):
