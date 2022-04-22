@@ -1,15 +1,23 @@
 import json
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-def test_cache_path_regular():
-
+@pytest.fixture(scope="module")
+def created_package():
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name foo --version 1.0")
     pref = t.created_package_reference("foo/1.0")
+    return t, pref
+
+
+def test_cache_path_regular(created_package):
+
+    t, pref = created_package
 
     # By default, exports folder, works with pref
     t.run("cache path {}".format(pref.repr_notime()))
@@ -61,7 +69,9 @@ def test_cache_path_regular():
     folder = t.cache.pkg_layout(pref).package()
     assert folder == str(t.out).rstrip()
 
-    # Errors
+
+def test_cache_path_regular_errors(created_package):
+    t, pref = created_package
 
     # build, cannot obtain build without pref
     t.run("cache path {} --folder build".format(pref.ref.repr_notime()), assert_error=True)
@@ -81,6 +91,10 @@ def test_cache_path_regular():
 
     t.run("cache path patata/1.0#123123", assert_error=True)
     assert "ERROR: No entry for recipe 'patata/1.0#123123'" in t.out
+
+
+def test_cache_path_regular_json_output_format(created_package):
+    t, pref = created_package
 
     # JSON output
     t.run("cache path {} --folder package --format json".format(pref.repr_notime()))
