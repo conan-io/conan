@@ -16,7 +16,7 @@ def test_toolchain_win(compiler, version, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
                 "compiler.version": version,
-                "compiler.cppstd": "17",
+                "compiler.cppstd": "14",
                 "compiler.runtime": runtime,
                 "build_type": "Release",
                 "arch": "x86_64"}
@@ -36,7 +36,7 @@ def test_toolchain_win(compiler, version, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     props = client.load("conantoolchain_release_x64.props")
-    assert "<LanguageStandard>stdcpp17</LanguageStandard>" in props
+    assert "<LanguageStandard>stdcpp14</LanguageStandard>" in props
     if version == "190":
         assert "<PlatformToolset>v140</PlatformToolset>" in props
     else:
