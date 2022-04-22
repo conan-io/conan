@@ -8,6 +8,7 @@ from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conans.errors import ConanException
 from conans.tools import args_to_string
 
 
@@ -18,7 +19,6 @@ class AutotoolsToolchain:
 
         self.configure_args = []
         self.make_args = []
-        self.default_configure_install_args = True
 
         # Flags
         self.cxxflags = []
@@ -153,6 +153,7 @@ class AutotoolsToolchain:
         env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
         env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
         env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
+        env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
 
         return env
 
@@ -166,26 +167,20 @@ class AutotoolsToolchain:
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
 
+    def _shared_static_args(self):
+        args = []
+        if self._conanfile.options.get_safe("shared", False):
+            args.extend(["--enable-shared", "--disable-static"])
+        else:
+            args.extend(["--disable-shared", "--enable-static", "--with-pic"
+                        if self._conanfile.options.get_safe("fPIC", True)
+                        else "--without-pic"])
+        return args
+
     def generate_args(self):
         configure_args = []
+        configure_args.extend(self._shared_static_args())
         configure_args.extend(self.configure_args)
-
-        if self.default_configure_install_args and self._conanfile.package_folder:
-            def _get_cpp_info_value(name):
-                # Why not taking cpp.build? because this variables are used by the "cmake install"
-                # that correspond to the package folder (even if the root is the build directory)
-                elements = getattr(self._conanfile.cpp.package, name)
-                return elements[0] if elements else None
-
-            # If someone want arguments but not the defaults can pass them in args manually
-            configure_args.extend(
-                    ['--prefix=%s' % self._conanfile.package_folder.replace("\\", "/"),
-                     "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                     "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                     "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
-                     "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                     "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                     "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:
