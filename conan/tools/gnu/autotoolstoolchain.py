@@ -153,7 +153,7 @@ class AutotoolsToolchain:
         env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
         env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
         env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
-        env.append_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
 
         return env
 
