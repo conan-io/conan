@@ -88,7 +88,10 @@ def _detect_encoding(text):
                 return encodings[bom], len(bom)
             except UnicodeDecodeError:
                 continue
-    decoders = ["utf-8", "Windows-1252"]
+    if sys.platform == "win32":
+        decoders = ["utf-8", "mbcs", "Windows-1252"]
+    else:
+        decoders = ["utf-8", "Windows-1252"]
     for decoder in decoders:
         try:
             text.decode(decoder)
