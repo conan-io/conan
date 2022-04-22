@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conans.client.tools.apple import XCRun, to_apple_arch
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
@@ -23,6 +23,7 @@ def test_ios():
         include(default)
         [settings]
         os=iOS
+        os.sdk=iphoneos
         os.version=12.0
         arch=armv8
         [env]
@@ -75,4 +76,5 @@ def test_ios():
 
     conanbuild = load_toolchain_args(client.current_folder)
     configure_args = conanbuild["configure_args"]
-    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+    assert configure_args == "'--disable-shared' '--enable-static' '--with-pic' " \
+                             "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"

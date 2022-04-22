@@ -156,14 +156,15 @@ def _get_profile_compiler_version(compiler, version, output):
     elif compiler == "gcc" and int(major) >= 5:
         output.info("gcc>=5, using the major as version")
         return major
+    elif compiler == "apple-clang" and int(major) >= 13:
+        output.info("apple-clang>=13, using the major as version")
+        return major
     elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
         return major
     elif compiler == "msvc":
-        # by default, drop the last digit of the minor (19.30 -> 19.3)
-        if len(minor) == 2:
-            version = version[:-1]
+        return major
     return version
 
 
@@ -225,15 +226,8 @@ def _detect_compiler_version(result, output, profile_path):
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        output.info("No compiler was detected (one may not be needed)")
         return
-
-    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
-    if compiler == "Visual Studio":
-        version = Version(version)
-        if version == "17":
-            compiler = "msvc"
-            version = "19.3"
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))
@@ -267,6 +261,11 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.base.version", "4.8"))
         else:
             result.append(("compiler.base.version", "4.4"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
 
 def _detect_os_arch(result, output):

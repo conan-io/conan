@@ -23,10 +23,6 @@ class Generator(object):
     def _get_name(cls, obj):
         return obj.get_name(cls.name)
 
-    @classmethod
-    def _get_namespace(cls, obj):
-        return obj.get_namespace(cls.name)
-
     @property
     def deps_build_info(self):
         return self._deps_build_info
@@ -89,7 +85,7 @@ class GeneratorComponentsMixin(object):
         pkg_build_info = self.deps_build_info[pkg]
         pkg_name = self._get_name(pkg_build_info)
         # fallback namespace to pkg_name if not defined
-        pkg_namespace = self._get_namespace(pkg_build_info) or pkg_name
+        pkg_namespace = pkg_name
         if cmp in pkg_build_info.components:
             cmp_name = self._get_name(pkg_build_info.components[cmp])
         else:

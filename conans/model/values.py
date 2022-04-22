@@ -67,6 +67,18 @@ class Values(object):
             result.append((name.strip(), value.strip()))
         return cls.from_list(result)
 
+    def update_values(self, values):
+        """ receives a list of tuples (compiler.version, value)
+        Necessary for binary_compatibility.py
+        """
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+            setattr(attr, list_settings[-1], value)
+
     def as_list(self, list_all=True):
         result = []
         for field in self.fields:

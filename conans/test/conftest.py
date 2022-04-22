@@ -104,10 +104,24 @@ tools_locations = {
         "exe": "make",
         "system": {"path": {'Windows': "C:/cygwin64/bin"}},
     },
-    'bazel':  {
+    'bazel': {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
+    },
+    'premake': {
+        "exe": "premake5",
+        "default": "5.0.0",
+        "5.0.0": {
+            "path": {'Linux': '/usr/local/bin/premake5'}
+        }
+    },
+    'premake': {},
+    'apt_get': {"exe": "apt-get"},
+    'brew': {},
+    'android_ndk': {
+        "platform": "Darwin",
+        "exe": "ndk-build",
     },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
@@ -134,7 +148,8 @@ except ImportError as e:
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
 }
 
 

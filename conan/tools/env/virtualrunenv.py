@@ -9,19 +9,10 @@ def runenv_from_cpp_info(conanfile, dep, os_name):
     # FIXME: Remove conanfile arg
     dyn_runenv = Environment()
 
-    cpp_info = dep.cpp_info
-    cpp_info.aggregate_components()
-    pkg_folder = dep.package_folder
-    if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
-        return dyn_runenv
+    cpp_info = dep.cpp_info.aggregated_components()
 
     def _handle_paths(paths):
-        result = []
-        for p in paths:
-            abs_path = os.path.join(pkg_folder, p)
-            if os.path.exists(abs_path):
-                result.append(abs_path)
-        return result
+        return [p for p in paths if os.path.exists(p)]
 
     if cpp_info.bindirs:  # cpp_info.exes is not defined yet
         dyn_runenv.prepend_path("PATH", _handle_paths(cpp_info.bindirs))
@@ -79,7 +70,7 @@ class VirtualRunEnv:
 
         return runenv
 
-    def vars(self, scope="build"):
+    def vars(self, scope="run"):
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="run"):

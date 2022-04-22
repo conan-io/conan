@@ -44,7 +44,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert arch is None, "checked don't know how to validate this architecture"
 
             if version:
-                assert "{} _MSC_VER{}".format(name, version.replace(".", "")) in output
+                assert "{} _MSC_VER{}".format(name, version) in output
             if cppstd:
                 assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
 

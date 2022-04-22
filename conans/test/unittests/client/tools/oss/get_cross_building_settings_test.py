@@ -105,3 +105,11 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
             build_os, build_arch, _, _ = get_cross_building_settings(conanfile)
             self.assertEqual("AIX", build_os)
             self.assertEqual("x86_64", build_arch)
+
+    def test_vxworks(self):
+        with mock.patch("platform.system", mock.MagicMock(return_value='VxWorks')), \
+             mock.patch("platform.machine", mock.MagicMock(return_value="armv7")):
+            conanfile = MockConanfile(MockSettings({}))
+            build_os, build_arch, _, _ = get_cross_building_settings(conanfile)
+            self.assertEqual("VxWorks", build_os)
+            self.assertEqual("armv7", build_arch)

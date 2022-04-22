@@ -2,7 +2,7 @@ from os import chdir
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -100,7 +100,7 @@ def test_cppstd():
         {"build_type": "Release",
          "arch": "x86",
          "compiler": "msvc",
-         "compiler.version": "19.3",
+         "compiler.version": "193",
          "compiler.cppstd": "17"})
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
@@ -203,12 +203,23 @@ def test_cxx11_abi_define():
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert be.gcc_cxx11_abi is None
-    assert "-D_GLIBCXX_USE_CXX11_ABI=0" not in env["CPPFLAGS"]
+    assert "GLIBCXX_USE_CXX11_ABI" not in env["CPPFLAGS"]
+
+    # Force the GLIBCXX_USE_CXX11_ABI=1 for old distros is direct def f ``gcc_cxx11_abi``
+    be.gcc_cxx11_abi = "_GLIBCXX_USE_CXX11_ABI=1"
+    env = be.vars()
+    assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]
+
+    # Also conf is possible
+    conanfile.conf["tools.gnu:define_libcxx11_abi"] = True
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]
 
 
 @pytest.mark.parametrize("config", [
     ('x86_64', "-m64"),
-    ('x86', "-m32"),])
+    ('x86', "-m32")])
 def test_architecture_flag(config):
     """Architecture flag is set in CXXFLAGS, CFLAGS and LDFLAGS"""
     arch, expected = config
@@ -224,6 +235,7 @@ def test_architecture_flag(config):
     assert expected in env["CXXFLAGS"]
     assert expected in env["CFLAGS"]
     assert expected in env["LDFLAGS"]
+    assert "-debug" not in env["LDFLAGS"]
 
 
 @pytest.mark.parametrize("compiler", ['Visual Studio', 'msvc'])
@@ -241,11 +253,12 @@ def test_build_type_flag(compiler):
     assert "-Zi -Ob0 -Od" in env["CXXFLAGS"]
     assert "-Zi -Ob0 -Od" in env["CFLAGS"]
     assert "-Zi -Ob0 -Od" not in env["LDFLAGS"]
+    assert "-debug" in env["LDFLAGS"]
 
 
 def test_apple_arch_flag():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings_build = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -277,7 +290,7 @@ def test_apple_arch_flag():
 def test_apple_min_os_flag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -295,7 +308,7 @@ def test_apple_min_os_flag():
 def test_apple_isysrootflag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings_build = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -326,7 +339,7 @@ def test_apple_isysrootflag():
 
 def test_custom_defines():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -342,7 +355,7 @@ def test_custom_defines():
 
 def test_custom_cxxflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -361,7 +374,7 @@ def test_custom_cxxflags():
 
 def test_custom_cflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -380,7 +393,7 @@ def test_custom_cflags():
 
 def test_custom_ldflags():
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
@@ -395,3 +408,23 @@ def test_custom_ldflags():
 
     assert "MyFlag" not in env["CXXFLAGS"]
     assert "MyFlag" not in env["CFLAGS"]
+
+
+def test_extra_flags_via_conf():
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:cxxflags", ["--flag1", "--flag2"])
+    conanfile.conf.define("tools.build:cflags", ["--flag3", "--flag4"])
+    conanfile.conf.define("tools.build:sharedlinkflags", ["--flag5"])
+    conanfile.conf.define("tools.build:exelinkflags", ["--flag6"])
+    conanfile.conf.define("tools.build:defines", ["DEF1", "DEF2"])
+    conanfile.settings = MockSettings(
+        {"build_type": "RelWithDebInfo",
+         "os": "iOS",
+         "os.version": "14",
+         "arch": "armv8"})
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert '-DNDEBUG -DDEF1 -DDEF2' in env["CPPFLAGS"]
+    assert '-mios-version-min=14 --flag1 --flag2' in env["CXXFLAGS"]
+    assert '-mios-version-min=14 --flag3 --flag4' in env["CFLAGS"]
+    assert '-mios-version-min=14 --flag5 --flag6' in env["LDFLAGS"]

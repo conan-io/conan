@@ -15,6 +15,31 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.tool_mingw64
+@pytest.mark.tool_cmake(version="3.15")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_mingw():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    assert "hello/1.0: __GNUC__" in client.out
+    assert "hello/1.0: __MINGW" in client.out
+
+
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
@@ -174,8 +199,8 @@ class Base(unittest.TestCase):
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
-                           ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "19.1", "17", "x86_64", None, False)]
+                           ("msvc", "Debug", "static", "191", "14", "x86", None, True),
+                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -188,8 +213,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path,
-             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
+        save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
@@ -244,7 +268,7 @@ class WinTest(Base):
         if compiler == "msvc":
             visual_version = version
         else:
-            visual_version = "19.0" if toolset == "v140" else "19.1"
+            visual_version = "190" if toolset == "v140" else "191"
         check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
@@ -353,8 +377,8 @@ class LinuxTest(Base):
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
-        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
+        cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
                   'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
                   '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
                   '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
@@ -448,8 +472,8 @@ class AppleTest(Base):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.parametrize("version, vs_version",
-                         [("19.0", "15"),
-                          ("19.1", "15")])
+                         [("190", "15"),
+                          ("191", "15")])
 def test_msvc_vs_versiontoolset(version, vs_version):
     settings = {"compiler": "msvc",
                 "compiler.version": version,

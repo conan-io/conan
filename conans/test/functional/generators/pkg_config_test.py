@@ -1,3 +1,4 @@
+import glob
 import os
 import platform
 import textwrap
@@ -8,6 +9,13 @@ import pytest
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+
+
+def get_requires_from_content(content):
+    for line in content.splitlines():
+        if "Requires:" in line:
+            return line
+    return ""
 
 
 class PkgGeneratorTest(unittest.TestCase):
@@ -248,6 +256,8 @@ class PkgConfigConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                          "componentdir=${prefix}/mydir")
+                    self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                         "19.8.199")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -256,3 +266,80 @@ class PkgConfigConan(ConanFile):
 
         pc_content = client.load("mycomponent.pc")
         self.assertIn("componentdir=${prefix}/mydir", pc_content)
+        self.assertIn("Version: 19.8.199", pc_content)
+
+
+def test_components_and_package_pc_creation_order():
+    """
+    Testing if the root package PC file name matches with any of the components one, the first one
+    is not going to be created. Components have more priority than root package.
+
+    Issue related: https://github.com/conan-io/conan/issues/10341
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "OpenCL")
+                self.cpp_info.components["_opencl-headers"].set_property("pkg_config_name", "OpenCL")
+                self.cpp_info.components["_opencl-other"].set_property("pkg_config_name", "OtherCL")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . opencl/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            requires = "opencl/1.0"
+
+            def package_info(self):
+                self.cpp_info.components["comp"].set_property("pkg_config_name", "pkgb")
+                self.cpp_info.components["comp"].requires.append("opencl::_opencl-headers")
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . pkgb/1.0@")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        pkgb/1.0
+
+        [generators]
+        pkg_config
+        """)
+    client.save({"conanfile.txt": conanfile}, clean_first=True)
+    client.run("install .")
+    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
+    pc_files.sort()
+    # Let's check all the PC file names created just in case
+    assert pc_files == ['OpenCL.pc', 'OtherCL.pc', 'pkgb.pc']
+    pc_content = client.load("OpenCL.pc")
+    assert "Name: OpenCL-OpenCL" in pc_content
+    assert "Description: Conan package: OpenCL-OpenCL" in pc_content
+    assert "Requires:" not in pc_content
+    pc_content = client.load("pkgb.pc")
+    assert "Requires: OpenCL" in get_requires_from_content(pc_content)
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires pkg-config")
+@pytest.mark.tool_pkg_config
+def test_pkg_config_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conans import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\"user_config.h\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+                self.cpp_info.cflags.append("flag1=\"my flag1\"")
+                self.cpp_info.cxxflags.append('flag2="my flag2"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . hello/1.0@")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g pkg_config")
+    client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
+    assert r'flag2=\"my flag2\" flag1=\"my flag1\" -DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out

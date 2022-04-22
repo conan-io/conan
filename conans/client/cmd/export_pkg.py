@@ -59,11 +59,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     conanfile.develop = True
     if hasattr(conanfile, "layout"):
         conanfile_folder = os.path.dirname(source_conanfile_path)
-        conanfile.folders.set_base_build(conanfile_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
+        conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
         conanfile.folders.set_base_package(dest_package_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
     else:
         conanfile.folders.set_base_build(build_folder)
         conanfile.folders.set_base_source(source_folder)
@@ -81,6 +78,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)
     if pkg_node.graph_lock_node:
+        pkg_node.graph_lock_node.relax()
+        pkg_node.graph_lock_node.unlock_prev()
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
         pkg_node.graph_lock_node.prev = pref.revision

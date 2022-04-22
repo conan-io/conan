@@ -4,9 +4,8 @@ import shutil
 
 from datetime import datetime
 from dateutil.tz import gettz
-
 from contextlib import contextmanager
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse, urlsplit
 
 from conans import load
 from conans.client import tools
@@ -147,7 +146,9 @@ def _process_folder(config, folder, cache, output):
 def _process_download(config, cache, output, requester):
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
-        zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
+        path = urlsplit(config.uri).path
+        filename = os.path.basename(path)
+        zippath = os.path.join(tmp_folder, filename)
         try:
             downloader = FileDownloader(requester=requester, output=output, verify=config.verify_ssl,
                                         config_retry=None, config_retry_wait=None)

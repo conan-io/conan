@@ -1,6 +1,9 @@
+import platform
 import textwrap
 import time
 import unittest
+
+import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -523,6 +526,35 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
+    def test_compatible_diamond(self):
+        # https://github.com/conan-io/conan/issues/9880
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                {}
+                settings = "build_type"
+                def package_id(self):
+                    if self.settings.build_type == "Debug":
+                        compatible_pkg = self.info.clone()
+                        compatible_pkg.settings.build_type = "Release"
+                        self.compatible_packages.append(compatible_pkg)
+                """)
+
+        client.save({"pkga/conanfile.py": conanfile.format(""),
+                     "pkgb/conanfile.py": conanfile.format('requires = ("pkga/0.1", "private"), '),
+                     "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
+                     "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
+                     })
+        client.run("create pkga pkga/0.1@ -s build_type=Release")
+        client.run("create pkgb pkgb/0.1@ -s build_type=Release")
+        client.run("create pkgc pkgc/0.1@ -s build_type=Release")
+
+        client.run("install pkgd -s build_type=Debug")
+        assert "pkga/0.1: Main binary package '5a67a79dbc25fd0fa149a0eb7a20715189a0d988' missing" \
+               in client.out
+        assert "pkga/0.1:4024617540c4f240a6a5e8911b0de9ef38a11a72 - Cache" in client.out
+
 
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
@@ -531,7 +563,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
@@ -547,3 +579,70 @@ def test_msvc_visual_incompatible():
     save(client.cache.new_config_path, new_config)
     client.run("install pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
+def test_apple_clang_compatible():
+    """
+    From apple-clang version 13 we detect apple-clang version as 13 and we make
+    this compiler version compatible with 13.0
+    """
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run('create . pkg/0.1@ -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
+               '-s build_type=Release -s arch=x86_64')
+    client.run("install pkg/0.1@ -pr=profile")
+    assert "Using compatible package" in client.out
+
+
+class TestNewCompatibility:
+
+    def test_compatible_setting(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler"
+
+                def compatibility(self):
+                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                        return [{"settings": [("compiler.version", v)]}
+                                for v in ("4.8", "4.7", "4.6")]
+
+                def package_info(self):
+                    self.output.info("PackageInfo!: Gcc version: %s!"
+                                     % self.settings.compiler.version)
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+        # Create package with gcc 4.8
+        c.run("create .  -pr=myprofile -s compiler.version=4.8")
+        assert "pkg/0.1: Package '22c594d7fed4994c59a1eacb24ff6ff48bc5c51c' created" in c.out
+
+        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
+        c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("install . -pr=myprofile")
+        assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
+        assert "pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c" in c.out
+        assert "pkg/0.1: Already installed!" in c.out

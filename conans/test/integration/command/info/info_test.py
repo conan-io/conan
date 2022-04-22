@@ -720,3 +720,30 @@ class TestInfoPythonRequires:
         client.run("info . --json=file.json")
         info = json.loads(client.load("file.json"))
         assert info[0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
+
+class TestInfoTestPackage:
+    # https://github.com/conan-io/conan/issues/10714
+
+    def test_tested_reference_str(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . tool/0.1@")
+
+        conanfile = textwrap.dedent("""
+from conans import ConanFile
+class HelloConan(ConanFile):
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def build_requirements(self):
+        self.build_requires(self.tested_reference_str)
+
+    test_type = 'explicit'
+""")
+        client.save({"conanfile.py": conanfile})
+
+        for args in ["", " --build-order tool/0.1@", " --build"]:
+            client.run("info . " + args)
+            assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
+                   not in client.out

@@ -1,5 +1,6 @@
-import textwrap
 import os
+import platform
+import textwrap
 
 import pytest
 
@@ -54,7 +55,7 @@ def test_cross_build_user_toolchain():
         arch=armv8
         build_type=Release
         [conf]
-        tools.cmake.cmaketoolchain:user_toolchain=rpi_toolchain.cmake
+        tools.cmake.cmaketoolchain:user_toolchain+=rpi_toolchain.cmake
         """)
 
     client = TestClient(path_with_spaces=False)
@@ -193,8 +194,7 @@ def test_cross_build_conf():
     assert "set(CMAKE_SYSTEM_PROCESSOR myarm)" in toolchain
 
 
-@pytest.mark.parametrize("find_builddir", [True, False, None])
-def test_find_builddirs(find_builddir):
+def test_find_builddirs():
     client = TestClient()
     conanfile = textwrap.dedent("""
             import os
@@ -227,14 +227,104 @@ def test_find_builddirs(find_builddir):
                     cmake.generate()
             """)
 
-    if find_builddir is not None:
-        conanfile = conanfile.format('cmake.find_builddirs = {}'.format(str(find_builddir)))
-
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
     with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
         contents = f.read()
-        if find_builddir is True or find_builddir is None:
-            assert "/path/to/builddir" in contents
-        else:
-            assert "/path/to/builddir" not in contents
+        assert "/path/to/builddir" in contents
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_cmaketoolchain_cmake_system_processor_cross_apple():
+    """
+    https://github.com/conan-io/conan/pull/10434
+    CMAKE_SYSTEM_PROCESSOR was not set when cross-building in Mac
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_apple_vars_overwrite_user_conf():
+    """
+        tools.cmake.cmaketoolchain:system_name and tools.cmake.cmaketoolchain:system_version
+        will be overwritten by the apple block
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain "
+               "-c tools.cmake.cmaketoolchain:system_name=tvOS "
+               "-c tools.cmake.cmaketoolchain:system_version=15.1 "
+               "-c tools.cmake.cmaketoolchain:system_processor=x86_64 ")
+
+    toolchain = client.load("conan_toolchain.cmake")
+
+    # should set the conf values but system/version are overwritten by the apple block
+    assert "CMAKE_SYSTEM_NAME tvOS" in toolchain
+    assert "CMAKE_SYSTEM_NAME iOS" not in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.1" in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.0" not in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
+
+
+def test_extra_flags_via_conf():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+
+        [conf]
+        tools.build:cxxflags=["--flag1", "--flag2"]
+        tools.build:cflags+=["--flag3", "--flag4"]
+        tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+        tools.build:exelinkflags=["--flag7", "--flag8"]
+        tools.build:defines=["D1", "D2"]
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " --flag1 --flag2")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
+    assert 'add_compile_definitions( D1 D2)' in toolchain

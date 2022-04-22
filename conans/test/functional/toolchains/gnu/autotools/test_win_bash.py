@@ -30,7 +30,6 @@ def test_autotools_bash_complete():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.gnu import Autotools
-        from conan.tools.microsoft import VCVars
         from conan.tools.env import Environment
 
         class TestConan(ConanFile):
@@ -38,17 +37,6 @@ def test_autotools_bash_complete():
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsToolchain"
             win_bash = True
-
-            def generate(self):
-                # Add vcvars launcher
-                VCVars(self).generate()
-
-                # Force autotools to use "cl" compiler
-                # FIXME: Should this be added to AutotoolsToolchain when visual?
-                env = Environment()
-                env.define("CXX", "cl")
-                env.define("CC", "cl")
-                env.vars(self).save_script("conan_compiler")
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and
@@ -71,7 +59,5 @@ def test_autotools_bash_complete():
     check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
-    sh_contents = client.load("conanbuild.sh")
-
     assert "conanvcvars.bat" in bat_contents
-    assert "conan_compiler.sh" in sh_contents and "conanautotoolstoolchain.sh" in sh_contents
+

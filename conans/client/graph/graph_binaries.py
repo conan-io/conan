@@ -1,4 +1,5 @@
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.compatibility import BinaryCompatibility
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
@@ -20,6 +21,7 @@ class GraphBinariesAnalyzer(object):
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
         self._fixed_package_id = cache.config.full_transitive_package_id
+        self._compatibility = BinaryCompatibility(self._cache)
 
     @staticmethod
     def _check_update(upstream_manifest, package_folder, output):
@@ -157,6 +159,10 @@ class GraphBinariesAnalyzer(object):
                 node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
+
+            # this line fixed the compatible_packages with private case.
+            # https://github.com/conan-io/conan/issues/9880
+            node._package_id = previous_node.package_id
             return True
         self._evaluated[pref] = [node]
 
@@ -195,6 +201,8 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
+                conanfile = node.conanfile
+                self._compatibility.compatibles(conanfile)
                 if node.conanfile.compatible_packages:
                     compatible_build_mode = BuildMode(None, self._out)
                     for compatible_package in node.conanfile.compatible_packages:
@@ -367,11 +375,15 @@ class GraphBinariesAnalyzer(object):
                                           python_requires=python_requires,
                                           default_python_requires_id_mode=
                                           default_python_requires_id_mode)
-
+        conanfile.original_info = conanfile.info.clone()
         if not self._cache.new_config["core.package_id:msvc_visual_incompatible"]:
             msvc_compatible = conanfile.info.msvc_compatible()
             if msvc_compatible:
                 conanfile.compatible_packages.append(msvc_compatible)
+
+        apple_clang_compatible = conanfile.info.apple_clang_compatible()
+        if apple_clang_compatible:
+            conanfile.compatible_packages.append(apple_clang_compatible)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
@@ -383,6 +395,8 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(str(conanfile), "validate"):
                 try:
                     conanfile.validate()
+                    # FIXME: this shouldn't be necessary in Conan 2.0
+                    conanfile._conan_dependencies = None
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
 

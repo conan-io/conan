@@ -50,10 +50,10 @@ def setup_client_with_greetings():
                     self.cpp_info.components["bye"].libs = ["bye"]
                 elif self.options.components == "custom":
                     self.cpp_info.set_property("cmake_file_name", "MYG")
-                    self.cpp_info.set_property("cmake_target_name", "MyGreetings")
+                    self.cpp_info.set_property("cmake_target_name", "MyGreetings::MyGreetings")
 
-                    self.cpp_info.components["hello"].set_property("cmake_target_name", "MyHello")
-                    self.cpp_info.components["bye"].set_property("cmake_target_name", "MyBye")
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "MyGreetings::MyHello")
+                    self.cpp_info.components["bye"].set_property("cmake_target_name", "MyGreetings::MyBye")
 
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
@@ -275,14 +275,14 @@ def test_custom_names(setup_client_with_greetings):
 
     package_info = textwrap.dedent("""
         # NOTE: For the new CMakeDeps only filenames mean filename, it is not using the "names" field
-        self.cpp_info.set_property("cmake_target_name", "MyChat")
+        self.cpp_info.set_property("cmake_target_name", "MyChat::MyChat")
         self.cpp_info.set_property("cmake_file_name", "MyChat")
 
-        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MyChat::MySay")
 
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
-        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MyChat::MySayBye")
 
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
@@ -314,15 +314,14 @@ def test_different_namespace(setup_client_with_greetings):
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
-        self.cpp_info.set_property("cmake_target_namespace", "MyChat")
-        self.cpp_info.set_property("cmake_target_name", "MyGlobalChat")
+        self.cpp_info.set_property("cmake_target_name", "MyChat::MyGlobalChat")
         self.cpp_info.set_property("cmake_file_name", "MyChat")
 
-        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MyChat::MySay")
 
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
-        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MyChat::MySayBye")
 
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
@@ -580,10 +579,10 @@ class TestComponentsCMakeGenerators:
                     self.copy("*.a", dst="lib", keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_target_name", "nonstd" )
+                    self.cpp_info.set_property("cmake_target_name", "nonstd::nonstd" )
                     self.cpp_info.set_property("cmake_file_name", "{name}")
 
-                    self.cpp_info.components["1"].set_property("cmake_target_name", "{name}")
+                    self.cpp_info.components["1"].set_property("cmake_target_name", "nonstd::{name}")
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         basic_cmake = textwrap.dedent("""
@@ -645,8 +644,7 @@ class TestComponentsCMakeGenerators:
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile
-            from conan.tools.cmake import CMake
-            from conan.tools.layout import cmake_layout
+            from conan.tools.cmake import CMake, cmake_layout
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -766,7 +764,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
         cmake_minimum_required(VERSION 3.15)
         project(project CXX)
 
-        find_package(hello COMPONENTS invented missing)
+        find_package(hello COMPONENTS hello::invented missing)
         add_executable(myapp main.cpp)
         target_link_libraries(myapp hello::invented)
     """)
@@ -778,5 +776,78 @@ def test_targets_declared_in_build_modules(check_components_exist):
 
     assert "Conan: Including build module" in client.out
     assert "my_modules.cmake" in client.out
-    assert bool(check_components_exist) == ("Conan: Component 'invented' found in package 'hello'"
+    assert bool(check_components_exist) == ("Conan: Component 'hello::invented' found in package 'hello'"
                                             in client.out)
+
+
+@pytest.mark.tool_cmake
+def test_cmakedeps_targets_no_namespace():
+    """
+    This test is checking that when we add targets with no namespace for the root cpp_info
+    and the components, the targets are correctly generated. Before Conan 1.43, Conan
+    only generated targets with namespace
+    """
+    client = TestClient()
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            name = "my_pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "nonamespacepkg")
+                self.cpp_info.components["MYPKGCOMP"].set_property("cmake_target_name", "MYPKGCOMPNAME")
+        """)
+    client.save({"my_pkg/conanfile.py": my_pkg}, clean_first=True)
+    client.run("create my_pkg")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            requires = "my_pkg/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "CURL")
+                self.cpp_info.set_property("cmake_file_name", "CURLFILENAME")
+                self.cpp_info.components["curl"].set_property("cmake_target_name", "libcurl")
+                self.cpp_info.components["curl2"].set_property("cmake_target_name", "libcurl2")
+                self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+        """)
+    client.save({"libcurl/conanfile.py": conanfile})
+    client.run("create libcurl")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "libcurl/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "CMakeLists.txt"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.check_components_exist=True
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelists = textwrap.dedent("""cmake_minimum_required(VERSION 3.15)
+        project(Consumer)
+        find_package(CURLFILENAME CONFIG REQUIRED COMPONENTS libcurl libcurl2)
+        """)
+
+    client.save({"consumer/conanfile.py": conanfile, "consumer/CMakeLists.txt": cmakelists})
+    client.run("create consumer")
+    assert "Component target declared 'libcurl'" in client.out
+    assert "Component target declared 'libcurl2'" in client.out
+    assert "Target declared 'CURL'" in client.out
+    assert "Component target declared 'MYPKGCOMPNAME'" in client.out
+    assert "Target declared 'nonamespacepkg'" in client.out

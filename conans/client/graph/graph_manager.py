@@ -21,14 +21,18 @@ from conans.util.files import load
 class _RecipeBuildRequires(OrderedDict):
     def __init__(self, conanfile, default_context):
         super(_RecipeBuildRequires, self).__init__()
-        build_requires = getattr(conanfile, "build_requires", [])
-        if not isinstance(build_requires, (list, tuple)):
-            build_requires = [build_requires]
-        self._default_context = default_context
-        for build_require in build_requires:
-            self.add(build_require, context=self._default_context)
+        # "tool_requires" is an alias for 2.0 compatibility
+        for require_type in ("build_requires", "tool_requires"):
+            build_requires = getattr(conanfile, require_type, [])
+            if not isinstance(build_requires, (list, tuple)):
+                build_requires = [build_requires]
+            self._default_context = default_context
+            for build_require in build_requires:
+                self.add(build_require, context=self._default_context)
 
     def add(self, build_require, context, force_host_context=False):
+        if build_require is None:
+            return
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
         build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
@@ -100,6 +104,7 @@ class GraphManager(object):
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
+                conanfile.tested_reference_str = repr(test)
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
@@ -157,8 +162,9 @@ class GraphManager(object):
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
-            return self._load_root_test_package(path, create_reference, graph_lock, profile_host,
+            ret = self._load_root_test_package(path, create_reference, graph_lock, profile_host,
                                                 require_overrides)
+            return ret
 
         # It is a path to conanfile.py or conanfile.txt
         root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref,
@@ -246,26 +252,30 @@ class GraphManager(object):
                                                )
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
+        conanfile.tested_reference_str = repr(create_reference)
 
         # Injection of the tested reference
         test_type = getattr(conanfile, "test_type", ("requires", ))
         if not isinstance(test_type, (list, tuple)):
             test_type = (test_type, )
-        if "build_requires" in test_type:
-            if getattr(conanfile, "build_requires", None):
-                # Injecting the tested reference
-                existing = conanfile.build_requires
-                if not isinstance(existing, (list, tuple)):
-                    existing = [existing]
-                conanfile.build_requires = list(existing) + [create_reference]
-            else:
-                conanfile.build_requires = str(create_reference)
-        if "requires" in test_type:
-            require = conanfile.requires.get(create_reference.name)
-            if require:
-                require.ref = require.range_ref = create_reference
-            else:
-                conanfile.requires.add_ref(create_reference)
+
+        if "explicit" not in test_type:  # 2.0 mode, not automatically add the require, always explicit
+            if "build_requires" in test_type:
+                if getattr(conanfile, "build_requires", None):
+                    # Injecting the tested reference
+                    existing = conanfile.build_requires
+                    if not isinstance(existing, (list, tuple)):
+                        existing = [existing]
+                    conanfile.build_requires = list(existing) + [create_reference]
+                else:
+                    conanfile.build_requires = str(create_reference)
+            if "requires" in test_type:
+                require = conanfile.requires.get(create_reference.name)
+                if require:
+                    require.ref = require.range_ref = create_reference
+                else:
+                    conanfile.requires.add_ref(create_reference)
+
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
@@ -298,6 +308,16 @@ class GraphManager(object):
     @staticmethod
     def _get_recipe_build_requires(conanfile, default_context):
         conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
+        conanfile.tool_requires = conanfile.build_requires
+
+        class TestRequirements:
+            def __init__(self, build_requires):
+                self._build_requires = build_requires
+
+            def __call__(self, ref):
+                self._build_requires(ref, force_host_context=True)
+
+        conanfile.test_requires = TestRequirements(conanfile.build_requires)
         if hasattr(conanfile, "build_requirements"):
             with get_env_context_manager(conanfile):
                 with conanfile_exception_formatter(str(conanfile), "build_requirements"):

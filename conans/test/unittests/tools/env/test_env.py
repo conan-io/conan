@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conan.tools.microsoft.subsystems import WINDOWS
+from conans.client.subsystems import WINDOWS
 from conans.client.tools import chdir, environment_append
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -130,7 +130,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
 def test_profile():
     myprofile = textwrap.dedent("""
         # define
-        MyVar1=MyValue1
+        MyVar1 =MyValue1
         #  append
         MyVar2+=MyValue2
         #  multiple append works
@@ -177,115 +177,8 @@ def test_profile():
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 
 
-def test_env_files():
-    env = Environment()
-    env.define("MyVar", "MyValue")
-    env.define("MyVar1", "MyValue1")
-    env.append("MyVar2", "MyValue2")
-    env.prepend("MyVar3", "MyValue3")
-    env.unset("MyVar4")
-    env.define("MyVar5", "MyValue5 With Space5=More Space5;:More")
-    env.append("MyVar6", "MyValue6")  # Append, but previous not existing
-    env.define_path("MyPath1", "/Some/Path1/")
-    env.append_path("MyPath2", ["/Some/Path2/", "/Other/Path2/"])
-    env.prepend_path("MyPath3", "/Some/Path3/")
-    env.unset("MyPath4")
-    folder = temp_folder()
-
-    prevenv = {"MyVar1": "OldVar1",
-               "MyVar2": "OldVar2",
-               "MyVar3": "OldVar3",
-               "MyVar4": "OldVar4",
-               "MyPath1": "OldPath1",
-               "MyPath2": "OldPath2",
-               "MyPath3": "OldPath3",
-               "MyPath4": "OldPath4",
-               }
-
-    display_bat = textwrap.dedent("""\
-        @echo off
-        echo MyVar=%MyVar%!!
-        echo MyVar1=%MyVar1%!!
-        echo MyVar2=%MyVar2%!!
-        echo MyVar3=%MyVar3%!!
-        echo MyVar4=%MyVar4%!!
-        echo MyVar5=%MyVar5%!!
-        echo MyVar6=%MyVar6%!!
-        echo MyPath1=%MyPath1%!!
-        echo MyPath2=%MyPath2%!!
-        echo MyPath3=%MyPath3%!!
-        echo MyPath4=%MyPath4%!!
-        """)
-
-    display_sh = textwrap.dedent("""\
-        echo MyVar=$MyVar!!
-        echo MyVar1=$MyVar1!!
-        echo MyVar2=$MyVar2!!
-        echo MyVar3=$MyVar3!!
-        echo MyVar4=$MyVar4!!
-        echo MyVar5=$MyVar5!!
-        echo MyVar6=$MyVar6!!
-        echo MyPath1=$MyPath1!!
-        echo MyPath2=$MyPath2!!
-        echo MyPath3=$MyPath3!!
-        echo MyPath4=$MyPath4!!
-        """)
-
-    def check(cmd_):
-        out, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  env=prevenv, shell=True).communicate()
-        out = out.decode()
-        assert "MyVar=MyValue!!" in out
-        assert "MyVar1=MyValue1!!" in out
-        assert "MyVar2=OldVar2 MyValue2!!" in out
-        assert "MyVar3=MyValue3 OldVar3!!" in out
-        assert "MyVar4=!!" in out
-        assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
-        assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
-        assert "MyPath1=/Some/Path1/!!" in out
-        assert os.pathsep.join(["MyPath2=OldPath2", "/Some/Path2/", "/Other/Path2/!!"]) in out
-        assert os.pathsep.join(["MyPath3=/Some/Path3/", "OldPath3!!"]) in out
-        assert "MyPath4=!!" in out
-
-        # This should be output when deactivated
-        assert "MyVar=!!" in out
-        assert "MyVar1=OldVar1!!" in out
-        assert "MyVar2=OldVar2!!" in out
-        assert "MyVar3=OldVar3!!" in out
-        assert "MyVar4=OldVar4!!" in out
-        assert "MyVar5=!!" in out
-        assert "MyVar6=!!" in out
-        assert "MyPath1=OldPath1!!" in out
-        assert "MyPath2=OldPath2!!" in out
-        assert "MyPath3=OldPath3!!" in out
-        assert "MyPath4=OldPath4!!" in out
-
-    with chdir(folder):
-        if platform.system() == "Windows":
-            env = env.vars(ConanFileMock())
-            env.save_bat("test.bat")
-
-            save("display.bat", display_bat)
-            cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-            check(cmd)
-            # FIXME: Powershell still not working
-            # env.save_ps1("test.ps1", pathsep=":")
-            # cmd = 'powershell.exe -ExecutionPolicy ./test.ps1; gci env:'
-            # shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # (stdout, stderr) = shell.communicate()
-            # stdout, stderr = decode_text(stdout), decode_text(stderr)
-            # check(cmd)
-        else:
-            env = env.vars(ConanFileMock())
-            env.save_sh("test.sh")
-            save("display.sh", display_sh)
-            os.chmod("display.sh", 0o777)
-            cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
-            check(cmd)
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_windows_case_insensitive():
+@pytest.fixture
+def env():
     # Append and define operation over the same variable in Windows preserve order
     env = Environment()
     env.define("MyVar", "MyValueA")
@@ -293,31 +186,64 @@ def test_windows_case_insensitive():
     env.define("MyVar1", "MyValue1A")
     env.append("MYVAR1", "MyValue1B")
     env.define("MyVar2", "MyNewValue2")
-    folder = temp_folder()
 
-    display_bat = textwrap.dedent("""\
-        @echo off
-        echo MyVar=%MyVar%!!
-        echo MyVar1=%MyVar1%!!
-        echo MyVar2=%MyVar2%!!
-        """)
+    env = env.vars(ConanFileMock())
+    env._subsystem = WINDOWS
 
-    with chdir(folder):
-        env = env.vars(ConanFileMock())
-        env._subsystem = WINDOWS
-        env.save_bat("test.bat")
-        save("display.bat", display_bat)
-        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  shell=True, env={"MYVAR2": "OldValue2"}).communicate()
+    return env
 
-    out = out.decode()
+
+def check_command_output(cmd, prevenv):
+    result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 env=prevenv, shell=True).communicate()
+    out = result.decode()
+
     assert "MyVar=MyValueB!!" in out
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
     assert "MyVar2=MyNewValue2!!" in out
     assert "MyVar2=OldValue2!!" in out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_bat(env):
+    display = textwrap.dedent("""\
+        @echo off
+        echo MyVar=%MyVar%!!
+        echo MyVar1=%MyVar1%!!
+        echo MyVar2=%MyVar2%!!
+        """)
+
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+
+    with chdir(temp_folder()):
+        env.save_bat("test.bat")
+        save("display.bat", display)
+        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        check_command_output(cmd, prevenv)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_ps1(env):
+    display = textwrap.dedent("""\
+        echo "MyVar=$env:MyVar!!"
+        echo "MyVar1=$env:MyVar1!!"
+        echo "MyVar2=$env:MyVar2!!"
+        """)
+
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+    prevenv.update(dict(os.environ.copy()))
+
+    with chdir(temp_folder()):
+        env.save_ps1("test.ps1")
+        save("display.ps1", display)
+        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        check_command_output(cmd, prevenv)
 
 
 def test_dict_access():
@@ -374,7 +300,7 @@ def test_env_win_bash():
     conanfile = ConanFileMock()
     conanfile.settings_build = MockSettings({"os": "Windows"})
     conanfile.win_bash = True
-    conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
+    conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
     folder = temp_folder()
     conanfile.folders.generators = folder
     env = Environment()
@@ -412,7 +338,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1=MyValue1
-            MyPath1=(path)/my/path1
+            MyPath1 = (path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)
@@ -426,7 +352,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1+=MyValue1
-            MyPath1+=(path)/my/path1
+            MyPath1 +=(path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)
