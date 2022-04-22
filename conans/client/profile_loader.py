@@ -59,17 +59,57 @@ class ProfileLoader:
     def _load_profile_plugin(self):
         profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
         if not os.path.isfile(profile_plugin):
-            profile_process = textwrap.dedent("""
-                def profile_plugin(profile):
-                    settings = profile.settings
-                    if settings.get("compiler") == "msvc" and settings.get("compiler.runtime"):
-                        if settings.get("compiler.runtime_type") is None:
-                            runtime = "Debug" if settings.get("build_type") == "Debug" else "Release"
-                            try:
-                                settings["compiler.runtime_type"] = runtime
-                            except ConanException:
-                                pass
-                """)
+            profile_process = """
+def profile_plugin(profile):
+    settings = profile.settings
+    if settings.get("compiler") == "msvc" and settings.get("compiler.runtime"):
+        if settings.get("compiler.runtime_type") is None:
+            runtime = "Debug" if settings.get("build_type") == "Debug" else "Release"
+            try:
+                settings["compiler.runtime_type"] = runtime
+            except ConanException:
+                pass
+    _check_correct_cppstd(settings)
+
+def _check_correct_cppstd(settings):
+    from conan.tools.scm import Version
+    def _error():
+        from conan.errors import ConanException
+        raise ConanException("The provided compiler.cppstd is not supported with the specified compiler")
+    cppstd = settings.get("compiler.cppstd")
+    version = settings.get("compiler.version")
+
+    if cppstd and version:
+        cppstd = cppstd.replace("gnu", "")
+        version = Version(version)
+        if settings.get("compiler") == "gcc":
+            if ((version < "3.4")
+                or (version < "4.3" and cppstd in ("11", "14", "17", "20"))
+                or (version < "4.8" and cppstd in ("14", "17", "20"))
+                or (version < "5" and cppstd in ("17", "20"))
+                or (version < "8" and cppstd in ("20"))):
+                _error()
+        elif settings.get("compiler") == "clang":
+            if ((version < "2.1" and cppstd in ("11", "14", "17", "20"))
+                or (version < "3.4" and cppstd in ("14", "17", "20"))
+                or (version < "3.5" and cppstd in ("17", "20"))
+                or (version < "6" and cppstd in ("20"))):
+                _error()
+        elif settings.get("compiler") == "apple-clang":
+            if ((version < "4.0" and cppstd in ("98", "11", "14", "17", "20"))
+                or (version < "5.1" and cppstd in ("14", "17", "20"))
+                or (version < "6.1" and cppstd in ("17", "20"))
+                or (version < "10" and cppstd in ("20"))):
+                _error()
+        elif settings.get("compiler") == "msvc":
+            if ((version < "190" and cppstd in ("14", "17", "20"))
+                or (version < "191" and cppstd in ("17", "20"))
+                or (version < "193" and cppstd in ("20"))):
+                _error()
+
+
+
+"""
             save(profile_plugin, profile_process)
         mod, _ = load_python_file(profile_plugin)
         if hasattr(mod, "profile_plugin"):

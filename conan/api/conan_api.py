@@ -1,5 +1,6 @@
 import sys
 
+from conan.api.subapi.cache import CacheAPI
 from conans import __version__ as client_version
 from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.download import DownloadAPI
@@ -52,6 +53,7 @@ class ConanAPIV2(object):
         self.new = NewAPI(self)
         self.upload = UploadAPI(self)
         self.download = DownloadAPI(self)
+        self.cache = CacheAPI(self)
 
 
 ConanAPI = ConanAPIV2

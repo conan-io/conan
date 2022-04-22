@@ -119,14 +119,14 @@ def test_cppstd_validated():
     client.save({"dep/conanfile.py": conanfile,
                  "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
 
-    base_settings = "-s compiler=gcc -s compiler.version=7 -s compiler.libcxx=libstdc++11"
+    base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
     client.run(f"create dep {base_settings} -s compiler.cppstd=20")
     package_id = client.created_package_id("dep/0.1")
 
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     # This message here proves it, only 1 configuraton passed the check
     assert "dep/0.1: Checking 1 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package '715bb35af433e3df6ae656e0f0a9a6d6e122d4d8' missing. "\
+    assert "dep/0.1: Main binary package 'e981c4b043330c584dd4eeaca7a31310099a4c60' missing. "\
            f"Using compatible package '{package_id}'" in client.out
 
 
