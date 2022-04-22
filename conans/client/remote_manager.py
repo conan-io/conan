@@ -9,6 +9,7 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
+from conans.model.info import ConanInfo
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -225,7 +226,11 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
+        packages = self._call_remote(remote, "search_packages", ref)
+        # Avoid serializing conaninfo in server side
+        packages = {pid: ConanInfo.loads(data["content"]).serialize_min()
+                    if "content" in data else data
+                    for pid, data in packages.items()}
         # Filter packages without recipe_hash, those are 1.X packages, the 2.0 are disregarded
         packages = {pid: data for pid, data in packages.items() if data.get("recipe_hash")}
         packages = filter_packages(query, packages)

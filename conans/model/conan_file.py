@@ -258,13 +258,15 @@ class ConanFile(object):
         return self.folders.source_folder
 
     @property
-    def base_source_folder(self):
-        """ returns the base_source folder, that is the containing source folder in the cache
-        irrespective of the layout() and where the final self.source_folder (computed with the
-        layout()) points.
-        This can be necessary in the source() or build() methods to locate where exported sources
-        are, like patches or entire files that will be used to complete downloaded sources"""
-        return self.folders._base_source
+    def export_sources_folder(self):
+        """points to the base source folder when calling source() and to the cache export sources
+        folder while calling the exports_sources() method. Prepared in case we want to introduce a
+        'no_copy_export_sources' and point to the right location always."""
+        return self.folders.base_export_sources
+
+    @property
+    def export_folder(self):
+        return self.folders.base_export
 
     @property
     def build_folder(self):
@@ -376,7 +378,7 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env=None):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanbuild"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         def _run(cmd, _env):
@@ -388,10 +390,11 @@ class ConanFile(object):
                 elif self.win_bash:  # New, Conan 2.0
                     from conans.client.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            if _env is None:
-                _env = "conanbuild"
             from conan.tools.env.environment import environment_wrap_command
-            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
+            if env:
+                wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
+            else:
+                wrapped_cmd = cmd
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:

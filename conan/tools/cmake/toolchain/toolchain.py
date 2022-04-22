@@ -70,8 +70,8 @@ class CMakeToolchain(object):
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_definitions' %}
-                add_definitions(-D{{ it }}={{ genexpr.str }})
+                {% elif action=='add_compile_definitions' %}
+                add_compile_definitions({{ it }}={{ genexpr.str }})
                 {% endif %}
             {% endfor %}
         {% endmacro %}
@@ -106,11 +106,10 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() %}
-        # add_compile_definitions only works in cmake >= 3.12
-        add_definitions(-D{{ it }}={{ value }})
+        add_compile_definitions({{ it }}={{ value }})
         {% endfor %}
         # Preprocessor definitions per configuration
-        {{ iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
+        {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
         """)
 
     def __init__(self, conanfile, generator=None):
