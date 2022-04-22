@@ -2,6 +2,7 @@ import os
 import platform
 import textwrap
 import time
+import re
 
 import pytest
 
@@ -10,7 +11,6 @@ from conans.model.ref import ConanFileReference
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import touch
 
@@ -218,3 +218,30 @@ def test_install_output_directories():
     p_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(p_folder, "mybin", "main"))
     assert not os.path.exists(os.path.join(p_folder, "bin"))
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool_autotools()
+def test_autotools_with_pkgconfigdeps():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/1.0 --template cmake_lib")
+    client.run("create .")
+
+    consumer_conanfile = textwrap.dedent("""
+        [requires]
+        hello/1.0
+        [generators]
+        AutotoolsToolchain
+        PkgConfigDeps
+    """)
+    client.save({"conanfile.txt": consumer_conanfile}, clean_first=True)
+    client.run("install .")
+
+    client.run_command(". ./conanautotoolstoolchain.sh && "
+                       "pkg-config --cflags hello && "
+                       "pkg-config --libs-only-l hello && "
+                       "pkg-config --libs-only-L --libs-only-other hello")
+
+    assert re.search("I.*hello.*1.0.*include", str(client.out))
+    assert "-lhello" in client.out
+    assert re.search("L.*hello.*1.0.*package", str(client.out))
