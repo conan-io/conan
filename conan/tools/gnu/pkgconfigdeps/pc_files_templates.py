@@ -23,17 +23,17 @@ def _get_pc_file_template():
         {%- endfor -%}
         {%- endmacro -%}
 
-        {%- macro get_cflags(includedirs, cpp_info) -%}
+        {%- macro get_cflags(includedirs, cxxflags, cflags, defines) -%}
         {%- for _ in includedirs -%}
         {{ '-I"${includedir%s}"' % loop.index + " " }}
         {%- endfor -%}
-        {%- for cxxflags in cpp_info.cxxflags -%}
-        {{ cxxflags + " " }}
+        {%- for cxxflag in cxxflags -%}
+        {{ cxxflag + " " }}
         {%- endfor -%}
-        {%- for cflags in cpp_info.cflags-%}
-        {{ cflags + " " }}
+        {%- for cflag in cflags-%}
+        {{ cflag + " " }}
         {%- endfor -%}
-        {%- for define in cpp_info.defines-%}
+        {%- for define in defines-%}
         {{  "-D%s" % define + " " }}
         {%- endfor -%}
         {%- endmacro -%}
@@ -54,7 +54,7 @@ def _get_pc_file_template():
         Description: {{ description }}
         Version: {{ version }}
         Libs: {{ get_libs(libdirs, cpp_info, gnudeps_flags) }}
-        Cflags: {{ get_cflags(includedirs, cpp_info) }}
+        Cflags: {{ get_cflags(includedirs, cxxflags, cflags, defines) }}
         {% if requires|length %}
         Requires: {{ requires|join(' ') }}
         {% endif %}
@@ -106,6 +106,9 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
         "version": version,
         "requires": requires,
         "cpp_info": cpp_info,
+        "cxxflags": [var.replace('"', '\\"') for var in cpp_info.cxxflags],
+        "cflags": [var.replace('"', '\\"') for var in cpp_info.cflags],
+        "defines": [var.replace('"', '\\"') for var in cpp_info.defines],
         "gnudeps_flags": GnuDepsFlags(conanfile, cpp_info)
     }
     template = Template(_get_pc_file_template(), trim_blocks=True, lstrip_blocks=True,

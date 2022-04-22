@@ -375,6 +375,11 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
                     name = member.name.replace("\\", "/")
                     member.name = name.split("/", 1)[1]
                     member.path = member.name
+                    if member.linkpath.startswith(common_folder):
+                        # https://github.com/conan-io/conan/issues/11065
+                        linkpath = member.linkpath.replace("\\", "/")
+                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkname = member.linkpath
             if pattern:
                 members = list(filter(lambda m: fnmatch(m.name, pattern),
                                       tarredgzippedFile.getmembers()))
