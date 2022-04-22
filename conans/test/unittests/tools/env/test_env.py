@@ -300,7 +300,7 @@ def test_env_win_bash():
     conanfile = ConanFileMock()
     conanfile.settings_build = MockSettings({"os": "Windows"})
     conanfile.win_bash = True
-    conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
+    conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
     folder = temp_folder()
     conanfile.folders.generators = folder
     env = Environment()

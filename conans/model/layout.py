@@ -20,6 +20,8 @@ class Folders(object):
         self._base_package = None
         self._base_generators = None
         self._base_imports = None
+        self._base_export = None
+        self._base_export_sources = None
 
         self.source = ""
         self.build = ""
@@ -54,6 +56,8 @@ class Folders(object):
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_imports = output_folder or base_folder
+
+        self._base_export_sources = output_folder or base_folder
 
     @property
     def source_folder(self):
@@ -131,3 +135,17 @@ class Folders(object):
 
     def set_base_imports(self, folder):
         self._base_imports = folder
+
+    @property
+    def base_export(self):
+        return self._base_export
+
+    def set_base_export(self, folder):
+        self._base_export = folder
+
+    @property
+    def base_export_sources(self):
+        return self._base_export_sources
+
+    def set_base_export_sources(self, folder):
+        self._base_export_sources = folder

@@ -25,7 +25,7 @@ def test_exports_sources_patch():
 
             def source(self):
                 save(self, "CMakeLists.txt", "old, bad") # EMULATE A DOWNLOAD!
-                base_source = self.base_source_folder
+                base_source = self.export_sources_folder
                 mypatch = load(self, os.path.join(base_source, "patches/mypatch"))
                 self.output.info("MYPATCH-SOURCE {}".format(mypatch))
                 shutil.copy(os.path.join(base_source, "CMakeLists.txt"),
@@ -35,7 +35,7 @@ def test_exports_sources_patch():
                 path = os.path.join(self.source_folder, "CMakeLists.txt")
                 cmake = load(self, path)
                 self.output.info("MYCMAKE-BUILD: {}".format(cmake))
-                path = os.path.join(self.base_source_folder, "patches/mypatch")
+                path = os.path.join(self.export_sources_folder, "patches/mypatch")
                 cmake = load(self, path)
                 self.output.info("MYPATCH-BUILD: {}".format(cmake))
             """)

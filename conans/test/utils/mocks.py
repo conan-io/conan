@@ -173,6 +173,7 @@ class ConanFileMock(ConanFile):
         self._conan_env_values = EnvValues()
         self.folders = Folders()
         self.folders.set_base_source(".")
+        self.folders.set_base_export_sources(".")
         self.folders.set_base_build(".")
         self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
