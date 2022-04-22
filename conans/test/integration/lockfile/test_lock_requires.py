@@ -78,6 +78,20 @@ def test_conanfile_txt_strict(requires):
 
     client.run("install consumer/conanfile.txt --lockfile=conan.lock")
     assert "pkg/1.2@user/testing" in client.out
+    assert "pkg/1.2" not in client.load("conan.lock")
+
+    # test it is possible to capture new changes too, when not strict, mutating the lockfile
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock --lockfile-out=conan.lock")
+    assert "pkg/1.2@user/testing" in client.out
+    lock = client.load("conan.lock")
+    assert "pkg/1.2" in lock
+    assert "pkg/0.1" in lock  # both versions are locked now
+    # clean legacy versions
+    client.run("lock create consumer/conanfile.txt "
+               "--lockfile=conan.lock --lockfile-out=conan.lock --clean")
+    lock = client.load("conan.lock")
+    assert "pkg/1.2" in lock
+    assert "pkg/0.1" not in lock
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
