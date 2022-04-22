@@ -8,12 +8,13 @@ import six
 from mock import Mock
 
 from conans.client.tools import untargz, unzip
+from conan.tools.files import unzip as unzip_dev2
 from conans.client.tools.files import chdir, save
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 from conans.model.manifest import gather_files
-from conans.util.files import gzopen_without_timestamps
+from conans.util.files import gzopen_without_timestamps, rmdir
 
 
 class ZipExtractPlainTest(unittest.TestCase):
@@ -123,6 +124,46 @@ class TarExtractPlainTest(unittest.TestCase):
                 with open(os.path.join(folder, filename), 'rb') as file_handler:
                     tgz.addfile(tarinfo=info, fileobj=file_handler)
             tgz.close()
+
+    def test_linkame_striproot_folder(self):
+        tmp_folder = temp_folder()
+        other_tmp_folder = temp_folder()
+        save(os.path.join(other_tmp_folder, "foo.txt"), "")
+        tgz_path = os.path.join(tmp_folder, "foo.tgz")
+
+        with open(tgz_path, "wb") as tgz_handle:
+            tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
+
+            # Regular file
+            info = tarfile.TarInfo(name="common/foo.txt")
+            info.name = "common/subfolder/foo.txt"
+            info.path = "common/subfolder/foo.txt"
+            with open(os.path.join(other_tmp_folder, "foo.txt"), 'rb') as file_handler:
+                tgz.addfile(tarinfo=info, fileobj=file_handler)
+
+            # A hardlink to the regular file
+            info = tarfile.TarInfo(name="common/foo.txt")
+            info.linkname = "common/subfolder/foo.txt"
+            info.linkpath = "common/subfolder/foo.txt"
+            info.name = "common/subfolder/bar/foo.txt"
+            info.path = "common/subfolder/bar/foo.txt"
+            info.type = b'1'  # This indicates a hardlink to the tgz file "common/subfolder/foo.txt"
+            tgz.addfile(tarinfo=info, fileobj=None)
+            tgz.close()
+
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+        untargz(tgz_path, destination=tmp_folder, strip_root=True)
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+
+        # Check develop2 public unzip
+        rmdir(os.path.join(tmp_folder, "subfolder"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+        unzip_dev2(ConanFileMock(), tgz_path, destination=tmp_folder, strip_root=True)
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
 
     def test_plain_tgz(self):
 

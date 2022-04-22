@@ -184,8 +184,7 @@ class MSBuildDeps(object):
             'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags),
-            'exe_flags': " ".join(cpp_info.exelinkflags),
+            'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
             'dependencies': ";".join(deps) if not build else "",
             'host_context': not build
         }

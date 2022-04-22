@@ -13,17 +13,20 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def run_in_windows_bash(conanfile, command, cwd=None, env=None):
+def run_in_windows_bash(conanfile, command, cwd=None, env="conanbuild"):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
+    env_win = []
+    env_shell = []
     if env:
-        # Passing env invalidates the conanfile.environment_scripts
-        env_win = [env] if not isinstance(env, list) else env
-        env_shell = []
-    else:
-        env_shell = ["conanbuild.sh"]
-        env_win = ["conanbuild.bat"]
+        if env == "conanbuild":
+            env_shell = ["conanbuild.sh"]
+            env_win = ["conanbuild.bat"]
+        else:
+            # Passing env invalidates the conanfile.environment_scripts
+            env_win = [env] if not isinstance(env, list) else env
+            env_shell = []
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
