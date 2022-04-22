@@ -9,6 +9,7 @@ from conan.tools.gnu import AutotoolsDeps
 from conans import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
+from conans.model.conf import ConfDefinition
 from conans.model.dependencies import ConanFileDependencies, Requirement
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockSettings
@@ -74,6 +75,7 @@ def test_foo():
              "compiler.libcxx": "libstdc++11",
              "compiler.version": "7.1",
              "cppstd": "17"})
+        consumer.conf = ConfDefinition().get_conanfile_conf(None)
         deps = AutotoolsDeps(consumer)
 
         env = deps.environment

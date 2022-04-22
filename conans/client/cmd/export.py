@@ -468,7 +468,9 @@ def export_source(conanfile, origin_folder, destination_source_folder):
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
 
+    conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources", origin_folder, destination_source_folder, output)
+    conanfile.folders.set_base_export_sources(None)
 
 
 def export_recipe(conanfile, origin_folder, destination_folder):
@@ -499,7 +501,9 @@ def export_recipe(conanfile, origin_folder, destination_folder):
         copier(pattern, links=True, excludes=excluded_exports)
     copier.report(package_output)
 
+    conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export", origin_folder, destination_folder, output)
+    conanfile.folders.set_base_export(None)
 
 
 def _run_method(conanfile, method, origin_folder, destination_folder, output):
@@ -510,8 +514,6 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
         output.highlight("Calling %s()" % method)
         copier = FileCopier([origin_folder], destination_folder)
         conanfile.copy = copier
-        folder_name = "%s_folder" % method
-        setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
         try:
             # TODO: Poor man attribute control access. Convert to nice decorator
@@ -521,6 +523,5 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
                     export_method()
         finally:
             conanfile.default_options = default_options
-            delattr(conanfile, folder_name)
         export_method_output = ScopedOutput("%s %s() method" % (output.scope, method), output)
         copier.report(export_method_output)
