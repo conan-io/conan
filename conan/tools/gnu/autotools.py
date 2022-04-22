@@ -28,20 +28,18 @@ class Autotools(object):
         """
         configure_args = []
         if self.default_configure_install_args and self._conanfile.package_folder:
-            def _get_cpp_info_value(name):
-                # Why not taking cpp.build? because this variables are used by the "cmake install"
-                # that correspond to the package folder (even if the root is the build directory)
-                elements = getattr(self._conanfile.cpp.package, name)
-                return elements[0] if elements else None
+            def _get_argument(argument_name, cppinfo_name):
+                elements = getattr(self._conanfile.cpp.package, cppinfo_name)
+                return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
 
             # If someone want arguments but not the defaults can pass them in args manually
             configure_args.extend(["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
-                                   "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                                   "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                                   "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
-                                   "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                                   "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                                   "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
+                                   _get_argument("bindir", "bindirs"),
+                                   _get_argument("sbindir", "bindirs"),
+                                   _get_argument("libdir", "libdirs"),
+                                   _get_argument("includedir", "includedirs"),
+                                   _get_argument("oldincludedir", "includedirs"),
+                                   _get_argument("datarootdir", "resdirs")])
 
         self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args)) \
                                if configure_args else self._configure_args
