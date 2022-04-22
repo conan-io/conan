@@ -271,7 +271,11 @@ class TestAutoLinkPragma:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
     @pytest.mark.tool_cmake
     def test_autolink_pragma_components(self):
-        """https://github.com/conan-io/conan/issues/10837"""
+        """https://github.com/conan-io/conan/issues/10837
+
+        NOTE: At the moment the property cmake_set_interface_link_directories is only read at the
+        global cppinfo, not in the components"""
+
         client = TestClient()
         client.run("new hello/1.0 --template cmake_lib")
         cf = client.load("conanfile.py")
@@ -279,6 +283,7 @@ class TestAutoLinkPragma:
             self.cpp_info.components['my_component'].includedirs.append('include')
             self.cpp_info.components['my_component'].libdirs.append('lib')
             self.cpp_info.components['my_component'].libs = []
+            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
         """)
         hello_h = client.load("include/hello.h")
         hello_h = hello_h.replace("#define hello_EXPORT __declspec(dllexport)",
@@ -307,6 +312,7 @@ class TestAutoLinkPragma:
             self.cpp_info.includedirs.append('include')
             self.cpp_info.libdirs.append('lib')
             self.cpp_info.libs = []
+            self.cpp_info.set_property("cmake_set_interface_link_directories", True)
         """)
         hello_h = client.load("include/hello.h")
         hello_h = hello_h.replace("#define hello_EXPORT __declspec(dllexport)",

@@ -26,16 +26,15 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
-        is_win = hasattr(self.conanfile, "settings_build") and \
-            self.conanfile.settings_build.get_safe("os") == "Windows"
+        is_win = self.conanfile.settings.get_safe("os") == "Windows"
+        auto_link = self.conanfile.cpp_info.get_property("cmake_set_interface_link_directories")
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
-                "set_interface_link_directories":
-                    self.cmakedeps.set_interface_link_directories and is_win}
+                "set_interface_link_directories": auto_link and is_win}
 
     @property
     def template(self):
