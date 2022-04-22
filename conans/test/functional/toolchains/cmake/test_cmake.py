@@ -22,24 +22,20 @@ def test_simple_cmake_mingw():
     client = TestClient()
     client.run("new hello/1.0 -m cmake_lib")
     client.save({"mingw": """
-
-    [settings]
-    os=Windows
-    arch=x86_64
-    build_type=Release
-    compiler=gcc
-    compiler.exception=seh
-    compiler.libcxx=libstdc++11
-    compiler.threads=win32
-    compiler.version=11.2
-    cppstd=17
-    [options]
-    [build_requires]
-    [env]
-    CC=gcc
-    CXX=g++
-    """})
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        cppstd=17
+        """})
     client.run("create . --profile=mingw")
+    assert "hello/1.0: __GNUC__11" in client.out
+    assert "hello/1.0: __MINGW" in client.out
 
 
 @pytest.mark.tool_cmake
