@@ -8,12 +8,13 @@ import six
 from mock import Mock
 
 from conans.client.tools import untargz, unzip
+from conan.tools.files import unzip as unzip_dev2
 from conans.client.tools.files import chdir, save
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 from conans.model.manifest import gather_files
-from conans.util.files import gzopen_without_timestamps
+from conans.util.files import gzopen_without_timestamps, rmdir
 
 
 class ZipExtractPlainTest(unittest.TestCase):
@@ -153,6 +154,14 @@ class TarExtractPlainTest(unittest.TestCase):
         assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
         assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
         untargz(tgz_path, destination=tmp_folder, strip_root=True)
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+
+        # Check develop2 public unzip
+        rmdir(os.path.join(tmp_folder, "subfolder"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
+        assert not os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
+        unzip_dev2(ConanFileMock(), tgz_path, destination=tmp_folder, strip_root=True)
         assert os.path.exists(os.path.join(tmp_folder, "subfolder", "foo.txt"))
         assert os.path.exists(os.path.join(tmp_folder, "subfolder", "bar", "foo.txt"))
 
