@@ -101,7 +101,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     * [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html): generates information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. CMake will use this files when you invoke ``find_package()`` in your *CMakeLists.txt*.
 
-    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
+    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file that you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
 
     Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
 
@@ -152,9 +152,9 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake
     $ cmake --build .
 
-    # for Windows and Visual Studio 2017
+    # for Windows and Visual Studio 2022
     $ conan install . --output-folder cmake-build --build=missing
-    $ cmake . -G "Visual Studio 15 2017" -DCMAKE_TOOLCHAIN_FILE=cmake-build/conan_toolchain.cmake
+    $ cmake . -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=cmake-build/conan_toolchain.cmake
     $ cmake --build . --config Release
     ```
 
@@ -165,7 +165,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {% for component_name, target_name in cmake_variables.component_alias.items() %}
     {%- if loop.index==1 %}
 
-    As the {{ requirement.ref.name }} Conan package defines components you can link only that desired part of the library in your project. For example, linking only with the {{ requirement.ref.name }} **{{ component_name }}** component, through the **{{ target_name }}** target.
+    As the {{ requirement.ref.name }} Conan package defines components, you can link only the desired parts of the library in your project. For example, linking only with the {{ requirement.ref.name }} **{{ component_name }}** component, through the **{{ target_name }}** target.
 
     ```cmake
     ...
