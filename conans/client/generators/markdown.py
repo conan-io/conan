@@ -152,9 +152,9 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake
     $ cmake --build .
 
-    # for Windows and Visual Studio 2022
+    # for Windows and Visual Studio 2017
     $ conan install . --output-folder cmake-build --build=missing
-    $ cmake . -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=cmake-build/conan_toolchain.cmake
+    $ cmake . -G "Visual Studio 15 2017" -DCMAKE_TOOLCHAIN_FILE=cmake-build/conan_toolchain.cmake
     $ cmake --build . --config Release
     ```
 
