@@ -53,3 +53,26 @@ def test_bazel_relative_paths():
     build_file = c.load("consumer/conandeps/dep/BUILD")
     assert 'hdrs = glob(["include/**"])' in build_file
     assert 'includes = ["include"]' in build_file
+
+
+def test_bazel_exclude_folders():
+    # https://github.com/conan-io/conan/issues/11081
+    dep = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class ExampleConanIntegration(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "mymath", "otherfile.a"), "")
+                save(self, os.path.join(self.package_folder, "lib", "libmymath.a"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["mymath"]
+        """)
+    c = TestClient()
+    c.save({"dep/conanfile.py": dep})
+    c.run("create dep")
+    c.run("install dep/0.1@ -g BazelDeps")
+    build_file = c.load("dep/BUILD")
+    assert 'static_library = "lib/libmymath.a"' in build_file

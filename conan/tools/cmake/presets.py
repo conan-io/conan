@@ -6,26 +6,31 @@ from conans.util.files import save, load
 
 
 def _contents(conanfile, toolchain_file, cache_variables, generator):
-    return {"version": 3,
-            "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
-            "configurePresets": [{
+    ret = {"version": 3,
+           "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
+           "configurePresets": [{
                 "name": "default",
                 "displayName": "Default Config",
                 "description": "Default configure using '{}' generator".format(generator),
                 "generator": generator,
                 "cacheVariables": cache_variables,
                 "toolchainFile": toolchain_file,
-                "binaryDir": conanfile.build_folder
-            }],
-            "buildPresets": [{
+           }],
+           "buildPresets": [{
               "name": "default",
               "configurePreset": "default"
-            }],
-            "testPresets": [{
+           }],
+           "testPresets": [{
               "name": "default",
               "configurePreset": "default"
-            }]
-            }
+           }]
+          }
+    if conanfile.build_folder:
+        # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
+        # we don't even have a conanfile with a `layout()` to determine the build folder.
+        # If we install a local conanfile: "conan install ." with a layout(), it will be available.
+        ret["configurePresets"][0]["binaryDir"] = conanfile.build_folder
+    return ret
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator):
