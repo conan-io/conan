@@ -1,5 +1,4 @@
 import os
-import platform
 import textwrap
 from collections import OrderedDict
 
@@ -122,12 +121,6 @@ class CMakeToolchain(object):
 
     _template_project_included = textwrap.dedent("""
         cmake_policy(SET CMP0091 NEW)
-        {% if mingw %}
-        set(CMAKE_SH "CMAKE_SH-NOTFOUND")
-        {% endif %}
-        {% if cmake_make_program %}
-        set(CMAKE_MAKE_PROGRAM "{{ cmake_make_program }}")
-        {% endif %}
         """)
 
     def __init__(self, conanfile, generator=None):
@@ -180,17 +173,8 @@ class CMakeToolchain(object):
         return content
 
     def _generate_project_included_file(self):
-        template = Template(self._template_project_included, trim_blocks=True, lstrip_blocks=True)
-        context = {}
-        # same code as in presets.py
-        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-            context["mingw"] = True
-            cmake_make_program = self._conanfile.conf.get("tools.gnu:make_program", default=None)
-            if cmake_make_program:
-                cmake_make_program = cmake_make_program.replace("\\", "/")
-                context["cmake_make_program"] = cmake_make_program
-        content = template.render(**context)
-        save(os.path.join(self._conanfile.generators_folder, "conan_project_include.cmake"), content)
+        save(os.path.join(self._conanfile.generators_folder, "conan_project_include.cmake"),
+             self._template_project_included)
 
     def generate(self):
         self._generate_project_included_file()

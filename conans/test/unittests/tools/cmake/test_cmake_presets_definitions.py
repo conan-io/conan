@@ -32,7 +32,6 @@ def conanfile():
     return c
 
 
-@pytest.mark.xfail(reason="Presets no longer pass CMAKE_MAKE_PROGRAM but CMAKE_PROJECT_INCLUDE")
 def test_cmake_make_program(conanfile):
     def run(command):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
