@@ -64,26 +64,22 @@ vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -93,7 +89,8 @@ vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-        {{dependencies}}
+      <Import Project="conan\\conantoolchain.props" />
+      {{dependencies}}
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -401,7 +398,7 @@ def get_msbuild_lib_files(name, version, package_name="Pkg"):
     conanfile = Template(conanfile_sources_v2, keep_trailing_newline=True).render(d)
     test_d = {"name": "test_" + name, "version": version, "pkg_name": package_name,
               "type": "Application",
-              "dependencies": '<Import Project="conan/conandeps.props" />'}
+              "dependencies": '<Import Project="conan\\conandeps.props" />'}
     test_sln = Template(sln_file, keep_trailing_newline=True).render(test_d)
     test_vcp = Template(vcxproj, keep_trailing_newline=True).render(test_d)
     test_conanfile = Template(test_conanfile_v2, keep_trailing_newline=True).render(test_d)
