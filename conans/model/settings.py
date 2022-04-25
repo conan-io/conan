@@ -300,6 +300,8 @@ class Settings(object):
                           for (field, value) in self.values_list])
 
     def get_definition_values(self, name):
+        """Check the range of values of the definition of a setting. e.g:
+           get_definition_values("compiler.gcc.version") """
         try:
             tmp = self._data
             elements = name.split(".")
