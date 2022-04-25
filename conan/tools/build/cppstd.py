@@ -1,5 +1,5 @@
-
 from conans.errors import ConanInvalidConfiguration, ConanException
+from conans.model.version import Version
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -58,3 +58,10 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     except ConanInvalidConfiguration:
         return False
     return True
+
+
+def default_cppstd(compiler, compiler_version):
+    # FIXME: If we want this (used in compatibility.py) make public access
+    from conans.client.conf.detect import _cppstd_default
+    compiler_version = Version(compiler_version)
+    return _cppstd_default(compiler, compiler_version)

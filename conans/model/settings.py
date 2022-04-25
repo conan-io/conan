@@ -298,3 +298,23 @@ class Settings(object):
         """
         return "\n".join(["%s=%s" % (field, value)
                           for (field, value) in self.values_list])
+
+    def get_definition_values(self, name):
+        try:
+            tmp = self._data
+            elements = name.split(".")
+            elements.reverse()
+            while elements:
+                prop = elements.pop()
+                tmp = tmp.get(prop)
+                if not elements:
+                    if hasattr(tmp, "values_range"):
+                        return tmp.values_range
+                    else:
+                        raise ConanException("{} setting is not a list of values")
+                if isinstance(tmp, SettingsItem):
+                    tmp = tmp._definition
+                else:
+                    tmp = tmp._data
+        except ConanException:
+            return None
