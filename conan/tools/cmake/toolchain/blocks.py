@@ -362,8 +362,13 @@ class AppleSystemBlock(Block):
         set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")
         set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")
         {% endif %}
-        string(APPEND CONAN_C_FLAGS " ${BITCODE} ${FOBJC_ARC}")
-        string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
+        #Check if Xcode generator is used, since that will handle these flags automagically
+        if(CMAKE_GENERATOR MATCHES "Xcode")
+          message(DEBUG "Not setting any manual command-line buildflags, since Xcode is selected as generator.")
+        else()
+            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${FOBJC_ARC}")
+            string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
+        endif()
         """)
 
     def _apple_sdk_name(self):
@@ -405,9 +410,7 @@ class AppleSystemBlock(Block):
         # Reading some configurations to enable or disable some Xcode toolchain flags and variables
         # Issue related: https://github.com/conan-io/conan/issues/9448
         # Based on https://github.com/leetal/ios-cmake repository
-        enable_bitcode = self._conanfile.conf.get("tools.apple:enable_bitcode",
-                                                  default=self._conanfile.settings.get_safe('os') in ["watchOS", "tvOS"],
-                                                  check_type=bool)
+        enable_bitcode = self._conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
         enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
         enable_visibility = self._conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
 
