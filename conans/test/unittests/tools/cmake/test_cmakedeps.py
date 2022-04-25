@@ -37,6 +37,8 @@ def test_cpp_info_name_cmakedeps():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -77,6 +79,9 @@ def test_cpp_info_name_cmakedeps_components():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -120,6 +125,9 @@ def test_cmake_deps_links_flags():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -164,6 +172,8 @@ def test_component_name_same_package():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("mypkg/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
