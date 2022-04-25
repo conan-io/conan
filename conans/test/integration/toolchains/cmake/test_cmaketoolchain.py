@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -322,3 +323,28 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
     assert 'add_compile_definitions( D1 D2)' in toolchain
+
+
+def test_cmake_presets_binary_dir_available():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+        generators = "CMakeToolchain"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def layout(self):
+            cmake_layout(self)
+
+    """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    if platform.system() != "Windows":
+        build_dir = os.path.join(client.current_folder, "cmake-build-release")
+    else:
+        build_dir = os.path.join(client.current_folder, "build")
+
+    presets = load_cmake_presets(os.path.join(build_dir, "conan"))
+    assert presets["configurePresets"][0]["binaryDir"] == build_dir
