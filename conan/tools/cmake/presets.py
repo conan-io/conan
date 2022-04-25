@@ -26,6 +26,9 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
            }]
           }
     if conanfile.build_folder:
+        # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
+        # we don't even have a conanfile with a `layout()` to determine the build folder.
+        # If we install a local conanfile: "conan install ." with a layout(), it will be available.
         ret["configurePresets"][0]["binaryDir"] = conanfile.build_folder
     return ret
 
