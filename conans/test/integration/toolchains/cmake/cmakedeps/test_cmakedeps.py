@@ -155,3 +155,25 @@ def test_cpp_info_component_error_aggregate():
     client.run("create hello hello/1.0@")
     client.run("create consumer consumer/1.0@")
     assert "consumer/1.0 (test package): Running test()" in client.out
+
+
+def test_cmakedeps_cppinfo_complex_strings():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conans import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("escape=partially \"escaped\"")
+                self.cpp_info.defines.append("spaces=me you")
+                self.cpp_info.defines.append("foobar=bazbuz")
+                self.cpp_info.defines.append("answer=42")
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . hello/1.0@")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g CMakeDeps")
+    deps = client.load("hello-release-x86_64-data.cmake")
+    assert r"escape=partially \"escaped\"" in deps
+    assert r"spaces=me you" in deps
+    assert r"foobar=bazbuz" in deps
+    assert r"answer=42" in deps
