@@ -35,13 +35,7 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
 
 def write_cmake_presets(conanfile, toolchain_file, generator):
     cache_variables = {}
-    if platform.system() == "Windows" and generator == "MinGW Makefiles":
-        cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
-        if cmake_make_program:
-            cmake_make_program = cmake_make_program.replace("\\", "/")
-            cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
-
+    # We no longer need variables in presets, as they are defined in CMAKE_PROJECT_INCLUDE
     tmp = _contents(conanfile, toolchain_file, cache_variables, generator)
     tmp = json.dumps(tmp, indent=4)
     save(os.path.join(conanfile.generators_folder, "CMakePresets.json"), tmp)
