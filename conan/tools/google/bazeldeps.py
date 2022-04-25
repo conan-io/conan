@@ -165,12 +165,15 @@ class BazelDeps(object):
                 continue
             files = os.listdir(libdir)
             for f in files:
+                full_path = os.path.join(libdir, f)
+                if not os.path.isfile(full_path):  # Make sure that directories are excluded
+                    continue
                 name, ext = os.path.splitext(f)
                 if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                     if ext != ".lib" and name.startswith("lib"):
                         name = name[3:]
                 if lib == name:
-                    return os.path.join(libdir, f)
+                    return full_path
         self._conanfile.output.warning("The library {} cannot be found in the "
                                        "dependency".format(lib))
 
