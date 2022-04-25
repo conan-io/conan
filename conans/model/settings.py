@@ -1,7 +1,6 @@
 import yaml
 
 from conans.errors import ConanException
-from conans.model.values import Values
 
 
 def bad_value_msg(name, value, value_range):
@@ -56,6 +55,29 @@ class SettingsItem(object):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
+        return result
+
+    def copy_conaninfo_settings(self):
+        """ deepcopy, recursive
+        This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
+        values, but not all, just the "final" values without subsettings.
+        We cannot let usres manipulate to random strings
+        things that contain subsettings like ``compiler``, because that would leave the thing
+        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        anymore. So with this change the options are:
+        - If you need more "binary-compatible" descriptions of a compiler, lets say like
+        "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
+        that you want for it.
+        - Settings that are "final" (lists), like build_type, or arch or compiler.version they
+        can get any value without issues.
+        """
+        result = SettingsItem({}, name=self._name)
+        result._value = self._value
+        if not isinstance(self._definition, dict):
+            result._definition = self._definition[:] + ["ANY"]
+        else:
+            result._definition = {k: v.copy_conaninfo_settings()
+                                  for k, v in self._definition.items()}
         return result
 
     def __bool__(self):
@@ -140,6 +162,7 @@ class SettingsItem(object):
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+        # FIXME: Avoid management of "None" as string if possible
         if parent_value == "None" and definition:
             raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
@@ -168,6 +191,12 @@ class Settings(object):
         result = Settings({}, name=self._name, parent_value=self._parent_value)
         for k, v in self._data.items():
             result._data[k] = v.copy()
+        return result
+
+    def copy_conaninfo_settings(self):
+        result = Settings({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            result._data[k] = v.copy_conaninfo_settings()
         return result
 
     @staticmethod
@@ -211,10 +240,6 @@ class Settings(object):
         self._data[field].value = value
 
     @property
-    def values(self):
-        return Values.from_list(self.values_list)
-
-    @property
     def values_list(self):
         result = []
         for field in self.fields:
@@ -229,18 +254,13 @@ class Settings(object):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
-        assert isinstance(vals, list), vals
+        assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
             attr = self
             for setting in list_settings[:-1]:
                 attr = getattr(attr, setting)
             setattr(attr, list_settings[-1], str(value))
-
-    @values.setter
-    def values(self, vals):
-        assert isinstance(vals, Values)
-        self.update_values(vals.as_list())
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
@@ -258,3 +278,23 @@ class Settings(object):
         to_remove = [k for k in self._data if k not in constraint_def]
         for k in to_remove:
             del self._data[k]
+
+    @property
+    def sha(self):
+        # FIXME: This should fail if trying to hash a not defined value (None not in range)
+        result = ["[settings]"]
+        for (name, value) in self.values_list:
+            # It is important to discard None values, so migrations in settings can be done
+            # without breaking all existing packages SHAs, by adding a first "None" option
+            # that doesn't change the final sha
+            if value != "None":
+                result.append("%s=%s" % (name, value))
+        return '\n'.join(result)
+
+    def dumps(self):
+        """ produces a text string with lines containine a flattened version:
+        compiler.arch = XX
+        compiler.arch.speed = YY
+        """
+        return "\n".join(["%s=%s" % (field, value)
+                          for (field, value) in self.values_list])

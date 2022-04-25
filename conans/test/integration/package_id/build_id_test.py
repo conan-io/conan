@@ -258,7 +258,7 @@ class BuildIdTest(unittest.TestCase):
         fail_conanfile = textwrap.dedent("""\
             from conan import ConanFile
             class MyTest(ConanFile):
-                settings = "os"
+                settings = "build_type"
                 def build(self):
                     raise Exception("Failed build!!")
             """)
@@ -271,7 +271,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         # now test with build_id
         client.save({"conanfile.py": fail_conanfile +
-                     "    def build_id(self): self.info_build.settings.os = 'any'"})
+                     "    def build_id(self): self.info_build.settings.build_type = 'any'"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)

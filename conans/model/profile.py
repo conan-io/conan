@@ -5,7 +5,6 @@ from conan.tools.env.environment import ProfileEnvironment
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.model.values import Values
 
 
 class Profile(object):
@@ -39,7 +38,7 @@ class Profile(object):
     def process_settings(self, cache):
         assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
-        self.processed_settings.values = Values.from_list(list(self.settings.items()))
+        self.processed_settings.update_values(list(self.settings.items()))
 
     def dumps(self):
         result = ["[settings]"]

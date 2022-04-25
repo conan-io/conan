@@ -39,7 +39,7 @@ def compute_package_id(node, new_config):
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
 
-    conanfile.info = ConanInfo.create(conanfile.settings.values,
+    conanfile.info = ConanInfo.create(conanfile.settings,
                                       conanfile.options,
                                       reqs_info,
                                       build_requires_info,

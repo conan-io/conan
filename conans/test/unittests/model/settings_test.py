@@ -10,18 +10,18 @@ class SettingsLoadsTest(unittest.TestCase):
         yml = "os: [None, Windows]"
         settings = Settings.loads(yml)
         # Same sha as if settings were empty
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == None)
-        self.assertEqual("", settings.values.dumps())
+        self.assertEqual("", settings.dumps())
         settings.os = "None"
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_any(self):
         yml = "os: [ANY]"
@@ -31,10 +31,10 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_none_any(self):
         yml = "os: [None, ANY]"
@@ -43,10 +43,10 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_getattr_none(self):
         yml = "os: [None, Windows]"
@@ -75,20 +75,20 @@ class SettingsLoadsTest(unittest.TestCase):
 """
         settings = Settings.loads(yml)
         # Same sha as if settings were empty
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == None)
-        self.assertEqual("", settings.values.dumps())
+        self.assertEqual("", settings.dumps())
         settings.os = "None"
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
         settings.os.subsystem = "cygwin"
-        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.values.dumps())
+        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.dumps())
 
     def test_none__sub_subsetting(self):
         yml = """os:
@@ -132,7 +132,7 @@ class SettingsTest(unittest.TestCase):
         other_settings = Settings.loads("os: [Windows, Linux]")
         settings.os = "Windows"
         other_settings.os = "Windows"
-        self.assertEqual(settings.values.sha, other_settings.values.sha)
+        self.assertEqual(settings.sha, other_settings.sha)
 
     def test_any(self):
         data = {"target": ["ANY"]}
@@ -165,7 +165,7 @@ class SettingsTest(unittest.TestCase):
         del self.sut.compiler
         self.sut.os = "Windows"
         self.sut.validate()
-        self.assertEqual(self.sut.values.dumps(), "os=Windows")
+        self.assertEqual(self.sut.dumps(), "os=Windows")
 
     def test_loads_default(self):
         settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]

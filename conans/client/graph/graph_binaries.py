@@ -119,7 +119,7 @@ class GraphBinariesAnalyzer(object):
                 conanfile.output.info("Main binary package '%s' missing. Using "
                                       "compatible package '%s'" % (original_package_id, package_id))
                 # So they are available in package_info() method
-                conanfile.settings.values = compatible_package.settings
+                conanfile.settings = compatible_package.settings
                 # TODO: Conan 2.0 clean this ugly
                 conanfile.options._package_options = compatible_package.options._package_options
                 break
