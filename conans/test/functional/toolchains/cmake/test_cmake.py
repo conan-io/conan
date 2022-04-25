@@ -15,6 +15,31 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.tool_mingw64
+@pytest.mark.tool_cmake(version="3.15")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_mingw():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    assert "hello/1.0: __GNUC__" in client.out
+    assert "hello/1.0: __MINGW" in client.out
+
+
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 

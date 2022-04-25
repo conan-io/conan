@@ -31,6 +31,7 @@ def test_cpp_info_name_cmakedeps():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -64,6 +65,7 @@ def test_cpp_info_name_cmakedeps_components():
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
@@ -104,6 +106,7 @@ def test_cmake_deps_links_flags():
     cpp_info.objects = ["myobject.o"]
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
     conanfile_dep._conan_node.context = "host"
@@ -145,6 +148,7 @@ def test_component_name_same_package():
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.context = "host"
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
