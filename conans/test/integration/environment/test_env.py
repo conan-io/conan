@@ -494,8 +494,21 @@ def test_multiple_deactivate():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
-@pytest.mark.parametrize("num_deps", [3, 80])
+@pytest.mark.parametrize("num_deps", [3, ])
 def test_massive_paths(num_deps):
+    """ This test proves that having too many dependencies that will result in a very long PATH
+    env-var in the consumer by one VirtualXXXEnv environment, will overflow.
+    https://github.com/conan-io/conan/issues/9565
+    This seems an unsolvable limitation, the only alternatives are:
+    - shorten the paths in general (shorter cache paths)
+    - add exclusively the paths of needed things (better visibility)
+    Seems that Conan 2.0 will improve over these things, allowing larger dependencies graphs without
+    failing. Besides that, it might use the deployers to workaround shared-libs running scenarios.
+
+    The test is parameterized for being fast an passing, but if we add a num_deps >= 80 approx,
+    it will start to enter the failing scenarios. Not adding the >=80 scenario, because that tests
+    takes 1 minute by itself, not worth the value.
+    """
     client = TestClient(path_with_spaces=False)
     compiler_bat = "@echo off\necho MYTOOL {}!!\n"
     conanfile = textwrap.dedent("""\
@@ -519,13 +532,35 @@ def test_massive_paths(num_deps):
             generators = "VirtualRunEnv"
         """)
     requires = ", ".join('"pkg{}/0.1"'.format(i) for i in range(num_deps))
-    client.save({"conanfile.py": conanfile.format(requires)}, clean_first=True)
+    conanfile = conanfile.format(requires)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -c tools.env.virtualenv:powershell=True")
+    assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
+    assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
     for i in range(num_deps):
         cmd = environment_wrap_command("conanrunenv", "mycompiler{}.bat".format(i),
                                        cwd=client.current_folder)
-        client.run_command(cmd)
-        assert "MYTOOL {}!!".format(i) in client.out
+        if num_deps > 50:  # to be safe if we change the "num_deps" number
+            client.run_command(cmd, assert_error=True)
+            assert "is not recognized as an internal" in client.out
+        else:
+            client.run_command(cmd)
+            assert "MYTOOL {}!!".format(i) in client.out
+
+    # Test .bats now
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install .")
+    assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
+    assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
+    for i in range(num_deps):
+        cmd = environment_wrap_command("conanrunenv", "mycompiler{}.bat".format(i),
+                                       cwd=client.current_folder)
+        if num_deps > 50:  # to be safe if we change the "num_deps" number
+            client.run_command(cmd, assert_error=True)
+            # This also fails, but without an error message (in my terminal, it kills the terminal!)
+        else:
+            client.run_command(cmd)
+            assert "MYTOOL {}!!".format(i) in client.out
 
 
 def test_profile_build_env_spaces():
