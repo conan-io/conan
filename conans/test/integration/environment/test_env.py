@@ -543,7 +543,8 @@ def test_massive_paths(num_deps):
         from conan import ConanFile
         from conan.tools.files import copy
         class Pkg(ConanFile):
-            exports = "*"
+            exports_sources = "*"
+            package_type = "application"
             def package(self):
                 copy(self, "*", self.build_folder, os.path.join(self.package_folder, "bin"))
         """)
