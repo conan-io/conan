@@ -61,6 +61,10 @@ vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <RootNamespace>{{name}}</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <ImportGroup Label="PropertySheets">
+      <Import Project="conan\\conantoolchain.props" />
+      {{dependencies}}
+  </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -87,10 +91,6 @@ vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets">
-      <Import Project="conan\\conantoolchain.props" />
-      {{dependencies}}
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
