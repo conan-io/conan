@@ -539,7 +539,7 @@ def test_massive_paths(num_deps):
     client = TestClient(path_with_spaces=False)
     compiler_bat = "@echo off\necho MYTOOL {}!!\n"
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports = "*"
             def package(self):
@@ -552,7 +552,7 @@ def test_massive_paths(num_deps):
         client.run("create . --name=pkg{} --version=0.1".format(i))
 
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             requires = {}

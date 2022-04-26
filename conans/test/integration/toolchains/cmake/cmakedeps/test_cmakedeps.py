@@ -164,7 +164,7 @@ def test_cpp_info_component_error_aggregate():
 def test_cmakedeps_cppinfo_complex_strings():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent(r'''
-        from conans import ConanFile
+        from conan import ConanFile
         class HelloLib(ConanFile):
             def package_info(self):
                 self.cpp_info.defines.append("escape=partially \"escaped\"")
