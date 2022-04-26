@@ -439,6 +439,7 @@ class ExtraFlagsBlock(Block):
     """This block is adding flags directly from user [conf] section"""
 
     template = textwrap.dedent("""
+        # Extra c, cxx, linkflags and defines
         {% if cxxflags %}
         string(APPEND CONAN_CXX_FLAGS "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
         {% endif %}
@@ -452,7 +453,7 @@ class ExtraFlagsBlock(Block):
         string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
         {% if defines %}
-        add_compile_definitions({% for define in defines %} {{ define }}{% endfor %})
+        add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
     """)
 
@@ -468,7 +469,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": defines
+            "defines": [define.replace('"', '\\"') for define in defines]
         }
 
 

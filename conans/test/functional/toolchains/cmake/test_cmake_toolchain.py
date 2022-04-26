@@ -234,6 +234,117 @@ def test_install_output_directories():
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 
+@pytest.mark.tool_cmake
+def test_cmake_toolchain_definitions_complex_strings():
+    # https://github.com/conan-io/conan/issues/11043
+    client = TestClient(path_with_spaces=False)
+    profile = textwrap.dedent(r'''
+        include(default)
+        [conf]
+        tools.build:defines+=["escape=partially \"escaped\""]
+        tools.build:defines+=["spaces=me you"]
+        tools.build:defines+=["foobar=bazbuz"]
+        tools.build:defines+=["answer=42"]
+    ''')
+
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.preprocessor_definitions["escape2"] = "partially \"escaped\""
+                tc.preprocessor_definitions["spaces2"] = "me you"
+                tc.preprocessor_definitions["foobar2"] = "bazbuz"
+                tc.preprocessor_definitions["answer2"] = 42
+                tc.preprocessor_definitions.release["escape_release"] = "release partially \"escaped\""
+                tc.preprocessor_definitions.release["spaces_release"] = "release me you"
+                tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
+                tc.preprocessor_definitions.release["answer_release"] = 42
+
+                tc.preprocessor_definitions.debug["escape_debug"] = "debug partially \"escaped\""
+                tc.preprocessor_definitions.debug["spaces_debug"] = "debug me you"
+                tc.preprocessor_definitions.debug["foobar_debug"] = "debug bazbuz"
+                tc.preprocessor_definitions.debug["answer_debug"] = 21
+                tc.generate()
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent("""
+        #include <stdio.h>
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("%s=%s", #x, STR(x))
+        int main(int argc, char *argv[]) {
+            SHOW_DEFINE(escape);
+            SHOW_DEFINE(spaces);
+            SHOW_DEFINE(foobar);
+            SHOW_DEFINE(answer);
+            SHOW_DEFINE(escape2);
+            SHOW_DEFINE(spaces2);
+            SHOW_DEFINE(foobar2);
+            SHOW_DEFINE(answer2);
+            #ifdef NDEBUG
+            SHOW_DEFINE(escape_release);
+            SHOW_DEFINE(spaces_release);
+            SHOW_DEFINE(foobar_release);
+            SHOW_DEFINE(answer_release);
+            #else
+            SHOW_DEFINE(escape_debug);
+            SHOW_DEFINE(spaces_debug);
+            SHOW_DEFINE(foobar_debug);
+            SHOW_DEFINE(answer_debug);
+            #endif
+            return 0;
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        set(CMAKE_CXX_STANDARD 11)
+        add_executable(example src/main.cpp)
+        """)
+
+    client.save({"conanfile.py": conanfile, "profile": profile, "src/main.cpp": main,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install . -pr=./profile -if=install")
+    client.run("build . -if=install")
+    exe = "cmake-build-release/example" if platform.system() != "Windows" else r"build\Release\example.exe"
+    client.run_command(exe)
+    assert 'escape=partially "escaped"' in client.out
+    assert 'spaces=me you' in client.out
+    assert 'foobar=bazbuz' in client.out
+    assert 'answer=42' in client.out
+    assert 'escape2=partially "escaped"' in client.out
+    assert 'spaces2=me you' in client.out
+    assert 'foobar2=bazbuz' in client.out
+    assert 'answer2=42' in client.out
+    assert 'escape_release=release partially "escaped"' in client.out
+    assert 'spaces_release=release me you' in client.out
+    assert 'foobar_release=release bazbuz' in client.out
+    assert 'answer_release=42' in client.out
+
+    client.run("install . -pr=./profile -if=install -s build_type=Debug")
+    client.run("build . -if=install -s build_type=Debug")
+    exe = "cmake-build-debug/example" if platform.system() != "Windows" else r"build\Debug\example.exe"
+    client.run_command(exe)
+    assert 'escape_debug=debug partially "escaped"' in client.out
+    assert 'spaces_debug=debug me you' in client.out
+    assert 'foobar_debug=debug bazbuz' in client.out
+    assert 'answer_debug=21' in client.out
+
+
 class TestAutoLinkPragma:
     # TODO: This is a CMakeDeps test, not a CMakeToolchain test, move it to the right place
 
