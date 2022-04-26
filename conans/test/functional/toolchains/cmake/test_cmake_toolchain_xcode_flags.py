@@ -64,9 +64,9 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 ])
 def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generator(op_system, os_version, sdk, arch):
     """
-    Testing what happens when any of the Bitcode, ARC or Visibility configurations are not defined.
+    Testing when all the Bitcode, ARC and Visibility are enabled, and Xcode as generator.
 
-    Note: If cross-compiling to watchOS or tvOS, bitcode will be enabled by default.
+    Note: When using CMake and Xcode as generator, the C/CXX flags do not need to be appended.
     """
     profile = textwrap.dedent("""
         include(default)
@@ -85,9 +85,10 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generato
     client.save({"host": profile}, clean_first=True)
     client.run("new hello/0.1 --template=cmake_lib")
     _add_message_status_flags(client)
-    client.run("create . --profile:build=default --profile:host=host -tf None -c tools.cmake.cmaketoolchain:generator=Xcode")
+    client.run("create . --profile:build=default --profile:host=host -tf None "
+               "-c tools.cmake.cmaketoolchain:generator=Xcode")
     assert "** BUILD SUCCEEDED **" in client.out
-    # flags
+    # flags are not appended when Xcode generator is used
     for line in str(client.out).splitlines():
         if "CONAN_C_FLAGS:" in line:
             assert "-- CONAN_C_FLAGS:" == line.strip()
@@ -147,8 +148,6 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
 def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_version, sdk, arch):
     """
     Testing what happens when any of the Bitcode, ARC or Visibility configurations are not defined.
-
-    Note: If cross-compiling to watchOS or tvOS, bitcode will be enabled by default.
     """
     profile = textwrap.dedent("""
         include(default)
@@ -177,7 +176,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_ver
     assert 'set(VISIBILITY "-' not in toolchain
 
     client.run("create . --profile:build=default --profile:host=host -tf None")
-    # flags
+    # flags are not appended
     for flag in ["-fembed-bitcode", "-fno-objc-arc", "-fobjc-arc", "-fvisibility"]:
         assert flag not in client.out
     assert "[100%] Built target hello" in client.out
