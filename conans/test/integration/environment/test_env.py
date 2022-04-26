@@ -539,11 +539,13 @@ def test_massive_paths(num_deps):
     client = TestClient(path_with_spaces=False)
     compiler_bat = "@echo off\necho MYTOOL {}!!\n"
     conanfile = textwrap.dedent("""\
+        import os
         from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports = "*"
             def package(self):
-                self.copy("*", dst="bin")
+                copy(self, "*", self.build_folder, os.path.join(self.package_folder, "bin"))
         """)
 
     for i in range(num_deps):
