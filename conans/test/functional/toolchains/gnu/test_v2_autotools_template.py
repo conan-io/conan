@@ -1,6 +1,7 @@
 import platform
 import re
 import os
+import shutil
 
 import pytest
 
@@ -60,3 +61,20 @@ def test_autotools_exe_template():
     client.run("create . -s build_type=Debug")
     assert "greet/0.1: Hello World Debug!" in client.out
 
+
+@pytest.mark.skipif(platform.system() not in ["Darwin"], reason="Requires Autotools")
+@pytest.mark.tool_autotools()
+def test_autotools_relocatable_libs_darwin():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=autotools_lib")
+    client.run("create . -o hello:shared=True --test-folder None")
+    package_id = re.search(r"Package (\S+)", str(client.out)).group(1)
+    package_id = package_id.replace("'", "")
+    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+    dylib = os.path.join(package_folder, "lib", "libhello.0.dylib")
+    if platform.system() == "Darwin":
+        client.run_command("otool -l {}".format(dylib))
+        assert package_folder in client.out
+
+    client.run("test test_package hello/0.1 -o hello:shared=True")
