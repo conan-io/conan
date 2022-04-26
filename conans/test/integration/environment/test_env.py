@@ -549,7 +549,7 @@ def test_massive_paths(num_deps):
     for i in range(num_deps):
         client.save({"conanfile.py": conanfile,
                      "mycompiler{}.bat".format(i): compiler_bat.format(i)})
-        client.run("create . pkg{}/0.1@".format(i))
+        client.run("create . --name=pkg{} --version=0.1".format(i))
 
     conanfile = textwrap.dedent("""\
         from conans import ConanFile

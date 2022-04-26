@@ -173,7 +173,7 @@ def test_cmakedeps_cppinfo_complex_strings():
                 self.cpp_info.defines.append("answer=42")
         ''')
     client.save({"conanfile.py": conanfile})
-    client.run("export . hello/1.0@")
+    client.run("export . --name=hello --version=1.0")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g CMakeDeps")
     deps = client.load("hello-release-x86_64-data.cmake")
