@@ -8,18 +8,32 @@ class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
+        self._ordered_deps = None
         check_using_build_profile(self._conanfile)
+
+    @property
+    def ordered_deps(self):
+        if self._ordered_deps is None:
+            deps = self._conanfile.dependencies.host.topological_sort
+            self._ordered_deps = [dep for dep in reversed(deps.values())]
+        return self._ordered_deps
 
     def _get_cpp_info(self):
         ret = NewCppInfo()
-
-        deps = self._conanfile.dependencies.host.topological_sort
-        for dep in reversed(deps.values()):
+        for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
             ret.merge(dep_cppinfo)
         return ret
+
+    def _rpaths_flags(self):
+        flags = []
+        for dep in self.ordered_deps:
+            if dep.options.get_safe("shared", False):
+                for libdir in dep.cpp_info.libdirs:
+                    flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)])
+        return flags
 
     @property
     def environment(self):
@@ -38,6 +52,7 @@ class AutotoolsDeps:
             ldflags.extend(flags.frameworks)
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
+            ldflags.extend(self._rpaths_flags())
 
             # libs
             libs = flags.libs
