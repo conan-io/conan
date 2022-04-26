@@ -234,7 +234,7 @@ def test_install_output_directories():
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmake_toolchain_definitions_complex_strings():
     # https://github.com/conan-io/conan/issues/11043
     client = TestClient(path_with_spaces=False)
@@ -318,8 +318,8 @@ def test_cmake_toolchain_definitions_complex_strings():
 
     client.save({"conanfile.py": conanfile, "profile": profile, "src/main.cpp": main,
                  "CMakeLists.txt": cmakelists}, clean_first=True)
-    client.run("install . -pr=./profile -if=install")
-    client.run("build . -if=install")
+    client.run("install . -pr=./profile")
+    client.run("build . -pr=./profile")
     exe = "cmake-build-release/example" if platform.system() != "Windows" else r"build\Release\example.exe"
     client.run_command(exe)
     assert 'escape=partially "escaped"' in client.out
@@ -335,8 +335,8 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
 
-    client.run("install . -pr=./profile -if=install -s build_type=Debug")
-    client.run("build . -if=install -s build_type=Debug")
+    client.run("install . -pr=./profile -s build_type=Debug")
+    client.run("build . -pr=./profile -s build_type=Debug")
     exe = "cmake-build-debug/example" if platform.system() != "Windows" else r"build\Debug\example.exe"
     client.run_command(exe)
     assert 'escape_debug=debug partially "escaped"' in client.out
