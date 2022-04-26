@@ -75,6 +75,6 @@ def test_autotools_relocatable_libs_darwin():
     dylib = os.path.join(package_folder, "lib", "libhello.0.dylib")
     if platform.system() == "Darwin":
         client.run_command("otool -l {}".format(dylib))
-        assert package_folder in client.out
+        assert "@rpath/libhello.0.dylib" in client.out
 
     client.run("test test_package hello/0.1 -o hello:shared=True")
