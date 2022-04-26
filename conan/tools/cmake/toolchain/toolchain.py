@@ -175,7 +175,7 @@ class CMakeToolchain(object):
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
         toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
-        write_cmake_presets(self._conanfile,toolchain , self.generator)
+        write_cmake_presets(self._conanfile, toolchain, self.generator)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
