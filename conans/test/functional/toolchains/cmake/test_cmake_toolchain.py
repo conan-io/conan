@@ -454,7 +454,10 @@ def test_cmake_toolchain_runtime_types():
     client.run_command(dumpbind_cmd)
     assert "LIBCMTD" in client.out
 
-    client.save({}, clean_first=True)
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
+    client = TestClient(path_with_spaces=False)
     # Setting an older cmake_minimum_required in the CMakeLists fails, will link
     # against the default debug runtime (MDd->MSVCRTD), not against MTd->LIBCMTD
     client.run("new hello/0.1 --template=cmake_lib")
@@ -463,5 +466,9 @@ def test_cmake_toolchain_runtime_types():
                     'cmake_minimum_required(VERSION 3.14)', output=client.out)
     client.run("install . -s compiler.runtime=MTd -s build_type=Debug")
     client.run("build .")
+
+    vcvars = vcvars_command(version="15", architecture="x64")
+    lib = os.path.join(client.current_folder, "build", "Debug", "hello.lib")
+    dumpbind_cmd = '{} && dumpbin /directives "{}"'.format(vcvars, lib)
     client.run_command(dumpbind_cmd)
     assert "LIBCMTD" in client.out
