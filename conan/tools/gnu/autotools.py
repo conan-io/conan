@@ -93,7 +93,7 @@ class Autotools(object):
         #  because there's no package_folder until the package step
         self.configure()
         self.make(target="install")
-        if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", True):
+        if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
             self._fix_macos_install_paths()
 
     def autoreconf(self, args=None):
