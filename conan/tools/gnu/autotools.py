@@ -65,11 +65,38 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, jobs])
         self._conanfile.run(command)
 
+    @staticmethod
+    def _collect_shared_lib_files(folder):
+        result = []
+        files = os.listdir(folder)
+        for f in files:
+            full_path = os.path.join(folder, f)
+            name, ext = os.path.splitext(f)
+            if ext == ".dylib" and not os.path.islink(full_path):
+                result.append(f)
+        return result
+
+    def _fix_macos_install_paths(self):
+        """
+        fix LC_ID_DYLIB in Macos
+        """
+        shared_libs = []
+        package_folder = self._conanfile.package_folder
+        libdirs = getattr(self._conanfile.cpp.package, "libdirs")
+        for folder in libdirs:
+            full_folder = os.path.join(package_folder, folder)
+            shared_libs.extend(self._collect_shared_lib_files(full_folder))
+            for shared_lib in shared_libs:
+                command = "install_name_tool -id @rpath/{} {}".format(shared_lib, os.path.join(full_folder, shared_lib))
+                self._conanfile.run(command)
+
     def install(self):
         # FIXME: we have to run configure twice because the local flow won't work otherwise
         #  because there's no package_folder until the package step
         self.configure()
         self.make(target="install")
+        if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", True):
+            self._fix_macos_install_paths()
 
     def autoreconf(self, args=None):
         command = ["autoreconf"]
