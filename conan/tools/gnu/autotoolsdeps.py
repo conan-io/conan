@@ -33,7 +33,8 @@ class AutotoolsDeps:
             if dep.options.get_safe("shared", False):
                 for libdir in dep.cpp_info.libdirs:
                     flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)])
-                    flags.extend(["-Wl,-rpath -Wl,@executable_path".format(libdir)])
+                    if self._conanfile.settings.get_safe("os") == "Macos":
+                        flags.extend(["-Wl,-rpath -Wl,@executable_path".format(libdir)])
         return flags
 
     @property

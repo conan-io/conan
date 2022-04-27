@@ -67,7 +67,7 @@ def test_autotools_exe_template():
 def test_autotools_relocatable_libs_darwin():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=autotools_lib")
-    client.run("create . -o hello:shared=True --test-folder None")
+    client.run("create . -o hello:shared=True")
     package_id = re.search(r"Package (\S+)", str(client.out)).group(1)
     package_id = package_id.replace("'", "")
     pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
@@ -76,5 +76,26 @@ def test_autotools_relocatable_libs_darwin():
     if platform.system() == "Darwin":
         client.run_command("otool -l {}".format(dylib))
         assert "@rpath/libhello.0.dylib" in client.out
+        client.run_command("otool -l {}".format("test_package/build-release/main"))
+        assert package_folder in client.out
+        assert "@executable_path" in client.out
 
-    client.run("test test_package hello/0.1 -o hello:shared=True")
+    # will work because rpath set
+    client.run_command("test_package/build-release/main")
+    assert "hello/0.1: Hello World Release!" in client.out
+
+    # move to another location so that the path set in the rpath does not exist
+    # then the execution should fail
+    shutil.move(os.path.join(package_folder, "lib"), os.path.join(client.current_folder, "tempfolder"))
+    # will fail because rpath does not exist
+    client.run_command("test_package/build-release/main", assert_error=True)
+    assert "Library not loaded: @rpath/libhello.0.dylib" in client.out
+
+    # move the dylib to the folder where the executable is
+    # should work because the @executable_path set in the rpath
+    shutil.move(os.path.join(client.current_folder, "tempfolder", "libhello.0.dylib"),
+                os.path.join(client.current_folder, "test_package", "build-release"))
+    shutil.move(os.path.join(client.current_folder, "tempfolder", "libhello.dylib"),
+                os.path.join(client.current_folder, "test_package", "build-release"))
+    client.run_command("test_package/build-release/main")
+    assert "hello/0.1: Hello World Release!" in client.out
