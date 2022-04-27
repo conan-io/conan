@@ -86,7 +86,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                                add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                                conan_message(DEBUG "DLL library not found, creating UNKNOWN IMPORTED target")
                            else()
-                               # library_type can be STATIC or still UNKNOWN if no package type available in the recipe
+                               # library_type can be STATIC, still UNKNOWN (if no package type available in the recipe) or SHARED (no windows)
                                add_library(${_LIB_NAME} ${library_type} IMPORTED)
                                conan_message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
                            endif()
