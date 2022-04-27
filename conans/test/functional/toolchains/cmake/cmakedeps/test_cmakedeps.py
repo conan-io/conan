@@ -36,7 +36,7 @@ def client():
 
 
 @pytest.mark.tool("cmake")
-# @pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows only multi-config")
 def test_transitive_multi_windows(client):
     # TODO: Make a full linking example, with correct header transitivity
 
