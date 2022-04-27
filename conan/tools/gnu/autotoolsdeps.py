@@ -28,9 +28,8 @@ class AutotoolsDeps:
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
-            if dep.options.get_safe("shared", False):
-                for libdir in dep.cpp_info.libdirs:
-                    flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)])
+            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
+                          if dep.options.get_safe("shared", False)])
         return flags
 
     @property
@@ -50,7 +49,10 @@ class AutotoolsDeps:
             ldflags.extend(flags.frameworks)
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
-            ldflags.extend(self._rpaths_flags())
+
+            ## set the rpath in Macos so that the library are found in the configure step
+            if self._conanfile.settings.get_safe("os") == "Macos":
+                ldflags.extend(self._rpaths_flags())
 
             # libs
             libs = flags.libs
