@@ -67,7 +67,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
                                       "{{ '${' }}{{ pkg_name }}_BIN_DIRS{{ config_suffix }}}" # package_bindir
-                                      "{{ '${' }}{{ pkg_name }}_IS_SHARED{{ config_suffix }}}"
+                                      "{{ '${' }}{{ pkg_name }}_LIBRARY_TYPE{{ config_suffix }}}"
                                       "{{ '${' }}{{ pkg_name }}_IS_HOST_WINDOWS{{ config_suffix }}}"
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
                                       {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
@@ -106,7 +106,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_BIN_DIRS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_IS_SHARED'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBRARY_TYPE'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_IS_HOST_WINDOWS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
                                       {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}

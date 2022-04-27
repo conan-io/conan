@@ -47,7 +47,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir package_bindir is_shared is_host_windows deps out_libraries out_libraries_target config_suffix package_name)
+       function(conan_package_library_targets libraries package_libdir package_bindir library_type is_host_windows deps out_libraries out_libraries_target config_suffix package_name)
            set(_out_libraries "")
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
@@ -64,23 +64,36 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
                    set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
                    if(NOT TARGET ${_LIB_NAME})
-                       # Create a micro-target for each lib/a found
-                       if(is_shared)
-                         add_library(${_LIB_NAME} SHARED IMPORTED)
-                       else()
-                         add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                       endif()
-                       if(is_shared AND is_host_windows)
+                       if(library_type STREQUAL "SHARED" AND is_host_windows)
+                         set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
                          find_library(CONAN_SHARED_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_bindir}
                                       NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-                         message("EEEE!! ${CONAN_SHARED_FOUND_LIBRARY}")
-                         if(CONAN_SHARED_FOUND_LIBRARY)
+                         if(NOT CONAN_SHARED_FOUND_LIBRARY)
+                           conan_message(STATUS "Cannot locate shared library: ${_LIBRARY_NAME}")
+                           set(CONAN_DLL_NOT_FOUND 1)
+                         endif()
+                       endif()
+
+                       # Create a micro-target for each lib/a found
+                       if (CONAN_SHARED_FOUND_LIBRARY)
+                           add_library(${_LIB_NAME} SHARED IMPORTED)
                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_SHARED_FOUND_LIBRARY})
                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_IMPLIB ${CONAN_FOUND_LIBRARY})
-                         endif()
-                       else()
+                           conan_message(DEBUG "Found DLL and STATIC at ${CONAN_SHARED_FOUND_LIBRARY}, ${CONAN_FOUND_LIBRARY}")
+                        else()
+                           if(CONAN_DLL_NOT_FOUND)
+                               # If we haven't found the DLL, fallback to old behavior: UNKNOWN target linking the static
+                               add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                               conan_message(DEBUG "DLL library not found, creating UNKNOWN IMPORTED target")
+                           else()
+                               # library_type can be STATIC or still UNKNOWN if no package type available in the recipe
+                               add_library(${_LIB_NAME} ${library_type} IMPORTED)
+                               conan_message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
+                           endif()
                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                        endif()
+
+
 
                        list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    else()
