@@ -372,8 +372,7 @@ def test_start_dir_failure():
     c = TestClient()
     c.save(pkg_cmake("dep", "0.1"))
     c.run("install .")
-    build = "build" if platform.system() == "Windows" else "cmake-build-release"
-    expected_path = os.path.join(c.current_folder, build, "conan", "conan_toolchain.cmake")
+    expected_path = os.path.join(c.current_folder, "build", "generators", "conan_toolchain.cmake")
     assert os.path.exists(expected_path)
     os.unlink(expected_path)
     with c.chdir("build"):

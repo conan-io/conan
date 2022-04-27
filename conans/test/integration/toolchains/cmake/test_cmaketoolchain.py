@@ -353,7 +353,7 @@ def test_cmake_presets_binary_dir_available():
     else:
         build_dir = os.path.join(client.current_folder, "build")
 
-    presets = load_cmake_presets(os.path.join(build_dir, "conan"))
+    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 
@@ -401,6 +401,9 @@ def test_cmake_presets_multiconfig():
     assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
     assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
 
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "default"
+
 
 def test_cmake_presets_singleconfig():
     client = TestClient()
@@ -420,8 +423,14 @@ def test_cmake_presets_singleconfig():
     assert len(presets["configurePresets"]) == 1
     assert presets["configurePresets"][0]["name"] == "Release"
 
-    # Still only one configurePreset, but named correctly
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configurePreset"] == "Release"
+
+    # Now two configurePreset, but named correctly
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
-    assert len(presets["configurePresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "Debug"
+    assert len(presets["configurePresets"]) == 2
+    assert presets["configurePresets"][1]["name"] == "Debug"
+
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][1]["configurePreset"] == "Debug"

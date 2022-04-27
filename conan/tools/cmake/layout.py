@@ -21,11 +21,11 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
     if multi:
         conanfile.folders.build = "build"
-        conanfile.folders.generators = "build/conan"
+        conanfile.folders.generators = "build/generators"
     else:
         build_type = build_type.lower()
         conanfile.folders.build = "cmake-build-{}".format(build_type)
-        conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
+        conanfile.folders.generators = "build/generators"
 
     conanfile.cpp.source.includedirs = ["include"]
 
