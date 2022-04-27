@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -354,3 +355,48 @@ def test_cmake_presets_binary_dir_available():
 
     presets = load_cmake_presets(os.path.join(build_dir, "conan"))
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
+
+
+def test_cmake_presets_multiconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Windows
+        arch = x86_64
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=static
+        compiler.runtime_type=Release
+    """)
+    client.save({"conanfile.py": GenConanfile(), "profile": profile})
+    client.run("create . mylib/1.0@ -s build_type=Release --profile:h=profile")
+    client.run("create . mylib/1.0@ -s build_type=Debug --profile:h=profile")
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=RelWithDebInfo --profile:h=profile")
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=MinSizeRel --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    # Repeat one
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
