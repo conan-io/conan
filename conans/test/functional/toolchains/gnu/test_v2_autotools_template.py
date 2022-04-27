@@ -77,8 +77,6 @@ def test_autotools_relocatable_libs_darwin():
         client.run_command("otool -l {}".format(dylib))
         assert "@rpath/libhello.0.dylib" in client.out
         client.run_command("otool -l {}".format("test_package/build-release/main"))
-        assert package_folder in client.out
-        assert "@executable_path" in client.out
 
     # will work because rpath set
     client.run_command("test_package/build-release/main")
@@ -91,11 +89,6 @@ def test_autotools_relocatable_libs_darwin():
     client.run_command("test_package/build-release/main", assert_error=True)
     assert "Library not loaded: @rpath/libhello.0.dylib" in client.out
 
-    # move the dylib to the folder where the executable is
-    # should work because the @executable_path set in the rpath
-    shutil.move(os.path.join(client.current_folder, "tempfolder", "libhello.0.dylib"),
-                os.path.join(client.current_folder, "test_package", "build-release"))
-    shutil.move(os.path.join(client.current_folder, "tempfolder", "libhello.dylib"),
-                os.path.join(client.current_folder, "test_package", "build-release"))
-    client.run_command("test_package/build-release/main")
+    # Use DYLD_LIBRARY_PATH and should run
+    client.run_command("DYLD_LIBRARY_PATH={} test_package/build-release/main".format(os.path.join(client.current_folder, "tempfolder")))
     assert "hello/0.1: Hello World Release!" in client.out
