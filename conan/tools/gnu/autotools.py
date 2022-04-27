@@ -6,6 +6,7 @@ from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
 from conan.tools.files import chdir
+from conans.util.runners import check_output_runner
 
 
 class Autotools(object):
@@ -63,30 +64,33 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, jobs])
         self._conanfile.run(command)
 
-    @staticmethod
-    def _collect_shared_lib_files(folder):
-        result = []
-        files = os.listdir(folder)
-        for f in files:
-            full_path = os.path.join(folder, f)
-            name, ext = os.path.splitext(f)
-            if ext == ".dylib" and not os.path.islink(full_path):
-                result.append(f)
-        return result
+    def _fix_osx_shared_install_name(self):
 
-    def _fix_macos_install_paths(self):
-        """
-        fix LC_ID_DYLIB in Macos
-        """
+        def _osx_collect_dylibs(lib_folder):
+            return [f for f in os.listdir(lib_folder) if f.endswith(".dylib")
+                    and not os.path.islink(os.path.join(lib_folder, f))]
+
+        def _fix_install_name(lib_name, lib_folder):
+            command = "install_name_tool -id @rpath/{} {}".format(lib_name, os.path.join(lib_folder,
+                                                                                         lib_name))
+            self._conanfile.run(command)
+
+        def _is_modified_install_name(lib_name, lib_folder):
+            """
+            Check that the user did not change the default install_name using the install_name
+            linker flag in that case we do not touch this field
+            """
+            command = "otool -D {}".format(os.path.join(lib_folder, lib_name))
+            out = check_output_runner(command).strip().split(":")[1]
+            return False if str(os.path.join(lib_folder, shared_lib)) in out else True
+
         libdirs = getattr(self._conanfile.cpp.package, "libdirs")
         for folder in libdirs:
             full_folder = os.path.join(self._conanfile.package_folder, folder)
-            shared_libs = self._collect_shared_lib_files(full_folder)
+            shared_libs = _osx_collect_dylibs(full_folder)
             for shared_lib in shared_libs:
-                command = "install_name_tool -id @rpath/{} {}".format(shared_lib,
-                                                                      os.path.join(full_folder,
-                                                                                   shared_lib))
-                self._conanfile.run(command)
+                if not _is_modified_install_name(shared_lib, full_folder):
+                    _fix_install_name(shared_lib, full_folder)
 
     def install(self):
         # FIXME: we have to run configure twice because the local flow won't work otherwise
@@ -94,7 +98,7 @@ class Autotools(object):
         self.configure()
         self.make(target="install")
         if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
-            self._fix_macos_install_paths()
+            self._fix_osx_shared_install_name()
 
     def autoreconf(self, args=None):
         command = ["autoreconf"]
