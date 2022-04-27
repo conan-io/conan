@@ -7,11 +7,11 @@ class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
-        self._ordered_deps = None
+        self._ordered_deps = []
 
     @property
     def ordered_deps(self):
-        if self._ordered_deps is None:
+        if not self._ordered_deps:
             deps = self._conanfile.dependencies.host.topological_sort
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
