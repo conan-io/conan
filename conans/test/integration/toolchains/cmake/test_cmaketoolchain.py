@@ -400,3 +400,28 @@ def test_cmake_presets_multiconfig():
     assert presets["buildPresets"][1]["configuration"] == "Debug"
     assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
     assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+
+def test_cmake_presets_singleconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Linux
+        arch = x86_64
+        compiler=gcc
+        compiler.version=8
+    """)
+    client.save({"conanfile.py": GenConanfile(), "profile": profile})
+    client.run("create . mylib/1.0@ -s build_type=Release --profile:h=profile")
+    client.run("create . mylib/1.0@ -s build_type=Debug --profile:h=profile")
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Release"
+
+    # Still only one configurePreset, but named correctly
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Debug"
