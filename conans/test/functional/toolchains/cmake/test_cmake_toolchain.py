@@ -463,7 +463,9 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     client.run("new hello/0.1 --template=cmake_lib")
     replace_in_file(os.path.join(client.current_folder, "CMakeLists.txt"),
                     'cmake_minimum_required(VERSION 3.15)',
-                    'cmake_minimum_required(VERSION 3.14)', output=client.out)
+                    'cmake_minimum_required(VERSION 3.1)'
+                    , output=client.out)
+
     client.run("install . -s compiler.runtime=MTd -s build_type=Debug")
     client.run("build .")
 

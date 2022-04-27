@@ -92,10 +92,6 @@ class CMakeToolchain(object):
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
         endif()
 
-        # This is useful to set some policies
-        # TODO: maybe we want to move this to a block?
-        set(CMAKE_PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/conan_project_include.cmake")
-
         {% for conan_block in conan_blocks %}
         {{ conan_block }}
         {% endfor %}
@@ -117,10 +113,6 @@ class CMakeToolchain(object):
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
-        """)
-
-    _template_project_included = textwrap.dedent("""
-        cmake_policy(SET CMP0091 NEW)
         """)
 
     def __init__(self, conanfile, generator=None):
@@ -172,12 +164,7 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         return content
 
-    def _generate_project_included_file(self):
-        save(os.path.join(self._conanfile.generators_folder, "conan_project_include.cmake"),
-             self._template_project_included)
-
     def generate(self):
-        self._generate_project_included_file()
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)

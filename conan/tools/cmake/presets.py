@@ -58,10 +58,10 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
         cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
-
         if cmake_make_program:
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
+    cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
