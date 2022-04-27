@@ -78,14 +78,14 @@ class Autotools(object):
         """
         fix LC_ID_DYLIB in Macos
         """
-        shared_libs = []
-        package_folder = self._conanfile.package_folder
         libdirs = getattr(self._conanfile.cpp.package, "libdirs")
         for folder in libdirs:
-            full_folder = os.path.join(package_folder, folder)
-            shared_libs.extend(self._collect_shared_lib_files(full_folder))
+            full_folder = os.path.join(self._conanfile.package_folder, folder)
+            shared_libs = self._collect_shared_lib_files(full_folder)
             for shared_lib in shared_libs:
-                command = "install_name_tool -id @rpath/{} {}".format(shared_lib, os.path.join(full_folder, shared_lib))
+                command = "install_name_tool -id @rpath/{} {}".format(shared_lib,
+                                                                      os.path.join(full_folder,
+                                                                                   shared_lib))
                 self._conanfile.run(command)
 
     def install(self):
