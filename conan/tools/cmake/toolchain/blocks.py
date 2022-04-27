@@ -681,9 +681,6 @@ class GenericSystemBlock(Block):
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
         {% endif %}
-        {% if build_type %}
-        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
-        {% endif %}
         """)
 
     def _get_toolset(self, generator):
@@ -815,15 +812,11 @@ class GenericSystemBlock(Block):
         return system_name, system_version, system_processor
 
     def context(self):
-        # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
 
         compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
-
-        build_type = self._conanfile.settings.get_safe("build_type")
-        build_type = build_type if not is_multi_configuration(generator) else None
 
         system_name, system_version, system_processor = self._get_cross_build()
 
@@ -832,7 +825,6 @@ class GenericSystemBlock(Block):
                 "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor}

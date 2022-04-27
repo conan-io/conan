@@ -6,7 +6,8 @@ from conan.tools.cmake.utils import is_multi_configuration
 from conans.util.files import save, load
 
 
-def _add_build_preset(build_type, multiconfig=False):
+def _add_build_preset(conanfile, multiconfig):
+    build_type = conanfile.settings.get_safe("build_type")
     ret = {"name": "Build {}".format(build_type),
            "configurePreset": "default"}
     if multiconfig:
@@ -14,18 +15,31 @@ def _add_build_preset(build_type, multiconfig=False):
     return ret
 
 
+def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
+    build_type = conanfile.settings.get_safe("build_type")
+    name = "default" if not build_type or multiconfig else build_type
+    if not multiconfig:
+        cache_variables["CMAKE_BUILD_TYPE"] = build_type
+    ret = {
+            "name": name,
+            "displayName": "{} Config".format(name.capitalize()),
+            "description": "{} configure using '{}' generator".format(name.capitalize(), generator),
+            "generator": generator,
+            "cacheVariables": cache_variables,
+            "toolchainFile": toolchain_file,
+           }
+    if conanfile.build_folder:
+        # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
+        # we don't even have a conanfile with a `layout()` to determine the build folder.
+        # If we install a local conanfile: "conan install ." with a layout(), it will be available.
+        ret["binaryDir"] = conanfile.build_folder
+    return ret
+
+
 def _contents(conanfile, toolchain_file, cache_variables, generator):
-    build_type = conanfile.settings.get_safe("build_type") or "default"
     ret = {"version": 3,
            "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
-           "configurePresets": [{
-                "name": "default",
-                "displayName": "Default Config",
-                "description": "Default configure using '{}' generator".format(generator),
-                "generator": generator,
-                "cacheVariables": cache_variables,
-                "toolchainFile": toolchain_file,
-           }],
+           "configurePresets": [],
            "buildPresets": [],
            "testPresets": [{
               "name": "default",
@@ -33,12 +47,9 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
            }]
           }
     multiconfig = is_multi_configuration(generator)
-    ret["buildPresets"].append(_add_build_preset(build_type, multiconfig))
-    if conanfile.build_folder:
-        # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
-        # we don't even have a conanfile with a `layout()` to determine the build folder.
-        # If we install a local conanfile: "conan install ." with a layout(), it will be available.
-        ret["configurePresets"][0]["binaryDir"] = conanfile.build_folder
+    ret["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
+    _conf = _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
+    ret["configurePresets"].append(_conf)
     return ret
 
 
@@ -53,14 +64,14 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
+    build_type = conanfile.settings.get_safe("build_type")
     if multiconfig and os.path.exists(preset_path):
         # We append the new configuration making sure that we don't overwrite it
-        build_type = conanfile.settings.get_safe("build_type")
         data = json.loads(load(preset_path))
         build_presets = data["buildPresets"]
         already_exist = any([b["configuration"] for b in build_presets if b == build_type])
         if not already_exist:
-            data["buildPresets"].append(_add_build_preset(build_type, multiconfig))
+            data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
     else:
         data = _contents(conanfile, toolchain_file, cache_variables, generator)
 
