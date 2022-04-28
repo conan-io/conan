@@ -104,13 +104,12 @@ def test_autotools_relocatable_libs_darwin():
 @pytest.mark.skipif(platform.system() not in ["Darwin"], reason="Requires Autotools")
 @pytest.mark.tool("autotools")
 def test_autotools_relocatable_libs_darwin_downloaded():
-    server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
-    client = TestClient(servers={"default": server}, path_with_spaces=False)
-    client2 = TestClient(servers={"default": server}, path_with_spaces=False)
+    client = TestClient(default_server_user=True, path_with_spaces=False)
+    client2 = TestClient(servers=client.servers, path_with_spaces=False)
     assert client2.cache_folder != client.cache_folder
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True -tf=None")
-    client.run("upload * --all -c")
+    client.run("upload hello/0.1 -c -r default")
     client.run("remove * -f")
 
     conanfile = textwrap.dedent("""
@@ -163,8 +162,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
                   "makefile.am": makefileam,
                   "configure.ac": configureac})
 
-    client2.run("install . -o hello/*:shared=True")
-    client2.run("build . -o hello/*:shared=True")
+    client2.run("install . -o hello/*:shared=True -r default")
+    client2.run("build . -o hello/*:shared=True -r default")
     client2.run_command("build-release/greet")
     assert "Hello World Release!" in client2.out
-
