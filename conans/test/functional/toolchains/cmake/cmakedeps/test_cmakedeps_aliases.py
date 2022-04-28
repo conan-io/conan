@@ -39,6 +39,7 @@ def test_global_alias():
 
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
+    project(test)
 
     find_package(hello REQUIRED)
     get_target_property(link_libraries hello INTERFACE_LINK_LIBRARIES)
@@ -72,6 +73,7 @@ def test_component_alias():
 
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION VERSION 3.15)
+    project(test)
 
     find_package(hello REQUIRED)
     get_target_property(link_libraries hola::adios INTERFACE_LINK_LIBRARIES)
@@ -105,6 +107,7 @@ def test_custom_name():
 
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
+    project(test)
 
     find_package(hello REQUIRED)
     get_target_property(link_libraries hello INTERFACE_LINK_LIBRARIES)
@@ -138,6 +141,8 @@ def test_collide_global_alias():
 
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
+    project(test)
+
     find_package(hello REQUIRED)
     """)
 
@@ -167,6 +172,7 @@ def test_collide_component_alias():
 
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
+    project(test)
 
     find_package(hello REQUIRED)
     """)
