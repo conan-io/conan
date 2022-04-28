@@ -10,7 +10,7 @@ from conans.util.files import save, load
 def _add_build_preset(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     configure_preset_name = _configure_preset_name(build_type, multiconfig)
-    ret = {"name": "Build {}".format(build_type),
+    ret = {"name": build_type,
            "configurePreset": configure_preset_name}
     if multiconfig:
         ret["configuration"] = build_type

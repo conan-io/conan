@@ -111,7 +111,6 @@ def test_cmake_user_presets_load():
     assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
 
 
-
 def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
