@@ -94,7 +94,7 @@ class VSRuntimeBlock(Block):
         {% endfor %}
         cmake_policy(GET CMP0091 POLICY_CMP0091)
         if(NOT "${POLICY_CMP0091}" STREQUAL NEW)
-            message(FATAL_ERROR "The CMake policy CMP0091 must be NEW")
+            message(FATAL_ERROR "The CMake policy CMP0091 must be NEW, but is '${POLICY_CMP0091}'")
         endif()
         set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
         """)
