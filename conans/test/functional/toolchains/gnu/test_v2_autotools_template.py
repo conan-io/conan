@@ -112,7 +112,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
         from conan.tools.gnu import Autotools
         from conan.tools.layout import basic_layout
 
-        class HelloConan(ConanFile):
+        class GreetConan(ConanFile):
             name = "greet"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
@@ -138,12 +138,12 @@ def test_autotools_relocatable_libs_darwin_downloaded():
         """)
 
     makefileam = textwrap.dedent("""
-        bin_PROGRAMS = hello
-        hello_SOURCES = main.cpp
+        bin_PROGRAMS = greet
+        greet_SOURCES = main.cpp
         """)
 
     configureac = textwrap.dedent("""
-        AC_INIT([hello], [1.0], [])
+        AC_INIT([greet], [1.0], [])
         AM_INIT_AUTOMAKE([-Wall -Werror foreign])
         AC_PROG_CXX
         AM_PROG_AR
@@ -157,4 +157,8 @@ def test_autotools_relocatable_libs_darwin_downloaded():
                   "makefile.am": makefileam,
                   "configure.ac": configureac})
 
-    client2.run("create . -o hello:shared=True -r default")
+    client2.run("install . -o hello:shared=True -r default")
+    client2.run("build .")
+    client2.run_command("build-release/greet")
+    assert "Hello World Release!" in client2.out
+
