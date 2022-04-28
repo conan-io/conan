@@ -69,7 +69,49 @@ def test_cmake_toolchain_custom_toolchain():
     assert "binaryDir" in presets["configurePresets"][0]
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Darwin",
+                    reason="Single config test, Linux CI still without 3.23")
+def test_cmake_user_presets_load():
+    """
+    Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
+    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
+    """
+    t = TestClient()
+    t.run("new mylib/1.0 --template cmake_lib")
+    t.run("create . -s:h build_type=Release")
+    t.run("create . -s:h build_type=Debug")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Consumer(ConanFile):
+
+            settings = "build_type", "os", "arch", "compiler"
+            requires = "mylib/1.0"
+            generators = "CMakeToolchain", "CMakeDeps"
+
+            def layout(self):
+                cmake_layout(self)
+
+    """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.1)
+        project(PackageTest CXX)
+        find_package(mylib REQUIRED CONFIG)
+        """)
+    t.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelist}, clean_first=True)
+    t.run("install . -s:h build_type=Debug -g CMakeToolchain")
+    t.run("install . -s:h build_type=Release -g CMakeToolchain")
+    assert os.path.exists(os.path.join(t.current_folder, "CMakeUserPresets.json"))
+    t.run_command("cmake . --preset Release")
+    assert 'CMAKE_BUILD_TYPE="Release"' in t.out
+    t.run_command("cmake . --preset Debug")
+    assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
+
+
 def test_cmake_toolchain_user_toolchain_from_dep():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -230,7 +272,7 @@ def test_install_output_directories():
     assert not os.path.exists(os.path.join(p_folder, "lib"))
     b_folder = client.get_latest_pkg_layout(pref).build()
     layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
-    toolchain = client.load(os.path.join(b_folder, layout_folder, "conan", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join(b_folder, layout_folder, "build", "generators", "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 

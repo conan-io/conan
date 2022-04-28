@@ -278,11 +278,52 @@ class AppleSystemBlock(Block):
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
         set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
+        set(BITCODE "")
+        set(FOBJC_ARC "")
+        set(VISIBILITY "")
+        {% if enable_bitcode %}
+        # Bitcode ON
+        set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")
+        set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")
+        {% if enable_bitcode_marker %}
+        set(BITCODE "-fembed-bitcode-marker")
+        {% else %}
+        set(BITCODE "-fembed-bitcode")
+        {% endif %}
+        {% elif enable_bitcode is not none %}
+        # Bitcode OFF
+        set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")
+        {% endif %}
+        {% if enable_arc %}
+        # ARC ON
+        set(FOBJC_ARC "-fobjc-arc")
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")
+        {% elif enable_arc is not none %}
+        # ARC OFF
+        set(FOBJC_ARC "-fno-objc-arc")
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")
+        {% endif %}
+        {% if enable_visibility %}
+        # Visibility ON
+        set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")
+        set(VISIBILITY "-fvisibility=default")
+        {% elif enable_visibility is not none %}
+        # Visibility OFF
+        set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")
+        set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")
+        {% endif %}
+        #Check if Xcode generator is used, since that will handle these flags automagically
+        if(CMAKE_GENERATOR MATCHES "Xcode")
+          message(DEBUG "Not setting any manual command-line buildflags, since Xcode is selected as generator.")
+        else()
+            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${FOBJC_ARC}")
+            string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
+        endif()
         """)
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
+        if not is_apple_os(os_):
             return None
 
         arch = self._conanfile.settings.get_safe("arch")
@@ -293,8 +334,21 @@ class AppleSystemBlock(Block):
 
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
+        is_debug = self._conanfile.settings.get_safe('build_type') == "Debug"
 
-        ctxt_toolchain = {}
+        # Reading some configurations to enable or disable some Xcode toolchain flags and variables
+        # Issue related: https://github.com/conan-io/conan/issues/9448
+        # Based on https://github.com/leetal/ios-cmake repository
+        enable_bitcode = self._conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
+        enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        enable_visibility = self._conanfile.conf.get("tools.apple:enable_visibility", check_type=bool)
+
+        ctxt_toolchain = {
+            "enable_bitcode": enable_bitcode,
+            "enable_bitcode_marker": all([enable_bitcode, is_debug]),
+            "enable_arc": enable_arc,
+            "enable_visibility": enable_visibility
+        }
         if host_sdk_name:
             ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
@@ -534,9 +588,6 @@ class GenericSystemBlock(Block):
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
         {% endif %}
-        {% if build_type %}
-        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
-        {% endif %}
         """)
 
     def _get_toolset(self, generator):
@@ -657,7 +708,8 @@ class GenericSystemBlock(Block):
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
-        return os_host in ('iOS', 'watchOS', 'tvOS') or (os_host == 'Macos' and arch_host != arch_build)
+        return os_host in ('iOS', 'watchOS', 'tvOS') or (
+                os_host == 'Macos' and arch_host != arch_build)
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
@@ -693,15 +745,11 @@ class GenericSystemBlock(Block):
         return system_name, system_version, system_processor
 
     def context(self):
-        # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
 
         compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
-
-        build_type = self._conanfile.settings.get_safe("build_type")
-        build_type = build_type if not is_multi_configuration(generator) else None
 
         system_name, system_version, system_processor = self._get_cross_build()
 
@@ -710,7 +758,6 @@ class GenericSystemBlock(Block):
                 "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor}
