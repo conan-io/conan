@@ -308,7 +308,6 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     # set the environment variables for Autotools
     $ source conanautotoolstoolchain.sh
 
-    # You will have to set the PKG_CONFIG_PATH to where Conan created the {{ pkgconfig_variables.pkg_name }}.pc file
     $ export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags {{ requirement.ref.name }})"
     $ export LIBS="$LIBS $(pkg-config --libs-only-l {{ requirement.ref.name }})"
     $ export LDFLAGS="$LDFLAGS $(pkg-config --libs-only-L --libs-only-other {{ requirement.ref.name }})"
