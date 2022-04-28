@@ -354,7 +354,7 @@ class EnvVars:
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
            echo Capturing current environment in "{deactivate_file}"
-           echo echo Restoring environment >> "{deactivate_file}"
+           echo "echo Restoring environment" >> "{deactivate_file}"
            for v in {vars}
            do
                value=$(printenv $v)
