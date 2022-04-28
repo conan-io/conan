@@ -7,7 +7,6 @@ import pytest
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save
