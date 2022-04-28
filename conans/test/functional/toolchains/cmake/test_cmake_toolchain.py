@@ -69,7 +69,8 @@ def test_cmake_toolchain_custom_toolchain():
     assert "binaryDir" not in presets["configurePresets"][0]
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Single config test")
+@pytest.mark.skipif(platform.system() != "Darwin",
+                    reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool_cmake(version="3.23")
 def test_cmake_user_presets_load():
     """
