@@ -434,3 +434,8 @@ def test_cmake_presets_singleconfig():
 
     assert len(presets["buildPresets"]) == 2
     assert presets["buildPresets"][1]["configurePreset"] == "Debug"
+
+    # Repeat configuration, it shouldn't add a new one
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 2

@@ -78,7 +78,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
             if not already_exist:
                 data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
         else:
-            configure_presets = data["buildPresets"]
+            configure_presets = data["configurePresets"]
             already_exist = any([c["name"]
                                  for c in configure_presets
                                  if c["name"] == _configure_preset_name(build_type, multiconfig)])
@@ -93,14 +93,14 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
     data = json.dumps(data, indent=4)
     save(preset_path, data)
 
-    # Try to save the CMakeUserPresets.json
-    # FIXME: Private base generators
-    if os.path.exists(os.path.join(conanfile.folders._base_generators, "CMakeLists.txt")):
-        user_presets_path = os.path.join(conanfile.folders._base_generators, "CMakeUserPresets.json")
-        if not os.path.exists(user_presets_path):
-            data = {"version": 4, "include": [preset_path]}
-            data = json.dumps(data, indent=4)
-            save(user_presets_path, data)
+    # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
+    if conanfile.source_folder:
+        if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
+            user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
+            if not os.path.exists(user_presets_path):
+                data = {"version": 4, "include": [preset_path]}
+                data = json.dumps(data, indent=4)
+                save(user_presets_path, data)
 
 
 def load_cmake_presets(folder):

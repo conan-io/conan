@@ -7,6 +7,7 @@ import pytest
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save
@@ -67,6 +68,49 @@ def test_cmake_toolchain_custom_toolchain():
     presets = load_cmake_presets(client.current_folder)
     assert "mytoolchain.cmake" in presets["configurePresets"][0]["toolchainFile"]
     assert "binaryDir" not in presets["configurePresets"][0]
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Single config test")
+@pytest.mark.tool_cmake(version="3.23")
+def test_cmake_user_presets_load():
+    """
+    Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
+    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
+    """
+    t = TestClient()
+    t.run("new mylib/1.0 --template cmake_lib")
+    t.run("create . -s:h build_type=Release")
+    t.run("create . -s:h build_type=Debug")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Consumer(ConanFile):
+
+            settings = "build_type", "os", "arch", "compiler"
+            requires = "mylib/1.0"
+            generators = "CMakeToolchain", "CMakeDeps"
+
+            def layout(self):
+                cmake_layout(self)
+
+    """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.1)
+        project(PackageTest CXX)
+        find_package(mylib REQUIRED CONFIG)
+        """)
+    t.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelist}, clean_first=True)
+    t.run("install . -s:h build_type=Debug -g CMakeToolchain")
+    t.run("install . -s:h build_type=Release -g CMakeToolchain")
+    assert os.path.exists(os.path.join(t.current_folder, "CMakeUserPresets.json"))
+    t.run_command("cmake . --preset Release")
+    assert 'CMAKE_BUILD_TYPE="Release"' in t.out
+    t.run_command("cmake . --preset Debug")
+    assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
+
 
 
 def test_cmake_toolchain_user_toolchain_from_dep():
