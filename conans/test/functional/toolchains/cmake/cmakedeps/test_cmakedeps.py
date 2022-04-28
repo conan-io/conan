@@ -375,6 +375,6 @@ def test_system_dep():
 
     client.run("install consumer")
     if platform.system() != "Windows":
-        data = os.path.join("consumer/cmake-build-release/conan/mylib-release-x86_64-data.cmake")
+        data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents

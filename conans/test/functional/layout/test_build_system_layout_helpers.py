@@ -168,7 +168,7 @@ def test_cmake_layout_external_sources():
 
     # Local flow
     client.run("install . foo/1.0 -s os=Linux")
-    assert os.path.exists(os.path.join(client.current_folder, "cmake-build-release", "conan", "generate.txt"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
