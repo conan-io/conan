@@ -72,6 +72,11 @@ tools_locations = {
             "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
+        },
+        "3.23": {
+            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+                     'Linux': '/usr/share/cmake-3.23.1/bin'}
         }
     },
     'ninja': {
