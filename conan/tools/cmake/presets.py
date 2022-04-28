@@ -94,7 +94,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
     save(preset_path, data)
 
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
-    if conanfile.source_folder:
+    if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
         if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
