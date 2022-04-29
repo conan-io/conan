@@ -1,6 +1,7 @@
 import os
 
 from conans.cli.command import Extender, OnceArgument, ExtenderValueRequired
+from conans.cli.commands import make_abs_path
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -101,7 +102,7 @@ def _add_common_install_arguments(parser, build_help, update_help=None):
 def add_lockfile_args(parser):
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
-    parser.add_argument("--lockfile-strict", action="store_true",
+    parser.add_argument("--lockfile-no-strict", action="store_true",
                         help="Raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
@@ -136,13 +137,19 @@ def get_remote_selection(conan_api, remote_patterns):
     return ret_remotes
 
 
-def get_lockfile(lockfile, strict=False):
-    graph_lock = None
-    if lockfile:
-        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock = Lockfile.load(lockfile)
-        graph_lock.strict = strict
-        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
+def get_lockfile(lockfile_path, cwd, strict=False):
+    if lockfile_path is None:
+        lockfile_path = make_abs_path(LOCKFILE, cwd)
+        if not os.path.isfile(lockfile_path):
+            return
+    else:
+        lockfile_path = make_abs_path(lockfile_path, cwd)
+        if not os.path.isfile(lockfile_path):
+            raise ConanException("Lockfile doesn't exist: {}".format(lockfile_path))
+
+    graph_lock = Lockfile.load(lockfile_path)
+    graph_lock.strict = strict
+    ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
     return graph_lock
 
 

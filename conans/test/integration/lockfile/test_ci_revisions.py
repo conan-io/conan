@@ -192,7 +192,7 @@ def test_single_config_centralized_change_dep(client_setup):
             "pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 new revision works
-    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows --lockfile-no-strict "
           "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
     assert "pkgb/0.1: DEP FILE pkgj: HelloJ" in c.out
     # Build new package alternative J, it won't be included, already locked in this create

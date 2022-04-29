@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conans.cli.command import conan_command, COMMAND_GROUPS
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
@@ -19,8 +19,7 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -47,5 +46,6 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     conan_api.export.export_pkg(deps_graph, path)
 
     if args.lockfile_out:
+
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         lockfile.save(lockfile_out)

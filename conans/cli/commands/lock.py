@@ -4,7 +4,7 @@ from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import common_graph_args, graph_compute
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.graph_lock import Lockfile
+from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -96,6 +96,6 @@ def lock_add(conan_api, parser, subparser, *args):
 
     lockfile.add(requires=requires, build_requires=build_requires, python_requires=python_requires)
 
-    lockfile_out = make_abs_path(args.lockfile_out)
+    lockfile_out = make_abs_path(args.lockfile_out or LOCKFILE)
     lockfile.save(lockfile_out)
     ConanOutput().info("Generated lockfile: %s" % lockfile_out)

@@ -6,13 +6,9 @@ from conans.cli.commands.create import test_package
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     get_multiple_remotes, add_lockfile_args
-from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
-from conans.client.conanfile.build import run_build_method
-from conans.errors import conanfile_exception_formatter
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -31,8 +27,7 @@ def test(conan_api, parser, *args):
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 

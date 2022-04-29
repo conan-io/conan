@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -31,14 +32,15 @@ def test_transitive_py_requires_revisions():
 
     client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
     client.run("export pkg --name=pkg --version=0.1 --user=user --channel=channel")
-    client.run("lock create consumer/conanfile.py --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.py")
 
     client.save({"dep/conanfile.py": python_req.format("123")})
     client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
 
-    client.run("install consumer/conanfile.py --lockfile=conan.lock")
+    client.run("install consumer/conanfile.py")
     assert "conanfile.py: VAR=42!!!" in client.out
 
+    os.remove(os.path.join(client.current_folder, "conan.lock"))
     client.run("install consumer/conanfile.py")
     assert "conanfile.py: VAR=123!!!" in client.out
 
@@ -78,13 +80,13 @@ def test_transitive_matching_revisions():
     client.run("export toolb --name=toolb --version=0.1")
     client.run("create pkga --name=pkga --version=0.1")
     client.run("create pkgb --name=pkgb --version=0.1")
-    client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
+    client.run("lock create app/conanfile.py --lockfile-out=app.lock")
 
     client.save({"dep/conanfile.py": dep.format(123)})
     client.run("export dep --name=dep --version=0.1")
     client.run("export dep --name=dep --version=0.2")
 
-    client.run("install app/conanfile.py --lockfile=conan.lock")
+    client.run("install app/conanfile.py --lockfile=app.lock")
     assert "pkga/0.1: VAR=42!!!" in client.out
     assert "pkgb/0.1: VAR=42!!!" in client.out
     assert "VAR=123" not in client.out

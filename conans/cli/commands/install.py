@@ -47,7 +47,6 @@ def _get_conanfile_path(path, cwd, py):
 
 def graph_compute(args, conan_api, strict=False, allow_error=False):
     cwd = os.getcwd()
-    lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     requires = [RecipeReference.loads(r) for r in args.requires] \
@@ -60,7 +59,7 @@ def graph_compute(args, conan_api, strict=False, allow_error=False):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = get_multiple_remotes(conan_api, args.remote)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=strict)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=strict)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
@@ -163,7 +162,7 @@ def install(conan_api, parser, *args):
 
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=not args.lockfile_no_strict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")

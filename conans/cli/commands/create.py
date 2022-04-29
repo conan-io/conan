@@ -13,6 +13,7 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.graph_lock import Lockfile
 from conans.util.files import chdir, mkdir
 
 
@@ -35,12 +36,7 @@ def create(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
-    if not lockfile and args.lockfile_out:
-        raise argparse.ArgumentError(lockfile, "Specify --lockfile with a valid file "
-                                               "if you use --lockfile-out or use 'conan lock create'"
-                                               " to create a new lockfile")
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -100,6 +96,11 @@ def create(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     if args.lockfile_out:
+        # TODO: Repeated pattern
+        if lockfile is None:
+            lockfile = Lockfile(deps_graph, args.lockfile_packages)
+        else:
+            lockfile.update_lock(deps_graph, args.lockfile_packages)
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)

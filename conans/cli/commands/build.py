@@ -8,6 +8,7 @@ from conans.cli.common import _add_common_install_arguments, _help_build_policie
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
+from conans.model.graph_lock import Lockfile
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -31,7 +32,7 @@ def build(conan_api, parser, *args):
     folder = os.path.dirname(path)
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, strict=not args.lockfile_no_strict)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
@@ -50,6 +51,11 @@ def build(conan_api, parser, *args):
     run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
     if args.lockfile_out:
+        # TODO: Repeated pattern
+        if lockfile is None:
+            lockfile = Lockfile(deps_graph, args.lockfile_packages)
+        else:
+            lockfile.update_lock(deps_graph, args.lockfile_packages)
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)
