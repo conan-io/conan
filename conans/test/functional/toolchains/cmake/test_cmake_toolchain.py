@@ -78,7 +78,7 @@ def test_cmake_user_presets_load():
     syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
     """
     t = TestClient()
-    t.run("new mylib/1.0 --template cmake_lib")
+    t.run("new -d name=mylib -d version=1.0 -f cmake_lib")
     t.run("create . -s:h build_type=Release")
     t.run("create . -s:h build_type=Debug")
 
@@ -271,8 +271,7 @@ def test_install_output_directories():
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
     assert not os.path.exists(os.path.join(p_folder, "lib"))
     b_folder = client.get_latest_pkg_layout(pref).build()
-    layout_folder = "cmake-build-release" if platform.system() != "Windows" else "build"
-    toolchain = client.load(os.path.join(b_folder, layout_folder, "build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join(b_folder, "build", "generators", "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 

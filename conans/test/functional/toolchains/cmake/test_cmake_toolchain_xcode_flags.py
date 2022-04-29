@@ -35,7 +35,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
     toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
@@ -83,7 +83,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generato
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("create . --profile:build=default --profile:host=host -tf None "
                "-c tools.cmake.cmaketoolchain:generator=Xcode")
@@ -118,7 +118,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
     toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
@@ -160,7 +160,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_ver
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
     toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
