@@ -387,4 +387,4 @@ def test_lockfile_input_not_specified():
     client.save({"conanfile.py": GenConanfile().with_name("foo").with_version("1.0")})
     client.run("lock create . --lockfile-out locks/conan.lock")
     client.run("create . --lockfile-out locks/conan.lock")
-    assert "Saving lockfile:" in client.out
+    assert "Generated lockfile:" in client.out
