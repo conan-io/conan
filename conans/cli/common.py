@@ -108,6 +108,7 @@ def add_lockfile_args(parser):
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
                         help="Lock package-id and package-revision information")
+    parser.add_argument("--lockfile-clean", action="store_true", help="remove unused")
 
 
 def get_profiles_from_args(conan_api, args):
@@ -151,6 +152,18 @@ def get_lockfile(lockfile_path, cwd, strict=False):
     graph_lock.strict = strict
     ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
     return graph_lock
+
+
+def save_lockfile_out(args, graph, lockfile, cwd):
+    if not args.lockfile_out:
+        return
+    if lockfile is None or args.lockfile_clean:
+        lockfile = Lockfile(graph, args.lockfile_packages)
+    else:
+        lockfile.update_lock(graph, args.lockfile_packages)
+    lockfile_out = make_abs_path(args.lockfile_out, cwd)
+    lockfile.save(lockfile_out)
+    ConanOutput().info(f"Generated lockfile: {lockfile_out}")
 
 
 def get_multiple_remotes(conan_api, remote_names=None):

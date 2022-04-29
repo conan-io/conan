@@ -116,7 +116,7 @@ def test_single_config_centralized(client_setup):
 
     # All good! We can get rid of the now unused pkgb/0.1 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgb/0.2" in app1_clean
     assert "pkgb/0.1" not in app1_clean
@@ -158,7 +158,7 @@ def test_single_config_centralized_out_range(client_setup):
 
     # All good! We can get rid of the now unused pkgb/1.0 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgb/0.1" in app1_clean
     assert "pkgb/1.0" not in app1_clean
@@ -203,7 +203,7 @@ def test_single_config_centralized_change_dep(client_setup):
 
     # All good! We can get rid of the now unused pkgb/1.0 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgj/0.1" in app1_clean
     assert "pkgb/0.2" in app1_clean
@@ -265,7 +265,7 @@ def test_multi_config_centralized(client_setup):
 
     # All good! We can get rid of the now unused pkgb/0.1 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_win.lock "
-          "--lockfile-out=app1_win.lock -s os=Windows --clean")
+          "--lockfile-out=app1_win.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_win.lock")
     assert "pkgawin/0.1" in app1_clean
     assert "pkgb/0.2" in app1_clean
@@ -273,7 +273,7 @@ def test_multi_config_centralized(client_setup):
     assert "pkgawin/0.2" not in app1_clean
     assert "pkganix/0.2" not in app1_clean
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_nix.lock "
-          "--lockfile-out=app1_nix.lock -s os=Linux --clean")
+          "--lockfile-out=app1_nix.lock -s os=Linux --lockfile-clean")
     app1_clean = c.load("app1_nix.lock")
     assert "pkganix/0.1" in app1_clean
     assert "pkgb/0.2" in app1_clean

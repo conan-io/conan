@@ -31,6 +31,18 @@ def test_conanfile_txt_deps_ranges(requires):
     assert "pkg/0.1" not in client.out
 
 
+@pytest.mark.parametrize("command", ["install", "create", "graph info", "export-pkg"])
+def test_lockfile_out(command):
+    # Check that lockfile out is generated for different commands
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
+    c.run("create dep")
+    c.run(f"{command} pkg --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "dep/0.1" in lock
+
+
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_ranges_transitive(requires):
     """
@@ -91,7 +103,7 @@ def test_conanfile_txt_strict(requires):
     assert "pkg/1.2" in lock
     assert "pkg/0.1" in lock  # both versions are locked now
     # clean legacy versions
-    client.run("lock create consumer/conanfile.txt --lockfile-out=conan.lock --clean")
+    client.run("lock create consumer/conanfile.txt --lockfile-out=conan.lock --lockfile-clean")
     lock = client.load("conan.lock")
     assert "pkg/1.2" in lock
     assert "pkg/0.1" not in lock

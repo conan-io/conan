@@ -1,7 +1,10 @@
+import os
+
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
     conan_subcommand
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import common_graph_args, graph_compute
+from conans.cli.common import save_lockfile_out
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
@@ -21,8 +24,6 @@ def lock_create(conan_api, parser, subparser, *args):
     Create a lockfile from a conanfile or a reference
     """
     common_graph_args(subparser)
-    subparser.add_argument("--clean", action="store_true", help="remove unused")
-
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -32,14 +33,8 @@ def lock_create(conan_api, parser, subparser, *args):
 
     deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
 
-    if lockfile is None or args.clean:
-        lockfile = Lockfile(deps_graph, args.lockfile_packages)
-    else:
-        lockfile.update_lock(deps_graph, args.lockfile_packages)
-
-    lockfile_out = make_abs_path(args.lockfile_out or "conan.lock")
-    lockfile.save(lockfile_out)
-    ConanOutput().info("Generated lockfile: %s" % lockfile_out)
+    args.lockfile_out = args.lockfile_out or "conan.lock"
+    save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
 
 
 @conan_subcommand()

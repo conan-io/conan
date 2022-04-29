@@ -116,7 +116,7 @@ def test_single_config_centralized(client_setup):
 
     # All good! We can get rid of the now unused pkgb/0.1 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgb/0.1#d03e920d532beeeb198cd886095bcca1" not in app1_clean
     assert "pkgb/0.1#bb12977c3353d7633b34d55a926fe58c" in app1_clean
@@ -167,7 +167,7 @@ def test_single_config_centralized_out_range(client_setup):
 
     # All good! We can get rid of the now unused pkgb/1.0 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgb/0.1#d03e920d532beeeb198cd886095bcca1" in app1_clean
     assert "pkgb/0.1#504bc7152c72b49c99a6f16733fb2ff6" not in app1_clean
@@ -212,7 +212,7 @@ def test_single_config_centralized_change_dep(client_setup):
 
     # All good! We can get rid of the now unused pkgb/1.0 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_b_integrated.lock "
-          "--lockfile-out=app1_clean.lock -s os=Windows --clean")
+          "--lockfile-out=app1_clean.lock -s os=Windows --lockfile-clean")
     app1_clean = c.load("app1_clean.lock")
     assert "pkgj/0.1" in app1_clean
     assert "pkgb/0.1" in app1_clean
@@ -276,9 +276,9 @@ def test_multi_config_centralized(client_setup):
 
     # All good! We can get rid of the now unused pkgb/0.1 version in the lockfile
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_win.lock "
-          "--lockfile-out=app1_win.lock -s os=Windows --clean")
+          "--lockfile-out=app1_win.lock -s os=Windows --lockfile-clean")
     c.run("lock create --requires=app1/0.1@ --lockfile=app1_nix.lock "
-          "--lockfile-out=app1_nix.lock -s os=Linux --clean")
+          "--lockfile-out=app1_nix.lock -s os=Linux --lockfile-clean")
 
     # Finally, merge the 2 clean lockfiles, for keeping just 1 for next iteration
     c.run("lock merge --lockfile=app1_win.lock --lockfile=app1_nix.lock "

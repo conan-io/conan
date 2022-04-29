@@ -1,19 +1,16 @@
-import argparse
 import os
 import shutil
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options
+    _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options, save_lockfile_out
 from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.graph_lock import Lockfile
 from conans.util.files import chdir, mkdir
 
 
@@ -46,6 +43,9 @@ def create(conan_api, parser, *args):
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
+    if lockfile:
+        # FIXME: We need to update build_requires too, not only ``requires``
+        lockfile.update_lock_export_ref(ref)
 
     out.highlight("\n-------- Input profiles ----------")
     out.info("Profile host:")
@@ -95,15 +95,7 @@ def create(conan_api, parser, *args):
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
-    if args.lockfile_out:
-        # TODO: Repeated pattern
-        if lockfile is None:
-            lockfile = Lockfile(deps_graph, args.lockfile_packages)
-        else:
-            lockfile.update_lock(deps_graph, args.lockfile_packages)
-        lockfile_out = make_abs_path(args.lockfile_out, cwd)
-        out.info(f"Saving lockfile: {lockfile_out}")
-        lockfile.save(lockfile_out)
+    save_lockfile_out(args, deps_graph, lockfile, cwd)
 
     if test_conanfile_path:
         _check_tested_reference_matches(deps_graph, ref, out)

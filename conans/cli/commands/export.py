@@ -1,10 +1,9 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS
-from conans.cli.commands import make_abs_path
+from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.common import get_lockfile, add_lockfile_args, add_reference_args
-from conans.model.graph_lock import Lockfile
+from conans.cli.common import get_lockfile, add_reference_args
+from conans.cli.output import ConanOutput
 
 
 def common_args_export(parser):
@@ -13,12 +12,16 @@ def common_args_export(parser):
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
-def export(conan_api, parser, *args, **kwargs):
+def export(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache
     """
     common_args_export(parser)
-    add_lockfile_args(parser)
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile.")
+    parser.add_argument("--lockfile-no-strict", action="store_true",
+                        help="Raise an error if some dependency is not found in lockfile")
+
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -28,11 +31,4 @@ def export(conan_api, parser, *args, **kwargs):
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
-
-    if args.lockfile_out:
-        if lockfile is None:
-            lockfile = Lockfile()
-            lockfile.update_lock_export_ref(ref)
-        # It was updated inside ``export()`` api
-        lockfile_out = make_abs_path(args.lockfile_out, cwd)
-        lockfile.save(lockfile_out)
+    ConanOutput().success("Exported recipe: {}".format(ref.repr_humantime()))

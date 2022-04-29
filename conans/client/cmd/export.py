@@ -80,9 +80,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             set_dirty(source_folder)
 
     scoped_output.info("Exported revision: %s" % revision)
-    if graph_lock is not None:
-        graph_lock.update_lock_export_ref(ref)
-
     return ref
 
 

@@ -1,14 +1,13 @@
 import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS
-from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
-    add_lockfile_args, add_reference_args, scope_options
+    add_lockfile_args, add_reference_args, scope_options, save_lockfile_out
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
-def export_pkg(conan_api, parser, *args, **kwargs):
+def export_pkg(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache
     """
@@ -45,7 +44,4 @@ def export_pkg(conan_api, parser, *args, **kwargs):
 
     conan_api.export.export_pkg(deps_graph, path)
 
-    if args.lockfile_out:
-
-        lockfile_out = make_abs_path(args.lockfile_out, cwd)
-        lockfile.save(lockfile_out)
+    save_lockfile_out(args, deps_graph, lockfile, cwd)
