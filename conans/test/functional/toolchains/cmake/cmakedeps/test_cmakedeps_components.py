@@ -192,8 +192,9 @@ def test_components_system_libs():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
+
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
@@ -249,8 +250,8 @@ def test_components_exelinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -303,8 +304,8 @@ def test_components_sharedlinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")

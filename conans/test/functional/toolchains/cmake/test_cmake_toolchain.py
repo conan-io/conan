@@ -5,6 +5,8 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
+from conan.tools.microsoft.visual import vcvars_command
+from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
@@ -225,10 +227,10 @@ def test_cmaketoolchain_no_warnings():
             requires = "dep/0.1"
         """)
     consumer = textwrap.dedent("""
+       cmake_minimum_required(VERSION 3.15)
        set(CMAKE_CXX_COMPILER_WORKS 1)
        set(CMAKE_CXX_ABI_COMPILED 1)
        project(MyHello CXX)
-       cmake_minimum_required(VERSION 3.15)
 
        find_package(dep CONFIG REQUIRED)
        """)
@@ -478,3 +480,39 @@ class TestAutoLinkPragma:
                      "test_package/conanfile.py": self.test_cf})
 
         client.run("create .")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_cmake_toolchain_runtime_types():
+    # everything works with the default cmake_minimum_required version 3.15 in the template
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("install . -s compiler.runtime=MTd -s build_type=Debug")
+    client.run("build .")
+
+    vcvars = vcvars_command(version="15", architecture="x64")
+    lib = os.path.join(client.current_folder, "build", "Debug", "hello.lib")
+    dumpbind_cmd = '{} && dumpbin /directives "{}"'.format(vcvars, lib)
+    client.run_command(dumpbind_cmd)
+    assert "LIBCMTD" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
+    client = TestClient(path_with_spaces=False)
+    # Setting an older cmake_minimum_required in the CMakeLists fails, will link
+    # against the default debug runtime (MDd->MSVCRTD), not against MTd->LIBCMTD
+    client.run("new hello/0.1 --template=cmake_lib")
+    replace_in_file(os.path.join(client.current_folder, "CMakeLists.txt"),
+                    'cmake_minimum_required(VERSION 3.15)',
+                    'cmake_minimum_required(VERSION 3.1)'
+                    , output=client.out)
+
+    client.run("install . -s compiler.runtime=MTd -s build_type=Debug")
+    client.run("build .")
+
+    vcvars = vcvars_command(version="15", architecture="x64")
+    lib = os.path.join(client.current_folder, "build", "Debug", "hello.lib")
+    dumpbind_cmd = '{} && dumpbin /directives "{}"'.format(vcvars, lib)
+    client.run_command(dumpbind_cmd)
+    assert "LIBCMTD" in client.out
