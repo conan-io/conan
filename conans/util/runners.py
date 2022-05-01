@@ -10,7 +10,7 @@ from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr
 from conans.util.files import rmdir
 from conans.util.log import logger
-
+import shutil
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
 
@@ -37,22 +37,34 @@ else:
         yield
 
 
+def _which_command(command):
+    if type(command) == str:
+        sub_commands = command.split(" ")
+        command_app = sub_commands[0]
+        which_app = shutil.which(command_app)
+        sub_commands[0] = "\"{}\"".format(which_app)
+        new_command = ' '.join(sub_commands)
+        return new_command
+    else:
+        command[0] = shutil.which(command[0])
+
+
 def version_runner(cmd, shell=False):
     # Used by build helpers like CMake and Meson and MSBuild to get the version
-    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=shell).communicate()
+    out, _ = subprocess.Popen(_which_command(cmd), stdout=subprocess.PIPE, shell=shell).communicate()
     return out
 
 
 def muted_runner(cmd, folder=None):
     # Used by tools/scm check_repo only (see if repo ok with status)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=folder)
+    process = subprocess.Popen(_which_command(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=folder)
     process.communicate()
     return process.returncode
 
 
 def input_runner(cmd, run_input, folder):
     # used in git excluded files from .gitignore
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+    p = subprocess.Popen(_which_command(cmd), stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                          stderr=subprocess.STDOUT, cwd=folder)
     out, _ = p.communicate(input=run_input)
     return out
@@ -60,7 +72,7 @@ def input_runner(cmd, run_input, folder):
 
 def detect_runner(command):
     # Running detect.py automatic detection of profile
-    proc = subprocess.Popen(command, shell=True, bufsize=1, universal_newlines=True,
+    proc = subprocess.Popen(_which_command(command), shell=True, bufsize=1, universal_newlines=True,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     output_buffer = []
@@ -85,7 +97,7 @@ def check_output_runner(cmd, stderr=None):
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
         command = '{} > "{}"'.format(cmd, tmp_file)
         logger.info("Calling command: {}".format(command))
-        process = subprocess.Popen(command, shell=True, stderr=stderr)
+        process = subprocess.Popen(_which_command(command), shell=True, stderr=stderr)
         stdout, stderr = process.communicate()
         logger.info("Return code: {}".format(int(process.returncode)))
 
