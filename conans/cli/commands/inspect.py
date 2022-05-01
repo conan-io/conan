@@ -9,7 +9,7 @@ def _inspect_json_formatter(data):
     return json.dumps(data, indent=4)
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": _inspect_json_formatter})
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": _inspect_json_formatter})
 def inspect(conan_api, parser, *args, **kwargs):
     """
     Returns the specified attribute/s of a conanfile
