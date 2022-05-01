@@ -1,3 +1,4 @@
+import copy
 import os
 import subprocess
 import sys
@@ -46,7 +47,9 @@ def _which_command(command):
         new_command = ' '.join(sub_commands)
         return new_command
     else:
-        command[0] = shutil.which(command[0])
+        new_command = copy.copy(command)
+        new_command[0] = shutil.which(new_command[0])
+        return new_command
 
 
 def version_runner(cmd, shell=False):
