@@ -10,7 +10,6 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
 from conans.errors import ConanException
@@ -64,7 +63,10 @@ class VSRuntimeBlock(Block):
             {% set genexpr.str = genexpr.str +
                                   '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
         {% endfor %}
-        set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
+        cmake_policy(GET CMP0091 POLICY_CMP0091)
+        if(NOT "${POLICY_CMP0091}" STREQUAL NEW)
+            message(FATAL_ERROR "The CMake policy CMP0091 must be NEW, but is '${POLICY_CMP0091}'")
+        endif()
         set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
         """)
 
