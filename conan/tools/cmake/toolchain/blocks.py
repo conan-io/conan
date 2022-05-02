@@ -691,37 +691,39 @@ class GenericSystemBlock(Block):
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_base = settings.get_safe("compiler.base")
+        toolset = None
         if compiler == "Visual Studio":
-            subs_toolset = settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
+            toolset = settings.get_safe("compiler.toolset")
         elif compiler == "intel" and compiler_base == "Visual Studio" and "Visual" in generator:
             # TODO: This intel toolset needs to be validated too
             compiler_version = settings.get_safe("compiler.version")
             if compiler_version:
                 compiler_version = compiler_version if "." in compiler_version else \
                     "%s.0" % compiler_version
-                return "Intel C++ Compiler " + compiler_version
+                toolset = "Intel C++ Compiler " + compiler_version
         elif compiler == "intel-cc":
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
-            subs_toolset = settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
-            compiler_version = str(settings.compiler.version)
-            compiler_update = str(settings.compiler.update)
-            if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
-                # The equivalent of compiler 19.26 is toolset 14.26
-                return "version=14.{}{}".format(compiler_version[-1], compiler_update)
-            else:
-                return msvc_version_to_toolset_version(compiler_version)
+            toolset = settings.get_safe("compiler.toolset")
+            if toolset is None:
+                compiler_version = str(settings.compiler.version)
+                compiler_update = str(settings.compiler.update)
+                if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
+                    # The equivalent of compiler 19.26 is toolset 14.26
+                    toolset = "version=14.{}{}".format(compiler_version[-1], compiler_update)
+                else:
+                    toolset = msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator:
-                    return "ClangCL"
+                    toolset = "ClangCL"
                 else:
                     raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
-        return None
+        toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
+        if toolset_arch is not None:
+            toolset_arch = "host={}".format(toolset_arch)
+            toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
+        return toolset
 
     def _get_generator_platform(self, generator):
         settings = self._conanfile.settings
