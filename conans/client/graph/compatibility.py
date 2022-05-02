@@ -98,8 +98,11 @@ class BinaryCompatibility:
 
         plugin_compatibles = self._compatibility(conanfile)
         compat_infos.extend(self._compatible_infos(conanfile, plugin_compatibles))
+        if not compat_infos:
+            return {}
 
         result = OrderedDict()
+        original_info = conanfile.info
         for c in compat_infos:
             conanfile.info = c
             conanfile.settings = c.settings
@@ -109,9 +112,9 @@ class BinaryCompatibility:
             if pid not in result and not c.invalid:
                 result[pid] = c
         # Restore the original state
-        conanfile.info = conanfile.original_info
-        conanfile.settings = conanfile.info.settings
-        conanfile.options = conanfile.info.options
+        conanfile.info = original_info
+        conanfile.settings = original_info.settings
+        conanfile.options = original_info.options
         return result
 
     @staticmethod
