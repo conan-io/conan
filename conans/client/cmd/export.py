@@ -141,7 +141,9 @@ def export_source(conanfile, destination_source_folder):
     output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     report_files_copied(copied, package_output)
-    _run_method(conanfile, "export_sources", destination_source_folder)
+    conanfile.folders.set_base_export_sources(destination_source_folder)
+    _run_method(conanfile, "export_sources")
+    conanfile.folders.set_base_export_sources(None)
 
 
 def export_recipe(conanfile, destination_folder):
@@ -169,17 +171,18 @@ def export_recipe(conanfile, destination_folder):
         copied.extend(tmp)
     report_files_copied(copied, package_output)
 
-    _run_method(conanfile, "export", destination_folder)
+    conanfile.folders.set_base_export(destination_folder)
+    _run_method(conanfile, "export")
+    conanfile.folders.set_base_export(None)
 
 
-def _run_method(conanfile, method, destination_folder):
+def _run_method(conanfile, method):
     export_method = getattr(conanfile, method, None)
     if export_method:
         if not callable(export_method):
             raise ConanException("conanfile '%s' must be a method" % method)
+
         conanfile.output.highlight("Calling %s()" % method)
-        folder_name = "%s_folder" % method
-        setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
         options = conanfile.options
         try:
@@ -192,4 +195,3 @@ def _run_method(conanfile, method, destination_folder):
         finally:
             conanfile.default_options = default_options
             conanfile.options = options
-            delattr(conanfile, folder_name)

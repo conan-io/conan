@@ -272,6 +272,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
         ret = loader.load_consumer(file_path)
         curdir = os.path.abspath(os.curdir)
         ret.folders.set_base_source(os.path.dirname(file_path))
+        ret.folders.set_base_export_sources(os.path.dirname(file_path))
         os.chdir(tmp_dir)
         try:
             ret.build()

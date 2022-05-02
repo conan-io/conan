@@ -48,6 +48,7 @@ def source(conan_api, parser, *args):
             conanfile.layout()
 
     conanfile.folders.set_base_source(folder)
+    conanfile.folders.set_base_export_sources(folder)
     conanfile.folders.set_base_build(None)
     conanfile.folders.set_base_package(None)
 

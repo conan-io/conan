@@ -1,12 +1,9 @@
 import unittest
 
 from bottle import request
-from parameterized.parameterized import parameterized
-import pytest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.env import get_env
-from conans.util.files import save
+
 
 conanfile = """
 from conan import ConanFile
@@ -53,14 +50,11 @@ class ReturnHandlerPlugin(object):
 
 class AuthorizeBearerTest(unittest.TestCase):
 
-    @parameterized.expand([(False, ), (True, )])
-    def test_basic(self, artifacts_properties):
+    def test_basic(self):
         auth = AuthorizationHeaderSpy()
         server = TestServer(plugins=[auth])
         servers = {"default": server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        if artifacts_properties:
-            save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . --user=lasote --channel=stable")
         errors = client.run("upload hello/0.1@lasote/stable -r default --only-recipe")

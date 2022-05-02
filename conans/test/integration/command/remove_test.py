@@ -240,10 +240,10 @@ def populated_client():
     {"remove": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
     {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
                                                       'fbar/1.1']},
+    {"remove": "foo/*@", "recipes": ['foo/1.0@user/channel', 'bar/1.1', 'fbar/1.1']},
     # These are errors
     {"remove": "foo", "error": True,
      "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
-    {"remove": "*/*@", "error": True},
     {"remove": "*#", "error": True},
     {"remove": "*/*#", "error": True},
 ])

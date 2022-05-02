@@ -1,11 +1,10 @@
 import copy
 
-import pytest
 
 from conan.api.conan_api import ConanAPIV2
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TurboTestClient
+from conans.test.utils.tools import TurboTestClient, TestClient
 
 
 def _pref_gen():
@@ -71,3 +70,13 @@ def test_get_package_revisions():
     with client.mocked_servers():
         sot = api.list.package_revisions(_pref, api.remotes.get("default"))
         assert sot == [pref3, pref2, pref1]
+
+
+def test_search_recipes_no_user_channel_only():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name foo --version 1.0 --user user --channel channel")
+    client.run("create . --name foo --version 1.0")
+    client.run("list recipes foo/1.0@")
+    assert "foo/1.0@user/channel" not in client.out
+    assert "foo/1.0" in client.out

@@ -146,11 +146,11 @@ class XcodeDeps(object):
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
             'frameworksdirs': " ".join('"{}"'.format(p) for p in cpp_info.frameworkdirs),
             'frameworks': " ".join("-framework {}".format(framework) for framework in cpp_info.frameworks),
-            'definitions': " ".join(cpp_info.defines),
-            'c_compiler_flags': " ".join(cpp_info.cflags),
-            'cxx_compiler_flags': " ".join(cpp_info.cxxflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags),
-            'exe_flags': " ".join(cpp_info.exelinkflags),
+            'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.defines),
+            'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cflags),
+            'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cxxflags),
+            'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.sharedlinkflags),
+            'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.exelinkflags),
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
         formatted_template = Template(self._vars_xconfig).render(**fields)

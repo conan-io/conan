@@ -19,7 +19,10 @@ class Git(object):
         try:
             # commit = self._run("rev-parse HEAD") For the whole repo
             # This rev-list knows to capture the last commit for the folder
-            commit = self._run('rev-list HEAD -n 1 -- "{}"'.format(self.folder))
+            # --full-history is needed to not avoid wrong commits:
+            # https://github.com/conan-io/conan/issues/10971
+            # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
+            commit = self._run('rev-list HEAD -n 1 --full-history -- "{}"'.format(self.folder))
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))

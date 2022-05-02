@@ -140,9 +140,10 @@ class RestApiTest(unittest.TestCase):
         ref2 = RecipeReference.loads(conan_name2)
         self._upload_recipe(ref2)
 
-        # Get the info about this RecipeReference
+        # Get the info about this ConanFileReference
         info = self.api.search_packages(ref1)
-        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(), info["1F23223EFDA"])
+        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(),
+                         ConanInfo.loads(info["1F23223EFDA"]["content"]).serialize_min())
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
