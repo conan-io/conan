@@ -108,6 +108,10 @@ class BinaryCompatibility:
             pid = c.package_id()
             if pid not in result and not c.invalid:
                 result[pid] = c
+        # Restore the original state
+        conanfile.info = conanfile.original_info
+        conanfile.settings = conanfile.info.settings
+        conanfile.options = conanfile.info.options
         return result
 
     @staticmethod
