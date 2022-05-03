@@ -74,6 +74,9 @@ class ListAPI:
             results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
         else:
             app = ConanApp(self.conan_api.cache_folder)
+            if ref.revision == "latest":
+                ref.revision = None
+                ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
             packages = app.remote_manager.search_packages(remote, ref)
             results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
         return results

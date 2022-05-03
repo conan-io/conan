@@ -141,8 +141,13 @@ class Pkg(ConanFile):
         client = TurboTestClient(default_server_user=True)
         conanfile = GenConanfile().with_settings("build_type")
         ref = RecipeReference.loads("pkg/0.1")
-        client.create(ref, conanfile=conanfile)
-        client.create(ref, args="-s build_type=Debug", conanfile=conanfile)
+        first_ref = client.create(ref, conanfile=conanfile)
+        client.upload_all(ref)
+        client.remove_all()
+
+        conanfile2 = str(conanfile) + " \n\n # new revision"
+        client.create(ref, conanfile=conanfile2)
+        client.create(ref, args="-s build_type=Debug", conanfile=conanfile2)
         client.upload_all(ref)
         client.remove_all()
 
@@ -154,6 +159,16 @@ class Pkg(ConanFile):
         client.run("download pkg/0.1#latest -p 'build_type=Release' -r default")
         client.run("list packages pkg/0.1#latest")
         assert "build_type=Debug" in client.out
+        assert "build_type=Release" in client.out
+
+        client.remove_all()
+        client.run("list packages pkg/0.1#latest -r default")
+        assert "build_type=Debug" in client.out
+        assert "build_type=Release" in client.out
+
+        client.remove_all()
+        client.run("list packages pkg/0.1#{} -r default".format(first_ref.ref.revision))
+        assert "build_type=Debug" not in client.out
         assert "build_type=Release" in client.out
 
     def test_download_package_argument(self):
