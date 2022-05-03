@@ -64,13 +64,13 @@ source_h = """#pragma once
   #define {{define_name}}_EXPORT
 #endif
 
-{{define_name}}_EXPORT void {{package_name}}();
+{{define_name}}_EXPORT void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
 """
 
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
 
-void {{package_name}}(){
+void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
     #ifdef NDEBUG
     std::cout << "{{name}}/{{version}}: Hello World Release!\n";
     #else
@@ -198,7 +198,7 @@ target_link_libraries(example {{name}}::{{name}})
 test_main = """#include "{{name}}.h"
 
 int main() {
-    {{package_name}}();
+    {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
 }
 """
 
