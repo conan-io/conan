@@ -170,8 +170,8 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
     client.run("create . --name=hello --version=0.1 {}".format(settings))
 
     consumer = textwrap.dedent("""
-        project(MyHello NONE)
         cmake_minimum_required(VERSION 3.15)
+        project(MyHello NONE)
 
         find_package(hello REQUIRED)
         """)
