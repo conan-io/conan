@@ -1,6 +1,7 @@
 import json
+import inspect as python_inspect
 
-from conans.cli.command import conan_command, COMMAND_GROUPS
+from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 
@@ -9,23 +10,30 @@ def _inspect_json_formatter(data):
     return json.dumps(data, indent=4)
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": _inspect_json_formatter})
-def inspect(conan_api, parser, *args, **kwargs):
+@conan_command(group=COMMAND_GROUPS['consumer'])
+def inspect(conan_api, parser, *args):
+    """
+    Inspect a conanfile.py to return the public fields
+    """
+
+
+@conan_subcommand(formatters={"json": _inspect_json_formatter})
+def inspect_path(conan_api, parser, subparser, *args, **kwargs):
     """
     Returns the specified attribute/s of a conanfile
     """
-    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
-    parser.add_argument("attribute", help="Attribute of the conanfile to read", nargs="+")
+    subparser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+
     args = parser.parse_args(*args)
     out = ConanOutput()
     conanfile = conan_api.graph.load_conanfile_class(args.path)
     ret = {}
-    for attr in args.attribute:
-        try:
-            value = getattr(conanfile, attr)
-        except AttributeError:
-            raise ConanException("The conanfile doesn't have a '{}' attribute".format(attr))
-        ret[attr] = value
-        out.writeln("{}: {}".format(attr, value))
 
-    return {"attributes": ret}
+    for name, value in python_inspect.getmembers(conanfile):
+        if name.startswith('_') or python_inspect.ismethod(value) \
+           or python_inspect.isfunction(value) or isinstance(value, property):
+            continue
+        ret[name] = value
+        out.writeln("{}: {}".format(name, value))
+
+    return ret
