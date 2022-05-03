@@ -40,7 +40,7 @@ def test_install_deploy():
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
     # I can totally build without errors with deployed
-    c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=mydeploy/conan_toolchain.cmake")
+    c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=mydeploy/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
     c.run_command("cmake --build . --config Release")
 
 

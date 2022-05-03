@@ -1,6 +1,7 @@
 import os
 import platform
 import textwrap
+from conans.test.utils.mocks import ConanFileMock
 
 import pytest
 
@@ -9,6 +10,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.tools.files import replace_in_file
 
 
 @pytest.fixture
@@ -67,19 +69,33 @@ def test_transitive_multi_windows(client):
                in client.load("libb-config.cmake")
         assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load("libb-release-x86_64-data.cmake")
 
-        client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
-        client.run_command('cmake --build . --config Debug')
-        client.run_command('cmake --build . --config Release')
+        if platform.system() == "Windows":
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+            client.run_command('cmake --build . --config Debug')
+            client.run_command('cmake --build . --config Release')
 
-        client.run_command('Debug\\example.exe')
-        assert "main: Debug!" in client.out
-        assert "MYVARliba: Debug" in client.out
-        assert "MYVARlibb: Debug" in client.out
+            client.run_command('Debug\\example.exe')
+            assert "main: Debug!" in client.out
+            assert "MYVARliba: Debug" in client.out
+            assert "MYVARlibb: Debug" in client.out
 
-        client.run_command('Release\\example.exe')
-        assert "main: Release!" in client.out
-        assert "MYVARliba: Release" in client.out
-        assert "MYVARlibb: Release" in client.out
+            client.run_command('Release\\example.exe')
+            assert "main: Release!" in client.out
+            assert "MYVARliba: Release" in client.out
+            assert "MYVARlibb: Release" in client.out
+        else:
+            # The CMakePresets IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
+            replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakePresets.json"),
+                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
+            for bt in ("Debug", "Release"):
+                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
+                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
+                client.run_command('cmake --build . --clean-first')
+
+                client.run_command('./example')
+                assert "main: {}!".format(bt) in client.out
+                assert "MYVARliba: {}".format(bt) in client.out
+                assert "MYVARlibb: {}".format(bt) in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -363,6 +379,6 @@ def test_system_dep():
 
     client.run("install consumer")
     if platform.system() != "Windows":
-        data = os.path.join("consumer/cmake-build-release/conan/mylib-release-x86_64-data.cmake")
+        data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents

@@ -43,7 +43,7 @@ def test_simple_cmake_mingw():
 @pytest.mark.tool("cmake")
 class Base(unittest.TestCase):
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(r"""
         from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
@@ -61,10 +61,10 @@ class Base(unittest.TestCase):
                 tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
                 tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
                 tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
-                tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions["MYDEFINE"] = "\"MYDEF_VALUE\""
                 tc.preprocessor_definitions["MYDEFINEINT"] = 42
-                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
-                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "\"MYDEF_DEBUG\""
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "\"MYDEF_RELEASE\""
                 tc.preprocessor_definitions.debug["MYDEFINEINT_CONFIG"] = 421
                 tc.preprocessor_definitions.release["MYDEFINEINT_CONFIG"] = 422
                 tc.generate()

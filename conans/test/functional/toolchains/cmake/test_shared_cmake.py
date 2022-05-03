@@ -48,7 +48,7 @@ def test_shared_cmake_toolchain_test_package():
 @pytest.fixture()
 def test_client_shared():
     client = TestClient()
-    client.run("new -d name=hello -d version=0.1 -f cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     test_conanfile = textwrap.dedent("""
                 import os
                 from conan import ConanFile
