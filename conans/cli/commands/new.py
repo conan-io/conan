@@ -44,24 +44,6 @@ def new(conan_api, parser, *args):
 
     try:
         template_files = conan_api.new.render(template_files, definitions)
-        # Saving the resulting files
-        output = ConanOutput()
-        cwd = os.getcwd()
-        # Making sure they don't overwrite existing files
-        for f, v in sorted(template_files.items()):
-            path = os.path.join(cwd, f)
-            if os.path.exists(path) and not args.force:
-                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
-            save(path, v)
-            output.success("File saved: %s" % f)
-
-        # copy non-templates
-        for f, v in sorted(non_template_files.items()):
-            path = os.path.join(cwd, f)
-            if os.path.exists(path) and not args.force:
-                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
-            shutil.copy2(v, path)
-            output.success("File saved: %s" % f)
     except exceptions.UndefinedError:
         def get_template_vars():
             template_vars = []
@@ -78,3 +60,22 @@ def new(conan_api, parser, *args):
         raise ConanException("Missing definitions for the template. "
                              "Required definitions are: {}"
                              .format(", ".join("'{}'".format(var) for var in get_template_vars())))
+
+    # Saving the resulting files
+    output = ConanOutput()
+    cwd = os.getcwd()
+    # Making sure they don't overwrite existing files
+    for f, v in sorted(template_files.items()):
+        path = os.path.join(cwd, f)
+        if os.path.exists(path) and not args.force:
+            raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+        save(path, v)
+        output.success("File saved: %s" % f)
+
+    # copy non-templates
+    for f, v in sorted(non_template_files.items()):
+        path = os.path.join(cwd, f)
+        if os.path.exists(path) and not args.force:
+            raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+        shutil.copy2(v, path)
+        output.success("File saved: %s" % f)
