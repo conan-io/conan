@@ -287,7 +287,7 @@ def _create_find_package_project(client):
             CMakeToolchain
             """),
         'CMakeLists.txt': textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8.12)
+            cmake_minimum_required(VERSION 3.15)
             project(executable CXX)
 
             find_package(libd)
