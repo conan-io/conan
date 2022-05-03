@@ -85,7 +85,7 @@ class TestNewCommandUserTemplate:
         save(os.path.join(path, "conanfile.py"), template1)
         save(os.path.join(path, "file.h"), "{{header}}")
 
-        client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=")
+        client.run(f"new mytemplate -d name=hello -d version=0.1")
         assert not os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
         client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=xxx -f")
