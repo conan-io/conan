@@ -605,7 +605,7 @@ class TestClient(object):
         source = RecipeReference.loads(source)
         target = target.split("/", 1)[1]
         self.run(f"new alias -d name={source.name} -d version={source.version} "
-                 f"-d target={target} -f")
+                 f"-d target={target} -d revision_mode=hash -f")
         user = f"--user={source.user}" if source.user else ""
         channel = f"--channel={source.channel}" if source.channel else ""
         self.run(f"export . {user} {channel}")
