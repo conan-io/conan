@@ -79,7 +79,7 @@ def test_vcvars_platform_x86():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"
