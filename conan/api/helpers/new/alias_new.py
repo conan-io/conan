@@ -5,7 +5,7 @@ class AliasConanfile(ConanFile):
     name = "{{name}}"
     {% if version %}version = "{{version}}"{%endif%}
     alias = "{{name}}/{{target}}"
-    revision_mode = "{{revision_mode}}"
+    revision_mode = "{{revision_mode|default('hash')}}"
 '''
 
 

@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from jinja2 import Environment, meta
+from jinja2 import Environment, meta, exceptions
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, Extender
 from conans.cli.output import ConanOutput
@@ -42,41 +42,39 @@ def new(conan_api, parser, *args):
     if not template_files and not non_template_files:
         raise ConanException("Template doesn't exist or not a folder: {}".format(args.template))
 
-    template_vars = []
-    for _, templ_str in template_files.items():
-        env = Environment()
-        ast = env.parse(templ_str)
-        template_vars.extend(meta.find_undeclared_variables(ast))
+    try:
+        template_files = conan_api.new.render(template_files, definitions)
+        # Saving the resulting files
+        output = ConanOutput()
+        cwd = os.getcwd()
+        # Making sure they don't overwrite existing files
+        for f, v in sorted(template_files.items()):
+            path = os.path.join(cwd, f)
+            if os.path.exists(path) and not args.force:
+                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+            save(path, v)
+            output.success("File saved: %s" % f)
 
-    injected_vars = {"conan_version", "package_name"}
-    template_vars = list(set(template_vars) - injected_vars)
-    missing_vars = list(set(template_vars) - set([var for var in definitions.keys()]))
+        # copy non-templates
+        for f, v in sorted(non_template_files.items()):
+            path = os.path.join(cwd, f)
+            if os.path.exists(path) and not args.force:
+                raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
+            shutil.copy2(v, path)
+            output.success("File saved: %s" % f)
+    except exceptions.UndefinedError:
+        def get_template_vars():
+            template_vars = []
+            for _, templ_str in template_files.items():
+                env = Environment()
+                ast = env.parse(templ_str)
+                template_vars.extend(meta.find_undeclared_variables(ast))
 
-    template_vars.sort()
-    missing_vars.sort()
+            injected_vars = {"conan_version", "package_name"}
+            template_vars = list(set(template_vars) - injected_vars)
+            template_vars.sort()
+            return template_vars
 
-    if missing_vars:
-        raise ConanException("Missing {} definitions. "
-                             "Required definitions are: {}".format(", ".join(missing_vars),
-                                                                   ", ".join(template_vars)))
-
-    template_files = conan_api.new.render(template_files, definitions)
-
-    # Saving the resulting files
-    output = ConanOutput()
-    cwd = os.getcwd()
-    # Making sure they don't overwrite existing files
-    for f, v in sorted(template_files.items()):
-        path = os.path.join(cwd, f)
-        if os.path.exists(path) and not args.force:
-            raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
-        save(path, v)
-        output.success("File saved: %s" % f)
-
-    # copy non-templates
-    for f, v in sorted(non_template_files.items()):
-        path = os.path.join(cwd, f)
-        if os.path.exists(path) and not args.force:
-            raise ConanException(f"File '{f}' already exists, and --force not defined, aborting")
-        shutil.copy2(v, path)
-        output.success("File saved: %s" % f)
+        raise ConanException("Missing definitions for the template. "
+                             "Required definitions are: {}"
+                             .format(", ".join("'{}'".format(var) for var in get_template_vars())))

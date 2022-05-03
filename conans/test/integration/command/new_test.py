@@ -39,14 +39,7 @@ class TestNewCommand:
     def test_new_missing_definitions(self):
         client = TestClient()
         client.run("new cmake_lib", assert_error=True)
-        assert "ERROR: Missing name, version definitions. " \
-               "Required definitions are: name, version" in client.out
-        client.run("new cmake_lib -d name=name", assert_error=True)
-        assert "ERROR: Missing version definitions. " \
-               "Required definitions are: name, version" in client.out
-        client.run("new cmake_lib -d version=version", assert_error=True)
-        assert "ERROR: Missing name definitions. " \
-               "Required definitions are: name, version" in client.out
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
 
 
 class TestNewCommandUserTemplate:
