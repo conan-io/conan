@@ -40,7 +40,7 @@ def test_transitive_py_requires_revisions():
     client.run("install consumer/conanfile.py")
     assert "conanfile.py: VAR=42!!!" in client.out
 
-    os.remove(os.path.join(client.current_folder, "conan.lock"))
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.py")
     assert "conanfile.py: VAR=123!!!" in client.out
 

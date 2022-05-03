@@ -33,7 +33,8 @@ def create(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
+                            partial=args.lockfile_partial)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 

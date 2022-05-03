@@ -18,8 +18,10 @@ def export_pkg(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
-    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    path = _get_conanfile_path(args.path, cwd, py=True)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
+                            partial=args.lockfile_partial)
+
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     ref = conan_api.export.export(path=path,

@@ -32,7 +32,7 @@ def test_transitive_py_requires():
     assert "dep/0.1@user/channel" in client.out
     assert "dep/0.2" not in client.out
 
-    os.remove(os.path.join(client.current_folder, "conan.lock"))
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.py")
     assert "dep/0.2@user/channel" in client.out
     assert "dep/0.1" not in client.out

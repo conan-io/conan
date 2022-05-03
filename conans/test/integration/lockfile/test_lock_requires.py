@@ -25,7 +25,7 @@ def test_conanfile_txt_deps_ranges(requires):
     assert "pkg/0.1@user/testing#" in client.out
     assert "pkg/0.2" not in client.out
 
-    os.remove(os.path.join(client.current_folder, "conan.lock"))
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.txt")
     assert "pkg/0.2@user/testing#" in client.out
     assert "pkg/0.1" not in client.out
@@ -65,7 +65,7 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
     assert "dep/0.1@user/testing#" in client.out
     assert "dep/0.2" not in client.out
 
-    os.remove(os.path.join(client.current_folder, "conan.lock"))
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.txt", assert_error=True)
     assert "dep/0.2@user/testing#" in client.out
     assert "dep/0.1" not in client.out
@@ -92,12 +92,12 @@ def test_conanfile_txt_strict(requires):
     client.run("install consumer/conanfile.txt", assert_error=True)
     assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
 
-    client.run("install consumer/conanfile.txt --lockfile-no-strict")
+    client.run("install consumer/conanfile.txt --lockfile-partial")
     assert "pkg/1.2@user/testing" in client.out
-    assert "pkg/1.2" not in client.load("conan.lock")
+    assert "pkg/1.2" not in client.load("consumer/conan.lock")
 
     # test it is possible to capture new changes too, when not strict, mutating the lockfile
-    client.run("install consumer/conanfile.txt --lockfile-no-strict --lockfile-out=conan.lock")
+    client.run("install consumer/conanfile.txt --lockfile-partial --lockfile-out=conan.lock")
     assert "pkg/1.2@user/testing" in client.out
     lock = client.load("conan.lock")
     assert "pkg/1.2" in lock
@@ -330,13 +330,13 @@ def test_partial_lockfile():
     c.run("create pkgb --lockfile=b.lock")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("install pkgc --lockfile=b.lock --lockfile-no-strict")
+    c.run("install pkgc --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("create pkgc  --lockfile=b.lock --lockfile-no-strict")
+    c.run("create pkgc  --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("create app --lockfile=b.lock --lockfile-no-strict")
+    c.run("create app --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
     c.run("create app --lockfile=b.lock", assert_error=True)

@@ -21,7 +21,7 @@ def test_user_overrides():
     assert "math/1.0" not in c.out
 
     c.run("lock add --requires=math/1.0 --requires=unrelated/2.0")
-    c.run("graph info game --lockfile-out=new.lock --lockfile-no-strict")
+    c.run("graph info game --lockfile=conan.lock --lockfile-out=new.lock --lockfile-partial")
     assert "math/1.0" in c.out
     assert "math/1.2" not in c.out
     # The resulting lockfile contains the full revision now
@@ -30,7 +30,7 @@ def test_user_overrides():
 
     # Repeat for 1.1
     c.run("lock add --requires=math/1.1 --requires=unrelated/2.0")
-    c.run("graph info game --lockfile-no-strict --lockfile-out=new.lock")
+    c.run("graph info game --lockfile=conan.lock --lockfile-partial --lockfile-out=new.lock")
     assert "math/1.1" in c.out
     assert "math/1.0" not in c.out
     # The resulting lockfile contains the full revision now
@@ -54,7 +54,7 @@ def test_user_build_overrides():
     assert "cmake/1.0" not in c.out
 
     c.run("lock add --build-requires=cmake/1.0")
-    c.run("graph info engine --lockfile-out=new.lock --lockfile-no-strict")
+    c.run("graph info engine --lockfile=conan.lock --lockfile-out=new.lock --lockfile-partial")
     assert "cmake/1.0" in c.out
     assert "cmake/1.2" not in c.out
     # The resulting lockfile contains the full revision now
@@ -63,7 +63,7 @@ def test_user_build_overrides():
 
     # Repeat for 1.1
     c.run("lock add --build-requires=cmake/1.1 --lockfile-out=conan.lock")
-    c.run("graph info engine --lockfile-out=new.lock --lockfile-no-strict")
+    c.run("graph info engine --lockfile=conan.lock --lockfile-out=new.lock --lockfile-partial")
     assert "cmake/1.1" in c.out
     assert "cmake/1.0" not in c.out
     # The resulting lockfile contains the full revision now

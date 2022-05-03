@@ -19,14 +19,15 @@ def export(conan_api, parser, *args):
     common_args_export(parser)
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
-    parser.add_argument("--lockfile-no-strict", action="store_true",
-                        help="Raise an error if some dependency is not found in lockfile")
+    parser.add_argument("--lockfile-partial", action="store_true",
+                        help="Do not raise an error if some dependency is not found in lockfile")
 
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, strict=not args.lockfile_no_strict)
-    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    path = _get_conanfile_path(args.path, cwd, py=True)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
+                            partial=args.lockfile_partial)
     ref = conan_api.export.export(path=path,
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,

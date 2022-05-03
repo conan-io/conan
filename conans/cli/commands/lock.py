@@ -3,8 +3,8 @@ import os
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
     conan_subcommand
 from conans.cli.commands import make_abs_path
-from conans.cli.commands.install import common_graph_args, graph_compute
-from conans.cli.common import save_lockfile_out
+from conans.cli.commands.install import common_graph_args, graph_compute, _get_conanfile_path
+from conans.cli.common import save_lockfile_out, get_lockfile
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
@@ -31,9 +31,14 @@ def lock_create(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=False)
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=True)
 
-    args.lockfile_out = args.lockfile_out or "conan.lock"
+    if args.lockfile_out is None:
+        cwd = os.getcwd()
+        path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+        lock_folder = os.path.dirname(path) if path else cwd
+        args.lockfile_out = os.path.join(lock_folder, "conan.lock")
+
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
 
 
@@ -43,7 +48,7 @@ def lock_merge(conan_api, parser, subparser, *args):
     Merge 2 or more lockfiles
     """
     subparser.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
                            help="Filename of the created lockfile")
 
     args = parser.parse_args(*args)
@@ -73,15 +78,13 @@ def lock_add(conan_api, parser, subparser, *args):
     subparser.add_argument('--python-requires', action="append",
                            help='Add python-requires to lockfile')
 
-    subparser.add_argument("--lockfile-out", action=OnceArgument,
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
                            help="Filename of the created lockfile")
     subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
     args = parser.parse_args(*args)
 
-    if args.lockfile:
-        lockfile = make_abs_path(args.lockfile)
-        lockfile = Lockfile.load(lockfile)
-    else:
+    lockfile = get_lockfile(args.lockfile, os.getcwd(), None, partial=True)
+    if lockfile is None:
         lockfile = Lockfile()  # create a new lockfile
     requires = [RecipeReference.loads(r) for r in args.requires] if args.requires else None
     build_requires = [RecipeReference.loads(r) for r in args.build_requires] \
@@ -91,6 +94,6 @@ def lock_add(conan_api, parser, subparser, *args):
 
     lockfile.add(requires=requires, build_requires=build_requires, python_requires=python_requires)
 
-    lockfile_out = make_abs_path(args.lockfile_out or LOCKFILE)
+    lockfile_out = make_abs_path(args.lockfile_out)
     lockfile.save(lockfile_out)
     ConanOutput().info("Generated lockfile: %s" % lockfile_out)

@@ -46,7 +46,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=not args.lockfile_no_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
     out.highlight("-------- Computing the build order ----------")
@@ -98,7 +98,7 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=not args.lockfile_no_strict,
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
                                          allow_error=True)
     if not args.format:
         print_graph_info(deps_graph, args.filter, args.package_filter)

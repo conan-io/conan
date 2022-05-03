@@ -23,7 +23,7 @@ def test_lock_packages(requires):
 
     client.run("lock create consumer/conanfile.txt --lockfile-packages")
     assert "pkg/0.1#" in client.out
-    lock = client.load("conan.lock")
+    lock = client.load("consumer/conan.lock")
     assert NO_SETTINGS_PACKAGE_ID in lock
 
     with environment_update({"MYVAR": "MYVALUE2"}):
@@ -35,7 +35,7 @@ def test_lock_packages(requires):
     assert prev in client.out
     assert prev2 not in client.out
 
-    os.remove(os.path.join(client.current_folder, "conan.lock"))
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.txt")
     assert prev2 in client.out
     assert prev not in client.out
