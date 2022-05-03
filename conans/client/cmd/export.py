@@ -98,7 +98,7 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
     else:
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1').strip()
+                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
