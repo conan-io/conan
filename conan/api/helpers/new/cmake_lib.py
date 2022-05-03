@@ -2,7 +2,7 @@ conanfile_sources_v2 = '''from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
+class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
 
@@ -64,13 +64,13 @@ source_h = """#pragma once
   #define {{define_name}}_EXPORT
 #endif
 
-{{define_name}}_EXPORT void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
+{{define_name}}_EXPORT void {{package_name}}();
 """
 
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
 
-void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
+void {{package_name}}(){
     #ifdef NDEBUG
     std::cout << "{{name}}/{{version}}: Hello World Release!\n";
     #else
@@ -164,7 +164,7 @@ from conan.tools.cmake import CMake, cmake_layout
 from conan.tools.build import cross_building
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeDeps", "CMakeToolchain"
 
@@ -198,7 +198,7 @@ target_link_libraries(example {{name}}::{{name}})
 test_main = """#include "{{name}}.h"
 
 int main() {
-    {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
+    {{package_name}}();
 }
 """
 
