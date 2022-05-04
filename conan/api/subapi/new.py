@@ -2,7 +2,7 @@ import fnmatch
 import os
 import re
 
-from jinja2 import Template
+from jinja2 import Template, StrictUndefined
 
 from conan.api.subapi import api_method
 from conans.util.files import load
@@ -90,8 +90,8 @@ class NewAPI:
         definitions["conan_version"] = __version__
         definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
         for k, v in template_files.items():
-            k = Template(k, keep_trailing_newline=True).render(**definitions)
-            v = Template(v, keep_trailing_newline=True).render(**definitions)
+            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
+            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
             if v:
                 result[k] = v
         return result
