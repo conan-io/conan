@@ -14,7 +14,13 @@ def new(conan_api, parser, *args):
     """
     Create a new recipe (with conanfile.py and other files) from a predefined template
     """
-    parser.add_argument("template", help="Template name, built-in predefined one or user one")
+    parser.add_argument("template", help="Template name, built-in predefined one or user one. "
+                        "You can use built-in templates: cmake_lib, cmake_exe, "
+                        "meson_lib, meson_exe, msbuild_lib, msbuild_exe, bazel_lib, bazel_exe, "
+                        "autotools_lib, autotools_exe. "
+                        "E.g. 'conan new cmake_lib -d name=hello -d version=0.1'. "
+                        "You can define your own templates too."
+                        )
     parser.add_argument("-d", "--define", action=Extender,
                         help="Define a template argument as key=value")
     parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if exists")
