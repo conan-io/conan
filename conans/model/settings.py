@@ -281,8 +281,15 @@ class Settings(object):
 
     @property
     def sha(self):
-        # FIXME: This should fail if trying to hash a not defined value (None not in range)
-        result = ["[settings]"]
+        # FIXME: Remove this function when refactored ConanInfo.package_id() method
+        return self.dumps()
+
+    def dumps(self):
+        """ produces a text string with lines containing a flattened version:
+        compiler.arch = XX
+        compiler.arch.speed = YY
+        """
+        result = []
         for (name, value) in self.values_list:
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
@@ -291,10 +298,3 @@ class Settings(object):
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
 
-    def dumps(self):
-        """ produces a text string with lines containine a flattened version:
-        compiler.arch = XX
-        compiler.arch.speed = YY
-        """
-        return "\n".join(["%s=%s" % (field, value)
-                          for (field, value) in self.values_list])
