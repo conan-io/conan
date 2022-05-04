@@ -4,7 +4,7 @@ conanfile_exe = '''from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
+class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "application"
@@ -56,7 +56,7 @@ from conan import ConanFile
 from conan.tools.build import cross_building
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):
