@@ -178,7 +178,16 @@ def conanfile_msvc():
 
 def test_toolset(conanfile_msvc):
     toolchain = CMakeToolchain(conanfile_msvc)
-    assert 'CMAKE_GENERATOR_TOOLSET "v143"' in toolchain.content
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143" CACHE STRING "" FORCE)' in toolchain.content
+    assert 'Visual Studio 17 2022' in toolchain.generator
+    assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_toolset_x64(conanfile_msvc):
+    # https://github.com/conan-io/conan/issues/11144
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_arch", "x64")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,host=x64" CACHE STRING "" FORCE)' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
