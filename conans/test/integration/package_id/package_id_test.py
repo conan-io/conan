@@ -117,7 +117,7 @@ def test_option_in():
     assert "fpic is an info.option!!!" in client.out
     assert "other is not an option!!!" in client.out
     assert "other is not an info.option!!!" in client.out
-    assert "ERROR: OPTIONS: 'self.options' access in 'package_id()' method is forbidden" in client.out
+    assert "ERROR: OPTIONS: option 'whatever' doesn't exist" in client.out
     assert "ERROR: INFO: option 'whatever' doesn't exist" in client.out
 
 
