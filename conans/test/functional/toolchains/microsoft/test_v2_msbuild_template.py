@@ -38,41 +38,27 @@ def test_msbuild_lib_template():
     # assert "hello/0.1: Hello World Release!" in client.out
 
 
-class TestDifferentVSVersions:
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("visual_studio", "17")
+def test_msbuild_lib_2022():
     # The template .vcxproj are MSBuildTools=15, so it won't work with older versions
+    # 2022 Must have installed the v141 toolset too
+    client = TestClient(path_with_spaces=False)
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
 
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-    @pytest.mark.tool("visual_studio", "17")
-    def test_msbuild_lib_2022(self):
-        # 2022 Must have installed the v141 toolset too
-        client = TestClient(path_with_spaces=False)
-        client.run("new msbuild_lib -d name=hello -d version=0.1")
+    # Create works
+    client.run("create . -s compiler.version=191 -c tools.microsoft.msbuild:vs_version=17")
+    assert "hello/0.1: Hello World Release!" in client.out
+    # This is the default compiler.version=191 in conftest
+    assert "Visual Studio 2022" in client.out
+    assert "hello/0.1: _MSC_VER191" in client.out
 
-        # Create works
-        client.run("create . -s compiler.version=191 -c tools.microsoft.msbuild:vs_version=17")
-        assert "hello/0.1: Hello World Release!" in client.out
-        # This is the default compiler.version=191 in conftest
-        assert "Visual Studio 2022" in client.out
-        assert "hello/0.1: _MSC_VER191" in client.out
-
-        # Create works
-        client.run("create . -s compiler.version=193")
-        assert "hello/0.1: Hello World Release!" in client.out
-        # This is the default compiler.version=191 in conftest
-        assert "Visual Studio 2022" in client.out
-        assert "hello/0.1: _MSC_VER193" in client.out
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-    @pytest.mark.tool("visual_studio", "15")
-    def test_msbuild_lib_2017(self):
-        client = TestClient(path_with_spaces=False)
-        client.run("new msbuild_lib -d name=hello -d version=0.1")
-        # Create works
-        client.run("create . -s compiler.version=191")
-        assert "hello/0.1: Hello World Release!" in client.out
-        # This is the default compiler.version=191 in conftest
-        assert "Visual Studio 2017" in client.out
-        assert "hello/0.1: _MSC_VER191" in client.out
+    # Create works
+    client.run("create . -s compiler.version=193")
+    assert "hello/0.1: Hello World Release!" in client.out
+    # This is the default compiler.version=191 in conftest
+    assert "Visual Studio 2022" in client.out
+    assert "hello/0.1: _MSC_VER193" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
