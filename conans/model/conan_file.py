@@ -27,13 +27,11 @@ class ConanFile:
     homepage = None
 
     build_policy = None
-    short_paths = False
     exports = None
     exports_sources = None
     generators = []
     revision_mode = "hash"
 
-    develop = False
 
     # Settings and Options
     settings = None
