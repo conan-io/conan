@@ -18,7 +18,7 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.dumps())
+        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -31,7 +31,7 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.dumps())
+        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -43,7 +43,7 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.dumps())
+        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -83,7 +83,7 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.dumps())
+        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
         self.assertEqual("os=Windows", settings.dumps())

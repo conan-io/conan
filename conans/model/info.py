@@ -424,8 +424,11 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        result = [self.settings.sha,
-                  "[options]"]
+        result = ["[settings]"]
+        settings_dumps = self.settings.dumps()
+        if settings_dumps:
+            result.append(settings_dumps)
+        result.append("[options]")
         options_dumps = self.options.dumps()
         if options_dumps:
             result.append(options_dumps)
