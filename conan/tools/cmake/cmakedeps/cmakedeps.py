@@ -31,6 +31,9 @@ class CMakeDeps(object):
         self.check_components_exist = False
 
     def generate(self):
+        """
+        This method will save the generated files to the conanfile.generators_folder
+        """
         # FIXME: Remove this in 2.0
         if not hasattr(self._conanfile, "settings_build") and \
                       (self.build_context_activated or self.build_context_build_modules or
