@@ -56,6 +56,7 @@ class _LockRequires:
             self._requires.setdefault(ref, {}).update(package_ids)
         else:
             self._requires.setdefault(ref, None)  # To keep previous packgae_id: prev if exists
+        self.sort()
 
     def insert(self, ref):
         self._requires[ref] = None
@@ -85,7 +86,7 @@ class Lockfile(object):
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self.alias = {}  # TODO: Alias locking needs to be tested more
-        self.strict = False
+        self.partial = False
 
         if deps_graph is None:
             return
@@ -206,7 +207,7 @@ class Lockfile(object):
                     require.ref = m
                     break
             else:
-                if self.strict:
+                if not self.partial:
                     raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
             alias = require.alias
@@ -219,10 +220,10 @@ class Lockfile(object):
                         require.ref = r
                         break
                 else:
-                    if self.strict:
+                    if not self.partial:
                         raise ConanException(f"Requirement '{ref}' not in lockfile")
             else:
-                if ref not in locked_refs and self.strict:
+                if ref not in locked_refs and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require):
