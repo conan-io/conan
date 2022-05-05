@@ -402,28 +402,6 @@ class ConanInfo(object):
         return result
 
     def dumps(self):
-        def indent(text):
-            if not text:
-                return ""
-            return '\n'.join("    " + line for line in text.splitlines())
-        result = list()
-
-        result.append("[settings]")
-        result.append(indent(self.settings.dumps()))
-        result.append("\n[requires]")
-        result.append(indent(self.requires.dumps()))
-        result.append("\n[options]")
-        result.append(indent(self.options.dumps()))
-        return '\n'.join(result) + "\n"
-
-    def clone(self):
-        q = self.copy()
-        return q
-
-    def package_id(self):
-        """ The package_id of a conans is the sha1 of its specific requirements,
-        options and settings
-        """
         result = ["[settings]"]
         settings_dumps = self.settings.dumps()
         if settings_dumps:
@@ -443,9 +421,18 @@ class ConanInfo(object):
             result.append("[build_requires]")
             result.append(self.build_requires.dumps())
         if hasattr(self, "conf"):
-            result.append(self.conf.sha)
-        result.append("")  # Append endline so file ends with LF
-        text = '\n'.join(result)
+            result.append(self.conf.dumps())
+        return '\n'.join(result)
+
+    def clone(self):
+        q = self.copy()
+        return q
+
+    def package_id(self):
+        """ The package_id of a conans is the sha1 of its specific requirements,
+        options and settings
+        """
+        text = self.dumps()
         package_id = sha1(text.encode())
         try:
             self.options.validate()
