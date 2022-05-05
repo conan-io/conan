@@ -10,7 +10,7 @@ def bad_value_msg(name, value, value_range):
               '#error-invalid-setting"'
 
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
-            % (value, name, sorted(value_range), tip))
+            % (value, name, [v for v in value_range], tip))
 
 
 def undefined_field(name, field, fields=None, value=None):
@@ -20,14 +20,10 @@ def undefined_field(name, field, fields=None, value=None):
     return ConanException("\n".join(result))
 
 
-def undefined_value(name):
-    return ConanException("'%s' value not defined" % name)
-
-
 class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
-    - List ["None", "ANY"] to accept None or any value
+    - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
@@ -37,11 +33,11 @@ class SettingsItem(object):
             self._definition = {}
             # recursive
             for k, v in definition.items():
-                k = str(k)
+                k = str(k) if k != "None" else None
                 self._definition[k] = Settings(v, name, k)
         else:
             # list or tuple of possible values, it can include "ANY"
-            self._definition = [str(v) for v in definition]
+            self._definition = [str(v) if v != "None" else None for v in definition]
 
     def __contains__(self, value):
         return value in (self._value or "")
@@ -111,7 +107,7 @@ class SettingsItem(object):
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
-            raise undefined_value(self._name)
+            raise ConanException("'%s' value not defined" % self._name)
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -153,22 +149,20 @@ class SettingsItem(object):
         return result
 
     def validate(self):
-        if self._value is None and "None" not in self._definition:
-            raise undefined_value(self._name)
+        if self._value is None and None not in self._definition:
+            raise ConanException("'%s' value not defined" % self._name)
         if isinstance(self._definition, dict):
-            key = "None" if self._value is None else self._value
-            self._definition[key].validate()
+            self._definition[self._value].validate()
 
 
 class Settings(object):
-    def __init__(self, definition=None, name="settings", parent_value=None):
-        # FIXME: Avoid management of "None" as string if possible
-        if parent_value == "None" and definition:
+    def __init__(self, definition=None, name="settings", parent_value="settings"):
+        if parent_value is None and definition:
             raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
-        self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
+        self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
     def serialize(self):
@@ -181,8 +175,8 @@ class Settings(object):
                 tmp = getattr(tmp, prop, None)
         except ConanException:
             return default
-        if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
-            return str(tmp)
+        if tmp is not None and tmp.value is not None:  # In case of subsettings is None
+            return tmp.value
         return default
 
     def copy(self):
@@ -292,9 +286,8 @@ class Settings(object):
         result = []
         for (name, value) in self.values_list:
             # It is important to discard None values, so migrations in settings can be done
-            # without breaking all existing packages SHAs, by adding a first "None" option
+            # without breaking all existing packages SHAs, by adding a first None option
             # that doesn't change the final sha
-            if value != "None":
+            if value is not None:
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
-

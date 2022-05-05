@@ -1,7 +1,11 @@
 import unittest
 
 from conans.errors import ConanException
-from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
+from conans.model.settings import Settings, bad_value_msg, undefined_field
+
+
+def undefined_value(v):
+    return "'%s' value not defined" % v
 
 
 class SettingsLoadsTest(unittest.TestCase):
@@ -14,11 +18,6 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.validate()
         self.assertTrue(settings.os == None)
         self.assertEqual("", settings.dumps())
-        settings.os = "None"
-        self.assertEqual(settings.sha, Settings.loads("").sha)
-        settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -28,10 +27,10 @@ class SettingsLoadsTest(unittest.TestCase):
         settings = Settings.loads(yml)
         with self.assertRaisesRegex(ConanException, "'settings.os' value not defined"):
             settings.validate()  # Raise exception if unset
-        settings.os = "None"
+        settings.os = "some-os"
         settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
+        self.assertTrue(settings.os == "some-os")
+        self.assertIn("os=some-os", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -43,7 +42,7 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
+        self.assertIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -79,11 +78,6 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.validate()
         self.assertTrue(settings.os == None)
         self.assertEqual("", settings.dumps())
-        settings.os = "None"
-        self.assertEqual(settings.sha, Settings.loads("").sha)
-        settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
         self.assertEqual("os=Windows", settings.dumps())
@@ -248,7 +242,8 @@ os: [Windows, Linux]
         self.sut.constrained(s2)
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler
-        self.assertEqual(str(cm.exception), str(undefined_field("settings", "compiler", ["os"])))
+        self.assertEqual(str(cm.exception),
+                         str(undefined_field("settings", "compiler", ["os"], "settings")))
         self.sut.os = "Windows"
         self.sut.os = "Linux"
 
@@ -257,7 +252,7 @@ os: [Windows, Linux]
         with self.assertRaises(ConanException) as cm:
             self.sut.constrained(s2)
         self.assertEqual(str(cm.exception),
-                         str(undefined_field("settings", "os2", ["compiler", "os"])))
+                         str(undefined_field("settings", "os2", ["compiler", "os"], "settings")))
 
     def test_constraint6(self):
         s2 = {"os", "compiler"}
