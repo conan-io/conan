@@ -65,7 +65,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def is_host_windows(self):
-        return self.conanfile.settings.get_safe("os") == "Windows"
+        # to account for all WindowsStore, WindowsCE and Windows OS in settings
+        return "Windows" in self.conanfile.settings.get_safe("os", "")
 
     @property
     def template(self):
