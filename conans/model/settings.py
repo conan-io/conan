@@ -4,13 +4,10 @@ from conans.errors import ConanException
 
 
 def bad_value_msg(name, value, value_range):
-    tip = ""
-    if "settings" in name:
-        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html' \
-              '#error-invalid-setting"'
-
-    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
-            % (value, name, [v for v in value_range], tip))
+    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
+            'Read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
+            # value range can be either a list or a dict, we only want to list the keys
+            % (value, name, [v for v in value_range]))
 
 
 def undefined_field(name, field, fields=None, value=None):
@@ -33,6 +30,7 @@ class SettingsItem(object):
             self._definition = {}
             # recursive
             for k, v in definition.items():
+                # None string from yaml definition maps to python None, means not-defined value
                 k = str(k) if k != "None" else None
                 self._definition[k] = Settings(v, name, k)
         else:
@@ -201,8 +199,7 @@ class Settings(object):
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
     def validate(self):
-        for field in self.fields:
-            child = self._data[field]
+        for child in self._data.values():
             child.validate()
 
     @property
@@ -235,6 +232,7 @@ class Settings(object):
 
     @property
     def values_list(self):
+        # TODO: make it private, leave .items accessor only
         result = []
         for field in self.fields:
             config_item = self._data[field]
