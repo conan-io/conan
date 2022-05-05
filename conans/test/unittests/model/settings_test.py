@@ -271,22 +271,19 @@ os: [Windows, Linux]
             self.sut.validate()
 
         self.sut.compiler = "gcc"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch = "x86"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch.speed"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch.speed = "A"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "4.8"
-        with self.assertRaisesRegex(ConanException, str(undefined_value("settings.os"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.os = "Windows"
@@ -300,13 +297,11 @@ os: [Windows, Linux]
     def test_validate2(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.runtime"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.runtime = "MD"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "10"
