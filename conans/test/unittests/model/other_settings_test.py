@@ -216,8 +216,6 @@ class SayConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("create . -s os=ChromeOS --build missing", assert_error=True)
-        print(client.out
-        )
         assert "ERROR: Invalid setting 'ChromeOS' is not a valid 'settings.os' value." in client.out
         assert "Possible values are ['Windows', 'WindowsStore', 'WindowsCE', 'Linux'" in client.out
 
