@@ -152,6 +152,14 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
+    def get_definition(self):
+        if isinstance(self._definition, list):
+            return [e if e != 'None' else None for e in self.values_range]
+        ret = {}
+        for key, value in self._definition.items():
+            ret[key] = value.get_definition()
+        return ret
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value="settings"):
@@ -284,3 +292,12 @@ class Settings(object):
             if value is not None:
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
+
+    def get_definition(self):
+        """Check the range of values of the definition of a setting. e.g:
+           get_definition_values("compiler.gcc.version") """
+
+        ret = {}
+        for key, element in self._data.items():
+            ret[key] = element.get_definition()
+        return ret

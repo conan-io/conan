@@ -92,7 +92,8 @@ class CustomConfigurationTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-release.cmake")))
 
-            self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            self.client.run_command('cmake .. -G "Visual Studio 15 Win64" --loglevel=DEBUG')
+            self.assertIn("Found DLL and STATIC", self.client.out)
             self.client.run_command('cmake --build . --config Release')
             self.client.run_command(r"Release\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)

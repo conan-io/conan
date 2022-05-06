@@ -148,9 +148,10 @@ class TestDefaultCompat:
         build_type = "Release"
         arch = "x86_64"
         compiler = "msvc"
-        version = "191"
+        version = "193"  # This is latest
         cppstd = "14"
         runtime = "dynamic"
+
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
@@ -182,7 +183,7 @@ class TestDefaultCompat:
         build_type = "Release"
         arch = "x86_64"
         compiler = "msvc"
-        version = "191"
+        version = "193"
         cppstd = "14"
         runtime = "dynamic"
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
@@ -195,8 +196,43 @@ class TestDefaultCompat:
               f"-s compiler.version={version} -s compiler.cppstd=17 "
               f"-s compiler.runtime={runtime}")
         package_id2 = c.created_package_id("app/1.0")
-        assert package_id1 == package_id2  # It does not depend on package_id
+        assert package_id1 == package_id2  # It does not depend on 'compiler.cppstd'
 
         c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
+               f"Using compatible package '{package_id1}'"
+
+    def test_default_cppstd_compatibility(self):
+        c = TestClient()
+        save(c.cache.default_profile_path, "")
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "mylib"
+                version = "1.0"
+                package_type = "library"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                settings = "os", "arch", "compiler", "build_type"
+            """)
+        c.save({"conanfile.py": conanfile})
+        os_ = "Windows"
+        build_type = "Release"
+        arch = "x86_64"
+        compiler = "msvc"
+        version = "191"
+        cppstd = "17"
+        runtime = "dynamic"
+        c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
+              f"-s compiler={compiler} "
+              f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
+              f"-s compiler.runtime={runtime}")
+        package_id1 = c.created_package_id("mylib/1.0")
+
+        # Try to install with cppstd 14, it will find cppstd 17 as compatible
+        c.run(f"install --requires=mylib/1.0@ -s os={os_} -s arch={arch} -s build_type={build_type} "
+              f"-s compiler={compiler} "
+              f"-s compiler.version={version} -s compiler.cppstd=14 "
+              f"-s compiler.runtime={runtime}")
+        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
