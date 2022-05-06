@@ -107,3 +107,4 @@ cacert.pem
 !conans/client/build
 !conan/tools/build
 !conans/test/unittests/client/build
+!conans/test/unittests/tools/build
