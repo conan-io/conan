@@ -51,16 +51,14 @@ class _LockRequires:
     def add(self, ref, package_ids=None):
         # In case we have an existing, incomplete thing
         pop_ref = RecipeReference.loads(str(ref))
-        self._requires.pop(pop_ref, None)
-        if package_ids is not None:
-            self._requires.setdefault(ref, {}).update(package_ids)
-        else:
-            self._requires.setdefault(ref, None)  # To keep previous packgae_id: prev if exists
-        self.sort()
-
-    def insert(self, ref):
-        self._requires[ref] = None
-        self._requires.move_to_end(ref, last=False)
+        self._requires.pop(pop_ref, None)  # Partial cannot have package_ids
+        old_package_ids = self._requires.pop(ref, None)
+        if old_package_ids is not None:
+            if package_ids is not None:
+                package_ids = old_package_ids.update(package_ids)
+            else:
+                package_ids = old_package_ids
+        self._requires[ref] = package_ids
 
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
@@ -146,15 +144,23 @@ class Lockfile(object):
         self._python_requires.merge(other._python_requires)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
+        """ adding new things manually will trigger the sort() of the locked list, so lockfiles
+        alwasys keep the ordered lists. This means that for some especial edge cases it might
+        be necessary to allow removing from a lockfile, for example to test an older version
+        than the one locked (in general adding works better for moving forward to newer versions)
+        """
         if requires:
             for r in requires:
                 self._requires.add(r)
+            self._requires.sort()
         if build_requires:
             for r in build_requires:
                 self._build_requires.add(r)
+            self._build_requires.sort()
         if python_requires:
             for r in python_requires:
                 self._python_requires.add(r)
+            self._python_requires.sort()
 
     @staticmethod
     def deserialize(data):
@@ -229,13 +235,3 @@ class Lockfile(object):
     def resolve_locked_pyrequires(self, require):
         locked_refs = self._python_requires.refs()  # CHANGE
         self._resolve(require, locked_refs)
-
-    def update_lock_export_ref(self, ref):
-        """ when the recipe is exported, it will complete the missing RREV, otherwise it should
-        match the existing RREV
-        """
-        # Filter existing matching
-        if ref not in self._requires:
-            # It is inserted in the first position, because that will result in prioritization
-            # That includes testing previous versions in a version range
-            self._requires.insert(ref)

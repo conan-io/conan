@@ -341,3 +341,11 @@ def test_partial_lockfile():
     assert "pkga/0.2" not in c.out
     c.run("create app --lockfile=b.lock", assert_error=True)
     assert "ERROR: Requirement 'pkgc/[*]' not in lockfile" in c.out
+
+
+def test_ux_defaults():
+    # Make sure the when explicit ``--lockfile`` argument, the file must exist, even if is conan.lock
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    c.run("install . --lockfile=conan.lock", assert_error=True)
+    assert "ERROR: Lockfile doesn't exist" in c.out
