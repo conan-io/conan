@@ -25,8 +25,8 @@ class SettingsTest(unittest.TestCase):
 
     def test_wrong_settings(self):
         settings = """os:
-    None:
-        subsystem: [None, msys]
+    null:
+        subsystem: [null, msys]
 """
         client = TestClient()
         save(client.cache.settings_path, settings)
@@ -37,7 +37,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing", assert_error=True)
-        self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
+        self.assertIn("ERROR: settings.yml: null setting can't have subsettings", client.out)
 
     @pytest.mark.xfail(reason="Working in the PackageID broke this")
     def test_custom_compiler_preprocessor(self):

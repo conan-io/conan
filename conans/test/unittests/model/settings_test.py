@@ -11,7 +11,7 @@ def undefined_value(v):
 class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_value(self):
-        yml = "os: [None, Windows]"
+        yml = "os: [null, Windows]"
         settings = Settings.loads(yml)
         settings.validate()
         self.assertTrue(settings.os == None)
@@ -34,7 +34,7 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual("os=Windows", settings.dumps())
 
     def test_none_any(self):
-        yml = "os: [None, ANY]"
+        yml = "os: [null, ANY]"
         settings = Settings.loads(yml)
         settings.validate()
         settings.os = "None"
@@ -66,9 +66,9 @@ class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_subsetting(self):
         yml = """os:
-    None:
+    null:
     Windows:
-        subsystem: [None, cygwin]
+        subsystem: [null, cygwin]
 """
         settings = Settings.loads(yml)
         settings.validate()
@@ -83,12 +83,12 @@ class SettingsLoadsTest(unittest.TestCase):
 
     def test_none__sub_subsetting(self):
         yml = """os:
-    None:
-        subsystem: [None, cygwin]
+    null:
+        subsystem: [null, cygwin]
     Windows:
 """
         with self.assertRaisesRegex(ConanException,
-                                   "settings.yml: None setting can't have subsettings"):
+                                    "settings.yml: null setting can't have subsettings"):
             Settings.loads(yml)
 
 
