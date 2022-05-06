@@ -182,7 +182,7 @@ class CMake(object):
         :param build_type: Use it only to override the value defined in the ``settings.build_type``.
                            It can fail if the build is single configuration (e.g. Unix Makefiles), as
                            in that case the build type must be specified at configure time, not build
-                           type.
+                           time.
         :param target: Name of the build target to run, by default ``RUN_TESTS`` or ``test``
         :param cli_args: Same as above ``build()``
         :param build_tool_args: Same as above ``build()``
