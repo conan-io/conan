@@ -352,7 +352,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[requires]\n    hello/0.1\n", conaninfo)
+        self.assertIn("[requires]\nhello/0.1\n", conaninfo)
 
     @pytest.mark.xfail(reason="--json output has been disabled")
     def test_compoents_json_output(self):
