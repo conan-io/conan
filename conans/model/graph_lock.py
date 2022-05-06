@@ -51,14 +51,13 @@ class _LockRequires:
     def add(self, ref, package_ids=None):
         # In case we have an existing, incomplete thing
         pop_ref = RecipeReference.loads(str(ref))
-        self._requires.pop(pop_ref, None)
+        old_package_ids = self._requires.pop(pop_ref, None)
         if package_ids is not None:
             self._requires.setdefault(ref, {}).update(package_ids)
         else:
             self._requires.setdefault(ref, None)  # To keep previous packgae_id: prev if exists
-        # When we are adding something manually to a lockfile, we want to prioritize it
-        # so we make it the first element in the list
-        self._requires.move_to_end(ref, last=False)
+        # Things are always sorted in a lockfile
+        self.sort()
 
     def insert(self, ref):
         self._requires[ref] = None
@@ -234,13 +233,3 @@ class Lockfile(object):
     def resolve_locked_pyrequires(self, require):
         locked_refs = self._python_requires.refs()  # CHANGE
         self._resolve(require, locked_refs)
-
-    def update_lock_export_ref(self, ref):
-        """ when the recipe is exported, it will complete the missing RREV, otherwise it should
-        match the existing RREV
-        """
-        # Filter existing matching
-        if ref not in self._requires:
-            # It is inserted in the first position, because that will result in prioritization
-            # That includes testing previous versions in a version range
-            self._requires.insert(ref)

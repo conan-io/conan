@@ -46,7 +46,7 @@ def create(conan_api, parser, *args):
                                   lockfile=lockfile)
     if lockfile:
         # FIXME: We need to update build_requires too, not only ``requires``
-        lockfile.update_lock_export_ref(ref)
+        lockfile.add(requires=[ref])
 
     out.highlight("\n-------- Input profiles ----------")
     out.info("Profile host:")

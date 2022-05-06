@@ -170,8 +170,36 @@ def test_add_multiple_revisions():
     assert ["math/1.0#rev2", "math/1.0#rev1"] == new_lock["requires"]
     c.run("lock add --requires=math/1.0#rev0")
     new_lock = json.loads(c.load("conan.lock"))
-    assert ["math/1.0#rev0", "math/1.0#rev2", "math/1.0#rev1"] == new_lock["requires"]
+    assert ['math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == new_lock["requires"]
     c.run("lock add --requires=math/1.0#revx%0.0")
     new_lock = json.loads(c.load("conan.lock"))
-    assert ["math/1.0#revx%0.0", "math/1.0#rev0", "math/1.0#rev2", "math/1.0#rev1"] == \
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0']== \
            new_lock["requires"]
+
+    c.save({"conanfile.txt": ""})
+    c.run("install . --lockfile=conan.lock")  # Just check that it doesn't crash
+    c.run("install . --lockfile=conan.lock --lockfile-out=new.lock")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == \
+           new_lock["requires"]
+
+    # add without revision at all
+    # It is not that this makes a lot of sense, but it is up to the user, the important thing
+    # is that it doesn't crash
+    c.run("lock add --requires=math/1.0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0',  'math/1.0'] == \
+           new_lock["requires"]
+
+    c.save({"conanfile.txt": "[requires]\nmath/1.0",
+            "math/conanfile.py": GenConanfile("math", "1.0")})
+    c.run("create math")
+    rev = c.exported_recipe_revision()
+    # Create a new lockfile, wipe the previous
+    c.run(f"lock add --lockfile=None --requires=math/1.0#{rev}")
+    print(c.out)
+    c.run("install . --lockfile=conan.lock --lockfile-out=conan.lock")
+
+    assert f" math/1.0#{rev} - Cache" in c.out
+    print(c.load("conan.lock"))
+
