@@ -402,6 +402,12 @@ class ConanInfo(object):
         return result
 
     def dumps(self):
+        """
+        Get all the information contained in settings, options, requires,
+        python_requires, build_requires and conf.
+        :return: `str` with the result of joining all the information, e.g.,
+            `"[settings]\nos=Windows\n[options]\n[requires]\n"`
+        """
         result = ["[settings]"]
         settings_dumps = self.settings.dumps()
         if settings_dumps:
@@ -422,6 +428,7 @@ class ConanInfo(object):
             result.append(self.build_requires.dumps())
         if hasattr(self, "conf"):
             result.append(self.conf.dumps())
+        result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
     def clone(self):
@@ -429,11 +436,14 @@ class ConanInfo(object):
         return q
 
     def package_id(self):
-        """ The package_id of a conans is the sha1 of its specific requirements,
-        options and settings
+        """
+        Get the `package_id` that is the result of applying the has function SHA-1 to the
+        `self.dumps()` return.
+        :return: `str` the `package_id`, e.g., `"040ce2bd0189e377b2d15eb7246a4274d1c63317"`
         """
         text = self.dumps()
         package_id = sha1(text.encode())
+        # FIXME: Should it be done before calling this function?
         try:
             self.options.validate()
         except ConanException as e:
