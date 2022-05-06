@@ -1,6 +1,5 @@
 import json
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -155,10 +154,9 @@ def test_add_revisions():
 
 
 def test_add_multiple_revisions():
-    """ What if we add multiple revisions
+    """ What if we add multiple revisions, mix with and without revisions, with and without
+    timestamps and it will not crash
     """
-    assert RecipeReference.loads("pkg/1.0#rev1") < RecipeReference.loads("pkg/1.0#rev2")
-    assert not RecipeReference.loads("pkg/1.0#rev2") < RecipeReference.loads("pkg/1.0#rev1")
     c = TestClient()
     # without revision, it will resolve to latest
     c.run("lock add --requires=math/1.0#rev1")
@@ -173,7 +171,7 @@ def test_add_multiple_revisions():
     assert ['math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == new_lock["requires"]
     c.run("lock add --requires=math/1.0#revx%0.0")
     new_lock = json.loads(c.load("conan.lock"))
-    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0']== \
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == \
            new_lock["requires"]
 
     c.save({"conanfile.txt": ""})
@@ -188,18 +186,22 @@ def test_add_multiple_revisions():
     # is that it doesn't crash
     c.run("lock add --requires=math/1.0")
     new_lock = json.loads(c.load("conan.lock"))
-    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0',  'math/1.0'] == \
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0', 'math/1.0'] == \
            new_lock["requires"]
 
+
+def test_timestamps_are_updated():
+    """ When ``conan lock add`` adds a revision with a timestamp, or without it, it will be
+    updated in the lockfile-out to the resolved new timestamp
+    """
+    c = TestClient()
     c.save({"conanfile.txt": "[requires]\nmath/1.0",
             "math/conanfile.py": GenConanfile("math", "1.0")})
     c.run("create math")
     rev = c.exported_recipe_revision()
     # Create a new lockfile, wipe the previous
-    c.run(f"lock add --lockfile=None --requires=math/1.0#{rev}")
-    print(c.out)
+    c.run(f"lock add --lockfile=None --requires=math/1.0#{rev}%0.123")
     c.run("install . --lockfile=conan.lock --lockfile-out=conan.lock")
-
     assert f" math/1.0#{rev} - Cache" in c.out
-    print(c.load("conan.lock"))
-
+    new_lock = c.load("conan.lock")
+    assert "%0.123" not in new_lock
