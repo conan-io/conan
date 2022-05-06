@@ -92,7 +92,8 @@ class CustomConfigurationTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-release.cmake")))
 
-            self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            self.client.run_command('cmake .. -G "Visual Studio 15 Win64" --loglevel=DEBUG')
+            self.assertIn("Found DLL and STATIC", self.client.out)
             self.client.run_command('cmake --build . --config Release')
             self.client.run_command(r"Release\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)
@@ -145,8 +146,8 @@ class CustomSettingsTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
         settings = get_default_settings_yml()
-        settings = settings.replace("build_type: [None, Debug, Release, ",
-                                    "build_type: [None, Debug, MyRelease, ")
+        settings = settings.replace("build_type: [null, Debug, Release, ",
+                                    "build_type: [null, Debug, MyRelease, ")
         save(self.client.cache.settings_path, settings)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")

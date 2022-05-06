@@ -164,6 +164,9 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
+        """
+          This method will save the generated files to the conanfile.generators_folder
+        """
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)

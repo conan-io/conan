@@ -1,5 +1,5 @@
-
 from conans.errors import ConanInvalidConfiguration, ConanException
+from conans.model.version import Version
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -58,3 +58,118 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     except ConanInvalidConfiguration:
         return False
     return True
+
+
+def default_cppstd(compiler, compiler_version):
+    """
+    Get the default of the "compiler.cppstd" setting for the specified compiler
+    :param compiler: Name of the compiler e.g: gcc
+    :param compiler_version: Version of the compiler e.g: 12
+    :return:
+    """
+    from conans.client.conf.detect import _cppstd_default
+    compiler_version = Version(compiler_version)
+    return _cppstd_default(compiler, compiler_version)
+
+
+def supported_cppstd(compiler, compiler_version):
+    """
+    Return a list of supported "compiler.cppstd" values for the specified compiler
+    :param compiler: Name of the compiler e.g: gcc
+    :param compiler_version: Version of the compiler e.g: 12
+    :return:
+    """
+    version = Version(compiler_version)
+    func = {"apple-clang": _apple_clang_supported_cppstd,
+            "gcc": _gcc_supported_cppstd,
+            "msvc": _msvc_supported_cppstd,
+            "clang": _clang_supported_cppstd,
+            "mcst-lcc": _mcst_lcc_supported_cppstd}.get(compiler)
+    if func:
+        return func(version)
+    return None
+
+
+def _apple_clang_supported_cppstd(version):
+    """
+    ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    """
+    if version < "4.0":
+        return []
+    if version < "5.1":
+        return ["98", "gnu98", "11", "gnu11"]
+    if version < "6.1":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
+    if version < "10.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
+
+def _gcc_supported_cppstd(version):
+    """
+    ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    """
+    if version < "3.4":
+        return []
+    if version < "4.3":
+        return ["98", "gnu98"]
+    if version < "4.8":
+        return ["98", "gnu98", "11", "gnu11"]
+    if version < "5":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
+    if version < "8":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    if version < "11":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+
+
+def _msvc_supported_cppstd(version):
+    """
+    [14, 17, 20, 23]
+    """
+    if version < "190":
+        return []
+    if version < "191":
+        return ["14", "17"]
+    if version < "193":
+        return ["14", "17", "20"]
+
+    return ["14", "17", "20", "23"]
+
+
+def _clang_supported_cppstd(version):
+    """
+    ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    """
+    if version < "2.1":
+        return []
+    if version < "3.4":
+        return ["98", "gnu98", "11", "gnu11"]
+    if version < "3.5":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
+    if version < "6":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    if version < "12":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+
+
+def _mcst_lcc_supported_cppstd(version):
+    """
+    ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    """
+
+    if version < "1.21":
+        return ["98", "gnu98"]
+    if version < "1.24":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
+    if version < "1.25":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+
+    # FIXME: When cppstd 23 was introduced????
+
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
