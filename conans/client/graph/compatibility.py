@@ -23,6 +23,8 @@ def compatibility(conanfile):
 
 
 default_cppstd_compat = """
+from conan.tools.build import supported_cppstd
+
 
 def cppstd_compat(conanfile):
     # It will try to find packages with all the cppstd versions
@@ -33,17 +35,13 @@ def cppstd_compat(conanfile):
     if not compiler or not compiler_version or not cppstd:
         return []
     base = dict(conanfile.settings.values_list)
-
-    coordinates = "compiler.{}.cppstd".format(compiler)
-    conanfile.settings.get_definition()
-    cppstd_possible_values = conanfile.settings.compiler.cppstd.get_definition()
+    cppstd_possible_values = supported_cppstd(compiler, compiler_version)
     ret = []
     for _cppstd in cppstd_possible_values:
         if _cppstd is None or _cppstd == cppstd:
             continue
         configuration = base.copy()
         configuration["compiler.cppstd"] = _cppstd
-        # FIXME: Not checking max supported by the compiler
         ret.append({"settings": [(k, v) for k, v in configuration.items()]})
 
     return ret
@@ -69,8 +67,8 @@ def app_compat(conanfile):
     compiler_version = conanfile.settings.get_safe("compiler.version")
     if not compiler_version:
         # Latest compiler version
-        coordinates = "compiler.{}.version".format(compiler)
-        compiler_versions = conanfile.settings.get_definition_values(coordinates)
+        definition = conanfile.settings.get_definition()
+        compiler_versions = definition["compiler"][compiler]["version"]
         compiler_version = compiler_versions[-1] # Latest
 
     configuration["compiler.version"] = compiler_version
