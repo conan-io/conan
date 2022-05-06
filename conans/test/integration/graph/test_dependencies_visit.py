@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -32,15 +33,17 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: openssl/0.1#705df323569bee67454c0ecb5929806f!!!" in client.out
-    assert "DefPRef: openssl/0.1#705df323569bee67454c0ecb5929806f:"\
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.1"))
+    pkgs = client.cache.get_package_references(refs)
+    prev1 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
+    assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f:" \
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.2"))
+    pkgs = client.cache.get_package_references(refs)
+    prev2 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
+    assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out

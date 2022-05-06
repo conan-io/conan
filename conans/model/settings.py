@@ -271,11 +271,6 @@ class Settings(object):
         for k in to_remove:
             del self._data[k]
 
-    @property
-    def sha(self):
-        # FIXME: Remove this function when refactored ConanInfo.package_id() method
-        return self.dumps()
-
     def dumps(self):
         """ produces a text string with lines containing a flattened version:
         compiler.arch = XX

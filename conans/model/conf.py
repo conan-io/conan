@@ -209,11 +209,6 @@ class Conf:
         for k, v in self._values.items():
             yield k, v.value
 
-    @property
-    def sha(self):
-        # FIXME: Keeping backward compatibility
-        return self.dumps()
-
     @staticmethod
     def _get_boolean_value(value):
         if type(value) is bool:

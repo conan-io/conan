@@ -13,8 +13,6 @@ class SettingsLoadsTest(unittest.TestCase):
     def test_none_value(self):
         yml = "os: [None, Windows]"
         settings = Settings.loads(yml)
-        # Same sha as if settings were empty
-        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == None)
         self.assertEqual("", settings.dumps())
@@ -73,8 +71,6 @@ class SettingsLoadsTest(unittest.TestCase):
         subsystem: [None, cygwin]
 """
         settings = Settings.loads(yml)
-        # Same sha as if settings were empty
-        self.assertEqual(settings.sha, Settings.loads("").sha)
         settings.validate()
         self.assertTrue(settings.os == None)
         self.assertEqual("", settings.dumps())
@@ -82,6 +78,7 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertTrue(settings.os.subsystem == None)
         self.assertEqual("os=Windows", settings.dumps())
         settings.os.subsystem = "cygwin"
+        settings.validate()
         self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.dumps())
 
     def test_none__sub_subsetting(self):
@@ -126,7 +123,7 @@ class SettingsTest(unittest.TestCase):
         other_settings = Settings.loads("os: [Windows, Linux]")
         settings.os = "Windows"
         other_settings.os = "Windows"
-        self.assertEqual(settings.sha, other_settings.sha)
+        self.assertEqual(settings.dumps(), other_settings.dumps())
 
     def test_any(self):
         data = {"target": ["ANY"]}
