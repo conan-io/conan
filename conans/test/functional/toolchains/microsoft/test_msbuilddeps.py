@@ -495,9 +495,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
     def test_no_build_type_error(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
+        client.save({"conanfile.py": GenConanfile(),
+                     "profile": "[settings]\nos=Windows\ncompiler=msvc\narch=x86_64"})
         client.run("create . --name=mypkg --version=0.1")
-        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
+        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps -pr=profile", assert_error=True)
         self.assertIn("The 'msbuild' generator requires a 'build_type' setting value", client.out)
 
     def test_custom_configuration(self):
