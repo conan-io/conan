@@ -80,9 +80,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             set_dirty(source_folder)
 
     scoped_output.info("Exported revision: %s" % revision)
-    if graph_lock is not None:
-        graph_lock.update_lock_export_ref(ref)
-
     return ref
 
 
@@ -98,7 +95,7 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
     else:
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1').strip()
+                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)

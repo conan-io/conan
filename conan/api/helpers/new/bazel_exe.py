@@ -8,7 +8,7 @@ from conan.tools.google import Bazel, bazel_layout
 from conan.tools.files import copy
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
+class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "application"
@@ -40,7 +40,7 @@ test_conanfile_exe_v2 = """from conan import ConanFile
 from conan.tools.build import cross_building
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Test(ConanFile):
+class {{package_name}}Test(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):

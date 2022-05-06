@@ -98,7 +98,6 @@ class GraphBinariesAnalyzer(object):
 
     def _process_compatible_packages(self, node):
         conanfile = node.conanfile
-        original_info = conanfile.info
         original_binary = node.binary
         original_package_id = node.package_id
 
@@ -111,7 +110,6 @@ class GraphBinariesAnalyzer(object):
         if compatibles:
             conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
-            conanfile.info = compatible_package  # Redefine current
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
             self._process_compatible_node(node)
@@ -119,13 +117,12 @@ class GraphBinariesAnalyzer(object):
                 conanfile.output.info("Main binary package '%s' missing. Using "
                                       "compatible package '%s'" % (original_package_id, package_id))
                 # So they are available in package_info() method
+                conanfile.info = compatible_package  # Redefine current
                 conanfile.settings = compatible_package.settings
-                # TODO: Conan 2.0 clean this ugly
-                conanfile.options._package_options = compatible_package.options._package_options
+                conanfile.options = compatible_package.options
                 break
         else:  # If no compatible is found, restore original state
             node.binary = original_binary
-            conanfile.info = original_info
             node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode):

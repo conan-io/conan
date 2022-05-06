@@ -6,7 +6,7 @@ from conan.tools.meson import MesonToolchain, Meson
 from conan.tools.layout import basic_layout
 from conan.tools.files import copy
 
-class {{class_name or name}}Conan(ConanFile):
+class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
 
@@ -55,7 +55,7 @@ from conan.tools.meson import MesonToolchain, Meson
 from conan.tools.layout import basic_layout
 
 
-class {{class_name or name}}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "PkgConfigDeps", "MesonToolchain"
 
