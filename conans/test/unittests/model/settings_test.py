@@ -1,5 +1,8 @@
 import unittest
 
+import pytest
+
+from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
 
@@ -394,3 +397,26 @@ os: [Windows, Linux]
 
         self.sut.compiler.arch.speed = "D"
         self.assertEqual(self.sut.compiler.arch.speed, "D")
+
+    def test_get_definition(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = "gcc"
+        sot = settings.compiler.cppstd.get_definition()
+        assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
+                       'gnu20', '23', 'gnu23']
+
+        # We cannot access the child definition of a non declared setting
+        with pytest.raises(Exception) as e:
+            settings.os.version.get_definition()
+
+        assert "'settings.os' value not defined" in str(e.value)
+
+        # But if we have it declared, we can
+        settings.os = "watchOS"
+        sot = settings.os.version.get_definition()
+        assert "4.0" in sot
+
+        # We can get the whole settings definition and explore the dict
+        sot = settings.get_definition()
+        assert [None, "cygwin", "msys", "msys2", "wsl"] == sot["os"]["Windows"]["subsystem"]
+
