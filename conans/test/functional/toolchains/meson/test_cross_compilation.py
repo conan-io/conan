@@ -66,7 +66,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
 
     [settings]
     os = {os}
-    os.version = {os_version}
+    {os_version}
     {os_sdk}
     arch = {arch}
     compiler = apple-clang
@@ -85,7 +85,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     profile = profile.format(
         os=os_,
-        os_version=os_version,
+        os_version=f"os.version={os_version}" if os_version else "",
         os_sdk="os.sdk = " + os_sdk if os_sdk else "",
         arch=arch,
         sdk_path=sdk_path)
