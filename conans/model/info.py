@@ -443,11 +443,6 @@ class ConanInfo(object):
         """
         text = self.dumps()
         package_id = sha1(text.encode())
-        # FIXME: Should it be done before calling this function?
-        try:
-            self.options.validate()
-        except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
         return package_id
 
     def serialize_min(self):
@@ -465,3 +460,15 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+
+    def validate(self):
+        # If the options are not fully defined, this is also an invalid case
+        try:
+            self.options.validate()
+        except ConanException as e:
+            self.invalid = BINARY_INVALID, str(e)
+
+        try:
+            self.settings.validate()
+        except ConanException as e:
+            self.invalid = BINARY_INVALID, str(e)
