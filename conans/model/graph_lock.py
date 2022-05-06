@@ -144,8 +144,10 @@ class Lockfile(object):
         self._python_requires.merge(other._python_requires)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
-        """ adding new things manually to the lockfile puts them as the first element in the
-        list of locked requires, prioritizing them
+        """ adding new things manually will trigger the sort() of the locked list, so lockfiles
+        alwasys keep the ordered lists. This means that for some especial edge cases it might
+        be necessary to allow removing from a lockfile, for example to test an older version
+        than the one locked (in general adding works better for moving forward to newer versions)
         """
         if requires:
             for r in requires:
