@@ -159,6 +159,14 @@ class SettingsItem(object):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()
 
+    def get_definition(self):
+        if isinstance(self._definition, list):
+            return [e if e != 'None' else None for e in self.values_range]
+        ret = {}
+        for key, value in self._definition.items():
+            ret[key] = value.get_definition()
+        return ret
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
@@ -299,24 +307,11 @@ class Settings(object):
         return "\n".join(["%s=%s" % (field, value)
                           for (field, value) in self.values_list])
 
-    def get_definition_values(self, name):
+    def get_definition(self):
         """Check the range of values of the definition of a setting. e.g:
            get_definition_values("compiler.gcc.version") """
-        try:
-            tmp = self._data
-            elements = name.split(".")
-            elements.reverse()
-            while elements:
-                prop = elements.pop()
-                tmp = tmp.get(prop)
-                if not elements:
-                    if hasattr(tmp, "values_range"):
-                        return tmp.values_range
-                    else:
-                        raise ConanException("{} setting is not a list of values")
-                if isinstance(tmp, SettingsItem):
-                    tmp = tmp._definition
-                else:
-                    tmp = tmp._data
-        except ConanException:
-            return None
+
+        ret = {}
+        for key, element in self._data.items():
+            ret[key] = element.get_definition()
+        return ret

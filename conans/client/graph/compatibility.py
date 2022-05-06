@@ -35,7 +35,8 @@ def cppstd_compat(conanfile):
     base = dict(conanfile.settings.values_list)
 
     coordinates = "compiler.{}.cppstd".format(compiler)
-    cppstd_possible_values = conanfile.settings.get_definition_values(coordinates)
+    conanfile.settings.get_definition()
+    cppstd_possible_values = conanfile.settings.compiler.cppstd.get_definition()
     ret = []
     for _cppstd in cppstd_possible_values:
         if _cppstd is None or _cppstd == cppstd:
