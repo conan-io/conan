@@ -1,3 +1,6 @@
+import json
+
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -102,3 +105,73 @@ def test_user_python_overrides():
     # The resulting lockfile contains the full revision now
     new_lock = c.load("new.lock")
     assert "pytool/1.1" in new_lock
+
+
+def test_add_revisions():
+    """ Is it possible to add revisions explicitly too
+    """
+    c = TestClient()
+    c.save({"math/conanfile.py": GenConanfile("math"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/[*]"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/[*]")})
+
+    c.run("export math --version=1.0")
+    rev0 = c.exported_recipe_revision()
+    c.save({"math/conanfile.py": GenConanfile("math").with_build_msg("New rev1")})
+    c.run("export math --version=1.0")
+    rev1 = c.exported_recipe_revision()
+    c.save({"math/conanfile.py": GenConanfile("math").with_build_msg("New rev2")})
+    c.run("export math --version=1.0")
+    rev2 = c.exported_recipe_revision()
+
+    c.run("export engine")
+    c.run("graph info game")
+    assert f"math/1.0#{rev2}" in c.out
+    assert f"math/1.0#{rev1}" not in c.out
+
+    # without revision, it will resolve to latest
+    c.run("lock add --requires=math/1.0 --requires=unrelated/2.0")
+    c.run("graph info game --lockfile=conan.lock --lockfile-out=new.lock --lockfile-partial")
+    assert f"math/1.0#{rev2}" in c.out
+    assert f"math/1.0#{rev1}" not in c.out
+    assert f"math/1.0#{rev0}" not in c.out
+    # The resulting lockfile contains the full revision now
+    new_lock = c.load("new.lock")
+    assert f"math/1.0#{rev2}" in new_lock
+    assert f"math/1.0#{rev1}" not in new_lock
+    assert f"math/1.0#{rev0}" not in c.out
+
+    # with revision, it will resolve to that revision
+    c.run(f"lock add --requires=math/1.0#{rev1} --requires=unrelated/2.0")
+    c.run("graph info game --lockfile=conan.lock --lockfile-out=new.lock --lockfile-partial")
+    assert f"math/1.0#{rev1}" in c.out
+    assert f"math/1.0#{rev2}" not in c.out
+    assert f"math/1.0#{rev0}" not in c.out
+    # The resulting lockfile contains the full revision now
+    new_lock = c.load("new.lock")
+    assert f"math/1.0#{rev1}" in new_lock
+    assert f"math/1.0#{rev2}" not in new_lock
+    assert f"math/1.0#{rev0}" not in c.out
+
+
+def test_add_multiple_revisions():
+    """ What if we add multiple revisions
+    """
+    assert RecipeReference.loads("pkg/1.0#rev1") < RecipeReference.loads("pkg/1.0#rev2")
+    assert not RecipeReference.loads("pkg/1.0#rev2") < RecipeReference.loads("pkg/1.0#rev1")
+    c = TestClient()
+    # without revision, it will resolve to latest
+    c.run("lock add --requires=math/1.0#rev1")
+    new_lock = c.load("conan.lock")
+    assert "math/1.0#rev1" in new_lock
+
+    c.run("lock add --requires=math/1.0#rev2")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#rev2", "math/1.0#rev1"] == new_lock["requires"]
+    c.run("lock add --requires=math/1.0#rev0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#rev0", "math/1.0#rev2", "math/1.0#rev1"] == new_lock["requires"]
+    c.run("lock add --requires=math/1.0#revx%0.0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#revx%0.0", "math/1.0#rev0", "math/1.0#rev2", "math/1.0#rev1"] == \
+           new_lock["requires"]

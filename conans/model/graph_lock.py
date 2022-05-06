@@ -56,7 +56,9 @@ class _LockRequires:
             self._requires.setdefault(ref, {}).update(package_ids)
         else:
             self._requires.setdefault(ref, None)  # To keep previous packgae_id: prev if exists
-        self.sort()
+        # When we are adding something manually to a lockfile, we want to prioritize it
+        # so we make it the first element in the list
+        self._requires.move_to_end(ref, last=False)
 
     def insert(self, ref):
         self._requires[ref] = None
@@ -146,6 +148,9 @@ class Lockfile(object):
         self._python_requires.merge(other._python_requires)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
+        """ adding new things manually to the lockfile puts them as the first element in the
+        list of locked requires, prioritizing them
+        """
         if requires:
             for r in requires:
                 self._requires.add(r)
