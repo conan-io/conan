@@ -25,8 +25,8 @@ class SettingsTest(unittest.TestCase):
 
     def test_wrong_settings(self):
         settings = """os:
-    None:
-        subsystem: [None, msys]
+    null:
+        subsystem: [null, msys]
 """
         client = TestClient()
         save(client.cache.settings_path, settings)
@@ -37,7 +37,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing", assert_error=True)
-        self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
+        self.assertIn("ERROR: settings.yml: null setting can't have subsettings", client.out)
 
     @pytest.mark.xfail(reason="Working in the PackageID broke this")
     def test_custom_compiler_preprocessor(self):
@@ -216,11 +216,8 @@ class SayConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("create . -s os=ChromeOS --build missing", assert_error=True)
-        self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
-                                     'SunOS', 'VxWorks', 'Windows', 'WindowsCE', 'WindowsStore', 'baremetal', 'iOS', 'tvOS',
-                                     'watchOS']),
-                      client.out)
+        assert "ERROR: Invalid setting 'ChromeOS' is not a valid 'settings.os' value." in client.out
+        assert "Possible values are ['Windows', 'WindowsStore', 'WindowsCE', 'Linux'" in client.out
 
         # Now add new settings to config and try again
         config = load(client.cache.settings_path)

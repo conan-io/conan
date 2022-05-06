@@ -4,21 +4,21 @@ import pytest
 
 from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
-from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
+from conans.model.settings import Settings, bad_value_msg, undefined_field
+
+
+def undefined_value(v):
+    return "'%s' value not defined" % v
 
 
 class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_value(self):
-        yml = "os: [None, Windows]"
+        yml = "os: [null, Windows]"
         settings = Settings.loads(yml)
         settings.validate()
         self.assertTrue(settings.os == None)
         self.assertEqual("", settings.dumps())
-        settings.os = "None"
-        settings.validate()
-        self.assertEqual(settings.dumps(), Settings.loads("").dumps())
-        self.assertTrue(settings.os == "None")
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -28,22 +28,22 @@ class SettingsLoadsTest(unittest.TestCase):
         settings = Settings.loads(yml)
         with self.assertRaisesRegex(ConanException, "'settings.os' value not defined"):
             settings.validate()  # Raise exception if unset
-        settings.os = "None"
+        settings.os = "some-os"
         settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
+        self.assertTrue(settings.os == "some-os")
+        self.assertIn("os=some-os", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
 
     def test_none_any(self):
-        yml = "os: [None, ANY]"
+        yml = "os: [null, ANY]"
         settings = Settings.loads(yml)
         settings.validate()
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
+        self.assertIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.dumps())
@@ -69,15 +69,14 @@ class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_subsetting(self):
         yml = """os:
-    None:
+    null:
     Windows:
-        subsystem: [None, cygwin]
+        subsystem: [null, cygwin]
 """
         settings = Settings.loads(yml)
         settings.validate()
-        settings.os = "None"
-        self.assertTrue(settings.os == "None")
-        self.assertNotIn("os=None", settings.dumps())
+        self.assertTrue(settings.os == None)
+        self.assertEqual("", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
         self.assertEqual("os=Windows", settings.dumps())
@@ -87,12 +86,12 @@ class SettingsLoadsTest(unittest.TestCase):
 
     def test_none__sub_subsetting(self):
         yml = """os:
-    None:
-        subsystem: [None, cygwin]
+    null:
+        subsystem: [null, cygwin]
     Windows:
 """
         with self.assertRaisesRegex(ConanException,
-                                   "settings.yml: None setting can't have subsettings"):
+                                    "settings.yml: null setting can't have subsettings"):
             Settings.loads(yml)
 
 
@@ -243,7 +242,8 @@ os: [Windows, Linux]
         self.sut.constrained(s2)
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler
-        self.assertEqual(str(cm.exception), str(undefined_field("settings", "compiler", ["os"])))
+        self.assertEqual(str(cm.exception),
+                         str(undefined_field("settings", "compiler", ["os"], "settings")))
         self.sut.os = "Windows"
         self.sut.os = "Linux"
 
@@ -252,7 +252,7 @@ os: [Windows, Linux]
         with self.assertRaises(ConanException) as cm:
             self.sut.constrained(s2)
         self.assertEqual(str(cm.exception),
-                         str(undefined_field("settings", "os2", ["compiler", "os"])))
+                         str(undefined_field("settings", "os2", ["compiler", "os"], "settings")))
 
     def test_constraint6(self):
         s2 = {"os", "compiler"}
@@ -271,22 +271,19 @@ os: [Windows, Linux]
             self.sut.validate()
 
         self.sut.compiler = "gcc"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch = "x86"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch.speed"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch.speed = "A"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "4.8"
-        with self.assertRaisesRegex(ConanException, str(undefined_value("settings.os"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.os = "Windows"
@@ -300,13 +297,11 @@ os: [Windows, Linux]
     def test_validate2(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.runtime"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.runtime = "MD"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "10"
