@@ -1,6 +1,5 @@
 import json
 import os
-import subprocess
 from shutil import which
 
 from conans.cli.output import ConanOutput
@@ -156,7 +155,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         output = "\n".join([line for line in output.splitlines()
                             if not line.strip().startswith('"description"')])
 
-    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+    except (ValueError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
     return json.loads(output)
