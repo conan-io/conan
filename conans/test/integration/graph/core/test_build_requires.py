@@ -556,6 +556,69 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
 
+    def test_tool_requires(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.1#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+
+    def test_tool_requires_override(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        #  \---(br, override)------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1")
+                                      .with_requirement("protobuf/0.2", build=True, override=True,
+                                                        headers=False, libs=False))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.2#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+        _check_transitive(libb, [(protobuf_host, True, True, False, False),
+                                 (protobuf_build, False, False, True, True)])
+
     def test_test_require(self):
         # app -(tr)-> gtest/0.1
         # This test should survive in 2.0
