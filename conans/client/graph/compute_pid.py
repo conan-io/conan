@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanErrorConfiguration, conanfile_remove_attr, ConanException
-from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
+from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 
 
 def compute_package_id(node, new_config):
@@ -38,13 +38,13 @@ def compute_package_id(node, new_config):
 
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
+    python_requires = PythonRequiresInfo(python_requires, python_mode)
 
-    conanfile.info = ConanInfo.create(conanfile.settings,
-                                      conanfile.options,
-                                      reqs_info,
-                                      build_requires_info,
-                                      python_requires=python_requires,
-                                      default_python_requires_id_mode=python_mode)
+    conanfile.info = ConanInfo(conanfile.settings.copy_conaninfo_settings(),
+                               conanfile.options.copy_conaninfo_options(),
+                               reqs_info,
+                               build_requires_info,
+                               python_requires=python_requires)
     conanfile.original_info = conanfile.info.clone()
 
     run_validate_package_id(conanfile)

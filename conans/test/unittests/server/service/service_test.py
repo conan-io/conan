@@ -98,16 +98,10 @@ class ConanServiceTest(unittest.TestCase):
 
         info = self.search_service.search_packages(ref2, None)
         self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
-                                                'options': {'use_Qt': 'False'},
-                                                'requires': [],
-                                                'settings': {}
                                                 }})
 
         info = self.search_service.search_packages(ref3, None)
-        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n',
-                                                'options': {'use_Qt': 'True'},
-                                                'requires': [],
-                                                'settings': {}}
+        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n'}
                                 })
 
     def test_remove(self):

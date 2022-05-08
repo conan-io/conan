@@ -4,10 +4,9 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conan.api.model import PkgConfiguration
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.info import ConanInfo
+from conans.model.info import BinaryInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
@@ -15,7 +14,7 @@ from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 
 
-def filter_packages(query, results: Dict[PkgReference, PkgConfiguration]):
+def filter_packages(query, results: Dict[PkgReference, BinaryInfo]):
     if query is None:
         return results
     try:
@@ -33,7 +32,7 @@ def filter_packages(query, results: Dict[PkgReference, PkgConfiguration]):
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info: PkgConfiguration):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: BinaryInfo):
 
     # Evaluate conaninfo with the expression
 
@@ -47,7 +46,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info: PkgConfiguration):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info: PkgConfiguration):
+def _evaluate(prop_name, prop_value, conan_vars_info: BinaryInfo):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -103,7 +102,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguration]:
+def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, BinaryInfo]:
     """
     param package_layout: Layout for the given reference
     """
@@ -123,7 +122,7 @@ def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguratio
             continue
         conan_info_content = load(info_path)
 
-        info = ConanInfo.loads(conan_info_content)
+        info = BinaryInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
         pref = pkg_layout.reference
         # The key shoudln't have the latest package revision, we are asking for package configs

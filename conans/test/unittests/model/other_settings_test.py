@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, BinaryInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import bad_value_msg
@@ -21,7 +21,7 @@ class SettingsTest(unittest.TestCase):
         pkg_ids = client.cache.get_package_references(ref)
         pref = client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_folder = client.cache.pkg_layout(pref).package()
-        return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
+        return BinaryInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):
         settings = """os:

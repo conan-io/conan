@@ -349,39 +349,22 @@ class PythonRequiresInfo(object):
     recipe_revision_mode = full_mode
 
 
-class ConanInfo(object):
-
-    def copy(self):
-        """ Useful for build_id implementation
-        """
-        result = ConanInfo()
-        result.invalid = self.invalid
-        result.settings = self.settings.copy()
-        result.options = self.options.copy_conaninfo_options()
-        result.requires = self.requires.copy()
-        result.build_requires = self.build_requires.copy()
-        result.python_requires = self.python_requires.copy()
-        return result
-
-    @staticmethod
-    def create(settings, options, reqs_info, build_requires_info,
-               python_requires, default_python_requires_id_mode):
-        result = ConanInfo()
-        result.invalid = None
-        result.settings = settings.copy_conaninfo_settings()
-        result.options = options.copy_conaninfo_options()
-        result.requires = reqs_info
-        result.build_requires = build_requires_info
-        result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
-        return result
+class BinaryInfo:
+    """ class to load a conaninfo.txt and be able to use it for the 'conan list packages'
+    command (previos conan search <ref>). As the server will transmit the whole
+    conaninfo.txt contents, it will be used in the client
+    """
+    def __init__(self, settings, options, requires, build_requires):
+        self.settings = settings
+        self.options = options
+        self.requires = requires
+        self.build_requires = build_requires
 
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
         parser = ConfigParser(text, ["settings", "options", "requires"],
                               raise_unexpected_field=False)
-        result = ConanInfo()
-        result.invalid = None
 
         def _loads_settings(settings_text):
             settings_result = []
@@ -392,13 +375,47 @@ class ConanInfo(object):
                 settings_result.append((name.strip(), value.strip()))
             return settings_result
 
-        result.settings = _loads_settings(parser.settings)
-        result.options = Options.loads(parser.options)
+        settings = _loads_settings(parser.settings)
+        options = Options.loads(parser.options)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
-        result.requires = RequirementsInfo({})
-        result.build_requires = RequirementsInfo({})
+        requires = parser.requires.splitlines() if parser.requires else []
+        requires = [r for r in requires if r]
+        return BinaryInfo(settings, options, requires, None)
 
+    def serialize_min(self):
+        """
+        This info will be shown in search results.
+        """
+        # self.settings is already a simple serialized list, it has been loaded from conaninfo.txt
+        conan_info_json = {"settings": dict(self.settings),
+                           "options": dict(self.options.serialize())["options"],
+                           "requires": self.requires
+                           }
+        return conan_info_json
+
+
+class ConanInfo:
+
+    def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
+                 python_requires=None):
+        self.invalid = None
+        self.settings = settings
+        self.options = options
+        self.requires = reqs_info
+        self.build_requires = build_requires_info
+        self.python_requires = python_requires
+
+    def clone(self):
+        """ Useful for build_id implementation and for compatibility()
+        """
+        result = ConanInfo()
+        result.invalid = self.invalid
+        result.settings = self.settings.copy()
+        result.options = self.options.copy_conaninfo_options()
+        result.requires = self.requires.copy()
+        result.build_requires = self.build_requires.copy()
+        result.python_requires = self.python_requires.copy()
         return result
 
     def dumps(self):
@@ -431,10 +448,6 @@ class ConanInfo(object):
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
-    def clone(self):
-        q = self.copy()
-        return q
-
     def package_id(self):
         """
         Get the `package_id` that is the result of applying the has function SHA-1 to the
@@ -444,17 +457,6 @@ class ConanInfo(object):
         text = self.dumps()
         package_id = sha1(text.encode())
         return package_id
-
-    def serialize_min(self):
-        """
-        This info will be shown in search results.
-        """
-        # self.settings is already a simple serialized list, it has been loaded from conaninfo.txt
-        conan_info_json = {"settings": dict(self.settings),
-                           "options": dict(self.options.serialize())["options"],
-                           "requires": self.requires.serialize()
-                           }
-        return conan_info_json
 
     def header_only(self):
         self.settings.clear()

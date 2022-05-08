@@ -24,7 +24,7 @@ from conans.util.tracer import log_package_built, log_package_got_from_local_cac
 def build_id(conan_file):
     if hasattr(conan_file, "build_id"):
         # construct new ConanInfo
-        build_id_info = conan_file.info.copy()
+        build_id_info = conan_file.info.clone()
         conan_file.info_build = build_id_info
         # effectively call the user function to change the package values
         with conanfile_exception_formatter(conan_file, "build_id"):

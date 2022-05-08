@@ -12,7 +12,7 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir
-from conans.model.info import ConanInfo
+from conans.model.info import BinaryInfo
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract, touch_folder
 
@@ -165,7 +165,7 @@ class RemoteManager(object):
     def search_packages(self, remote, ref):
         packages = self._call_remote(remote, "search_packages", ref)
         # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): ConanInfo.loads(data["content"]).serialize_min()
+        packages = {PkgReference(ref, pid): BinaryInfo.loads(data["content"]).serialize_min()
                     if "content" in data else data
                     for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages
