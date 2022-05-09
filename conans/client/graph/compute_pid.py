@@ -30,7 +30,8 @@ def compute_package_id(node, new_config):
         require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
                                        non_embed_mode, embed_mode, build_mode, unknown_mode)
         if require.package_id_mode is not None:
-            req_info = RequirementInfo(dep_node.pref, require.package_id_mode)
+            req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
+                                       require.package_id_mode)
             if require.build:
                 build_data[require] = req_info
             else:
