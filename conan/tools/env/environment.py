@@ -182,10 +182,10 @@ class Environment:
 
     def define(self, name, value, separator=" "):
         """
-        Overwrite previously existing `name` environment variable with new `value`
+        Define `name` environment variable with value `value`
 
-        :param name: Name of the variable to override
-        :param value: New value
+        :param name: Name of the variable
+        :param value: Value that the environment variable will take
         :param separator: The character to separate appended or prepended values
         """
         self._values[name] = _EnvValue(name, value, separator, path=False)
@@ -213,7 +213,7 @@ class Environment:
 
     def append_path(self, name, value):
         """
-        Similar to "append" method but indicating that the variable is a filesystem path.
+        Similar to "append" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
 
         :param name: Name of the variable to append a new value
         :param value: New value
@@ -232,7 +232,7 @@ class Environment:
 
     def prepend_path(self, name, value):
         """
-        Similar to "prepend" method but indicating that the variable is a filesystem path.
+        Similar to "prepend" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
 
         :param name: Name of the variable to prepend a new value
         :param value: New value
