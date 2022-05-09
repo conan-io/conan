@@ -1,4 +1,3 @@
-import re
 import textwrap
 
 from conans.model.package_ref import PkgReference
@@ -52,7 +51,7 @@ def test_cpp_info_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+    rrev = client.exported_recipe_revision()
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -61,7 +60,7 @@ def test_cpp_info_editable():
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
@@ -86,7 +85,7 @@ def test_cpp_info_editable():
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
-    assert "**builddirs:['']**" in out
+    assert "**builddirs:[]**" in out
     assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
     assert "**objects:['myobject.o']**" in out
@@ -177,7 +176,7 @@ def test_cpp_info_components_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+    rrev = client.exported_recipe_revision()
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -186,7 +185,7 @@ def test_cpp_info_components_editable():
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"

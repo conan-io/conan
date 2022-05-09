@@ -13,7 +13,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
 from conans.util.env import environment_update
 from conans.client.userio import UserInput
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, load_binary_info
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -50,7 +50,6 @@ class RestApiTest(unittest.TestCase):
                 localdb = LocalDBMock()
                 cache = Mock()
                 cache.localdb = localdb
-                cache.config.non_interactive = False
 
                 mocked_user_input = UserInput(non_interactive=False)
                 mocked_user_input.get_username = Mock(return_value="private_user")
@@ -141,9 +140,9 @@ class RestApiTest(unittest.TestCase):
         ref2 = RecipeReference.loads(conan_name2)
         self._upload_recipe(ref2)
 
-        # Get the info about this RecipeReference
+        # Get the info about this ConanFileReference
         info = self.api.search_packages(ref1)
-        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(), info["1F23223EFDA"])
+        self.assertEqual(conan_info, info["1F23223EFDA"]["content"])
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
@@ -222,7 +221,7 @@ class RestApiTest(unittest.TestCase):
         if base_files:
             files.update(base_files)
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class MyConan(ConanFile):
     name = "%s"

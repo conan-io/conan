@@ -7,7 +7,7 @@ from conans.util.files import load, save
 class ConditionalReqsTest(unittest.TestCase):
 
     def test_conditional_requirements(self):
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 
 class TestConanLib(ConanFile):
     name = "hello"
@@ -15,13 +15,14 @@ class TestConanLib(ConanFile):
     settings = "os", "build_type", "product"
         """
         test_conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class TestConanLib(ConanFile):
     settings = "os", "build_type", "product"
     def requirements(self):
         self.output.info("Conditional test requirement: %s, %s, %s"
                          % (self.settings.os, self.settings.build_type, self.settings.product))
+        self.requires(self.tested_reference_str)
 
     def test(self):
         pass

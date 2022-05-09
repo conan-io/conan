@@ -1,5 +1,3 @@
-import subprocess
-
 from conan.tools.env import Environment
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
@@ -18,16 +16,13 @@ class PkgConfig:
         self._variables = None
 
     def _parse_output(self, option):
-        executable = self._conanfile.conf["tools.gnu:pkg_config"] or "pkg-config"
+        executable = self._conanfile.conf.get("tools.gnu:pkg_config", default="pkg-config")
         command = [executable, '--' + option, self._library, '--print-errors']
-        try:
-            env = Environment()
-            if self._pkg_config_path:
-                env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
-            with env.vars(self._conanfile).apply():
-                return check_output_runner(command).strip()
-        except subprocess.CalledProcessError as e:
-            raise ConanException('pkg-config command %s failed with error: %s' % (command, e))
+        env = Environment()
+        if self._pkg_config_path:
+            env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
+        with env.vars(self._conanfile).apply():
+            return check_output_runner(command).strip()
 
     def _get_option(self, option):
         if option not in self._info:

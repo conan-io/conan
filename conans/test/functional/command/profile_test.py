@@ -85,7 +85,7 @@ class DetectCompilersTest(unittest.TestCase):
         platform_default_compilers = {
             "Linux": "gcc",
             "Darwin": "apple-clang",
-            "Windows": "Visual Studio"
+            "Windows": "msvc"
         }
 
         result = detect_defaults_settings()
@@ -95,7 +95,7 @@ class DetectCompilersTest(unittest.TestCase):
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
 
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool("gcc")
     @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
     def test_detect_default_in_mac_os_using_gcc_as_default(self):
         """
@@ -128,4 +128,4 @@ class DetectCompilersTest(unittest.TestCase):
         self.assertIn("os=", load(pr_path))
 
         client.run("profile detect --name=./MyProfile2", assert_error=True)
-        self.assertIn("MyProfile2 already exists", client.out)
+        self.assertIn("MyProfile2' already exists", client.out)

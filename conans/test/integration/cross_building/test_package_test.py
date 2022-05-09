@@ -3,13 +3,13 @@ import unittest
 
 from jinja2 import Template
 
-from conans.client.tools import save
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class TestPackageTestCase(unittest.TestCase):
     conanfile_tpl = Template(textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conan.tools.env import VirtualBuildEnv
 

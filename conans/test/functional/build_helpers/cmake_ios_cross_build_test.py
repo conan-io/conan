@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.xfail(reason="This was using legacy cmake_find_package generator, need to be tested "
                    "with modern, probably move it to elsewhere")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Apple")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cross_build_test_package():
     # https://github.com/conan-io/conan/issues/9202
     profile_build = textwrap.dedent("""
@@ -17,7 +17,7 @@ def test_cross_build_test_package():
         os=Macos
         arch=x86_64
         compiler=apple-clang
-        compiler.version=13.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
     """)
@@ -28,7 +28,7 @@ def test_cross_build_test_package():
         os.version=13.0
         arch=x86_64
         compiler=apple-clang
-        compiler.version=13.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
     """)

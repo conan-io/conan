@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 conanfile_base = textwrap.dedent("""\
-    from conans import ConanFile
+    from conan import ConanFile
 
     class APck(ConanFile):
         {body}
@@ -91,7 +91,7 @@ class RelatedToGraphBehavior(object):
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
-        self.t.run('install --reference={}{}'.format(self.ref, update))
+        self.t.run('install --requires={}{}'.format(self.ref, update))
         self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)

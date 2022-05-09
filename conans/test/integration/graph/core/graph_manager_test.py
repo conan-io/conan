@@ -384,6 +384,35 @@ class TestLinear(GraphManagerTest):
                                 (liba, False, False, False, False)])
         _check_transitive(libb, [(liba, True, False, False, False)])
 
+    def test_multiple_levels_transitive_headers(self):
+        # app -> libcc0.1 -> libb0.1  -> liba0.1
+        self.recipe_cache("liba/0.1")
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library")
+                                                        .with_requirement("liba/0.1",
+                                                                          transitive_headers=True))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("static-library")
+                                                        .with_requirement("libb/0.1",
+                                                                          transitive_headers=True))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (liba, True, True, False, False)])
+
 
 class TestDiamond(GraphManagerTest):
 
@@ -854,19 +883,6 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb, liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
-
-    # FIXME: Remove
-    def test_a_ver_si_me_entero(self):
-        # consumer -> dep1 -> dep2
-        #         \-> dep3
-        self.recipe_cache("dep2/0")
-        self.recipe_cache("dep1/0", ["dep2/0"])
-        self.recipe_cache("dep3/0")
-        consumer = self.consumer_conanfile(GenConanfile("consumer", "0").with_require("dep1/0")
-                                           .with_require("dep3/0"))
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(4, len(deps_graph.nodes))
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)

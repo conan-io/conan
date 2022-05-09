@@ -13,7 +13,7 @@ class RemoveSubsettingTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/2327
         # https://github.com/conan-io/conan/issues/2781
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     options = {"opt1": [True, False], "opt2": [True, False]}
     default_options = {"opt1": True, "opt2": False}
@@ -35,13 +35,13 @@ class Pkg(ConanFile):
     def test_remove_setting(self):
         # https://github.com/conan-io/conan/issues/2327
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "os", "build_type"
     def configure(self):
         del self.settings.build_type
 
-    def source(self):
+    def build(self):
         self.settings.build_type
 """
         client.save({"conanfile.py": conanfile})
@@ -49,22 +49,19 @@ class Pkg(ConanFile):
         mkdir(build_folder)
         client.current_folder = build_folder
 
-        client.run("source ..", assert_error=True)
+        client.run("build ..", assert_error=True)
         self.assertIn("'settings.build_type' doesn't exist", client.out)
-        # This doesn't fail, it doesn't access build_type
-        client.run("install ..")
-        client.run("build ..")
 
     @pytest.mark.xfail(reason="Move this to CMakeToolchain")
     def test_remove_subsetting(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
-        base = '''from conans import ConanFile
+        base = '''from conan import ConanFile
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
 '''
-        test = """from conans import ConanFile, CMake
+        test = """from conan import ConanFile, CMake
 class ConanLib(ConanFile):
     settings = "compiler", "arch"
 
@@ -89,7 +86,7 @@ class ConanLib(ConanFile):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
 
-        conanfile = """from conans import ConanFile, CMake
+        conanfile = """from conan import ConanFile, CMake
 class ConanLib(ConanFile):
     settings = "compiler", "arch"
 

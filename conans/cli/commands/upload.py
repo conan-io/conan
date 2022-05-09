@@ -1,7 +1,4 @@
-import json
-
-from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.api.model import UploadBundle
+from conan.api.conan_api import ConanAPIV2
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
@@ -30,15 +27,16 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     parser.add_argument("--only-recipe", action='store_true', default=False,
                         help='Upload only the recipe/s, not the binary packages.')
     parser.add_argument("--force", action='store_true', default=False,
-                        help='Ignore the missing fields in the scm attribute and override '
-                             'remote recipe and packages with local regardless of recipe date')
+                        help='Force the upload of the artifacts even if the revision already exists'
+                             ' in the server')
     parser.add_argument("--check", action='store_true', default=False,
                         help='Perform an integrity check, using the manifests, before upload')
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Upload all matching recipes without confirmation')
 
     args = parser.parse_args(*args)
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+
+    remote = conan_api.remotes.get(args.remote)
 
     upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
 
@@ -57,7 +55,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
     if not upload_bundle.any_upload:
         return
-    conan_api.upload.upload_bundle(upload_bundle, remote, force=args.force)
+    conan_api.upload.upload_bundle(upload_bundle, remote)
 
 
 def _ask_confirm_upload(conan_api, upload_data):

@@ -8,7 +8,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 conanfile_basic = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "basic"
@@ -231,7 +231,7 @@ class HookTest(unittest.TestCase):
         self._check_download_package(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
-        client.run("install --reference=basic/0.1@danimtb/testing")
+        client.run("install --requires=basic/0.1@danimtb/testing")
         self._check_download_recipe(conanfile_cache_path, client.out)
         self._check_download_package(conanfile_cache_path, client.out)
         self._check_package_info(client.out)
@@ -409,19 +409,14 @@ class HookTest(unittest.TestCase):
 
     def test_import_hook(self):
         client = TestClient()
-        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "my_hook.py")
+        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "hook_my_hook.py")
         init_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module", "__init__.py")
         custom_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module", "custom.py")
         client.save({init_path: "",
                      custom_path: custom_module,
                      hook_path: my_hook,
                      "conanfile.py": conanfile_basic})
-        conan_conf = textwrap.dedent("""
-                [hooks]
-                my_hook/my_hook.py
-        """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("export . --user=danimtb --channel=testing")
-        self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
+        self.assertIn("[HOOK - my_hook/hook_my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
                       client.out)

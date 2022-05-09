@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.cli.api.model import Remote
+from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -360,9 +360,9 @@ def test_mixed_user_channel():
     t.run("upload * --confirm -r default")
     t.run("remove * -f")
 
-    t.run('install --reference="pkg/[>0 <2]@"')
+    t.run('install --requires="pkg/[>0 <2]@"')
     t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
-    t.run('install --reference="pkg/[>0 <2]@user/testing"')
+    t.run('install --requires="pkg/[>0 <2]@user/testing"')
     t.assert_listed_require({"pkg/1.1@user/testing": "Downloaded (default)"})
 
 
@@ -415,6 +415,6 @@ def test_different_user_channel_resolved_correctly():
     client.run("upload lib/1.0@conan/testing -r=server2")
 
     client2 = TestClient(servers=servers)
-    client2.run("install --reference=lib/[>=1.0]@conan/testing")
+    client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out

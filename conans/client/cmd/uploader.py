@@ -22,7 +22,6 @@ class _RecipeData:
         self.ref = ref
         self.upload = None
         self.force = None
-        self.dirty = None
         self.build_always = None
         self.files = None
         self.packages = [_PackageData(p) for p in prefs or []]
@@ -30,7 +29,6 @@ class _RecipeData:
     def serialize(self):
         return {
             "ref": repr(self.ref),
-            "dirty": self.dirty,
             "upload": self.upload,
             "force": self.force,
             "build_always": self.build_always,
@@ -184,25 +182,17 @@ class PackagePreparator:
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
-        - check if package is ok to be uploaded, if scm info missing, will raise
+        - check if package is ok to be uploaded
         - check if the remote recipe is newer, raise
         - compare and decide which files need to be uploaded (and deleted from server)
         """
         try:
             ref = recipe.ref
             recipe_layout = self._app.cache.ref_layout(ref)
-            retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref, remotes)
+            retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
+                                     remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
             recipe.files = cache_files
-
-            # Check SCM data for auto fields
-            if hasattr(conanfile, "scm") and (
-                    conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto" or
-                    conanfile.scm.get("type") is None or conanfile.scm.get("url") is None or
-                    conanfile.scm.get("revision") is None):
-                recipe.dirty = True
-            else:
-                recipe.dirty = False
         except Exception as e:
             raise ConanException(f"{recipe.ref} Error while compressing: {e}")
 
@@ -235,7 +225,8 @@ class PackagePreparator:
             elif tgz_files:
                 if self._output and not self._output.is_terminal:
                     self._output.info(msg)
-                compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", int)
+                compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel",
+                                                               check_type=int)
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
                                      compresslevel=compresslevel)
                 result[tgz_name] = tgz
@@ -276,7 +267,7 @@ class PackagePreparator:
                 self._output.info("Compressing package...")
             tgz_files = {f: path for f, path in files.items() if
                          f not in [CONANINFO, CONAN_MANIFEST]}
-            compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", int)
+            compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", check_type=int)
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       compresslevel=compresslevel)
             assert tgz_path == package_tgz
@@ -292,18 +283,11 @@ class UploadExecutor:
         self._app = app
         self._output = ConanOutput()
 
-    def upload(self, upload_data, remote, force):
+    def upload(self, upload_data, remote):
 
         if upload_data.any_upload:
             self._output.info("Uploading artifacts")
         for recipe in upload_data.recipes:
-            # Recipe force can still be False so far if package not in server
-            if recipe.dirty and not (recipe.force or force):
-                raise ConanException(f"The {recipe.ref} recipe contains invalid data in the 'scm' attribute"
-                                     " (some 'auto' values or missing fields 'type', 'url' or"
-                                     " 'revision'). Use '--force' to ignore this error or export"
-                                     " again the recipe ('conan export' or 'conan create') to"
-                                     " fix these issues.")
             if recipe.upload:
                 self.upload_recipe(recipe, remote)
             if recipe.build_always and recipe.packages:
@@ -336,7 +320,7 @@ class UploadExecutor:
         ref_layout = self._app.cache.ref_layout(ref)
         conanfile_path = ref_layout.conanfile()
         self._app.hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
+                                       reference=ref, remote=remote)
 
         upload_ref = ref
         self._app.remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote)

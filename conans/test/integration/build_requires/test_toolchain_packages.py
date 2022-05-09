@@ -35,7 +35,7 @@ def test_android_ndk():
         """)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.files import save
+        from conan.tools.files import save, copy
         class Pkg(ConanFile):
             name = "androidndk"
             version = "0.1"
@@ -45,7 +45,7 @@ def test_android_ndk():
                 save(self, "bin/ndk.compiler", f"MYNDK-{self.settings.os}-{self.settings.arch} exe!")
 
             def package(self):
-                self.copy("*")
+                copy(self, "*", src=self.build_folder, dst=self.package_folder)
 
             def package_info(self):
                 arch = self.settings_target.arch
@@ -190,7 +190,7 @@ def test_libcxx():
         """)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.files import save
+        from conan.tools.files import save, copy
         class Pkg(ConanFile):
             name = "libcxx"
             version = "0.1"
@@ -204,7 +204,7 @@ def test_libcxx():
                 save(self, f"lib/libcxx-{arch}", f"libcxx{phone_sdk}-{os_}-{arch}!")
 
             def package(self):
-                self.copy("*")
+                copy(self, "*", src=self.build_folder, dst=self.package_folder)
 
             def package_info(self):
                 arch = self.settings_target.arch
@@ -212,7 +212,7 @@ def test_libcxx():
 
             def package_id(self):
                 self.info.settings.clear()
-                self.info.settings_target = self.settings_target.values
+                self.info.settings_target = self.settings_target
         """)
     test = textwrap.dedent("""
         import os
@@ -238,28 +238,28 @@ def test_libcxx():
             "ios": ios})
 
     c.run("create . -pr:b=macos -pr:h=ios")
-    c.assert_listed_binary({"libcxx/0.1": ("f65d02463a7f8279217290c51994d38b5a0329e2", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv7!" in c.out
 
     # Same host profile should be same binary, the build profile is not factored in
     c.run("create . -pr:b=macos -s:b build_type=Debug -s:b arch=armv8 -pr:h=ios --build=missing")
-    c.assert_listed_binary({"libcxx/0.1": ("f65d02463a7f8279217290c51994d38b5a0329e2", "Cache")},
+    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Cache")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv7!" in c.out
 
     # But every change in host, is a different binary
     c.run("create . -pr:b=macos -pr:h=ios -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"libcxx/0.1": ("52d228521d318515b19d400e3d2e2b572b640017", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("27e8e4d68b22fe333b1a2af763046f527803f0d2", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv8!" in c.out
 
     # But every change in host, is a different binary
     c.run("create . -pr:b=macos -pr:h=ios -s:h arch=armv8 -s:h os.sdk=iphonesimulator ")
-    c.assert_listed_binary({"libcxx/0.1": ("2827aeb92fb9ce8833bfde468ee78c1861aef094", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("3f0ed22aac7950c3e9519bd67307e0fd98301fe8", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphonesimulator-iOS-armv8!" in c.out
@@ -269,7 +269,7 @@ def test_libcxx():
             "macos": macos,
             "ios": ios}, clean_first=True)
     c.run("install . -pr:b=macos -pr:h=ios")
-    c.assert_listed_binary({"libcxx/0.1": ("f65d02463a7f8279217290c51994d38b5a0329e2", "Cache")},
+    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Cache")},
                            build=True)
     assert "conanfile.py: LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "conanfile.py: libcxxiphoneos-iOS-armv7!" in c.out
@@ -302,7 +302,7 @@ def test_compiler_gcc():
         """)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.files import save
+        from conan.tools.files import save, copy
         class Pkg(ConanFile):
             name = "gcc"
             version = "0.1"
@@ -317,21 +317,21 @@ def test_compiler_gcc():
                 save(self, "bin/gcc", f"gcc-{self.settings.os}-{self.settings.arch}")
 
             def package(self):
-                self.copy("*")
+                copy(self, "*", src=self.build_folder, dst=self.package_folder)
 
             def package_info(self):
                 arch = self.settings_target.arch
                 self.cpp_info.libs = [f"libcxx-{arch}"]
 
             def package_id(self):
-                self.info.settings_target = self.settings_target.values
+                self.info.settings_target = self.settings_target
         """)
     test = textwrap.dedent("""
         import os
         from conan import ConanFile
         from conan.tools.files import load
         class Pkg(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
+            settings = "os", "arch", "build_type"
 
             def generate(self):
                 gcc = self.dependencies.build["gcc"]
@@ -352,7 +352,7 @@ def test_compiler_gcc():
             "rpi": rpi})
 
     c.run("create . -pr:b=linux -pr:h=rpi")
-    c.assert_listed_binary({"gcc/0.1": ("306563637ff16730bf4ab6d268187c7f4a0dfa67", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("37b084dfd1318fb5c559173f7a3838b76f4bfb00", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv7!" in c.out
@@ -360,7 +360,7 @@ def test_compiler_gcc():
 
     # Same host profile, but different build profile is a different binary
     c.run("create . -pr:b=linux  -s:b os=Windows -s:b arch=armv8 -pr:h=rpi")
-    c.assert_listed_binary({"gcc/0.1": ("88f59266a5a12bbf78bccb0b609e9ae96460acd7", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("398ff960a11d4d5c412fabc0d855be906056a166", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv7!" in c.out
@@ -368,8 +368,15 @@ def test_compiler_gcc():
 
     # Same build but different host is also a new binary
     c.run("create . -pr:b=linux -pr:h=rpi -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"gcc/0.1": ("3b2683e2fa3b48f169ba78d05e493438601cf51e", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("d2c168f06afa5cc443d2e8cbaf23d1bcb204fca8", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv8!" in c.out
     assert "gcc/0.1 (test package): gcc-Linux-x86_64" in c.out
+
+    # check the list packages
+    c.run("list packages gcc/0.1")
+    assert """settings_target:
+      arch=armv7
+      build_type=Release
+      os=Linux""" in c.out

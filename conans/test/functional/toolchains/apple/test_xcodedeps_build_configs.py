@@ -231,7 +231,7 @@ def create_xcode_project(client, project_name, source):
                         CLANG_WARN_UNREACHABLE_CODE = YES;
                         CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
                         COPY_PHASE_STRIP = NO;
-                        DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                        DEBUG_INFORMATION_FORMAT = dwarf;
                         ENABLE_NS_ASSERTIONS = NO;
                         ENABLE_STRICT_OBJC_MSGSEND = YES;
                         GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -300,7 +300,8 @@ def create_xcode_project(client, project_name, source):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake()
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
@@ -342,7 +343,8 @@ def test_xcodedeps_build_configurations():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake()
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
 def test_frameworks():
     client = TestClient(path_with_spaces=False)
 
@@ -372,6 +374,7 @@ def test_frameworks():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("xcodebuild")
 def test_xcodedeps_dashes_names_and_arch():
     # https://github.com/conan-io/conan/issues/9949
     client = TestClient(path_with_spaces=False)
@@ -384,3 +387,36 @@ def test_xcodedeps_dashes_names_and_arch():
     assert os.path.exists(os.path.join(client.current_folder,
                                        "conan_hello_dashes_vars_release_arm64.xcconfig"))
     client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("xcodebuild")
+def test_xcodedeps_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\\"user_config.h\\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . --name=hello --version=1.0")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    main = textwrap.dedent("""
+                                #include <stdio.h>
+                                #define STR(x)   #x
+                                #define SHOW_DEFINE(x) printf("%s=%s", #x, STR(x))
+                                int main(int argc, char *argv[]) {
+                                    SHOW_DEFINE(USER_CONFIG);
+                                    SHOW_DEFINE(OTHER);
+                                    return 0;
+                                }
+                                """)
+    create_xcode_project(client, "app", main)
+    client.run("install . --build=missing -g XcodeDeps")
+    client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig")
+    client.run_command("build/Release/app")
+    assert 'USER_CONFIG="user_config.h"' in client.out
+    assert 'OTHER="other.h"' in client.out

@@ -1,5 +1,6 @@
 import unittest
-from conans.client.command import ERROR_INVALID_SYSTEM_REQUIREMENTS
+
+from conans.cli.exit_codes import ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.test.utils.tools import TestClient
 
 
@@ -7,8 +8,8 @@ class InvalidSystemRequirementsTest(unittest.TestCase):
     def test_create_method(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
-from conans import ConanFile
-from conans.errors import ConanInvalidSystemRequirements
+from conan import ConanFile
+from conan.errors import ConanInvalidSystemRequirements
 
 class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"

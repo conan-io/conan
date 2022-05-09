@@ -2,19 +2,18 @@ import platform
 import textwrap
 
 import pytest
-import six
 
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_apt_get
+@pytest.mark.tool("apt_get")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_apt_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.system import Apt
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Apt
+
         class MyPkg(ConanFile):
             settings = "arch", "os"
             def system_requirements(self):
@@ -28,14 +27,14 @@ def test_apt_check():
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
-@pytest.mark.tool_apt_get
+@pytest.mark.tool("apt_get")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_build_require():
     client = TestClient()
     client.save({"tool_require.py": textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.system import Apt
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Apt
+
         class MyPkg(ConanFile):
             settings = "arch", "os"
             def system_requirements(self):
@@ -45,7 +44,7 @@ def test_build_require():
         """)})
     client.run("export tool_require.py --name=tool_require --version=1.0")
     client.save({"consumer.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class consumer(ConanFile):
             settings = "arch", "os"
             tool_requires = "tool_require/1.0"
@@ -57,14 +56,14 @@ def test_build_require():
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
-@pytest.mark.tool_brew
+@pytest.mark.tool("brew")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_brew_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.system import Brew
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Brew
+
         class MyPkg(ConanFile):
             settings = "arch"
             def system_requirements(self):
@@ -76,14 +75,16 @@ def test_brew_check():
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
-@pytest.mark.tool_brew
+@pytest.mark.tool("brew")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
 @pytest.mark.skip(reason="brew update takes a lot of time")
 def test_brew_install_check_mode():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.system import Brew
+
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Brew
+
         class MyPkg(ConanFile):
             settings = "arch"
             def system_requirements(self):
@@ -95,14 +96,15 @@ def test_brew_install_check_mode():
            "can't install because tools.system.package_manager:mode is 'check'" in client.out
 
 
-@pytest.mark.tool_brew
+@pytest.mark.tool("brew")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
 @pytest.mark.skip(reason="brew update takes a lot of time")
 def test_brew_install_install_mode():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.system import Brew
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Brew
+
         class MyPkg(ConanFile):
             settings = "arch"
             def system_requirements(self):

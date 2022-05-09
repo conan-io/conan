@@ -14,22 +14,20 @@ from conans.model.package_ref import PkgReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
-from conans.util.log import logger
 
 
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
+                 checksum_deploy=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, requester,
-                                            config, verify_ssl, artifacts_properties, matrix_params)
+                                            config, verify_ssl)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
-                              self._matrix_params)
+        return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)
@@ -39,8 +37,8 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
-        retry = self._config.get("core.download:retry", int)
-        retry_wait = self._config.get("core.download:retry_wait", int)
+        retry = self._config.get("core.download:retry", check_type=int)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
         download_cache = False if not use_cache else self._config.download_cache
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,
@@ -142,12 +140,12 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, ref, files_to_upload):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
+        urls = {fn: self.router.recipe_file(ref, fn)
                 for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload):
-        urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
+        urls = {fn: self.router.package_file(pref, fn)
                 for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, display_name=pref.repr_reduced())
 
@@ -165,7 +163,7 @@ class RestV2Methods(RestCommonMethods):
                 output.info(msg)
             resource_url = urls[filename]
             try:
-                headers = self._artifacts_properties if not self._matrix_params else {}
+                headers = {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy,
                                 headers=headers, display_name=display_name)
@@ -178,15 +176,13 @@ class RestV2Methods(RestCommonMethods):
         if failed:
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
-        else:
-            logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        retry = self._config.get("core.download:retry", int)
-        retry_wait = self._config.get("core.download:retry_wait", int)
-        download_cache = False if not use_cache else self._config["core.download:download_cache"]
+        retry = self._config.get("core.download:retry", check_type=int)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
+        download_cache = False if not use_cache else self._config.get("core.download:download_cache")
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
@@ -213,8 +209,7 @@ class RestV2Methods(RestCommonMethods):
                 if not self.get_json(package_search_url):
                     return
             except Exception as e:
-                logger.warning("Unexpected error searching {} packages"
-                               " in remote {}: {}".format(ref, self.remote_url, e))
+                pass
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)
             response.charset = "utf-8"
@@ -249,7 +244,6 @@ class RestV2Methods(RestCommonMethods):
 
         for ref in refs:
             url = self.router.remove_recipe(ref)
-            logger.debug("REST: remove: %s" % url)
             response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                              verify=self.verify_ssl)
             if response.status_code == 404:

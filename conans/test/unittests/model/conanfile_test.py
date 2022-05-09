@@ -19,7 +19,7 @@ class ConanFileTest(unittest.TestCase):
 
     def test_conanfile_naming_complete(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     pass
     def package_info(self):

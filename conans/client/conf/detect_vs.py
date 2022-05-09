@@ -1,6 +1,5 @@
 import json
 import os
-import subprocess
 from shutil import which
 
 from conans.cli.output import ConanOutput
@@ -9,16 +8,14 @@ from conans.model.version import Version
 from conans.util.env import get_env
 
 
-
 def _visual_compiler(version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
     if Version(version) >= "15":
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
         if path:
-            compiler = "Visual Studio"
-            ConanOutput().success("Found %s %s" % (compiler, version))
-            return compiler, version
+            ConanOutput().success("Found msvc %s" % version)
+            return version
     return None
 
 
@@ -27,7 +24,7 @@ def latest_visual_studio_version_installed():
     for version in msvc_sersions:
         vs = _visual_compiler(version)
         if vs:
-            return vs[1]
+            return {"17": "193", "16": "192", "15": "191"}.get(vs)
     return None
 
 
@@ -158,7 +155,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         output = "\n".join([line for line in output.splitlines()
                             if not line.strip().startswith('"description"')])
 
-    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+    except (ValueError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
     return json.loads(output)

@@ -2,15 +2,14 @@ import os
 import textwrap
 
 import pytest
-from mock import Mock
 
-from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc
-from conans import ConanFile
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
+from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
 from conans.test.utils.test_files import temp_folder
-from conans.tools import load
+from conans.util.files import load
 
 
 def test_msbuild_cpu_count():
@@ -36,7 +35,7 @@ def test_msbuild_cpu_count():
 
 def test_msbuild_toolset():
     settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["193"]}},
+                         "compiler": {"msvc": {"version": ["193"], "toolset": [None, "v142_xp"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
@@ -50,6 +49,10 @@ def test_msbuild_toolset():
 
     msbuild = MSBuildToolchain(conanfile)
     assert 'v143' in msbuild.toolset
+
+    conanfile.settings.compiler.toolset = "v142_xp"
+    msbuild = MSBuildToolchain(conanfile)
+    assert 'v142_xp' in msbuild.toolset
 
 
 @pytest.mark.parametrize("mode,expected_toolset", [
@@ -80,9 +83,8 @@ def test_msbuild_standard():
     test_folder = temp_folder()
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = Settings({"build_type": ["Release"],
                                    "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
@@ -111,9 +113,8 @@ def test_resource_compile():
                          "arch": ["x86_64"]})
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings_build = settings
@@ -133,7 +134,9 @@ def test_resource_compile():
           <PreprocessorDefinitions>
              MYTEST=MYVALUE;%(PreprocessorDefinitions)
           </PreprocessorDefinitions>
+          <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
         </ResourceCompile>"""
+
     props_file = load(props_file)  # Remove all blanks and CR to compare
     props_file = "".join(s.strip() for s in props_file.splitlines())
     assert "".join(s.strip() for s in expected.splitlines()) in props_file
@@ -153,10 +156,9 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
                          "arch": ["x86_64"]})
     conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.intel:installation_path", "my/intel/oneapi/path")
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
@@ -173,7 +175,6 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
 
 
 @pytest.mark.parametrize("compiler,expected", [
-    ("Visual Studio", True),
     ("msvc", True),
     ("clang", False)
 ])
@@ -186,3 +187,64 @@ def test_is_msvc(compiler, expected):
     conanfile.settings = settings
     conanfile.settings.compiler = compiler
     assert is_msvc(conanfile) == expected
+
+
+@pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
+    ("msvc", True, "static", "Release", True),
+    ("msvc", True, "static", "Debug", True),
+    ("clang", True, None, "Debug", False),
+])
+def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected):
+    options = MockOptions({"shared": shared})
+    settings = MockSettings({"build_type": build_type,
+                             "arch": "x86_64",
+                             "compiler": compiler,
+                             "compiler.runtime": runtime,
+                             "compiler.version": "17",
+                             "cppstd": "17"})
+    conanfile = MockConanfile(settings, options)
+    assert is_msvc_static_runtime(conanfile) == expected
+
+
+def test_msbuildtoolchain_changing_flags_via_attributes():
+    test_folder = temp_folder()
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile()
+    conanfile.settings = settings
+    conanfile.folders.set_base_generators(test_folder)
+    conanfile.conf = Conf()
+    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.settings_build = settings
+    conanfile.settings.build_type = "Release"
+    conanfile.settings.compiler = "msvc"
+    conanfile.settings.compiler.version = "193"
+    conanfile.settings.compiler.cppstd = "20"
+    conanfile.settings.os = "Windows"
+    conanfile.settings.arch = "x86_64"
+
+    msbuild = MSBuildToolchain(conanfile)
+    msbuild.cxxflags.append("/flag1")
+    msbuild.cflags.append("/flag2")
+    msbuild.ldflags.append("/link1")
+    msbuild.generate()
+    toolchain = load(os.path.join(test_folder, "conantoolchain_release_x64.props"))
+
+    expected_cl_compile = """
+    <ClCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/flag1 /flag2 %(AdditionalOptions)</AdditionalOptions>"""
+    expected_link = """
+    <Link>
+      <AdditionalOptions>/link1 %(AdditionalOptions)</AdditionalOptions>
+    </Link>"""
+    expected_resource_compile = """
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/flag1 /flag2 %(AdditionalOptions)</AdditionalOptions>
+    </ResourceCompile>"""
+    assert expected_cl_compile in toolchain
+    assert expected_link in toolchain
+    assert expected_resource_compile in toolchain

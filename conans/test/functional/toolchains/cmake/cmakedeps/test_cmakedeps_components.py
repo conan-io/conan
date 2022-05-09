@@ -16,7 +16,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """
 
     top = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -27,7 +27,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     middle = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "middle"
@@ -37,7 +37,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -66,13 +66,10 @@ class PropagateSpecificComponents(unittest.TestCase):
 
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
-        t.run('install --reference=middle/version@ -g CMakeDeps')
+        t.run('install --requires=middle/version@ -g CMakeDeps')
 
         content = t.load('middle-release-x86_64-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
-
-        content = t.load('middle-config.cmake')
-        self.assertIn("find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)", content)
 
         content = t.load('middle-Target-release.cmake')
         self.assertNotIn("top::top", content)
@@ -83,7 +80,7 @@ class PropagateSpecificComponents(unittest.TestCase):
 @pytest.fixture
 def top_conanfile():
     return textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -102,7 +99,7 @@ def test_wrong_component(top_conanfile, from_component):
     """
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -115,7 +112,7 @@ def test_wrong_component(top_conanfile, from_component):
     t.run('create top.py --name=top --version=version')
     t.run('create consumer.py --name=wrong --version=version')
 
-    t.run('install --reference=wrong/version@ -g CMakeDeps', assert_error=True)
+    t.run('install --requires=wrong/version@ -g CMakeDeps', assert_error=True)
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
@@ -125,7 +122,7 @@ def test_unused_requirement(top_conanfile):
         This error is known when creating the package if the requirement is consumed.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -146,7 +143,7 @@ def test_wrong_requirement(top_conanfile):
         This error is known when creating the package if the requirement is not there.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -161,10 +158,10 @@ def test_wrong_requirement(top_conanfile):
            "components requires but not defined as a recipe requirement" in t.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -180,7 +177,7 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -197,8 +194,9 @@ def test_components_system_libs():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
+
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
@@ -218,10 +216,10 @@ def test_components_system_libs():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_exelinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -237,7 +235,7 @@ def test_components_exelinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -254,8 +252,8 @@ def test_components_exelinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -272,10 +270,10 @@ def test_components_exelinkflags():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_sharedlinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -291,7 +289,7 @@ def test_components_sharedlinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -308,8 +306,8 @@ def test_components_sharedlinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
         project(consumer)
-        cmake_minimum_required(VERSION 3.1)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")

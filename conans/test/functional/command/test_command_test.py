@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_conan_test(self):
         client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1")
@@ -22,6 +22,6 @@ class ConanTestTest(unittest.TestCase):
 
         self.assertNotIn("WARN: conanenv.txt file not found", client.out)
 
-        client.run("test test_package hello/0.1@lasote/stable -s hello:build_type=Debug "
+        client.run("test test_package hello/0.1@lasote/stable -s hello/*:build_type=Debug "
                    "--build missing")
         self.assertIn('hello/0.1: Hello World Debug!', client.out)

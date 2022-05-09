@@ -33,11 +33,13 @@ def test_package_from_system():
         with_settings("os", "arch", "build_type")
     client.save({"conanfile.py": consumer})
     client.run("install .")
+
     assert os.path.exists(os.path.join(client.current_folder, "dep1-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "dep2-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "custom_dep2-config.cmake"))
-    contents = client.load("dep1-release-x86_64-data.cmake")
-    assert 'list(APPEND dep1_FIND_DEPENDENCY_NAMES custom_dep2)' in contents
+    dep1_contents = client.load("dep1-release-x86_64-data.cmake")
+    assert 'list(APPEND dep1_FIND_DEPENDENCY_NAMES custom_dep2)' in dep1_contents
+    assert 'set(custom_dep2_FIND_MODE "")' in dep1_contents
 
 
 def test_test_package():
@@ -52,7 +54,7 @@ def test_test_package():
     client.run("export . --name=pkg --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps"
@@ -71,7 +73,7 @@ def test_components_error():
 
     conan_hello = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         from conan.tools.files import save
         class Pkg(ConanFile):
@@ -91,7 +93,7 @@ def test_components_error():
 def test_cpp_info_component_objects():
     client = TestClient()
     conan_hello = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "arch", "build_type"
             def package_info(self):
@@ -100,7 +102,7 @@ def test_cpp_info_component_objects():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0 -s arch=x86_64 -s build_type=Release")
-    client.run("install --reference=hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    client.run("install --requires=hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
@@ -130,7 +132,7 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["say"].includedirs = ["include"]
             """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             requires = "hello/1.0"
@@ -139,10 +141,13 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["chat"].requires = ["hello::say"]
         """)
     test_package = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "VirtualRunEnv", "CMakeDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def test(self):
                 pass
@@ -154,3 +159,25 @@ def test_cpp_info_component_error_aggregate():
     client.run("create hello --name=hello --version=1.0")
     client.run("create consumer --name=consumer --version=1.0")
     assert "consumer/1.0 (test package): Running test()" in client.out
+
+
+def test_cmakedeps_cppinfo_complex_strings():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("escape=partially \"escaped\"")
+                self.cpp_info.defines.append("spaces=me you")
+                self.cpp_info.defines.append("foobar=bazbuz")
+                self.cpp_info.defines.append("answer=42")
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . --name=hello --version=1.0")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g CMakeDeps")
+    deps = client.load("hello-release-x86_64-data.cmake")
+    assert r"escape=partially \"escaped\"" in deps
+    assert r"spaces=me you" in deps
+    assert r"foobar=bazbuz" in deps
+    assert r"answer=42" in deps

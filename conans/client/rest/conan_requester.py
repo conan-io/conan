@@ -18,6 +18,7 @@ logging.captureWarnings(True)
 
 
 DEFAULT_TIMEOUT = (30, 60)  # connect, read timeouts
+INFINITE_TIMEOUT = -1
 
 
 class ConanRequester(object):
@@ -32,17 +33,18 @@ class ConanRequester(object):
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
-        self._timeout = config.get("core.net.http:timeout", eval, DEFAULT_TIMEOUT)
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match", eval, None)
-        self._proxies = config.get("core.net.http:proxies", eval, None)
-        self._cacert_path = config["core.net.http:cacert_path"]
-        self._client_certificates = config.get("core.net.http:client_cert", eval, None)
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match", eval, None)
-        self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", eval, False)
+        self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
+        self._proxies = config.get("core.net.http:proxies")
+        self._cacert_path = config.get("core.net.http:cacert_path")
+        self._client_certificates = config.get("core.net.http:client_cert")
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
+        self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
+                                              check_type=bool)
 
     @staticmethod
     def _get_retries(config):
-        retry = config.get("core.net.http:max_retries", int, 2)
+        retry = config.get("core.net.http:max_retries", default=2, check_type=int)
         if retry == 0:
             return 0
         retry_status_code_set = {
@@ -77,7 +79,7 @@ class ConanRequester(object):
         if self._proxies:
             if not self._should_skip_proxy(url):
                 kwargs["proxies"] = self._proxies
-        if self._timeout:
+        if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
         if not kwargs.get("headers"):
             kwargs["headers"] = {}

@@ -1,22 +1,16 @@
 import json
 import os
-import platform
-import stat
 import textwrap
 import unittest
 
 import pytest
 from requests import ConnectionError
 
-from conans.client.tools.files import untargz
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     GenConanfile, TurboTestClient)
-from conans.util.files import load, mkdir, save
+                                     GenConanfile)
+from conans.util.files import load, save
 
 
 class BadConnectionUploader(TestRequester):
@@ -71,7 +65,7 @@ def test_upload_with_pattern():
         assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    assert "hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "\
+    assert f"hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7 "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
     assert "hello2" not in client.out
@@ -156,7 +150,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build -r default")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*' -r default")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -213,7 +207,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*'")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -236,14 +230,15 @@ class UploadTest(unittest.TestCase):
                               "upgraded")
     def test_upload_json(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
+            from conan.tools.files import copy
 
             class TestConan(ConanFile):
                 name = "test"
                 version = "0.1"
 
                 def package(self):
-                    self.copy("mylib.so", dst="lib")
+                    copy(self, "mylib.so", self.build_folder, os.path.join(self.package_folder, "lib"))
             """)
 
         client = self._get_client()

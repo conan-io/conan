@@ -18,7 +18,6 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.user import update_localdb
 from conans.client.userio import UserInput
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
-from conans.util.log import logger
 
 LOGIN_RETRIES = 3
 
@@ -56,13 +55,13 @@ class ConanApiAuthManager(object):
                 try:
                     self._authenticate(remote, user, None)
                 except AuthenticationException as exc:
-                    logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
+                    # logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
                     self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
                 # (will be anonymous call but exporting who is calling)
-                logger.info("Token expired or not valid, cleaning the saved token and retrying")
+                # logger.info("Token expired or not valid, cleaning the saved token and retrying")
                 self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
@@ -71,7 +70,7 @@ class ConanApiAuthManager(object):
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
-            ui = UserInput(self._cache.new_config["core:non_interactive"])
+            ui = UserInput(self._cache.new_config.get("core:non_interactive", check_type=bool))
             input_user, input_password = ui.request_login(remote.name, user)
             try:
                 self._authenticate(remote, input_user, input_password)

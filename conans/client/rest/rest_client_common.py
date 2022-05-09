@@ -8,7 +8,6 @@ from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            PackageNotFoundException)
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import decode_text
-from conans.util.log import logger
 
 
 class JWTAuth(AuthBase):
@@ -27,11 +26,11 @@ def get_exception_from_error(error_code):
     tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
            if k not in (RecipeNotFoundException, PackageNotFoundException)}
     if error_code in tmp:
-        logger.debug("REST ERROR: %s" % str(tmp[error_code]))
+        # logger.debug("REST ERROR: %s" % str(tmp[error_code]))
         return tmp[error_code]
     else:
         base_error = int(str(error_code)[0] + "00")
-        logger.debug("REST ERROR: %s" % str(base_error))
+        # logger.debug("REST ERROR: %s" % str(base_error))
         try:
             return tmp[base_error]
         except KeyError:
@@ -60,16 +59,13 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
-                 artifacts_properties=None, matrix_params=False):
+    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl):
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
-        self._artifacts_properties = artifacts_properties
-        self._matrix_params = matrix_params
 
     @property
     def auth(self):
@@ -90,7 +86,7 @@ class RestCommonMethods(object):
         """
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
-        logger.debug("REST: Authenticate to get access_token: %s" % url)
+        # logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
 
@@ -107,14 +103,14 @@ class RestCommonMethods(object):
         headers = {}
         headers.update(self.custom_headers)
         headers["Content-type"] = "application/x-www-form-urlencoded"
-        logger.debug("REST: Authenticating with OAUTH: %s" % url)
+        # logger.debug("REST: Authenticating with OAUTH: %s" % url)
         ret = self.requester.post(url, auth=auth, headers=headers, verify=self.verify_ssl)
         self._check_error_response(ret)
 
         data = ret.json()
         access_token = data["access_token"]
         refresh_token = data["refresh_token"]
-        logger.debug("REST: Obtained refresh and access tokens")
+        # logger.debug("REST: Obtained refresh and access tokens")
         return access_token, refresh_token
 
     def refresh_token(self, token, refresh_token):
@@ -124,7 +120,7 @@ class RestCommonMethods(object):
         Artifactory >= 6.13.X
         """
         url = self.router.oauth_authenticate()
-        logger.debug("REST: Refreshing Token: %s" % url)
+        # logger.debug("REST: Refreshing Token: %s" % url)
         headers = {}
         headers.update(self.custom_headers)
         headers["Content-type"] = "application/x-www-form-urlencoded"
@@ -135,12 +131,12 @@ class RestCommonMethods(object):
 
         data = ret.json()
         if "access_token" not in data:
-            logger.debug("REST: unexpected data from server: {}".format(data))
+            # logger.debug("REST: unexpected data from server: {}".format(data))
             raise ConanException("Error refreshing the token")
 
         new_access_token = data["access_token"]
         new_refresh_token = data["refresh_token"]
-        logger.debug("REST: Obtained new refresh and access tokens")
+        # logger.debug("REST: Obtained new refresh and access tokens")
         return new_access_token, new_refresh_token
 
     @handle_return_deserializer()
@@ -148,7 +144,7 @@ class RestCommonMethods(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = self.router.common_check_credentials()
-        logger.debug("REST: Check credentials: %s" % url)
+        # logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
@@ -156,7 +152,7 @@ class RestCommonMethods(object):
     def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
-        logger.debug("REST: ping: %s" % url)
+        # logger.debug("REST: ping: %s" % url)
         if user and password:
             # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
             auth = HTTPBasicAuth(user, password)
@@ -178,13 +174,13 @@ class RestCommonMethods(object):
         if data:  # POST request
             req_headers.update({'Content-type': 'application/json',
                                 'Accept': 'application/json'})
-            logger.debug("REST: post: %s" % url)
+            # logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=req_headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
-            logger.debug("REST: get: %s" % url)
+            # logger.debug("REST: get: %s" % url)
             response = self.requester.get(url, auth=self.auth, headers=req_headers,
                                           verify=self.verify_ssl,
                                           stream=True)

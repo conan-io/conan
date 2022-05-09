@@ -1,8 +1,6 @@
 import os
 import shutil
 import time
-import traceback
-from collections import OrderedDict
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -11,38 +9,17 @@ from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import rmdir
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.env import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
-    rmdir
-from conans.util.log import logger
+from conans.util.files import mkdir, tar_extract, touch_folder
+
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
                                 log_uncompressed_file)
-
-CONAN_REQUEST_HEADER_SETTINGS = 'Conan-PkgID-Settings'
-CONAN_REQUEST_HEADER_OPTIONS = 'Conan-PkgID-Options'
-
-
-def _headers_for_info(info):
-    if not info:
-        return None
-
-    r = {}
-    settings = info.full_settings.as_list()
-    if settings:
-        settings = ['{}={}'.format(*it) for it in settings]
-        r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})
-
-    options = info.options._package_options.items()  # FIXME
-    if options:
-        options = filter(lambda u: u[0] in ['shared', 'fPIC', 'header_only'], options)
-        options = ['{}={}'.format(*it) for it in options]
-        r.update({CONAN_REQUEST_HEADER_OPTIONS: ';'.join(options)})
-    return r
 
 
 class RemoteManager(object):
@@ -50,7 +27,6 @@ class RemoteManager(object):
 
     def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
-        self._output = ConanOutput()
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
@@ -144,18 +120,16 @@ class RemoteManager(object):
         pkg_layout = self._cache.get_or_create_pkg_layout(pref)
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
-            info = getattr(conanfile, 'info', None)
-            self._get_package(pkg_layout, pref, remote, conanfile.output, info=info)
+            self._get_package(pkg_layout, pref, remote, conanfile.output)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.package_id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, scoped_output, info):
+    def _get_package(self, layout, pref, remote, scoped_output):
         t1 = time.time()
         try:
-            if pref.revision is None:
-                pref = self.get_latest_package_reference(pref, remote, info=info)
+            assert pref.revision is not None
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -175,8 +149,6 @@ class RemoteManager(object):
                 shutil.move(file_path, os.path.join(package_folder, file_name))
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(package_folder)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
 
             scoped_output.success('Package installed %s' % pref.package_id)
             scoped_output.info("Downloaded package revision %s" % pref.revision)
@@ -187,23 +159,16 @@ class RemoteManager(object):
             scoped_output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
-    def search_recipes(self, remote, pattern, ignorecase=True):
-        """
-        returns (dict str(ref): {packages_info}
-        """
-        # TODO: Remove the ignorecase param. It's not used anymore, we're keeping it
-        # to avoid some test crashes
-
+    def search_recipes(self, remote, pattern):
         return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref):
-        infos = self._call_remote(remote, "search_packages", ref)
-        ret = OrderedDict()
-        for package_id, data in infos.items():
-            # FIXME: we don't have the package reference, it uses the latest, we could check
-            #        here doing N requests or improve the Artifactory API.
-            ret[PkgReference(ref, package_id)] = data
-        return ret
+        packages = self._call_remote(remote, "search_packages", ref)
+        # Avoid serializing conaninfo in server side
+        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                    if "content" in data else data
+                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        return packages
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)
@@ -235,10 +200,9 @@ class RemoteManager(object):
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
+    def get_latest_package_reference(self, pref, remote) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
-        headers = _headers_for_info(info) if info else None
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+        return self._call_remote(remote, "get_latest_package_reference", pref, headers=None)
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"
@@ -264,13 +228,7 @@ class RemoteManager(object):
             exc.remote = remote
             raise
         except Exception as exc:
-            logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
-
-
-def calc_files_checksum(files):
-    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
-            for file_name, path in files.items()}
 
 
 def check_compressed_files(tgz_name, files):

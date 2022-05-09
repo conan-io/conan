@@ -1,6 +1,7 @@
 import itertools
 import os
 import platform
+import re
 import stat
 import textwrap
 import unittest
@@ -21,14 +22,15 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.env import environment_update
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
+from conan.tools.files import copy
 class MyPkg(ConanFile):
     name = "hello0"
     version = "1.2.1"
     exports_sources = "*"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
 
 
@@ -88,7 +90,7 @@ class UploadTest(unittest.TestCase):
 
         if platform.system() == "Linux":
             client.run("remove '*' -f")
-            client.run("install --reference={}".format(ref))
+            client.run("install --requires={}".format(ref))
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
@@ -128,8 +130,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading hello0/1.2.1@user/testing#4173:357a",
-                      client.out)
+        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#66c6", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
@@ -144,7 +145,8 @@ class UploadTest(unittest.TestCase):
     def test_query_upload(self):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
+            from conan.tools.files import copy
             class MyPkg(ConanFile):
                 name = "hello1"
                 version = "1.2.1"
@@ -152,7 +154,7 @@ class UploadTest(unittest.TestCase):
                 settings = "os", "arch"
 
                 def package(self):
-                    self.copy("*")
+                    copy(self, "*", self.source_folder, self.package_folder)
             """)
         client.save({"conanfile.py": conanfile_upload_query})
 
@@ -263,6 +265,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": "int i=0"})
         client.run("export . --user=frodo --channel=stable")
+        rrev = client.exported_recipe_revision()
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
@@ -283,7 +286,7 @@ class UploadTest(unittest.TestCase):
         # first client tries to upload again
         # The client tries to upload exactly the same revision already uploaded, so no changes
         client.run("upload hello0/1.2.1@frodo/stable -r default")
-        self.assertIn("hello0/1.2.1@frodo/stable#e079cca93fe52941fa1fa737d9698e59 already "
+        self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev} already "
                       "in server, skipping upload", client.out)
 
     def test_upload_unmodified_recipe(self):
@@ -291,6 +294,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
+        rrev = client.exported_recipe_revision()
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
@@ -299,19 +303,19 @@ class UploadTest(unittest.TestCase):
         client2.save(files)
         client2.run("export . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        rrev = client2.cache.get_latest_recipe_reference(ref)
-        manifest = client2.cache.ref_layout(rrev).recipe_manifest()
+        rrev2 = client2.cache.get_latest_recipe_reference(ref)
+        manifest = client2.cache.ref_layout(rrev2).recipe_manifest()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(rrev).export())
+        manifest.save(client2.cache.ref_layout(rrev2).export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
-        self.assertIn("hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f already "
+        self.assertIn(f"hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7 already "
                       "in server, skipping upload", client2.out)
 
         # first client tries to upload again
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "
+        self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev} "
                       "already in server, skipping upload", client.out)
 
     def test_upload_unmodified_package(self):
@@ -319,6 +323,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
+        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
 
@@ -326,8 +331,11 @@ class UploadTest(unittest.TestCase):
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
         client2.run("create . --user=frodo --channel=stable")
+        refs = client2.cache.get_latest_recipe_reference(ref)
+        pkgs = client2.cache.get_package_references(refs)
+        prev2 = client2.cache.get_latest_package_reference(pkgs[0])
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
-        self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc already "
+        self.assertIn(f"{repr(prev2.ref)} already "
                       "in server, skipping upload", client2.out)
         self.assertNotIn("Uploading conanfile.py", client2.out)
         self.assertNotIn("Uploading conan_sources.tgz", client2.out)
@@ -335,13 +343,14 @@ class UploadTest(unittest.TestCase):
                          client2.out)
         self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
-        self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
-                      " already in server, skipping upload", client2.out)
+        self.assertIn(f"{prev2.repr_notime()} already in server, skipping upload", client2.out)
 
         # first client tries to upload again
+        refs = client.cache.get_latest_recipe_reference(ref)
+        pkgs = client.cache.get_package_references(refs)
+        prev1 = client.cache.get_latest_package_reference(pkgs[0])
         client.run("upload hello0/1.2.1@frodo/stable -r default")
-        self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc already "
+        self.assertIn(f"{repr(prev1.ref)} already "
                       "in server, skipping upload", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
@@ -349,19 +358,18 @@ class UploadTest(unittest.TestCase):
                          client.out)
         self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
-        self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
-                      " already in server, skipping upload", client2.out)
+        self.assertIn(f"{prev1.repr_notime()} already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):
         conanfile_new = GenConanfile("hello", "1.0").\
-            with_exports_sources(["*"]).with_package("self.copy('*')")
+            with_import("from conan.tools.files import copy").\
+            with_exports_sources(["*"]).\
+            with_package('copy(self, "*", self.source_folder, self.package_folder)')
 
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
-
         # First time upload
         client.run("upload hello/1.0@frodo/stable -r default")
         self.assertNotIn("Forbidden overwrite", client.out)
@@ -369,11 +377,12 @@ class UploadTest(unittest.TestCase):
 
         # CASE: Upload again
         client.run("upload hello/1.0@frodo/stable -r default")
-        self.assertIn("hello/1.0@frodo/stable#66e74d8694b15fb8a7ed8fbc55c242a0 already "
+        refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/1.0@frodo/stable"))
+        pkgs = client.cache.get_package_references(refs)
+        prev1 = client.cache.get_latest_package_reference(pkgs[0])
+        self.assertIn(f"{repr(prev1.ref)} already "
                       "in server, skipping upload", client.out)
-        self.assertIn("hello/1.0@frodo/stable#66e74d8694b15fb8a7ed8fbc55c242a0:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#a397cb03d51fb3b129c78d2968e2676f"
-                      " already in server, skipping upload", client.out)
+        self.assertIn(f"{prev1.repr_notime()} already in server, skipping upload", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):
@@ -420,7 +429,7 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password",
                                                              "lasote", "mypass"])
 
-        client2.run("install --reference=pkg/0.1@user/testing")
+        client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
@@ -493,7 +502,7 @@ class UploadTest(unittest.TestCase):
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing -r server1")
         client.run("remove * --force")
-        client.run("install --reference=hello0/1.2.1@user/testing -r server1")
+        client.run("install --requires=hello0/1.2.1@user/testing -r server1")
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)
@@ -529,11 +538,12 @@ class UploadTest(unittest.TestCase):
 
         ref = RecipeReference.loads("lib/1.0@conan/testing")
         client.create(ref)
+        rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         # Upload same with client2
         client2.create(ref)
         client2.run("upload lib/1.0@conan/testing -r default")
-        self.assertIn("lib/1.0@conan/testing#f3367e0e7d170aa12abccb175fee5f97 already in "
+        self.assertIn(f"lib/1.0@conan/testing#{rrev} already in "
                       "server, skipping upload", client2.out)
         self.assertNotIn("WARN", client2.out)
 
@@ -852,3 +862,30 @@ def test_upload_package_selection(populate_client):
         tmp.revision = None
         client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
         assert prev.repr_notime() not in client.out
+
+
+def test_upload_only_without_user_channel():
+    """
+    check that we can upload only the packages without user and channel
+    https://github.com/conan-io/conan/issues/10579
+    """
+    c = TestClient(default_server_user=True)
+
+    c.save({"conanfile.py": GenConanfile("lib", "1.0")})
+    c.run('create .')
+    c.run("create . --user=user --channel=channel")
+    c.run("list recipes *")
+    assert "lib/1.0@user/channel" in c.out
+
+    c.run('upload */*@ -c -r=default')
+    assert "Uploading lib/1.0" in c.out  # FAILS!
+    assert "lib/1.0@user/channel" not in c.out
+    c.run("search * -r=default")
+    assert "lib/1.0" in c.out
+    assert "lib/1.0@user/channel" not in c.out
+
+    c.run('upload */*@user/channel -c -r=default')
+    assert "Uploading lib/1.0@user/channel" in c.out
+    c.run("search * -r=default")
+    assert "lib/1.0@user/channel" in c.out
+    assert "lib/1.0" in c.out

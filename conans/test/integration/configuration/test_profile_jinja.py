@@ -14,9 +14,9 @@ def test_profile_template():
         build_type = {{ os.getenv("MY_BUILD_TYPE") }}
         """)
     client.save({"conanfile.py": GenConanfile(),
-                 "profile1.jinja": tpl})
+                 "profile1": tpl})
     with environment_update({"MY_BUILD_TYPE": "Debug"}):
-        client.run("install . -pr=profile1.jinja")
+        client.run("install . -pr=profile1")
 
     current_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "os={}".format(current_os)
@@ -31,15 +31,15 @@ def test_profile_template_variables():
         os = {{ a }}
         """)
     client.save({"conanfile.py": GenConanfile(),
-                 "profile1.jinja": tpl})
-    client.run("install . -pr=profile1.jinja")
+                 "profile1": tpl})
+    client.run("install . -pr=profile1")
     assert "os=FreeBSD" in client.out
 
 
 def test_profile_template_inclusion():
     client = TestClient()
     tpl1 = textwrap.dedent("""
-        {% import "profile_vars.jinja" as vars %}
+        {% import "profile_vars" as vars %}
         [settings]
         os = {{ vars.a }}
         """)
@@ -47,9 +47,9 @@ def test_profile_template_inclusion():
         {% set a = "FreeBSD" %}
         """)
     client.save({"conanfile.py": GenConanfile(),
-                 "profile1.jinja": tpl1,
-                 "profile_vars.jinja": tpl2})
-    client.run("install . -pr=profile1.jinja")
+                 "profile1": tpl1,
+                 "profile_vars": tpl2})
+    client.run("install . -pr=profile1")
     assert "os=FreeBSD" in client.out
 
 
@@ -60,14 +60,15 @@ def test_profile_template_profile_dir():
         tools.toolchain:mydir = {{ os.path.join(profile_dir, "toolchain.cmake") }}
         """)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, load
+        from conan import ConanFile
+        from conan.tools.files import load
         class Pkg(ConanFile):
             def generate(self):
-                content = load(self.conf["tools.toolchain:mydir"])
+                content = load(self, self.conf.get("tools.toolchain:mydir"))
                 self.output.info("CONTENT: {}".format(content))
         """)
     client.save({"conanfile.py": conanfile,
-                 "anysubfolder/profile1.jinja": tpl1,
+                 "anysubfolder/profile1": tpl1,
                  "anysubfolder/toolchain.cmake": "MyToolchainCMake!!!"})
-    client.run("install . -pr=anysubfolder/profile1.jinja")
+    client.run("install . -pr=anysubfolder/profile1")
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out

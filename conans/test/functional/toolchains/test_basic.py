@@ -13,7 +13,7 @@ class BasicTest(unittest.TestCase):
 
     def test_basic(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain
             class Pkg(ConanFile):
                 def generate(self):
@@ -30,7 +30,7 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain")
@@ -47,11 +47,11 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_meson_native.ini")
         self.assertIn("[project options]", toolchain)
 
-    @pytest.mark.tool_visual_studio
+    @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_declarative_msbuildtoolchain(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = ("MSBuildToolchain", )
@@ -66,7 +66,7 @@ class BasicTest(unittest.TestCase):
 
     def test_error_missing_settings(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 generators = "MSBuildToolchain"
             """)
@@ -78,7 +78,7 @@ class BasicTest(unittest.TestCase):
 
     def test_error_missing_settings_method(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildToolchain
             class Pkg(ConanFile):
                 def generate(self):
@@ -92,7 +92,7 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake
             class Pkg(ConanFile):
                 generators = "CMakeToolchain"
@@ -108,12 +108,12 @@ class BasicTest(unittest.TestCase):
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
-    @pytest.mark.tool_visual_studio
+    @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_toolchain_windows(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildToolchain
             class Pkg(ConanFile):
                 name = "Pkg"
@@ -128,8 +128,8 @@ class BasicTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD')
+        client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=191'
+                   ' -s compiler.runtime=dynamic')
 
         conan_toolchain_props = client.load("conantoolchain.props")
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)

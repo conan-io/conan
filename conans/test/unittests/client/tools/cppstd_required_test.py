@@ -2,11 +2,9 @@ import unittest
 from mock import mock
 from parameterized import parameterized
 
+from conan.tools.build import check_min_cppstd, valid_min_cppstd
 from conans.test.utils.mocks import MockSettings, MockConanfile
-from conans.client.tools import OSInfo
 from conans.errors import ConanInvalidConfiguration, ConanException
-
-from conans.tools import check_min_cppstd, valid_min_cppstd
 
 
 class UserInputTests(unittest.TestCase):

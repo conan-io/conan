@@ -66,6 +66,10 @@ def print_graph_basic(graph):
             reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
+    if graph.error:
+        output.info("Graph error", Color.BRIGHT_RED)
+        output.info("    {}".format(graph.error), Color.BRIGHT_RED)
+
 
 def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
@@ -123,7 +127,7 @@ def _serial_pretty_printer(data, field_filter, indent=""):
         if isinstance(v, dict):
             out.writeln(f"{indent}{k}:")
             # TODO: increment color too
-            _serial_pretty_printer(v, field_filter, indent=indent+"  ")
+            _serial_pretty_printer(v, None, indent=indent+"  ")
         else:
             out.writeln(f"{indent}{k}: {v}")
 

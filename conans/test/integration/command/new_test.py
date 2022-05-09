@@ -6,7 +6,7 @@ import pytest
 from conans import __version__ as client_version
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.tools import save
+from conans.util.files import save
 
 
 class TestNewCommand:
@@ -35,6 +35,15 @@ class TestNewCommand:
         # Test at least it exports correctly
         client.run("export . --user=myuser --channel=testing")
         assert "pkg/1.3@myuser/testing" in client.out
+
+    def test_new_missing_definitions(self):
+        client = TestClient()
+        client.run("new cmake_lib", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
+        client.run("new cmake_lib -d name=myname", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
+        client.run("new cmake_lib -d version=myversion", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
 
 
 class TestNewCommandUserTemplate:
@@ -80,7 +89,7 @@ class TestNewCommandUserTemplate:
         save(os.path.join(path, "conanfile.py"), template1)
         save(os.path.join(path, "file.h"), "{{header}}")
 
-        client.run(f"new mytemplate -d name=hello -d version=0.1")
+        client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=")
         assert not os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
         client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=xxx -f")
@@ -108,7 +117,6 @@ class TestNewErrors:
     def test_template_errors(self):
         client = TestClient()
         client.run("new mytemplate", assert_error=True)
-        print(client.out)
         assert "ERROR: Template doesn't exist" in client.out
 
     def test_forced(self):

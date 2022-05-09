@@ -13,8 +13,9 @@ def client_weird_lib_name():
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.files import copy
 
         class Pkg(ConanFile):
             exports_sources = "CMakeLists.txt", "src/*"
@@ -30,9 +31,12 @@ def client_weird_lib_name():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", os.path.join(self.source_folder, "src"),
+                                  os.path.join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"),
+                     keep_path=False)
+                copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"),
+                     keep_path=False)
                 ext = "a" if platform.system() != "Windows" else "lib"
                 prefix = "lib" if platform.system() != "Windows" else ""
                 os.chdir(os.path.join(self.package_folder, "lib"))
@@ -55,7 +59,7 @@ def client_weird_lib_name():
     return c
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmakedeps(client_weird_lib_name):
     c = client_weird_lib_name
     c.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)

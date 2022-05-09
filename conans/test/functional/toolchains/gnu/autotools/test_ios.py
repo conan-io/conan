@@ -3,21 +3,19 @@ import textwrap
 
 import pytest
 
-from conan.tools.files import load_toolchain_args
-from conans.client.tools.apple import XCRun, to_apple_arch
+from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("autotools")
 def test_ios():
     xcrun = XCRun(None, sdk='iphoneos')
-    cflags = ""
-    cflags += " -isysroot " + xcrun.sdk_path
-    cflags += " -arch " + to_apple_arch('armv8')
-    cxxflags = cflags
-    ldflags = cflags
+    sdk_path = xcrun.sdk_path
 
     profile = textwrap.dedent("""
         include(default)
@@ -26,13 +24,10 @@ def test_ios():
         os.sdk=iphoneos
         os.version=12.0
         arch=armv8
-        [env]
-        CC={cc}
-        CXX={cxx}
-        CFLAGS={cflags}
-        CXXFLAGS={cxxflags}
-        LDFLAGS={ldflags}
-    """).format(cc=xcrun.cc, cxx=xcrun.cxx, cflags=cflags, cxxflags=cxxflags, ldflags=ldflags)
+
+        [conf]
+        tools.apple:sdk_path={sdk_path}
+    """).format(sdk_path=sdk_path)
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
@@ -44,7 +39,7 @@ def test_ios():
     configure_ac = gen_configure_ac()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
@@ -75,4 +70,5 @@ def test_ios():
 
     conanbuild = load_toolchain_args(client.current_folder)
     configure_args = conanbuild["configure_args"]
-    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+    assert configure_args == "'--disable-shared' '--enable-static' '--with-pic' " \
+                             "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"

@@ -11,7 +11,7 @@ class TestOptions:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [True, False], "optimized": [2, 3, 4], "path": "ANY"}
+        options = {"static": [True, False], "optimized": [2, 3, 4], "path": ["ANY"]}
         values = {"static": True, "optimized": 3, "path": "mypath"}
         self.sut = Options(options, values)
 
@@ -92,11 +92,9 @@ class TestOptions:
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
         assert "static=True" in self.sut.dumps()
 
-        # Removal of options with values should rais
-        with pytest.raises(ConanException) as e:
-            del self.sut.static
-        assert "Incorrect attempt to remove option 'static'" in str(e.value)
-        assert "static" in self.sut.dumps()
+        # Removal of options with values doesn't raise anymore
+        del self.sut.static
+        assert "static" not in self.sut.dumps()
 
         # Test None is possible to change
         sut2 = Options({"static": [True, False],
@@ -110,7 +108,7 @@ class TestOptions:
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
         assert "static=True" in sut2.dumps()
 
-        # can remove other, not assigned yet
+        # can remove other, removing is always possible, even if freeze
         del sut2.other
         assert "other" not in sut2.dumps()
 
@@ -121,7 +119,7 @@ class TestOptionsLoad:
             optimized=3
             path=mypath
             static=True
-            zlib:option=8
+            zlib*:option=8
             *:common=value
             """)
         sut = Options.loads(text)
@@ -131,8 +129,10 @@ class TestOptionsLoad:
         assert sut.path != "whatever"  # Non validating
         assert sut.static == "True"
         assert sut.static != "whatever"  # Non validating
-        assert sut["zlib"].option == 8
-        assert sut["zlib"].option != "whatever"  # Non validating
+        assert sut["zlib/1*"].option == 8
+        assert sut["zlib/1.2.11"].option == 8
+        assert sut["zlib/*"].option != "whatever"  # Non validating
+        assert sut["*/*"].common == "value"
         assert sut["*"].common == "value"
         assert sut["*"].common != "whatever"  # Non validating
 
@@ -146,8 +146,8 @@ class TestOptionsPropagate:
 
         ref = RecipeReference.loads("boost/1.0")
         # if ref!=None option MUST be preceded by boost:
-        down_options = Options(options_values={"zlib:other": 1, "boost:static": False})
-        sut.apply_downstream(down_options, Options(), ref)
+        down_options = Options(options_values={"zlib/2.0:other": 1, "boost/1.0:static": False})
+        sut.apply_downstream(down_options, Options(), ref, False)
         assert not sut.static
 
         # Should be freezed now
@@ -155,15 +155,15 @@ class TestOptionsPropagate:
             sut.static = True
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
 
-        self_options, up_options = sut.get_upstream_options(down_options, ref)
-        assert up_options.dumps() == "zlib:other=1"
-        assert self_options.dumps() == "boost:static=False\nzlib:other=1"
+        self_options, up_options = sut.get_upstream_options(down_options, ref, False)
+        assert up_options.dumps() == "zlib/2.0:other=1"
+        assert self_options.dumps() == "boost/1.0:static=False\nzlib/2.0:other=1"
 
 
 class TestOptionsNone:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        options = {"static": [None, 1, 2], "other": "ANY", "more": ["None", 1]}
+        options = {"static": [None, 1, 2], "other": [None, "ANY"], "more": ["None", 1]}
         self.sut = Options(options)
 
     def test_booleans(self):

@@ -16,7 +16,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
         self.t = TestClient()
         create_library(self.t)
         self._conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
 
             class Library(ConanFile):
@@ -56,7 +56,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
             """)
         })
 
-    @pytest.mark.tool_cmake(version="3.19")
+    @pytest.mark.tool("cmake", "3.19")
     def test_xcode_generator(self):
         """ Simplest approach:
             https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-ios-tvos-or-watchos

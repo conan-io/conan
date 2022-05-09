@@ -12,11 +12,13 @@ class CollectLibsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0")
     def test_collect_libs(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            import os
+            from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):
-                    self.copy("*", dst="lib")
+                    copy(self, "*", self.source_folder, dst=os.path.join(self.package_folder, "lib"))
                 def package_info(self):
                     from conans import tools
                     self.cpp_info.libs = tools.collect_libs(self)

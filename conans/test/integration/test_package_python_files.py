@@ -10,11 +10,12 @@ def test_package_python_files():
     client = TestClient(default_server_user=True)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
         """)
     client.save({"conanfile.py": conanfile,
                  "myfile.pyc": "",
@@ -44,7 +45,7 @@ def test_package_python_files():
 
     client.run("upload * -r=default --confirm")
     client.run("remove * -f")
-    client.run("download pkg/0.1@")
+    client.run("download pkg/0.1#*:* -r default")
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))

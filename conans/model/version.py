@@ -51,8 +51,8 @@ class Version:
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
-    def __init__(self, value: str):
-        assert isinstance(value, str)
+    def __init__(self, value):
+        value = str(value)
         self._value = value
 
         items = value.rsplit("+", 1)  # split for build

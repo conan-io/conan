@@ -5,8 +5,7 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAN
 from conans.cli.commands import json_formatter, CommandResult
 from conans.cli.common import get_remote_selection
 from conans.cli.output import Color, ConanOutput
-from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
-    NotFoundException
+from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -83,22 +82,18 @@ def print_list_package_ids(results: List[CommandResult]):
         elif not result.elements:
             out.writeln("  There are no packages")
         else:
-            for pref, search_info in result.elements.items():
+            for pref, binary_info in result.elements.items():
                 _tmp_pref = copy.copy(pref)
                 _tmp_pref.revision = None  # Do not show the revision of the package
                 out.writeln(f"  {_tmp_pref.repr_notime()}", fg=reference_color)
-                if search_info.requires:
-                    out.writeln("    requires:", fg=field_color)
-                    for req in search_info.requires:
-                        out.writeln(f"      {req}", fg=value_color)
-                if search_info.settings:
-                    out.writeln(f"    settings:", fg=field_color)
-                    for name, val in search_info.settings.items():
-                        out.writeln(f"      {name}={val}", fg=value_color)
-                if search_info.options:
-                    out.writeln(f"    options:", fg=field_color)
-                    for name, val in search_info.options.items():
-                        out.writeln(f"      {name}={val}", fg=value_color)
+                for item, contents in binary_info.items():
+                    out.writeln(f"    {item}:", fg=field_color)
+                    if not isinstance(contents, dict):
+                        for c in contents:
+                            out.writeln(f"      {c}", fg=value_color)
+                    else:
+                        for k, v in contents.items():
+                            out.writeln(f"      {k}={v}", fg=value_color)
 
 
 def _add_remotes_and_cache_options(subparser):
@@ -261,7 +256,15 @@ def list_packages(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         result = CommandResult()
         try:
-            result.elements = conan_api.list.packages_configurations(ref)
+            # This resolves "latest" or no revision
+            refs = conan_api.search.recipe_revisions(args.reference, args.remote)
+            if len(refs) == 0:
+                raise ConanException("There are no recipes matching the expression '{}'"
+                                     "".format(args.reference))
+            if len(refs) > 1:
+                raise ConanException("The expression '{}' resolved more "
+                                     "than one recipe".format(args.reference))
+            result.elements = conan_api.list.packages_configurations(refs[0])
         except Exception as e:
             result.error = str(e)
         results.append(result)

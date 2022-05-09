@@ -1,29 +1,32 @@
+import os
 import types
 
 import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain import Block
-from conans import ConanFile
+from conan import ConanFile
+from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
 
 
 @pytest.fixture
 def conanfile():
     c = ConanFile(None)
     settings = Settings({"os": ["Windows"],
-                           "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
+                           "compiler": {"clang": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
     c.settings = settings
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
-    c.settings.compiler = "gcc"
+    c.settings.compiler = "clang"
     c.settings.compiler.libcxx = "libstdc++"
     c.settings_build = c.settings
     c.settings.os = "Windows"
@@ -37,29 +40,29 @@ def conanfile():
 def test_cmake_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
-    assert 'set(CMAKE_BUILD_TYPE "Release"' in content
+    assert 'set(CMAKE_C_COMPILER clang)' in content
 
 
 def test_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.remove("generic_system")
     content = toolchain.content
-    assert 'CMAKE_BUILD_TYPE' not in content
+    assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_template_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks["generic_system"].template = ""
     content = toolchain.content
-    assert 'CMAKE_BUILD_TYPE' not in content
+    assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_template_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
     tmp = toolchain.blocks["generic_system"].template
-    toolchain.blocks["generic_system"].template = tmp.replace("CMAKE_BUILD_TYPE", "OTHER_THING")
+    toolchain.blocks["generic_system"].template = tmp.replace("CMAKE_C_COMPILER", "OTHER_THING")
     content = toolchain.content
-    assert 'set(OTHER_THING "Release"' in content
+    assert 'set(OTHER_THING clang)' in content
 
 
 def test_context_change(conanfile):
@@ -68,25 +71,25 @@ def test_context_change(conanfile):
 
     def context(self):
         assert self
-        return {"build_type": "SuperRelease"}
+        return {"compiler": None}
     tmp.context = types.MethodType(context, tmp)
     content = toolchain.content
-    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+    assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_context_update(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    build_type = toolchain.blocks["generic_system"].values["build_type"]
-    toolchain.blocks["generic_system"].values["build_type"] = "Super" + build_type
+    compiler = toolchain.blocks["generic_system"].values["compiler"]
+    toolchain.blocks["generic_system"].values["compiler"] = "Super" + compiler
     content = toolchain.content
-    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+    assert 'set(CMAKE_C_COMPILER Superclang)' in content
 
 
 def test_context_replace(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks["generic_system"].values = {"build_type": "SuperRelease"}
+    toolchain.blocks["generic_system"].values = {"compiler": "SuperClang"}
     content = toolchain.content
-    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+    assert 'set(CMAKE_C_COMPILER SuperClang)' in content
 
 
 def test_replace_block(conanfile):
@@ -101,7 +104,7 @@ def test_replace_block(conanfile):
     toolchain.blocks["generic_system"] = MyBlock
     content = toolchain.content
     assert 'HelloWorld' in content
-    assert 'CMAKE_BUILD_TYPE' not in content
+    assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_add_new_block(conanfile):
@@ -116,7 +119,7 @@ def test_add_new_block(conanfile):
     toolchain.blocks["mynewblock"] = MyBlock
     content = toolchain.content
     assert 'Hello World!!!' in content
-    assert 'CMAKE_BUILD_TYPE' in content
+    assert 'CMAKE_C_COMPILER' in content
 
 
 def test_user_toolchain(conanfile):
@@ -179,9 +182,71 @@ def conanfile_msvc():
 
 def test_toolset(conanfile_msvc):
     toolchain = CMakeToolchain(conanfile_msvc)
-    assert 'CMAKE_GENERATOR_TOOLSET "v143"' in toolchain.content
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143" CACHE STRING "" FORCE)' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_toolset_x64(conanfile_msvc):
+    # https://github.com/conan-io/conan/issues/11144
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_arch", "x64")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,host=x64" CACHE STRING "" FORCE)' in toolchain.content
+    assert 'Visual Studio 17 2022' in toolchain.generator
+    assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_older_msvc_toolset():
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["170"], "update": [None],
+                                                 "cppstd": ["98"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "170"
+    c.settings.compiler.cppstd = "98"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
+    # As by the CMake docs, this has no effect for VS < 2015
+    assert 'CMAKE_CXX_STANDARD 98' in content
+
+
+def test_msvc_xp_toolsets():
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["170"], "update": [None],
+                                                 "cppstd": ["98"], "toolset": [None, "v110_xp"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "170"
+    c.settings.compiler.toolset = "v110_xp"
+    c.settings.compiler.cppstd = "98"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "v110_xp"' in content
+    # As by the CMake docs, this has no effect for VS < 2015
+    assert 'CMAKE_CXX_STANDARD 98' in content
 
 
 @pytest.fixture
@@ -342,7 +407,7 @@ def test_libcxx_abi_flag():
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=0' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=0' in content
     c.settings.compiler.libcxx = "libstdc++11"
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -351,13 +416,13 @@ def test_libcxx_abi_flag():
     # recipe workaround for older distros
     toolchain.blocks["libcxx"].values["glibcxx"] = "1"
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
     # but maybe the conf is better
-    c.conf["tools.gnu:define_libcxx11_abi"] = True
+    c.conf.define("tools.gnu:define_libcxx11_abi", True)
     toolchain = CMakeToolchain(c)
     content = toolchain.content
-    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+    assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 
 
 @pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
@@ -375,7 +440,8 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
-    c.settings.os.sdk = os_sdk
+    if os_sdk:
+        c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
     c.settings.arch = arch
     c.settings.compiler = "apple-clang"
@@ -394,12 +460,12 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     assert 'set(CMAKE_OSX_SYSROOT %s CACHE STRING "" FORCE)' % expected_sdk in content
 
 
-@pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
-    ("iOS", None, "x86_64", ""),
-    ("watchOS", None, "armv8", ""),
-    ("tvOS", None, "x86_64", "")
+@pytest.mark.parametrize("os,arch,expected_sdk", [
+    ("iOS", "x86_64", ""),
+    ("watchOS", "armv8", ""),
+    ("tvOS", "x86_64", "")
 ])
-def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
+def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
     """
     Testing if CMAKE_OSX_SYSROOT is correctly set.
     Issue related: https://github.com/conan-io/conan/issues/10275
@@ -408,7 +474,6 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
-    c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
     c.settings.arch = arch
     c.settings.compiler = "apple-clang"
@@ -424,3 +489,17 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
         assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
+
+
+def test_variables_types(conanfile):
+    generator_folder = temp_folder()
+    conanfile.folders.set_base_generators(generator_folder)
+    # This is a trick for 1.X to use base_generator and not install folder
+    conanfile.folders.generators = "here"
+
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.variables["FOO"] = True
+    toolchain.generate()
+
+    contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
+    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents

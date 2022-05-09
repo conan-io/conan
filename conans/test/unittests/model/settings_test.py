@@ -1,52 +1,52 @@
 import unittest
 
+import pytest
+
+from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
-from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
+from conans.model.settings import Settings, bad_value_msg, undefined_field
+
+
+def undefined_value(v):
+    return "'%s' value not defined" % v
 
 
 class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_value(self):
-        yml = "os: [None, Windows]"
+        yml = "os: [null, Windows]"
         settings = Settings.loads(yml)
-        # Same sha as if settings were empty
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
         self.assertTrue(settings.os == None)
-        self.assertEqual("", settings.values.dumps())
-        settings.os = "None"
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
-        settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_any(self):
-        yml = "os: ANY"
+        yml = "os: [ANY]"
         settings = Settings.loads(yml)
         with self.assertRaisesRegex(ConanException, "'settings.os' value not defined"):
             settings.validate()  # Raise exception if unset
-        settings.os = "None"
+        settings.os = "some-os"
         settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertTrue(settings.os == "some-os")
+        self.assertIn("os=some-os", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_none_any(self):
-        yml = "os: [None, ANY]"
+        yml = "os: [null, ANY]"
         settings = Settings.loads(yml)
         settings.validate()
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertIn("os=None", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
 
     def test_getattr_none(self):
         yml = "os: [None, Windows]"
@@ -69,35 +69,29 @@ class SettingsLoadsTest(unittest.TestCase):
 
     def test_none_subsetting(self):
         yml = """os:
-    None:
+    null:
     Windows:
-        subsystem: [None, cygwin]
+        subsystem: [null, cygwin]
 """
         settings = Settings.loads(yml)
-        # Same sha as if settings were empty
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
         self.assertTrue(settings.os == None)
-        self.assertEqual("", settings.values.dumps())
-        settings.os = "None"
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
-        settings.validate()
-        self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows", settings.dumps())
         settings.os.subsystem = "cygwin"
-        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.values.dumps())
+        settings.validate()
+        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.dumps())
 
     def test_none__sub_subsetting(self):
         yml = """os:
-    None:
-        subsystem: [None, cygwin]
+    null:
+        subsystem: [null, cygwin]
     Windows:
 """
         with self.assertRaisesRegex(ConanException,
-                                   "settings.yml: None setting can't have subsettings"):
+                                    "settings.yml: null setting can't have subsettings"):
             Settings.loads(yml)
 
 
@@ -132,10 +126,10 @@ class SettingsTest(unittest.TestCase):
         other_settings = Settings.loads("os: [Windows, Linux]")
         settings.os = "Windows"
         other_settings.os = "Windows"
-        self.assertEqual(settings.values.sha, other_settings.values.sha)
+        self.assertEqual(settings.dumps(), other_settings.dumps())
 
     def test_any(self):
-        data = {"target": "ANY"}
+        data = {"target": ["ANY"]}
         sut = Settings(data)
         sut.target = "native"
         self.assertTrue(sut.target == "native")
@@ -165,7 +159,7 @@ class SettingsTest(unittest.TestCase):
         del self.sut.compiler
         self.sut.os = "Windows"
         self.sut.validate()
-        self.assertEqual(self.sut.values.dumps(), "os=Windows")
+        self.assertEqual(self.sut.dumps(), "os=Windows")
 
     def test_loads_default(self):
         settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
@@ -175,7 +169,7 @@ compiler:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
     gcc:
         version: ["4.8", "4.9", "5.0"]
-    Visual Studio:
+    msvc:
         runtime: [None, MD, MT, MTd, MDd]
         version: ["10", "11", "12"]
     clang:
@@ -190,7 +184,7 @@ build_type: [None, Debug, Release]""")
     def test_loads(self):
         settings = Settings.loads("""
 compiler:
-    Visual Studio:
+    msvc:
         runtime: [MD, MT]
         version:
             '10':
@@ -209,11 +203,11 @@ compiler:
         version: ['4.8', '4.9']
 os: [Windows, Linux]
 """)
-        settings.update_values([('compiler', 'Visual Studio'),
+        settings.update_values([('compiler', 'msvc'),
                                 ('compiler.version', '10'),
                                 ('compiler.version.arch', '32')])
         self.assertEqual(settings.values_list,
-                         [('compiler', 'Visual Studio'),
+                         [('compiler', 'msvc'),
                           ('compiler.version', '10'),
                           ('compiler.version.arch', '32')])
 
@@ -225,7 +219,7 @@ os: [Windows, Linux]
         settings.compiler.version.arch = "64"
 
         self.assertEqual(settings.values_list,
-                         [('compiler', 'Visual Studio'),
+                         [('compiler', 'msvc'),
                           ('compiler.version', '12'),
                           ('compiler.version.arch', '64')])
 
@@ -248,7 +242,8 @@ os: [Windows, Linux]
         self.sut.constrained(s2)
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler
-        self.assertEqual(str(cm.exception), str(undefined_field("settings", "compiler", ["os"])))
+        self.assertEqual(str(cm.exception),
+                         str(undefined_field("settings", "compiler", ["os"], "settings")))
         self.sut.os = "Windows"
         self.sut.os = "Linux"
 
@@ -257,7 +252,7 @@ os: [Windows, Linux]
         with self.assertRaises(ConanException) as cm:
             self.sut.constrained(s2)
         self.assertEqual(str(cm.exception),
-                         str(undefined_field("settings", "os2", ["compiler", "os"])))
+                         str(undefined_field("settings", "os2", ["compiler", "os"], "settings")))
 
     def test_constraint6(self):
         s2 = {"os", "compiler"}
@@ -276,22 +271,19 @@ os: [Windows, Linux]
             self.sut.validate()
 
         self.sut.compiler = "gcc"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch = "x86"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.arch.speed"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.arch.speed = "A"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "4.8"
-        with self.assertRaisesRegex(ConanException, str(undefined_value("settings.os"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.os = "Windows"
@@ -305,13 +297,11 @@ os: [Windows, Linux]
     def test_validate2(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.runtime"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.runtime = "MD"
-        with self.assertRaisesRegex(ConanException,
-                                   str(undefined_value("settings.compiler.version"))):
+        with self.assertRaisesRegex(ConanException, "value not defined"):
             self.sut.validate()
 
         self.sut.compiler.version = "10"
@@ -402,3 +392,26 @@ os: [Windows, Linux]
 
         self.sut.compiler.arch.speed = "D"
         self.assertEqual(self.sut.compiler.arch.speed, "D")
+
+    def test_get_definition(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = "gcc"
+        sot = settings.compiler.cppstd.get_definition()
+        assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
+                       'gnu20', '23', 'gnu23']
+
+        # We cannot access the child definition of a non declared setting
+        with pytest.raises(Exception) as e:
+            settings.os.version.get_definition()
+
+        assert "'settings.os' value not defined" in str(e.value)
+
+        # But if we have it declared, we can
+        settings.os = "watchOS"
+        sot = settings.os.version.get_definition()
+        assert "4.0" in sot
+
+        # We can get the whole settings definition and explore the dict
+        sot = settings.get_definition()
+        assert [None, "cygwin", "msys", "msys2", "wsl"] == sot["os"]["Windows"]["subsystem"]
+

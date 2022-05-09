@@ -1,17 +1,15 @@
 import os
 import traceback
 
-from conan.tools.microsoft.subsystems import deduce_subsystem
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import save, mkdir
-from ..tools import chdir
-
+from conans.util.files import save, mkdir, chdir
 
 _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
-               "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+               "MesonToolchain", "MSBuildDeps", "QbsToolchain",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "deploy", "IntelCC", "XcodeDeps", "PremakeDeps"]
+               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
 
 
 def _get_generator_class(generator_name):
@@ -63,15 +61,15 @@ def _get_generator_class(generator_name):
     elif generator_name == "BazelToolchain":
         from conan.tools.google import BazelToolchain
         return BazelToolchain
-    elif generator_name == "deploy":
-        from conans.client.generators.deploy import DeployGenerator
-        return DeployGenerator
     elif generator_name == "XcodeDeps":
         from conan.tools.apple import XcodeDeps
         return XcodeDeps
     elif generator_name == "PremakeDeps":
         from conan.tools.premake import PremakeDeps
         return PremakeDeps
+    elif generator_name == "XcodeToolchain":
+        from conan.tools.apple import XcodeToolchain
+        return XcodeToolchain
     else:
         raise ConanException("Internal Conan error: Generator '{}' "
                              "not complete".format(generator_name))
@@ -134,7 +132,6 @@ def _receive_conf(conanfile):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
@@ -148,12 +145,15 @@ def _generate_aggregated_env(conanfile):
         subsystem = deduce_subsystem(conanfile, group)
         bats = []
         shs = []
+        ps1s = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             if env_script.endswith(".bat"):
                 bats.append(path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".ps1"):
+                ps1s.append(path)
         if shs:
             def sh_content(files):
                 return ". " + " && . ".join('"{}"'.format(s) for s in files)
@@ -168,3 +168,10 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  bat_content(deactivates(bats)))
+        if ps1s:
+            def ps1_content(files):
+                return "\r\n".join(['& "{}"'.format(b) for b in files])
+            filename = "conan{}.ps1".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 ps1_content(deactivates(ps1s)))

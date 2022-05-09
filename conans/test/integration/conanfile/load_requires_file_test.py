@@ -5,10 +5,10 @@ class TestLoadRequirementsTextFileTest:
 
     def test_load_reqs_from_text_file(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile, load
+        conanfile = """from conan import ConanFile
 def reqs():
     try:
-        content = load("reqs.txt")
+        content = open("reqs.txt", "r").read()
         lines = [line for line in content.splitlines() if line]
         return tuple(lines)
     except:
@@ -27,7 +27,7 @@ class Test(ConanFile):
                          "reqs.txt": reqs})
             client.run("create . --name=hello%s --version=0.1 --user=user --channel=channel" % (i + 1))
 
-        client.run("install --reference=hello3/0.1@user/channel")
+        client.run("install --requires=hello3/0.1@user/channel")
         client.assert_listed_require({"hello0/0.1@user/channel": "Cache",
                                       "hello1/0.1@user/channel": "Cache",
                                       "hello2/0.1@user/channel": "Cache",

@@ -212,6 +212,8 @@ class Requirement:
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        # The force trait is also defined from an override
+        self.force |= other.force or other.override
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
@@ -250,7 +252,7 @@ class Requirement:
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
@@ -261,7 +263,7 @@ class Requirement:
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
@@ -270,6 +272,10 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
+            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
+                downstream_require.headers = False
+            if pkg_type in (PackageType.SHARED, PackageType.APP):
+                downstream_require.libs = False
 
         assert require.visible, "at this point require should be visible"
 
@@ -299,23 +305,39 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type):
-        # If the requirement doesn't declare package_id, try to guess it with the types
-        if self.package_id_mode is not None:
+    def deduce_package_id_mode(self, pkg_type, dep_pkg_type, non_embed_mode, embed_mode, build_mode,
+                               unknown_mode):
+        # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
+        # The "conf" values are defaults, no hard overrides
+        if self.package_id_mode:
+            return
+
+        if self.build:
+            if build_mode and self.direct:
+                self.package_id_mode = build_mode
+            return  # At the moment no defaults
+
+        if pkg_type is PackageType.HEADER:
+            self.package_id_mode = "unrelated_mode"
             return
 
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:
-                    self.package_id_mode = "minor_mode"
+                    self.package_id_mode = non_embed_mode
                 else:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = embed_mode
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = embed_mode
                 else:
-                    self.package_id_mode = "minor_mode"
-            # HEADER-ONLY is automatically cleared in compute_package_id()
+                    self.package_id_mode = non_embed_mode
+
+            if self.package_id_mode is None:
+                self.package_id_mode = unknown_mode
+
+        # For cases like Application->Application, without headers or libs, package_id_mode=None
+        # It will be independent by default
 
 
 class BuildRequirements:
@@ -383,6 +405,8 @@ class Requirements:
 
     # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
+        if str_ref is None:
+            return
         assert isinstance(str_ref, str)
         ref = RecipeReference.loads(str_ref)
         req = Requirement(ref, **kwargs)
@@ -402,6 +426,8 @@ class Requirements:
              headers = False => We won't include headers, is a tool, no propagate the includes.
              run = None => It will be determined by the package_type of the ref
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
@@ -452,6 +478,8 @@ class Requirements:
          libs = False => We won't link with it, is a tool, no propagate the libs.
          headers = False => We won't include headers, is a tool, no propagate the includes.
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,

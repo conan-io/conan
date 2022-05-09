@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-import platform
 import subprocess
 import unittest
 
-import pytest
-from mock.mock import mock_open, patch
-
-from conans.client import tools
-from conans.client.conf.detect_vs import vswhere
-from conans.client.tools.files import replace_in_file
+from conan.tools.files import replace_in_file, collect_libs
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
@@ -46,65 +40,15 @@ class ReplaceInFileTest(unittest.TestCase):
         with open(self.win_file, "wb") as handler:
             handler.write(text)
 
-        self.bytes_file = os.path.join(self.tmp_folder, "bytes_encoding.txt")
-        with open(self.bytes_file, "wb") as handler:
-            handler.write(text)
-
     def test_replace_in_file(self):
-        replace_in_file(self.win_file, "nis", "nus")
-        replace_in_file(self.bytes_file, "nis", "nus")
+        replace_in_file(ConanFileMock(), self.win_file, "nis", "nus", encoding="Windows-1252")
 
-        content = tools.load(self.win_file)
-        self.assertNotIn("nis", content)
-        self.assertIn("nus", content)
-
-        content = tools.load(self.bytes_file)
+        content = load(self.win_file)
         self.assertNotIn("nis", content)
         self.assertIn("nus", content)
 
 
 class ToolsTest(unittest.TestCase):
-
-    def test_replace_paths(self):
-        folder = temp_folder()
-        path = os.path.join(folder, "file")
-        replace_with = "MYPATH"
-        expected = 'Some other contentsMYPATH"finally all text'
-
-        save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with,
-                                         windows_paths=True)
-        self.assertEqual(load(path), expected)
-        self.assertTrue(ret)
-
-        save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with,
-                                         windows_paths=True)
-        self.assertEqual(load(path), expected)
-        self.assertTrue(ret)
-
-        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False,
-                                         windows_paths=True)
-        self.assertEqual(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
-        self.assertFalse(ret)
-
-        # Multiple matches
-        s = 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext'
-        save(path, s)
-        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
-                                         windows_paths=True)
-        self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
-        self.assertTrue(ret)
-
-        # Automatic windows_paths
-        save(path, s)
-        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
-        if platform.system() == "Windows":
-            self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
-            self.assertTrue(ret)
-        else:
-            self.assertFalse(ret)
 
     def test_load_save(self):
         folder = temp_folder()
@@ -190,69 +134,6 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual(os.getenv("B", None), None)
         self.assertEqual(os.getenv("Z", None), None)
 
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires vswhere")
-    def test_vswhere_description_strip(self):
-        myoutput = """
-[
-  {
-    "instanceId": "17609d7c",
-    "installDate": "2018-06-11T02:15:04Z",
-    "installationName": "VisualStudio/15.7.3+27703.2026",
-    "installationPath": "",
-    "installationVersion": "15.7.27703.2026",
-    "productId": "Microsoft.VisualStudio.Product.Enterprise",
-    "productPath": "",
-    "isPrerelease": false,
-    "displayName": "Visual Studio Enterprise 2017",
-    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
-    "channelId": "VisualStudio.15.Release",
-    "channelUri": "https://aka.ms/vs/15/release/channel",
-    "enginePath": "",
-    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
-    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
-    "updateDate": "2018-06-11T02:15:04.7009868Z",
-    "catalog": {
-      "buildBranch": "d15.7",
-      "buildVersion": "15.7.27703.2026",
-      "id": "VisualStudio/15.7.3+27703.2026",
-      "localBuild": "build-lab",
-      "manifestName": "VisualStudio",
-      "manifestType": "installer",
-      "productDisplayVersion": "15.7.3",
-      "productLine": "Dev15",
-      "productLineVersion": "2017",
-      "productMilestone": "RTW",
-      "productMilestoneIsPreRelease": "False",
-      "productName": "Visual Studio",
-      "productPatchVersion": "3",
-      "productPreReleaseMilestoneSuffix": "1.0",
-      "productRelease": "RTW",
-      "productSemanticVersion": "15.7.3+27703.2026",
-      "requiredEngineVersion": "1.16.1187.57215"
-    },
-    "properties": {
-      "campaignId": "",
-      "canceled": "0",
-      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
-      "nickname": "",
-      "setupEngineFilePath": ""
-    }
-  },
-  {
-    "instanceId": "VisualStudio.12.0",
-    "installationPath": "",
-    "installationVersion": "12.0"
-  }
-]
-
-"""
-        myoutput = myoutput.encode()
-        myrunner = mock_open()
-        myrunner.check_output = lambda x: myoutput
-        with patch('conans.client.conf.detect_vs.subprocess', myrunner):
-            json = vswhere()
-            self.assertNotIn("descripton", json)
-
     def test_check_output_runner(self):
         original_temp = temp_folder()
         patched_temp = os.path.join(original_temp, "dir with spaces")
@@ -268,7 +149,7 @@ class CollectLibTestCase(unittest.TestCase):
         with redirect_output(output):
             conanfile = ConanFileMock()
             # Without package_folder
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual([], result)
 
             # Default behavior
@@ -276,29 +157,29 @@ class CollectLibTestCase(unittest.TestCase):
             mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(mylib_path, "")
             conanfile.cpp = Infos()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
 
             # Custom folder
             customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
             save(customlib_path, "")
-            result = tools.collect_libs(conanfile, folder="custom_folder")
+            result = collect_libs(conanfile, folder="custom_folder")
             self.assertEqual(["customlib"], result)
 
             # Custom folder doesn't exist
-            result = tools.collect_libs(conanfile, folder="fake_folder")
+            result = collect_libs(conanfile, folder="fake_folder")
             self.assertEqual([], result)
             self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
             output.clear()
 
             # Use cpp_info.libdirs
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["customlib", "mylib"], result)
 
             # Custom folder with multiple libdirs should only collect from custom folder
             self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
-            result = tools.collect_libs(conanfile, folder="custom_folder")
+            result = collect_libs(conanfile, folder="custom_folder")
             self.assertEqual(["customlib"], result)
 
             # Warn same lib different folders
@@ -312,7 +193,7 @@ class CollectLibTestCase(unittest.TestCase):
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
 
             output.clear()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("Library 'mylib' was either already found in a previous "
                           "'conanfile.cpp_info.libdirs' folder or appears several times with a "
@@ -327,7 +208,7 @@ class CollectLibTestCase(unittest.TestCase):
             no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
             conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
             output.clear()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                           % no_folder_path, output.getvalue())
@@ -337,7 +218,7 @@ class CollectLibTestCase(unittest.TestCase):
         with redirect_output(output):
             conanfile = ConanFileMock()
             # Without package_folder
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual([], result)
 
             # Default behavior
@@ -345,29 +226,29 @@ class CollectLibTestCase(unittest.TestCase):
             mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(mylib_path, "")
             conanfile.cpp = Infos()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
 
             # Custom folder
             customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
             save(customlib_path, "")
-            result = tools.collect_libs(conanfile, folder="custom_folder")
+            result = collect_libs(conanfile, folder="custom_folder")
             self.assertEqual(["customlib"], result)
 
             # Custom folder doesn't exist
             output.clear()
-            result = tools.collect_libs(conanfile, folder="fake_folder")
+            result = collect_libs(conanfile, folder="fake_folder")
             self.assertEqual([], result)
             self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
 
             # Use cpp_info.libdirs
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["customlib", "mylib"], result)
 
             # Custom folder with multiple libdirs should only collect from custom folder
             self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
-            result = tools.collect_libs(conanfile, folder="custom_folder")
+            result = collect_libs(conanfile, folder="custom_folder")
             self.assertEqual(["customlib"], result)
 
             # Warn same lib different folders
@@ -380,7 +261,7 @@ class CollectLibTestCase(unittest.TestCase):
             save(lib_mylib_path, "")
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
             output.clear()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("Library 'mylib' was either already found in a previous "
                           "'conanfile.cpp_info.libdirs' folder or appears several times with a "
@@ -395,7 +276,7 @@ class CollectLibTestCase(unittest.TestCase):
             no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
             conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
             output.clear()
-            result = tools.collect_libs(conanfile)
+            result = collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                           % no_folder_path, output.getvalue())

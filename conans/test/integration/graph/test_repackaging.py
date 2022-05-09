@@ -21,7 +21,7 @@ def test_repackage():
     client.run("create . --name=libb --version=1.0 -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
 

@@ -59,10 +59,6 @@ class UserInput(object):
         self._raise_if_non_interactive()
         return input()
 
-    def get_pass(self, remote_name):
-        self._raise_if_non_interactive()
-        return getpass.getpass("")
-
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
@@ -94,7 +90,8 @@ class UserInput(object):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        return self.get_pass(remote_name)
+        self._raise_if_non_interactive()
+        return getpass.getpass("")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg

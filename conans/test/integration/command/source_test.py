@@ -2,81 +2,74 @@ import os
 import unittest
 from collections import OrderedDict
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import mkdir
 
 
 class SourceTest(unittest.TestCase):
 
     def test_local_flow_patch(self):
         # https://github.com/conan-io/conan/issues/2327
-        conanfile = """from conans import ConanFile, tools
-from conans.tools import save
+        conanfile = """from conan import ConanFile
+from conan.tools.files import save, load
 import os
 class TestexportConan(ConanFile):
+    name = "test"
+    version = "0.1"
+
     exports = "mypython.py"
     exports_sources = "patch.patch"
 
     def source(self):
-        save("hello/hello.h", "my hello header!")
+        save(self, "hello/hello.h", "my hello header!")
         patch = os.path.join(self.source_folder, "patch.patch")
-        self.output.info("PATCH: %s" % tools.load(patch))
+        self.output.info("PATCH: %s" % load(self, patch))
         header = os.path.join(self.source_folder, "hello/hello.h")
-        self.output.info("HEADER: %s" % tools.load(header))
-        python = os.path.join(self.source_folder, "mypython.py")
-        self.output.info("PYTHON: %s" % tools.load(python))
+        self.output.info("HEADER: %s" % load(self, header))
+        python = os.path.join(self.recipe_folder, "mypython.py")
+        self.output.info("PYTHON: %s" % load(self, python))
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
         client.run("source .")
-        self.assertIn("conanfile.py: PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py: PYTHON: mypython", client.out)
-        client.run("source . -sf=mysrc")
-        self.assertIn("conanfile.py: Executing exports to", client.out)
-        self.assertIn("conanfile.py: PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py: PYTHON: mypython", client.out)
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "patch.patch")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "mypython.py")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "hello/hello.h")))
+        self.assertIn("conanfile.py (test/0.1): PATCH: mypatch", client.out)
+        self.assertIn("conanfile.py (test/0.1): HEADER: my hello header!", client.out)
+        self.assertIn("conanfile.py (test/0.1): PYTHON: mypython", client.out)
+
+        client.run("create . ")
+        self.assertIn("test/0.1: PATCH: mypatch", client.out)
+        self.assertIn("test/0.1: HEADER: my hello header!", client.out)
+        self.assertIn("test/0.1: PYTHON: mypython", client.out)
 
     def test_apply_patch(self):
         # https://github.com/conan-io/conan/issues/2327
         # Test if a patch can be applied in source() both in create
         # and local flow
         client = TestClient()
-        conanfile = """from conans import ConanFile
-from conans.tools import load
+        conanfile = """from conan import ConanFile
+from conan.tools.files import load
 import os
 class Pkg(ConanFile):
     exports_sources = "*"
     def source(self):
-        if self.develop:
-            patch = os.path.join(self.source_folder, "mypatch")
-            self.output.info("PATCH: %s" % load(patch))
+        patch = os.path.join(self.source_folder, "mypatch")
+        self.output.info("PATCH: %s" % load(self, patch))
 """
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})
         client.run("source .")
         self.assertIn("PATCH: this is my patch", client.out)
-        client.run("source . -sf=mysrc")
+        client.run("source .")
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("PATCH: this is my patch", client.out)
 
     def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
-        conanfile = '''from conans import ConanFile
+        conanfile = '''from conan import ConanFile
 class ConanLib(ConanFile):
     pass
 '''
@@ -84,11 +77,6 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("source .")
         self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
-
-    def test_source_reference(self):
-        client = TestClient()
-        client.run("source lib/1.0@conan/stable", assert_error=True)
-        self.assertIn("'conan source' doesn't accept a reference anymore", client.out)
 
     def test_source_with_path_errors(self):
         client = TestClient()
@@ -104,7 +92,7 @@ class ConanLib(ConanFile):
     def test_source_local_cwd(self):
         conanfile = '''
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "hello"
@@ -116,48 +104,15 @@ class ConanLib(ConanFile):
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        subdir = os.path.join(client.current_folder, "subdir")
-        os.mkdir(subdir)
-        client.run("install . --install-folder subdir")
-        client.run("source . --source-folder subdir")
-        self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
-        self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % subdir, client.out)
 
-    def test_local_source_src_not_exist(self):
-        conanfile = '''
-import os
-from conans import ConanFile
-class ConanLib(ConanFile):
-    name = "hello"
-    version = "0.1"
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        # Automatically created
-        client.run("source conanfile.py --source-folder=src")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "src")))
-
-    def test_repeat_args_fails(self):
-        conanfile = '''
-from conans import ConanFile
-class ConanLib(ConanFile):
-
-    def source(self):
-        pass
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("source ./conanfile.py --source-folder sf")
-        with self.assertRaisesRegex(Exception, "Command failed"):
-            client.run("source . --source-folder sf --source-folder sf")
-        with self.assertRaisesRegex(Exception, "Command failed"):
-
-            client.run("source conanfile.py --source-folder sf --install-folder if "
-                       "--install-folder rr")
+        client.run("install .")
+        client.run("source .")
+        self.assertIn("conanfile.py (hello/0.1): Calling source()", client.out)
+        self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % client.current_folder, client.out)
 
     def test_local_source(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 
 class ConanLib(ConanFile):
@@ -178,7 +133,7 @@ class ConanLib(ConanFile):
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Calling source() in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
 
@@ -195,12 +150,13 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "sources.cpp": "sources"})
         client.run("create . --name=hello --version=0.1")
+        rrev = client.exported_recipe_revision()
         client.run("upload hello/0.1 -r server0")
         client.run("remove * -f")
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
         # download the sources from server0
-        client.run("install --reference=hello/0.1@ -r server0")
+        client.run("install --requires=hello/0.1@ -r server0")
         client.run("upload hello/0.1 -r server1")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
@@ -208,16 +164,15 @@ class ConanLib(ConanFile):
         # install from server1 that has the sources, upload to server1
         # Will not download sources, revision already in server
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server1")
+        client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
-        assert "hello/0.1#02da70a3eeda6a0f01a16b75607a2e73 already in server, skipping upload" in \
-               client.out
+        assert f"hello/0.1#{rrev} already in server, skipping upload" in client.out
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Sources downloaded from 'server0'", client.out)
 
         # install from server0 and build
         # download sources from server0
         client.run("remove * -f")
-        client.run("install --reference=hello/0.1@ -r server0 --build")
+        client.run("install --requires=hello/0.1@ -r server0 --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)

@@ -1,9 +1,10 @@
+import os
 import textwrap
 
 from jinja2 import Template
 
-from conan.tools.build.cross_building import cross_building
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.build.cross_building import cross_building
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -16,6 +17,11 @@ class MesonToolchain(object):
     cross_filename = "conan_meson_cross.ini"
 
     _meson_file_template = textwrap.dedent("""
+    [properties]
+    {% for it, value in properties.items() -%}
+    {{it}} = {{value}}
+    {% endfor %}
+
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
@@ -37,9 +43,9 @@ class MesonToolchain(object):
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
-    {% if buildtype %}buildtype = {{buildtype}}{% endif %}
+    {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
-    {% if default_library %}default_library = {{default_library}}{% endif %}
+    {% if default_library %}default_library = '{{default_library}}'{% endif %}
     {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
@@ -62,12 +68,13 @@ class MesonToolchain(object):
 
     def __init__(self, conanfile, backend=None):
         self._conanfile = conanfile
+        self._os = self._conanfile.settings.get_safe("os")
+
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
-        self._backend = backend_conf or backend or 'ninja'
-
+        self._backend = conanfile.conf.get("tools.meson.mesontoolchain:backend",
+                                           default=backend or 'ninja')
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
                            "Release": "release",
@@ -87,16 +94,16 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
-        if compiler == "Visual Studio":
-            vscrt = self._conanfile.settings.get_safe("compiler.runtime")
-            self._b_vscrt = str(vscrt).lower()
-        elif compiler == "msvc":
+        if compiler == "msvc":
             vscrt = msvc_runtime_flag(self._conanfile)
             self._b_vscrt = str(vscrt).lower()
         else:
             self._b_vscrt = None
 
-        self.project_options = {}
+        self.properties = {}
+        self.project_options = {
+            "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
+        }
         self.preprocessor_definitions = {}
         self.pkg_config_path = self._conanfile.generators_folder
 
@@ -110,6 +117,7 @@ class MesonToolchain(object):
             arch_build = conanfile.settings_build.get_safe('arch')
             self.cross_build["build"] = to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = to_meson_machine(os_host, arch_host)
+            self.properties["needs_exe_wrapper"] = True
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -140,57 +148,94 @@ class MesonToolchain(object):
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        self.c_args = build_env.get("CFLAGS", "")
-        self.c_link_args = build_env.get("LDFLAGS", "")
-        self.cpp_args = build_env.get("CXXFLAGS", "")
-        self.cpp_link_args = build_env.get("LDFLAGS", "")
+        self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
+        self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
+        self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
+        self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
-        self._add_apple_flags()
+        # Apple flags
+        self.apple_arch_flag = []
+        self.apple_isysroot_flag = []
+        self.apple_min_version_flag = []
 
-    def _add_apple_flags(self):
-        conanfile = self._conanfile
-        os_ = conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
+        self._resolve_apple_flags()
+        self._resolve_android_cross_compilation()
+
+    def _resolve_apple_flags(self):
+        if not is_apple_os(self._os):
             return
-
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+        sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
         # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and os_ != "Macos":
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if not os_sdk and self._os != "Macos":
             raise ConanException("Please, specify a suitable value for os.sdk.")
 
-        arch = to_apple_arch(conanfile.settings.get_safe("arch"))
         # Calculating the main Apple flags
-        deployment_target_flag = apple_min_version_flag(conanfile)
-        sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
-        arch_flag = "-arch " + arch if arch else ""
+        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+        self.apple_arch_flag = ["-arch", arch] if arch else []
+        self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
+        os_version = self._conanfile.settings.get_safe("os.version")
+        subsystem = self._conanfile.settings.get_safe("os.subsystem")
+        self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
 
-        apple_flags = {}
-        if deployment_target_flag:
-            flag_ = deployment_target_flag.split("=")[0]
-            apple_flags[flag_] = deployment_target_flag
-        if sysroot_flag:
-            apple_flags["-isysroot"] = sysroot_flag
-        if arch_flag:
-            apple_flags["-arch"] = arch_flag
+    def _resolve_android_cross_compilation(self):
+        if not self.cross_build or not self.cross_build["host"]["system"] == "android":
+            return
 
-        for flag, arg_value in apple_flags.items():
-            v = " " + arg_value
-            if flag not in self.c_args:
-                self.c_args += v
-            if flag not in self.c_link_args:
-                self.c_link_args += v
-            if flag not in self.cpp_args:
-                self.cpp_args += v
-            if flag not in self.cpp_link_args:
-                self.cpp_link_args += v
+        ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
+        if not ndk_path:
+            raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
+                                 "configuration field.")
+
+        arch = self._conanfile.settings.get_safe("arch")
+        os_build = self.cross_build["build"]["system"]
+        ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "{}-x86_64".format(os_build), "bin")
+        android_api_level = self._conanfile.settings.get_safe("os.api_level")
+        android_target = {'armv7': 'armv7a-linux-androideabi',
+                          'armv8': 'aarch64-linux-android',
+                          'x86': 'i686-linux-android',
+                          'x86_64': 'x86_64-linux-android'}.get(arch)
+        self.c = os.path.join(ndk_bin, "{}{}-clang".format(android_target, android_api_level))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++".format(android_target, android_api_level))
+        self.ar = os.path.join(ndk_bin, "llvm-ar")
+
+    def _get_extra_flags(self):
+        # Now, it's time to get all the flags defined by the user
+        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        return {
+            "cxxflags": cxxflags,
+            "cflags": cflags,
+            "ldflags": sharedlinkflags + exelinkflags
+        }
+
+    @staticmethod
+    def _get_env_list(v):
+        # FIXME: Should Environment have the "check_type=None" keyword as Conf?
+        return v.strip().split() if not isinstance(v, list) else v
+
+    @staticmethod
+    def _filter_list_empty_fields(v):
+        return list(filter(bool, v))
 
     def _context(self):
+        apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
+        extra_flags = self._get_extra_flags()
+
+        self.c_args.extend(apple_flags + extra_flags["cflags"])
+        self.cpp_args.extend(apple_flags + extra_flags["cxxflags"])
+        self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
+        self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+
         return {
+            # https://mesonbuild.com/Machine-files.html#properties
+            "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
@@ -207,19 +252,19 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": to_meson_value(self._buildtype),
-            "default_library": to_meson_value(self._default_library),
+            "buildtype": self._buildtype,
+            "default_library": self._default_library,
             "backend": self._backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self._b_vscrt,
-            "b_staticpic": to_meson_value(self._b_staticpic),
-            "b_ndebug": to_meson_value(self._b_ndebug),
+            "b_staticpic": to_meson_value(self._b_staticpic),  # boolean
+            "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": to_meson_value(self._cpp_std),
-            "c_args": to_meson_value(self.c_args.strip().split()),
-            "c_link_args": to_meson_value(self.c_link_args.strip().split()),
-            "cpp_args": to_meson_value(self.cpp_args.strip().split()),
-            "cpp_link_args": to_meson_value(self.cpp_link_args.strip().split()),
+            "cpp_std": self._cpp_std,
+            "c_args": to_meson_value(self._filter_list_empty_fields(self.c_args)),
+            "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
+            "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),
+            "cpp_link_args": to_meson_value(self._filter_list_empty_fields(self.cpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build

@@ -21,6 +21,7 @@ class MesonToolchainTest(TestMesonBase):
                 del self.options.fPIC
 
         def layout(self):
+            self.folders.generators = 'build/gen_folder'
             self.folders.build = "build"
 
         def generate(self):
@@ -71,7 +72,7 @@ class MesonToolchainTest(TestMesonBase):
 
         self.t.run("install .")
 
-        content = self.t.load("conan_meson_native.ini")
+        content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
 
         self.assertIn("[project options]", content)
         self.assertIn("STRING_DEFINITION = 'Text'", content)
@@ -88,5 +89,8 @@ class MesonToolchainTest(TestMesonBase):
 
         self.assertIn("hello: Release!", self.t.out)
         self.assertIn("STRING_DEFINITION: Text", self.t.out)
+
+        self.assertIn("[properties]", content)
+        self.assertNotIn("needs_exe_wrapper", content)
 
         self._check_binary()

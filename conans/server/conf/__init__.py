@@ -8,15 +8,13 @@ import string
 from datetime import timedelta
 from configparser import ConfigParser, NoSectionError
 
-from conans.client import tools
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.util.env import get_env
-from conans.util.files import mkdir, save
-from conans.util.log import logger
+from conans.util.files import mkdir, save, load
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
@@ -69,7 +67,7 @@ class ConanServerConfigParser(ConfigParser):
             if not self._loaded:
                 self._loaded = True
                 # To avoid encoding problems we use our tools.load
-                self.read_string(tools.load(self.config_filename))
+                self.read_string(load(self.config_filename))
 
             if varname:
                 section = dict(self.items(section))
@@ -79,7 +77,6 @@ class ConanServerConfigParser(ConfigParser):
         except NoSectionError:
             raise ConanException("No section '%s' found" % section)
         except Exception as exc:
-            logger.debug(exc)
             raise ConanException("Invalid configuration, "
                                  "missing %s: %s" % (section, varname))
 

@@ -24,8 +24,8 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("gcc", "s390x", None, "-m64"),
                            ("clang", "s390x", None, "-m64"),
                            ("sun-cc", "s390x", None, "-m64"),
-                           ("Visual Studio", "x86", None, ""),
-                           ("Visual Studio", "x86_64", None, ""),
+                           ("msvc", "x86", None, ""),
+                           ("msvc", "x86_64", None, ""),
                            ("gcc", "ppc32", "AIX", "-maix32"),
                            ("gcc", "ppc64", "AIX", "-maix64"),
                            ])
@@ -39,23 +39,25 @@ class CompilerFlagsTest(unittest.TestCase):
         settings = MockSettings({"compiler": "apple-clang",
                                  "arch": "x86_64",
                                  "os": "Macos",
-                                 "os.subsystem": "catalyst"})
-        self.assertEqual(architecture_flag(settings), "--target=x86_64-apple-ios-macabi")
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=x86_64-apple-ios13.1-macabi")
 
         settings = MockSettings({"compiler": "apple-clang",
                                  "arch": "armv8",
                                  "os": "Macos",
-                                 "os.subsystem": "catalyst"})
-        self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios-macabi")
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios13.1-macabi")
 
-    @parameterized.expand([("gcc", "x86", "-m32"),
-                           ("gcc", "x86_64", "-m64"),
-                           ("Visual Studio", "x86", "/Qm32"),
-                           ("Visual Studio", "x86_64", "/Qm64"),
+    @parameterized.expand([("Linux", "x86", "-m32"),
+                           ("Linux", "x86_64", "-m64"),
+                           ("Windows", "x86", "/Qm32"),
+                           ("Windows", "x86_64", "/Qm64"),
                            ])
-    def test_arch_flag_intel(self, base, arch, flag):
-        settings = MockSettings({"compiler": "intel",
-                                 "compiler.base": base,
+    def test_arch_flag_intel(self, os_, arch, flag):
+        settings = MockSettings({"compiler": "intel-cc",
+                                 "os": os_,
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 
@@ -68,18 +70,17 @@ class CompilerFlagsTest(unittest.TestCase):
                            ])
     def test_arch_flag_mcst_lcc(self, arch, flag):
         settings = MockSettings({"compiler": "mcst-lcc",
-                                 "compiler.base": "gcc",
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 
-    @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
-                           ("Visual Studio", "Release", None, "-O2 -Ob2"),
-                           ("Visual Studio", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
-                           ("Visual Studio", "MinSizeRel", None, "-O1 -Ob1"),
-                           ("Visual Studio", "Debug", "v140_clang_c2", "-gline-tables-only -fno-inline -O0"),
-                           ("Visual Studio", "Release", "v140_clang_c2", "-O2"),
-                           ("Visual Studio", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
-                           ("Visual Studio", "MinSizeRel", "v140_clang_c2", ""),
+    @parameterized.expand([("msvc", "Debug", None, "-Zi -Ob0 -Od"),
+                           ("msvc", "Release", None, "-O2 -Ob2"),
+                           ("msvc", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
+                           ("msvc", "MinSizeRel", None, "-O1 -Ob1"),
+                           ("msvc", "Debug", "v140_clang_c2", "-gline-tables-only -fno-inline -O0"),
+                           ("msvc", "Release", "v140_clang_c2", "-O2"),
+                           ("msvc", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
+                           ("msvc", "MinSizeRel", "v140_clang_c2", ""),
                            ("gcc", "Debug", None, "-g"),
                            ("gcc", "Release", None, "-O3 -s"),
                            ("gcc", "RelWithDebInfo", None, "-O2 -g"),

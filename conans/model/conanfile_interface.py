@@ -51,10 +51,6 @@ class ConanFileInterface:
         return self._conanfile.cpp_info
 
     @property
-    def user_info(self):
-        return self._conanfile.user_info
-
-    @property
     def settings(self):
         return self._conanfile.settings
 
@@ -85,3 +81,10 @@ class ConanFileInterface:
     @property
     def package_type(self):
         return self._conanfile.package_type
+
+    @property
+    def info(self):
+        return self._conanfile.info
+
+    def set_deploy_folder(self, deploy_folder):
+        self._conanfile.set_deploy_folder(deploy_folder)

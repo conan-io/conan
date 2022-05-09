@@ -107,14 +107,9 @@ class MSBuildDeps(object):
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # ca_exclude section
-        self.exclude_code_analysis = None
-        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps:exclude_code_analysis"]
-        if ca_exclude is not None:
-            # TODO: Accept single strings, not lists
-            self.exclude_code_analysis = eval(ca_exclude)
-            if not isinstance(self.exclude_code_analysis, list):
-                raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
-                                     " list of package names patterns like ['pkga*']")
+        # TODO: Accept single strings, not lists
+        self.exclude_code_analysis = self._conanfile.conf.get("tools.microsoft.msbuilddeps:exclude_code_analysis",
+                                                              check_type=list)
 
     def generate(self):
         # TODO: Apply config from command line, something like
@@ -187,8 +182,7 @@ class MSBuildDeps(object):
             'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags),
-            'exe_flags': " ".join(cpp_info.exelinkflags),
+            'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
             'dependencies': ";".join(deps) if not build else "",
             'host_context': not build
         }

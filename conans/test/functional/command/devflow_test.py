@@ -6,8 +6,9 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
 conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
+from conan.tools.files import copy
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -25,8 +26,8 @@ class ConanFileToolsTest(ConanFile):
         save("subdir/myartifact2.lib", "artifact2 contents!")
 
     def package(self):
-        self.copy("*.h")
-        self.copy("*.lib")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.lib", self.build_folder, self.package_folder)
 '''
 
 
@@ -104,8 +105,9 @@ class DevInSourceFlowTest(unittest.TestCase):
 
 
 conanfile_out = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
+from conan.tools.files import copy
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -120,8 +122,8 @@ class ConanFileToolsTest(ConanFile):
         save("myartifact.lib", "artifact contents!")
 
     def package(self):
-        self.copy("*.h")
-        self.copy("*.lib")
+        copy(self, "*.h", self.source_folder, self.package_folder)
+        copy(self, "*.lib", self.build_folder, self.package_folder)
 '''
 
 

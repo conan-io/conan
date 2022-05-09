@@ -15,7 +15,7 @@ class ConditionalRequirementsIdTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=optional --version=0.1 --user=user --channel=testing")
-        conanfile = '''from conans import ConanFile
+        conanfile = '''from conan import ConanFile
 class ConanLib(ConanFile):
     options = {"use_lib": [True, False]}
     default_options= {"use_lib": False}
@@ -29,7 +29,7 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkgA --version=0.1 --user=user --channel=testing")
         self.assertIn(NO_SETTINGS_PACKAGE_ID, client.out)
-        client.run("create . --name=pkgA --version=0.1 --user=user --channel=testing -o pkgA:use_lib=True")
+        client.run("create . --name=pkgA --version=0.1 --user=user --channel=testing -o pkgA/*:use_lib=True")
         self.assertIn("9824b101f894df7e2b106af5055272fc083f3008", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_requires("pkgA/0.1@user/testing")})

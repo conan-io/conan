@@ -93,11 +93,10 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no packages
-        """)
+          ERROR: There are no recipes matching the expression 'whatever/0.1#""")
 
         self.client.run(f"list packages {self._get_fake_recipe_refence('whatever/0.1')}")
-        assert expected_output == self.client.out
+        assert expected_output in self.client.out
 
     def test_search_no_matching_recipes(self):
         self._add_remote("remote1")
@@ -297,3 +296,26 @@ class TestRemotes(TestListPackageIdsBase):
         rrev = self._get_fake_recipe_refence(remote1_recipe1)
         self.client.run(f"list packages -r wrong_remote {rrev}", assert_error=True)
         assert expected_output in self.client.out
+
+
+class TestListPackages:
+    def test_list_packages(self):
+        c = TestClient(default_server_user=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
+                "pkg/conanfile.py": GenConanfile("pkg", "2.3.4").with_requires("dep/1.2.3")
+                .with_settings("os", "arch").with_shared_option(False)})
+        c.run("create dep")
+        c.run("create pkg -s os=Windows -s arch=x86")
+        c.run("list packages pkg/2.3.4")
+        expected = textwrap.dedent("""\
+            Local Cache:
+              pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5
+                settings:
+                  arch=x86
+                  os=Windows
+                options:
+                  shared=False
+                requires:
+                  dep/1.2.Z
+            """)
+        assert expected == c.out

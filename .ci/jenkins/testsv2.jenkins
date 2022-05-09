@@ -1,3 +1,6 @@
+def branchName = env.BRANCH_NAME
+def jobName = env.JOB_NAME
+
 void cancelPrevious() {
     stage("Cancelling previous") {
         def buildNumber = env.BUILD_NUMBER as int
@@ -21,22 +24,15 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
             configs.add([node: "Macos", pyvers: ["PY36"]])
         }
     }
-    else if (jobName == "ConanNightlyv2") {
+    else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
     }
-    else if (branchName =~ /(^release.*)|(^develop2)/) {
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Linux", pyvers: ["PY36"]])
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "Macos", pyvers: ["PY36"]])
-        }
-        else {
-            configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
-        }
+    else if (branchName == "develop2") {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -76,7 +72,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest ${module} -n=4"
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
 
                 if (nodeName=="Linux") {
                     try {
@@ -183,9 +179,7 @@ void deployToPypiTest() {
 try {
     cancelPrevious()
 
-    def branchName = env.BRANCH_NAME
-    def jobName = env.JOB_NAME
-
+ 
     testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }
@@ -195,6 +189,10 @@ try {
     }
 }
 catch(e){
-    echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+    if (branchName == "develop2") {
+        def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+        def summary = "${subject} (${env.BUILD_URL}), Conan Branch: ${branchName}"
+        slackSend (color: '#FF0000', message: summary)
+    }
     throw e
 }

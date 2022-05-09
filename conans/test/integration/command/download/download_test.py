@@ -19,7 +19,7 @@ class DownloadTest(unittest.TestCase):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable --recipe")
+        client.run("download pkg/0.1@lasote/stable -r default")
 
         self.assertIn("Downloading conanfile.py", client.out)
         self.assertNotIn("Downloading conan_package.tgz", client.out)
@@ -37,7 +37,7 @@ class DownloadTest(unittest.TestCase):
         servers["other"] = TestServer()
 
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -52,7 +52,7 @@ class Pkg(ConanFile):
         client.run("upload pkg/0.1@lasote/stable -r default")
         client.run("remove pkg/0.1@lasote/stable -f")
 
-        client.run("download pkg/0.1@lasote/stable")
+        client.run("download pkg/0.1@lasote/stable -r default")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         source = client.get_latest_ref_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
@@ -65,16 +65,16 @@ class Pkg(ConanFile):
         client.run("upload pkg/0.1@user/stable -r default")
         client.run("remove pkg/0.1@user/stable -f")
 
-        client.run("download pkg/0.1@user/stable")
+        client.run("download pkg/0.1@user/stable#*:* -r default", assert_error=True)
         # Check 'No remote binary packages found' warning
-        self.assertIn("WARN: No remote binary packages found in remote", client.out)
-        # Check at least conanfile.py is downloaded
-        ref = RecipeReference.loads("pkg/0.1@user/stable")
-        self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).conanfile()))
+        self.assertIn("There are no packages matching", client.out)
+        # The recipe is not downloaded either
+        client.run("list recipes pkg*")
+        assert "There are no matching recipe references" in client.out
 
     def test_download_reference_with_packages(self):
         client = TurboTestClient(default_server_user=True)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -86,7 +86,7 @@ class Pkg(ConanFile):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable")
+        client.run("download pkg/0.1@lasote/stable#*:* -r default")
         pref = client.get_latest_package_reference(ref)
         ref_layout = client.get_latest_ref_layout(ref)
         pkg_layout = client.get_latest_pkg_layout(pref)
@@ -103,18 +103,14 @@ class Pkg(ConanFile):
         client = TurboTestClient(default_server_user=True)
         ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.export(ref)
+        rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable:wrong", assert_error=True)
-        self.assertIn("ERROR: Binary package not found: "
-                      "'pkg/0.1@lasote/stable#f3367e0e7d170aa12abccb175fee5f97:wrong'",
-                      client.out)
-
-    def test_download_pattern(self):
-        client = TestClient()
-        client.run("download pkg/*@user/channel", assert_error=True)
-        self.assertIn("Provide a valid full reference without wildcards", client.out)
+        client.run("download pkg/0.1@lasote/stable#{}:wrong -r default".format(rrev),
+                   assert_error=True)
+        self.assertIn("ERROR: There are no packages matching "
+                      "'pkg/0.1@lasote/stable#{}:wrong".format(rrev), client.out)
 
     def test_download_full_reference(self):
         server = TestServer()
@@ -127,7 +123,7 @@ class Pkg(ConanFile):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("download pkg/0.1#*:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_recipe_reference(ref)
         pkgids = client.cache.get_package_references(rrev)
@@ -141,20 +137,39 @@ class Pkg(ConanFile):
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 
-    def test_download_with_full_reference_and_p(self):
-        client = TestClient()
-        client.run("download pkg/0.1@user/channel:{package_id} -p {package_id}".
-                   format(package_id="dupqipa4tog2ju3pncpnrzbim1fgd09g"),
-                   assert_error=True)
-        self.assertIn("Use a full package reference (preferred) or the `--package`"
-                      " command argument, but not both.", client.out)
+    def test_download_with_package_query(self):
+        client = TurboTestClient(default_server_user=True)
+        conanfile = GenConanfile().with_settings("build_type")
+        ref = RecipeReference.loads("pkg/0.1")
+        first_ref = client.create(ref, conanfile=conanfile)
+        client.upload_all(ref)
+        client.remove_all()
 
-    def test_download_with_package_and_recipe_args(self):
-        client = TestClient()
-        client.run("download eigen/3.3.4@conan/stable --recipe --package fake_id",
-                   assert_error=True)
+        conanfile2 = str(conanfile) + " \n\n # new revision"
+        client.create(ref, conanfile=conanfile2)
+        client.create(ref, args="-s build_type=Debug", conanfile=conanfile2)
+        client.upload_all(ref)
+        client.remove_all()
 
-        self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
+        client.run("download pkg/0.1#latest -p 'build_type=Debug' -r default")
+        client.run("list packages pkg/0.1#latest")
+        assert "build_type=Debug" in client.out
+        assert "build_type=Release" not in client.out
+
+        client.run("download pkg/0.1#latest -p 'build_type=Release' -r default")
+        client.run("list packages pkg/0.1#latest")
+        assert "build_type=Debug" in client.out
+        assert "build_type=Release" in client.out
+
+        client.remove_all()
+        client.run("list packages pkg/0.1#latest -r default")
+        assert "build_type=Debug" in client.out
+        assert "build_type=Release" in client.out
+
+        client.remove_all()
+        client.run("list packages pkg/0.1#{} -r default".format(first_ref.ref.revision))
+        assert "build_type=Debug" not in client.out
+        assert "build_type=Release" in client.out
 
     def test_download_package_argument(self):
         client = TurboTestClient(default_server_user=True)
@@ -164,7 +179,7 @@ class Pkg(ConanFile):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("download pkg/0.1@lasote/stable#latest:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_recipe_reference(ref)
         pkgids = client.cache.get_package_references(rrev)
@@ -180,7 +195,7 @@ class Pkg(ConanFile):
 
     def test_download_not_found_reference(self):
         client = TurboTestClient(default_server_user=True)
-        client.run("download pkg/0.1@lasote/stable", assert_error=True)
+        client.run("download pkg/0.1@lasote/stable -r default", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
 
     def test_no_user_channel(self):
@@ -191,12 +206,12 @@ class Pkg(ConanFile):
         client.run("upload * --confirm -r default")
         client.run("remove * -f")
 
-        client.run("download pkg/1.0:{}".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("download pkg/1.0#latest:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertIn("Downloading pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+                      NO_SETTINGS_PACKAGE_ID, client.out)
 
         # All
         client.run("remove * -f")
-        client.run("download pkg/1.0@")
-        self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("download pkg/1.0#*:* -r default")
+        self.assertIn("Downloading pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+                      NO_SETTINGS_PACKAGE_ID, client.out)

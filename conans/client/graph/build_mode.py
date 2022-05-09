@@ -2,6 +2,7 @@ import fnmatch
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 
 
 class BuildMode(object):
@@ -16,6 +17,7 @@ class BuildMode(object):
         self.missing = False
         self.never = False
         self.cascade = False
+        self.editable = False
         self.patterns = []
         self._unused_patterns = []
         self._excluded_patterns = []
@@ -30,12 +32,14 @@ class BuildMode(object):
             for param in params:
                 if param == "missing":
                     self.missing = True
+                elif param == "editable":
+                    self.editable = True
                 elif param == "never":
                     self.never = True
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    # Remove the @ at the end, to match for "conan install --reference=pkg/0.1@ --build=pkg/0.1@"
+                    # Remove the @ at the end, to match for "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
                     clean_pattern = param[:-1] if param.endswith("@") else param
                     clean_pattern = clean_pattern.replace("@#", "#")
                     if clean_pattern and clean_pattern[0] == "!":
@@ -48,13 +52,9 @@ class BuildMode(object):
         self._unused_patterns = list(self.patterns) + self._excluded_patterns
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
-        def pattern_match(pattern_):
-            return (fnmatch.fnmatchcase(ref.name, pattern_) or
-                    fnmatch.fnmatchcase(str(ref), pattern_) or
-                    fnmatch.fnmatchcase(ref.repr_notime(), pattern_))
 
         for pattern in self._excluded_patterns:
-            if pattern_match(pattern):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
@@ -80,7 +80,7 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if pattern_match(pattern):
+            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:

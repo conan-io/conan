@@ -22,7 +22,7 @@ def client():
         """)
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
@@ -47,9 +47,9 @@ def client():
     return c
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_mingw64
-@pytest.mark.tool_clang(version="12")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("mingw64")
+@pytest.mark.tool("clang", "12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang(client):
     client.run("create . --name=pkg --version=0.1 -pr=clang")
@@ -61,8 +61,8 @@ def test_clang(client):
     assert "main _MSVC_LANG2014" in client.out
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_clang(version="12")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("clang", "12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang_cmake_ninja(client):
     client.run("create . --name=pkg --version=0.1 -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja")
@@ -73,12 +73,12 @@ def test_clang_cmake_ninja(client):
     assert "main _MSVC_LANG2014" in client.out
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_clang(version="12")
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("clang", "12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang_cmake_ninja_custom_cxx(client):
     with environment_update({"CXX": "/no/exist/clang++"}):
-        client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
+        client.run("create . --name=pkg --version=0.1 -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
                    assert_error=True)
         assert 'Could not find compiler' in client.out
         assert '/no/exist/clang++' in client.out
@@ -94,14 +94,14 @@ def test_clang_cmake_ninja_custom_cxx(client):
         CXX=/no/exist/clang++
         """)
     client.save({"clang":     clang_profile})
-    client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
+    client.run("create . --name=pkg --version=0.1 -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
                assert_error=True)
     assert 'Could not find compiler' in client.out
     assert '/no/exist/clang++' in client.out
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_visual_studio(version="16")  # With Clang distributed in VS!
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("visual_studio", "16")  # With Clang distributed in VS!
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang_cmake_visual(client):
     clang_profile = textwrap.dedent("""

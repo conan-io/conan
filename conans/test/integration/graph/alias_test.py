@@ -5,7 +5,6 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.client.tools.files import replace_in_file
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
@@ -15,22 +14,22 @@ class ConanAliasTest(unittest.TestCase):
 
     def test_complete_large(self):
         # https://github.com/conan-io/conan/issues/2583
-        conanfile0 = """from conans import ConanFile
+        conanfile0 = """from conan import ConanFile
 class Pkg(ConanFile):
     pass
 """
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         self.requires("%s")
 """
-        conanfile2 = """from conans import ConanFile
+        conanfile2 = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         self.requires("%s")
         self.requires("%s")
 """
-        conanfile3 = """from conans import ConanFile
+        conanfile3 = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         self.requires("%s")
@@ -58,7 +57,7 @@ class Pkg(ConanFile):
         ]:
             export_alias(name, conanfile)
 
-        cj = """from conans import ConanFile
+        cj = """from conan import ConanFile
 class Pkg(ConanFile):
     def build_requirements( self):
         self.requires( "CA/ALIAS@user/testing")
@@ -67,7 +66,7 @@ class Pkg(ConanFile):
 """
         export_alias("CJ", cj)
 
-        ck = """from conans import ConanFile
+        ck = """from conan import ConanFile
 class Pkg(ConanFile):
     def build_requirements( self):
         self.requires( "CA/ALIAS@user/testing")
@@ -84,7 +83,7 @@ class Pkg(ConanFile):
 """
         export_alias("CK", ck)
 
-        cl = """from conans import ConanFile
+        cl = """from conan import ConanFile
 class Pkg(ConanFile):
     def build_requirements( self):
         self.requires( "CA/ALIAS@user/testing")
@@ -100,7 +99,7 @@ class Pkg(ConanFile):
 """
         export_alias("CL", cl)
 
-        cm = """from conans import ConanFile
+        cm = """from conan import ConanFile
 class Pkg(ConanFile):
     def build_requirements( self):
         self.requires( "CA/ALIAS@user/testing")
@@ -111,7 +110,7 @@ class Pkg(ConanFile):
 """
         export_alias("CM", cm)
 
-        consumer = """from conans import ConanFile
+        consumer = """from conan import ConanFile
 class Pkg(ConanFile):
     def build_requirements( self):
         self.requires( "CA/ALIAS@user/testing")
@@ -138,7 +137,7 @@ class Pkg(ConanFile):
 
     def test_striped_large(self):
         # https://github.com/conan-io/conan/issues/2583
-        conanfile0 = """from conans import ConanFile
+        conanfile0 = """from conan import ConanFile
 class Pkg(ConanFile):
     pass
 """
@@ -151,14 +150,14 @@ class Pkg(ConanFile):
 
         export_alias("CH", conanfile0)
 
-        ck = """from conans import ConanFile
+        ck = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements( self):
         self.requires( "CH/ALIAS@user/testing")
 """
         export_alias("CK", ck)
 
-        cl = """from conans import ConanFile
+        cl = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements( self):
         self.requires( "CK/ALIAS@user/testing")
@@ -166,14 +165,14 @@ class Pkg(ConanFile):
 """
         export_alias("CL", cl)
 
-        cm = """from conans import ConanFile
+        cm = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements( self):
         self.requires( "CL/ALIAS@user/testing")
 """
         export_alias("CM", cm)
 
-        consumer = """from conans import ConanFile
+        consumer = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements( self):
         self.requires( "CM/ALIAS@user/testing")
@@ -194,12 +193,12 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     requires = "%s"
 """
         else:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         req = "%s"
@@ -239,7 +238,7 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     requires = "%s"
     options = {"myoption": [True, False]}
@@ -248,7 +247,7 @@ class Pkg(ConanFile):
         self.output.info("MYOPTION: {} {}".format(self.name, self.options.myoption))
 """
         else:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     options = {"myoption": [True, False]}
     default_options = "myoption=True"
@@ -271,10 +270,10 @@ class Pkg(ConanFile):
         client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
         client.alias("LibC/latest@user/testing",  "LibC/0.1@user/testing")
 
-        client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"')
+        conanfile = conanfile % "LibC/latest@user/testing"
+        conanfile = conanfile.replace('"myoption=True"', '"myoption=True", "LibD:myoption=False"')
+        client.save({"conanfile.py": conanfile})
+
         client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
         client.alias("LibB/latest@user/testing",  "LibB/0.1@user/testing")
 
@@ -302,12 +301,12 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     requires = "%s"
 """
         else:
-            conanfile = """from conans import ConanFile
+            conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     def requirements(self):
         req = "%s"
@@ -351,7 +350,7 @@ class Pkg(ConanFile):
 
         client.alias("hello/0.X@lasote/channel",  "hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "Chat"
                 version = "1.0"

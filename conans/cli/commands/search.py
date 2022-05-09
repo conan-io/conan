@@ -1,4 +1,4 @@
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.cli.commands import CommandResult
 from conans.cli.commands.list import print_list_recipes, json_formatter

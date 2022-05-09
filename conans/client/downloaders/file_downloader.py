@@ -1,25 +1,24 @@
 import os
 import re
 import time
-import traceback
+
 
 from conans.cli.output import ConanOutput
 from conans.client.rest import response_to_str
-from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util.files import mkdir
-from conans.util.log import logger
+from conans.util.sha import check_with_algorithm_sum
 from conans.util.tracer import log_download
 
 
 def check_checksum(file_path, md5, sha1, sha256):
     if md5:
-        check_md5(file_path, md5)
+        check_with_algorithm_sum("md5", file_path, md5)
     if sha1:
-        check_sha1(file_path, sha1)
+        check_with_algorithm_sum("sha1", file_path, sha1)
     if sha256:
-        check_sha256(file_path, sha256)
+        check_with_algorithm_sum("sha256", file_path, sha256)
 
 
 class FileDownloader(object):
@@ -156,8 +155,6 @@ class FileDownloader(object):
             return written_chunks
 
         except Exception as e:
-            logger.debug(e.__class__)
-            logger.debug(traceback.format_exc())
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))

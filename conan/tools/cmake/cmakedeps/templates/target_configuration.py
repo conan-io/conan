@@ -26,12 +26,15 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
+        is_win = self.conanfile.settings.get_safe("os") == "Windows"
+        auto_link = self.conanfile.cpp_info.get_property("cmake_set_interface_link_directories")
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
-                "configuration": self.cmakedeps.configuration}
+                "configuration": self.cmakedeps.configuration,
+                "set_interface_link_directories": auto_link and is_win}
 
     @property
     def template(self):
@@ -63,6 +66,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "") # Will be filled later
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
+                                      "{{ '${' }}{{ pkg_name }}_BIN_DIRS{{ config_suffix }}}" # package_bindir
+                                      "{{ '${' }}{{ pkg_name }}_LIBRARY_TYPE{{ config_suffix }}}"
+                                      "{{ '${' }}{{ pkg_name }}_IS_HOST_WINDOWS{{ config_suffix }}}"
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
                                       {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
                                       {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
@@ -99,6 +105,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }})
         conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_BIN_DIRS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBRARY_TYPE'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_IS_HOST_WINDOWS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
                                       {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
@@ -115,6 +124,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
+
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
@@ -128,6 +138,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
+        {%- if set_interface_link_directories %}
+
+        # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+        set_property(TARGET {{root_target_name}}
+                     PROPERTY INTERFACE_LINK_DIRECTORIES
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
+        {%- endif %}
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
         {%- for comp_variable_name, comp_target_name in components_names %}
@@ -148,7 +165,14 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
         set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
 
+        {%- if set_interface_link_directories %}
+        # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix)}}> APPEND)
+
+        {%- endif %}
         {%- endfor %}
+
 
         """)
 

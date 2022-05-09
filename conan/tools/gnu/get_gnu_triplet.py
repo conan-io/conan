@@ -67,7 +67,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
     # Calculate the OS
     if compiler == "gcc":
         windows_op = "w64-mingw32"
-    elif compiler == "Visual Studio":
+    elif compiler == "msvc":
         windows_op = "windows-msvc"
     else:
         windows_op = "windows"

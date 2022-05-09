@@ -2,8 +2,6 @@ import errno
 import gzip
 import hashlib
 import os
-import platform
-import re
 import shutil
 import stat
 import tarfile
@@ -12,20 +10,6 @@ import tempfile
 
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
-
-from conans.util.log import logger
-
-
-def make_read_only(folder_path):
-    for root, _, files in os.walk(folder_path):
-        for f in files:
-            full_path = os.path.join(root, f)
-            make_file_read_only(full_path)
-
-
-def make_file_read_only(file_path):
-    mode = os.stat(file_path).st_mode
-    os.chmod(file_path, mode & ~ stat.S_IWRITE)
 
 
 _DIRTY_FOLDER = ".dirty"
@@ -97,7 +81,6 @@ def decode_text(text, encoding="auto"):
     if encoding == "auto":
         encoding, bom_length = _detect_encoding(text)
         if encoding is None:
-            logger.warning("can't decode %s" % str(text))
             return text.decode("utf-8", "ignore")  # Ignore not compatible characters
     return text[bom_length:].decode(encoding)
 
@@ -140,6 +123,7 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
+# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -307,7 +291,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base):
-                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
+                # ConanOutput().warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux
@@ -330,9 +314,8 @@ def exception_message_safe(exc):
 
 
 def merge_directories(src, dst, excluded=None):
-    from conans.client.file_copier import FileCopier
-    copier = FileCopier([src], dst)
-    copier(pattern="*", excludes=excluded)
+    from conan.tools.files import copy
+    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
     return
 
 
@@ -362,3 +345,30 @@ def gather_files(folder):
             file_dict[rel_path] = abs_path
 
     return file_dict, symlinked_folders
+
+
+# FIXME: This is very repeated with the tools.unzip, but wsa needed for config-install unzip
+def unzip(filename, destination="."):
+    from conan.tools.files.files import untargz  # FIXME, importing from conan.tools
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar")):
+        return untargz(filename, destination)
+    if filename.endswith(".gz"):
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        return untargz(filename, destination)
+
+    import zipfile
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    with zipfile.ZipFile(filename, "r") as z:
+        zip_info = z.infolist()
+        extracted_size = 0
+        for file_ in zip_info:
+            extracted_size += file_.file_size
+            z.extract(file_, full_path)

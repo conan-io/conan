@@ -1,22 +1,19 @@
-from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
+from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.util.log import logger
 
 
 class RestApiClientFactory(object):
 
-    def __init__(self, requester, config, artifacts_properties=None):
+    def __init__(self, requester, config):
         self._requester = requester
         self._config = config
-        self._artifacts_properties = artifacts_properties
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
         tmp = RestApiClient(remote, token, refresh_token, custom_headers,
                             self._requester, self._config,
-                            self._cached_capabilities,
-                            self._artifacts_properties)
+                            self._cached_capabilities)
         return tmp
 
 
@@ -26,7 +23,7 @@ class RestApiClient(object):
     """
 
     def __init__(self, remote, token, refresh_token, custom_headers, requester,
-                 config, cached_capabilities, artifacts_properties=None):
+                 config, cached_capabilities):
 
         # Set to instance
         self._token = token
@@ -36,7 +33,6 @@ class RestApiClient(object):
         self._requester = requester
 
         self._verify_ssl = remote.verify_ssl
-        self._artifacts_properties = artifacts_properties
         self._config = config
 
         # This dict is shared for all the instances of RestApiClient
@@ -46,11 +42,9 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV2Methods(self._remote_url, self._token, self._custom_headers,
-                                self._requester, self._config, self._verify_ssl,
-                                self._artifacts_properties)
+                                self._requester, self._config, self._verify_ssl)
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
-            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
         return capability in capabilities
 
     def _get_api(self):
@@ -61,11 +55,10 @@ class RestApiClient(object):
             raise ConanException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
-        matrix_params = self._capable(MATRIX_PARAMS)
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
         return RestV2Methods(self._remote_url, self._token, self._custom_headers,
                              self._requester, self._config, self._verify_ssl,
-                             self._artifacts_properties, checksum_deploy, matrix_params)
+                             checksum_deploy)
 
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
@@ -93,7 +86,7 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,
-                               self._requester, self._verify_ssl, self._artifacts_properties)
+                               self._requester, self._config, self._verify_ssl)
 
         if self._refresh_token and self._token:
             token, refresh_token = api_v2.refresh_token(self._token, self._refresh_token)
@@ -120,10 +113,7 @@ class RestApiClient(object):
         return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference):
-        # Do not send the query to the server, as it will fail
-        # https://github.com/conan-io/conan/issues/4951
-        package_infos = self._get_api().search_packages(reference)
-        return package_infos
+        return self._get_api().search_packages(reference)
 
     def remove_recipe(self, ref):
         return self._get_api().remove_recipe(ref)

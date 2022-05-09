@@ -19,7 +19,7 @@ def source_helper(output):
     '''
 
         if scope_imports:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 from myhelper import build_helper
 from myhelpers.other import source_helper
 
@@ -33,7 +33,7 @@ class ConanFileToolsTest(ConanFile):
         build_helper(self.output)
 '''
         else:
-            file_content = '''from conans import ConanFile
+            file_content = '''from conan import ConanFile
 import myhelper
 from myhelpers import other
 
@@ -63,7 +63,7 @@ class ConanFileToolsTest(ConanFile):
                                     test/1.9@user/testing\n
                                     test2/2.3@user/testing"""}
         client.save(files, clean_first=True)
-        client.run("install . --build")
+        client.run("install . --build='*'")
         self.assertIn("test/1.9@user/testing: Building 1!", client.out)
         self.assertIn("test/1.9@user/testing: Source 1!", client.out)
         self.assertIn("test2/2.3@user/testing: Building 2!", client.out)

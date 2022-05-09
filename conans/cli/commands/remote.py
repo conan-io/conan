@@ -1,8 +1,8 @@
 import json
 from collections import OrderedDict
 
-from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.api.model import Remote
+from conan.api.conan_api import ConanAPIV2
+from conan.api.model import Remote
 from conans.cli.command import conan_command, conan_subcommand, OnceArgument
 from conans.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color

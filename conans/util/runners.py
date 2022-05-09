@@ -5,10 +5,9 @@ import tempfile
 from contextlib import contextmanager
 from io import StringIO
 
-from conans.client.tools.files import load
-from conans.errors import CalledProcessErrorWithStderr, ConanException
+from conans.errors import ConanException
 from conans.util.env import environment_update
-from conans.util.log import logger
+from conans.util.files import load
 
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
@@ -115,20 +114,15 @@ def check_output_runner(cmd, stderr=None):
         stderr = stderr or subprocess.PIPE
         cmd = cmd if isinstance(cmd, str) else subprocess.list2cmdline(cmd)
         command = '{} > "{}"'.format(cmd, tmp_file)
-        logger.info("Calling command: {}".format(command))
         process = subprocess.Popen(command, shell=True, stderr=stderr)
         stdout, stderr = process.communicate()
-        logger.info("Return code: {}".format(int(process.returncode)))
 
         if process.returncode:
             # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
+            msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
+            raise ConanException(msg)
 
         output = load(tmp_file)
-        try:
-            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
-        except Exception as exc:
-            logger.error("Error logging command output: {}".format(exc))
         return output
     finally:
         try:

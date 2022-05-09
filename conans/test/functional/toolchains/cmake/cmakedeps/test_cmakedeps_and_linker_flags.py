@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_shared_link_flags():
     """
     Testing CMakeDeps and linker flags injection
@@ -16,7 +16,7 @@ def test_shared_link_flags():
     Issue: https://github.com/conan-io/conan/issues/9936
     """
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMake, cmake_layout
 
 
@@ -26,7 +26,7 @@ def test_shared_link_flags():
         settings = "os", "compiler", "build_type", "arch"
         options = {"shared": [True, False]}
         default_options = {"shared": False}
-        exports_sources = "CMakeLists.txt", "src/*"
+        exports_sources = "CMakeLists.txt", "src/*", "include/*"
         generators = "CMakeDeps", "CMakeToolchain"
 
         def layout(self):
@@ -51,7 +51,8 @@ def test_shared_link_flags():
     client.run("new cmake_lib -d name=hello -d version=1.0")
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    t = os.path.join("test_package", "cmake-build-release", "conan", "hello-release-x86_64-data.cmake")
+    t = os.path.join("test_package", "test_output", "build", "generators",
+                     "hello-release-x86_64-data.cmake")
     target_data_cmake_content = client.load(t)
     assert 'set(hello_SHARED_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
     assert 'set(hello_EXE_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content

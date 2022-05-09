@@ -1,7 +1,6 @@
-import textwrap
 import unittest
 
-from conans.client.command import ERROR_INVALID_CONFIGURATION
+from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.test.utils.tools import TestClient
 
 
@@ -10,20 +9,21 @@ class InvalidConfigurationTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": """
-from conans import ConanFile
-from conans.errors import ConanInvalidConfiguration
+from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def configure(self):
-        if self.settings.compiler.version == "12":
+        if self.settings.compiler.version == "190":
             raise ConanInvalidConfiguration("user says that compiler.version=12 is invalid")
 
     """})
-        settings = "-s os=Windows -s compiler='Visual Studio' -s compiler.version={ver}"
-        self.settings_msvc15 = settings.format(ver="15")
-        self.settings_msvc12 = settings.format(ver="12")
+        settings = "-s os=Windows -s compiler=msvc -s compiler.version={ver} "\
+                   "-s compiler.runtime=dynamic"
+        self.settings_msvc15 = settings.format(ver="192")
+        self.settings_msvc12 = settings.format(ver="190")
 
     def test_install_method(self):
         self.client.run("install . %s" % self.settings_msvc15)
@@ -54,16 +54,16 @@ class MyPkg(ConanFile):
     def test_as_requirement(self):
         self.client.run("create . --name=name --version=ver %s" % self.settings_msvc15)
         self.client.save({"other/conanfile.py": """
-from conans import ConanFile
-from conans.errors import ConanInvalidConfiguration
+from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):
     requires = "name/ver"
     settings = "os", "compiler", "build_type", "arch"
     """})
-        self.client.run("create other/ --name=other --version=1 %s" % self.settings_msvc15)
+        self.client.run("create other/ --name=other --version=1.0 %s" % self.settings_msvc15)
 
-        error = self.client.run("create other/ --name=other --version=1 %s" % self.settings_msvc12,
+        error = self.client.run("create other/ --name=other --version=1.0 %s" % self.settings_msvc12,
                                 assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver: Invalid configuration: user says that "

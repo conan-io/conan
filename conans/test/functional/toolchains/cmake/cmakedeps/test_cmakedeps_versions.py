@@ -34,6 +34,7 @@ def hello_client():
     ("hello", "0.1", "REQUIRED", True, False),
     ("hello", "2.0", "REQUIRED", True, False)
 ])
+@pytest.mark.tool("cmake")
 def test_version(hello_client, name, version, params, cmake_fails, package_found):
     client = hello_client
     cmakelists = textwrap.dedent("""
@@ -44,7 +45,7 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
         """).format(name=name, version=version, params=params)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -68,6 +69,7 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
         assert "hello found: 0" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_no_version_file(hello_client):
     client = hello_client
 
@@ -79,7 +81,7 @@ def test_no_version_file(hello_client):
         """)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):

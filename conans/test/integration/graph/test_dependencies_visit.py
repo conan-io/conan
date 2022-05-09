@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -14,7 +15,7 @@ def test_dependencies_visit():
     client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.2")})
     client.run("create . --name=cmake --version=0.1")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/0.1"
             build_requires = "cmake/0.1"
@@ -32,15 +33,17 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009:"\
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.1"))
+    pkgs = client.cache.get_package_references(refs)
+    prev1 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
+    assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009:" \
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.2"))
+    pkgs = client.cache.get_package_references(refs)
+    prev2 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
+    assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
@@ -54,7 +57,7 @@ def test_dependencies_visit_settings_options():
     client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.1")})
     client.run("create . --name=pkg --version=0.1  -s os=Linux")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkg/0.1"
 
@@ -107,7 +110,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . --name=cmake --version=0.2")
 
     app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     class Pkg(ConanFile):
 
         def requirements(self):
@@ -142,7 +145,7 @@ def test_invisible_not_colliding_test_requires():
     client.run("create . --name=bar --version=0.1")
 
     app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     class Pkg(ConanFile):
 
         def requirements(self):
@@ -168,7 +171,7 @@ def test_dependencies_visit_build_requires_profile():
     client.save({"conanfile.py": GenConanfile("cmake", "0.1")})
     client.run("create .")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
 
             def validate(self):
@@ -182,10 +185,31 @@ def test_dependencies_visit_build_requires_profile():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": "[tool_requires]\ncmake/0.1"})
-    client.run("install . -pr:b=default -pr:h=profile --build")  # Use 2 contexts
+    client.run("install . -pr:b=default -pr:h=profile --build='*'")  # Use 2 contexts
 
     # Validate time, build-requires available
     assert "conanfile.py: VALIDATE DEPS: 1!!!" in client.out
     # generate time, build-requires already available
     assert "conanfile.py: GENERATE REQUIRE: cmake/0.1!!!" in client.out
     assert "conanfile.py: GENERATE CMAKE: cmake/0.1!!!" in client.out
+
+
+def test_dependencies_package_type():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library")})
+    c.run("create .")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "lib/0.1"
+            def generate(self):
+                is_app = self.dependencies["lib"].package_type == "static-library"
+                self.output.info(f"APP: {is_app}!!")
+                assert is_app
+                self.dependencies["lib"].package_type == "not-exist-type"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "APP: True!!" in c.out
+    assert "conanfile.py: Error in generate() method, line 9" in c.out
+    assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out

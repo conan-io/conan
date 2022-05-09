@@ -1,6 +1,9 @@
 import glob
 import os
+import platform
 import textwrap
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -18,7 +21,7 @@ def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             name = "mylib"
@@ -38,7 +41,7 @@ def test_pkg_config_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
@@ -67,7 +70,7 @@ def test_empty_dirs():
     # Adding in package_info all the empty directories
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             name = "mylib"
@@ -83,7 +86,7 @@ def test_empty_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
@@ -99,8 +102,8 @@ def test_empty_dirs():
 
 def test_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.tools import save
+        from conan import ConanFile
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
@@ -108,7 +111,7 @@ def test_system_libs():
             version = "0.1"
 
             def package(self):
-                save(os.path.join(self.package_folder, "lib", "file"), "")
+                save(self, os.path.join(self.package_folder, "lib", "file"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["mylib1", "mylib2"]
@@ -117,7 +120,7 @@ def test_system_libs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("mylib.pc")
     assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
@@ -126,14 +129,14 @@ def test_system_libs():
 def test_multiple_include():
     # https://github.com/conan-io/conan/issues/7056
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.tools import save
+        from conan import ConanFile
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
             def package(self):
                 for p in ["inc1", "inc2", "inc3/foo", "lib1", "lib2"]:
-                    save(os.path.join(self.package_folder, p, "file"), "")
+                    save(self, os.path.join(self.package_folder, p, "file"), "")
 
             def package_info(self):
                 self.cpp_info.includedirs = ["inc1", "inc2", "inc3/foo"]
@@ -142,7 +145,7 @@ def test_multiple_include():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "includedir1=${prefix}/inc1" in pc_content
@@ -157,16 +160,16 @@ def test_multiple_include():
 def test_custom_content():
     # https://github.com/conan-io/conan/issues/7661
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.tools import save
+        from conan import ConanFile
+        from conan.tools.files import save
         import os
         import textwrap
 
         class PkgConfigConan(ConanFile):
 
             def package(self):
-                save(os.path.join(self.package_folder, "include" ,"file"), "")
-                save(os.path.join(self.package_folder, "lib" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "include" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "lib" ,"file"), "")
 
             def package_info(self):
                 custom_content = textwrap.dedent(\"""
@@ -181,7 +184,7 @@ def test_custom_content():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "libdir1=${prefix}/lib" in pc_content
@@ -191,25 +194,25 @@ def test_custom_content():
     assert "Name: pkg" in pc_content
 
 
-def test_custom_content_components():
+def test_custom_content_and_version_components():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.tools import save
-        import os
-        import textwrap
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
 
             def package_info(self):
                 self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                      "componentdir=${prefix}/mydir")
+                self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                     "19.8.199")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
-    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
+    assert "Version: 19.8.199" in pc_content
 
 
 def test_pkg_with_public_deps_and_component_requires():
@@ -239,7 +242,7 @@ def test_pkg_with_public_deps_and_component_requires():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -253,7 +256,7 @@ def test_pkg_with_public_deps_and_component_requires():
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "first/0.1"
@@ -319,7 +322,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -335,7 +338,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
     client.run("create . --name=other --version=1.0")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "other/1.0"
@@ -380,7 +383,7 @@ def test_pkg_config_name_full_aliases():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -395,7 +398,7 @@ def test_pkg_config_name_full_aliases():
     client.run("create . --name=first --version=0.3")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "first/0.3"
@@ -418,7 +421,7 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
-    assert "Description: Conan component: compo1" in pc_content
+    assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
@@ -470,7 +473,7 @@ def test_duplicated_names_warnings():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -486,7 +489,7 @@ def test_duplicated_names_warnings():
     client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "pkgb/1.0"
@@ -550,7 +553,7 @@ def test_components_and_package_pc_creation_order():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
 
@@ -563,7 +566,7 @@ def test_components_and_package_pc_creation_order():
     client.run("create . --name=opencl --version=1.0")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "opencl/1.0"
@@ -594,3 +597,25 @@ def test_components_and_package_pc_creation_order():
     assert "Requires:" not in pc_content
     pc_content = client.load("pkgb.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Needs pkg-config")
+@pytest.mark.tool("pkg_config")
+def test_pkg_configdeps_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\"user_config.h\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+                self.cpp_info.cflags.append("flag1=\"my flag1\"")
+                self.cpp_info.cxxflags.append('flag2="my flag2"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . --name=hello --version=1.0")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g PkgConfigDeps")
+    client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
+    assert r'flag2=\"my flag2\" flag1=\"my flag1\" '\
+           r'-DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out

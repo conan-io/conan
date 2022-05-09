@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 
-from conans.client import tools
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load, save
@@ -46,7 +45,7 @@ class CreateTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """from conan import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
@@ -89,7 +88,7 @@ class MyPkg(ConanFile):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_name_command_line(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """from conan import ConanFile
 class MyPkg(ConanFile):
     name = "Pkg"
     def source(self):
@@ -168,7 +167,6 @@ class MyPkg(ConanFile):
                      "test_package/conanfile.py":
                          GenConanfile().with_test('self.output.info("TESTING!!!")')})
         client.run("create . --user=lasote --channel=testing")
-        print(client.out)
         self.assertIn("pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
@@ -190,7 +188,7 @@ class MyPkg(ConanFile):
         client.run("create . --name=other --version=1.0 --user=user --channel=channel")
 
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
-        test_conanfile = """from conans import ConanFile
+        test_conanfile = """from conan import ConanFile
 class MyPkg(ConanFile):
     requires = "other/1.0@user/channel"
     def requirements(self):
@@ -280,7 +278,7 @@ class MyPkg(ConanFile):
         """
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyPkg(ConanFile):
 
@@ -316,7 +314,7 @@ class MyPkg(ConanFile):
     def test_requires_without_user_channel(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hellobar"
@@ -354,13 +352,13 @@ class MyPkg(ConanFile):
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[requires]\n    hello/0.1\n", conaninfo)
+        self.assertIn("[requires]\nhello/0.1\n", conaninfo)
 
     @pytest.mark.xfail(reason="--json output has been disabled")
     def test_compoents_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
@@ -382,3 +380,11 @@ class MyPkg(ConanFile):
         self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
         self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
         self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+
+
+def test_lockfile_input_not_specified():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_name("foo").with_version("1.0")})
+    client.run("lock create . --lockfile-out locks/conan.lock")
+    client.run("create . --lockfile-out locks/conan.lock")
+    assert "Generated lockfile:" in client.out

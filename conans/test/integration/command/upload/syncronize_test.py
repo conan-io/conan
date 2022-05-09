@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.tools.files import untargz
+from conan.tools.files.files import untargz  # FIXME: DO not import from tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_TGZ_NAME
@@ -70,7 +70,7 @@ class SynchronizeTest(unittest.TestCase):
         # Now try with the package
         ##########################
 
-        client.run("install --reference=%s --build missing" % str(ref))
+        client.run("install --requires=%s --build missing" % str(ref))
         # Upload package
         ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(ref_with_rev)

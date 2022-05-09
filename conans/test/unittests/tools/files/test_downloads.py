@@ -5,14 +5,15 @@ import requests
 from bottle import HTTPError, auth_basic, static_file
 
 from conan.tools.files import ftp_download, download, get
-from conans.client.tools import chdir
 from conans.errors import ConanException, AuthenticationException
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import StoppableThreadBottle, redirect_output
-from conans.util.files import save, load
+from conans.util.files import save, load, chdir
 
 
+@pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "
+                      "very little conan code, mostly python")
 class TestFTP:
 
     def test_ftp_auth(self):
@@ -78,7 +79,7 @@ class TestDownload:
     def test_download(self, bottle_server):
         dest = os.path.join(temp_folder(), "manual.html")
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         download(conanfile, "http://localhost:%s/manual.html" % bottle_server.port, dest, retry=3,
                  retry_wait=0)
         content = load(dest)
@@ -91,7 +92,7 @@ class TestDownload:
     def test_download_iterate_url(self, bottle_server):
         dest = os.path.join(temp_folder(), "manual.html")
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         output = RedirectedTestOutput()
         with redirect_output(output):
             download(conanfile, ["invalid",
@@ -106,7 +107,7 @@ class TestDownload:
         # Not authorized
         with pytest.raises(AuthenticationException) as exc:
             conanfile = ConanFileMock()
-            conanfile._conan_requester = requests
+            conanfile._conan_helpers.requester = requests
             download(conanfile, "http://localhost:%s/forbidden" % bottle_server.port, dest)
         assert "403: Forbidden" in str(exc.value)
 
@@ -114,7 +115,7 @@ class TestDownload:
         # Not authorized
         dest = os.path.join(temp_folder(), "manual.html")
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         with pytest.raises(AuthenticationException):
             download(conanfile, "http://localhost:%s/basic-auth/user/passwd" % bottle_server.port,
                      dest, retry=0, retry_wait=0)
@@ -130,7 +131,7 @@ class TestDownload:
     def test_download_retries_errors(self):
         # unreachable server will retry
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         file_path = os.path.join(temp_folder(), "file.txt")
         with pytest.raises(ConanException):
             output = RedirectedTestOutput()
@@ -141,7 +142,7 @@ class TestDownload:
     def test_download_retries_500_errors(self, bottle_server):
         # 500 internal also retries
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         file_path = os.path.join(temp_folder(), "file.txt")
         with pytest.raises(ConanException):
             output = RedirectedTestOutput()
@@ -153,7 +154,7 @@ class TestDownload:
     def test_download_no_retries_errors(self, bottle_server):
         # Not found error will not retry
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         file_path = os.path.join(temp_folder(), "file.txt")
         with pytest.raises(ConanException):
             download(conanfile, "http://localhost:%s/notexisting" % bottle_server.port, file_path,
@@ -210,7 +211,7 @@ class TestGet:
 
     def test_get_tgz(self, bottle_server_zip):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             get(conanfile, "http://localhost:%s/sample.tgz" % bottle_server_zip.port,
@@ -219,7 +220,7 @@ class TestGet:
 
     def test_get_tgz_strip_root(self, bottle_server_zip):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             get(conanfile, "http://localhost:%s/sample.tgz" % bottle_server_zip.port,
@@ -228,7 +229,7 @@ class TestGet:
 
     def test_get_gunzip(self, bottle_server_zip):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             get(conanfile, "http://localhost:%s/test.txt.gz" % bottle_server_zip.port,
@@ -237,7 +238,7 @@ class TestGet:
 
     def test_get_gunzip_destination(self, bottle_server_zip):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             get(conanfile, "http://localhost:%s/test.txt.gz" % bottle_server_zip.port,
@@ -246,7 +247,7 @@ class TestGet:
 
     def test_get_gunzip_destination_subfolder(self, bottle_server_zip):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             get(conanfile, "http://localhost:%s/test.txt.gz" % bottle_server_zip.port,
@@ -256,7 +257,7 @@ class TestGet:
     def test_get_filename_error(self, bottle_server_zip):
         # Test: File name cannot be deduced from '?file=1'
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
+        conanfile._conan_helpers.requester = requests
         with pytest.raises(ConanException) as error:
             get(conanfile, "http://localhost:%s/?file=1" % bottle_server_zip.port)
         assert "Cannot deduce file name from the url" in str(error.value)

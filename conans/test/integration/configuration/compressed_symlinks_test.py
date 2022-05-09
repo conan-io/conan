@@ -20,13 +20,14 @@ class CompressSymlinksZeroSize(unittest.TestCase):
 
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conan.tools.files import save
 
 class HelloConan(ConanFile):
 
     def package(self):
         # Link to file.txt and then remove it
-        tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
+        save(self, os.path.join(self.package_folder, "file.txt"), "contents")
         os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))
 """
         ref = RecipeReference.loads("lib/1.0@conan/stable")
@@ -76,7 +77,9 @@ def test_package_with_symlinks(package_files):
 
     client = TurboTestClient(default_server_user=True)
     client2 = TurboTestClient(servers=client.servers)
-    client.save({"conanfile.py": GenConanfile().with_package('self.copy("*")')
+    client.save({"conanfile.py": GenConanfile()
+                .with_import("from conan.tools.files import copy")
+                .with_package('copy(self, "*", self.source_folder, self.package_folder)')
                 .with_exports_sources("*")})
 
     for path in package_files["files"]:
@@ -113,7 +116,7 @@ def test_package_with_symlinks(package_files):
     client.run("upload '*' -c -r default")
 
     # Client 2 install
-    client2.run("install --reference lib/1.0@")
+    client2.run("install --requires lib/1.0@")
     # Check package files are there
     package_folder = client2.get_latest_pkg_layout(pref).package()
     assert_folder_symlinks(package_folder)

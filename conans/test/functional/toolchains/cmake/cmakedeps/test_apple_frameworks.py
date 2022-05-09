@@ -3,15 +3,16 @@ import textwrap
 
 import pytest
 
-from conans.client.tools.apple import XCRun, to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
     lib_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class FooLib(ConanFile):
             name = "foolib"
@@ -28,7 +29,7 @@ def client():
 
 
 app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMake
 
     class App(ConanFile):
@@ -43,7 +44,7 @@ app_conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -63,8 +64,7 @@ def test_apple_framework_xcode(client):
 
 
 conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conans import tools
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
 
             class AppleframeworkConan(ConanFile):
@@ -191,6 +191,7 @@ timer_cpp = textwrap.dedent("""
     """)
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
          [('',),
@@ -211,7 +212,7 @@ def test_apple_own_framework_cross_build(settings):
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
         from conan.tools.build import cross_building
 
@@ -259,7 +260,7 @@ def test_apple_own_framework_cross_build(settings):
 
 @pytest.mark.xfail(reason="run_environment=True no longer works")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
@@ -276,7 +277,7 @@ def test_apple_own_framework_cmake_deps():
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestPkg(ConanFile):
@@ -334,6 +335,7 @@ def test_apple_own_framework_cmake_deps():
     assert "Hello World Debug!" in client.out
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
@@ -351,7 +353,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     """)
 
     test_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
@@ -379,11 +381,11 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 from conan.tools.cmake import CMake
 
 
@@ -445,7 +447,7 @@ install(TARGETS ${PROJECT_NAME}
         """)
     test_conanfile_py = textwrap.dedent("""
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 from conan.tools.build import cross_building
 
@@ -501,6 +503,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
     t.run("create . --name=hello --version=1.0")
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_m1():
     xcrun = XCRun(None, sdk='iphoneos')
@@ -545,7 +548,7 @@ def test_m1():
     """)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestConan(ConanFile):

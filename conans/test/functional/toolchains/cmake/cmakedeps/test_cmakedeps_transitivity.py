@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_transitive_headers_not_public():
     c = TestClient()
 
@@ -21,7 +21,7 @@ def test_transitive_headers_not_public():
     c.run("create .")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
@@ -56,22 +56,22 @@ def test_transitive_headers_not_public():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_shared_requires_static():
     c = TestClient()
 
     c.save(pkg_cmake("liba", "0.1"))
     c.run("create .")
     c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+    c.run("create . -o libb/*:shared=True")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
@@ -96,24 +96,24 @@ def test_shared_requires_static():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_transitive_binary_skipped():
     c = TestClient()
 
     c.save(pkg_cmake("liba", "0.1"))
     c.run("create .")
     c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+    c.run("create . -o libb/*:shared=True")
     # IMPORTANT: liba binary can be removed, no longer necessary
     c.run("remove liba* -p -f")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 
@@ -131,7 +131,7 @@ def test_transitive_binary_skipped():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    c.run("build . -g VirtualRunEnv")
+    c.run("build . ")
     command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out

@@ -5,13 +5,14 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("use_components", [False, True])
 def test_build_modules_alias_target(use_components):
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "hello"
@@ -20,7 +21,8 @@ def test_build_modules_alias_target(use_components):
             exports_sources = ["target-alias.cmake"]
 
             def package(self):
-                self.copy("target-alias.cmake", dst="share/cmake")
+                copy(self, "target-alias.cmake", self.source_folder,
+                     os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 module = os.path.join("share", "cmake", "target-alias.cmake")
@@ -43,7 +45,7 @@ def test_build_modules_alias_target(use_components):
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -73,7 +75,7 @@ def test_build_modules_alias_target(use_components):
         assert "otherhello link libraries: hello::hello" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_build_modules_components_selection_is_not_possible():
     """
     If openssl declares different cmake_build_modules on ssl and crypto, in the consumer both
@@ -85,7 +87,8 @@ def test_build_modules_components_selection_is_not_possible():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "openssl"
@@ -94,7 +97,7 @@ def test_build_modules_components_selection_is_not_possible():
             exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.cmake", dst="share/cmake")
+                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 ssl_module = os.path.join("share", "cmake", "ssl.cmake")
@@ -129,7 +132,7 @@ def test_build_modules_components_selection_is_not_possible():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
@@ -164,7 +167,7 @@ def test_build_modules_components_selection_is_not_possible():
     assert "ROOT MESSAGE:hello!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_build_modules_components_selection_is_not_possible2():
     """
     If openssl declares different cmake_build_modules on ssl and crypto, in the consumer both
@@ -176,7 +179,8 @@ def test_build_modules_components_selection_is_not_possible2():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "openssl"
@@ -185,7 +189,8 @@ def test_build_modules_components_selection_is_not_possible2():
             exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.cmake", dst="share/cmake")
+                copy(self, "*.cmake", self.source_folder,
+                     os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 ssl_module = os.path.join("share", "cmake", "ssl.cmake")
@@ -220,7 +225,7 @@ def test_build_modules_components_selection_is_not_possible2():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):

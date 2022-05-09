@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -18,7 +18,7 @@ class RemoveOutdatedTest(unittest.TestCase):
         test_server = TestServer(users={"admin": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Test(ConanFile):
     settings = "os"
     """
@@ -86,20 +86,20 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("upload lib/1.0 -r default -c")
         self.client.run("remove lib/1.0 -f")
         # we can still install it
-        self.client.run("install --reference=lib/1.0@")
+        self.client.run("install --requires=lib/1.0@")
         self.assertIn("lib/1.0: Retrieving package", self.client.out)
         self.client.run("remove lib/1.0 -f")
 
         # Now remove remotely
         self.client.run("remove lib/1.0 -f -r default")
-        self.client.run("install --reference=lib/1.0@", assert_error=True)
+        self.client.run("install --requires=lib/1.0@", assert_error=True)
 
         self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)
 
 
 class RemovePackageRevisionsTest(unittest.TestCase):
 
-    NO_SETTINGS_RREF = "f3367e0e7d170aa12abccb175fee5f97"
+    NO_SETTINGS_RREF = "4d670581ccb765839f2239cc8dff8fbd"
 
     def setUp(self):
         self.test_server = TestServer(users={"user": "password"},
@@ -107,7 +107,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, inputs=["user", "password"])
         ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
-        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "a397cb03d51fb3b129c78d2968e2676f")
+        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "871e6d06bd4bbea0172937df1717e075")
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but
@@ -170,13 +170,17 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 
 
 # populated packages of bar
-bar_rrev = "bar/1.1#54ebd2321a1375c524eb7174c272927b"
-bar_rrev2 = "bar/1.1#b305dca03567ef3ebaeddc22f7f45376"
-bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
-bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
+bar_rrev = "bar/1.1#7db54b020cc95b8bdce49cd6aa5623c0"
+bar_rrev2 = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
+pkg_id_debug = "040ce2bd0189e377b2d15eb7246a4274d1c63317"
+pkg_id_release = "e53d55fd33066c49eb97a4ede6cb50cd8036fe8b"
+bar_rrev2_debug = '{}:{}'.format(bar_rrev2, pkg_id_debug)
+bar_rrev2_release = '{}:{}'.format(bar_rrev2, pkg_id_release)
 
-bar_rrev2_release_prev1 = "{}#61ceea29651eaf24b902e4ccdd49cc44".format(bar_rrev2_release)
-bar_rrev2_release_prev2 = "{}#c1c8d8ef1f9f9278d7963f6e35527bc7".format(bar_rrev2_release)
+bar_prev1 = "51ef5374f2df568657c8f5198a77fa4d"
+bar_prev2 = "42ff219d456bdf6b29d165e5fb5db7ec"
+bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
+bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
 @pytest.fixture()
@@ -240,10 +244,10 @@ def populated_client():
     {"remove": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
     {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
                                                       'fbar/1.1']},
+    {"remove": "foo/*@", "recipes": ['foo/1.0@user/channel', 'bar/1.1', 'fbar/1.1']},
     # These are errors
     {"remove": "foo", "error": True,
      "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
-    {"remove": "*/*@", "error": True},
     {"remove": "*#", "error": True},
     {"remove": "*/*#", "error": True},
 ])
@@ -263,12 +267,11 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
 @pytest.mark.parametrize("data", [
     {"remove": "bar/*#*", "rrevs": []},
     {"remove": "bar/1.1#z*", "rrevs": [bar_rrev, bar_rrev2]},
-    {"remove": "bar/1.1#*3*", "rrevs": []},
-    {"remove": "bar/1.1#*76", "rrevs": [bar_rrev]},
+    {"remove": "bar/1.1#*9*", "rrevs": []},
+    {"remove": "bar/1.1#*2a", "rrevs": [bar_rrev]},
     {"remove": "bar*#*50", "error": True, "error_msg": "Invalid expression, specify version"},
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
-
     with populated_client.mocked_servers():
         r = "-r default" if with_remote else ""
         error = data.get("error", False)
@@ -284,10 +287,10 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
-    {"remove": "bar/1.1#*:*cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
-    {"remove": "{}:*bd0189e377b2d15e*".format(bar_rrev2), "prefs": [bar_rrev2_release]},
-    {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_rrev2_release]},
+    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
+    {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
+    {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_rrev2_release, bar_rrev2_debug]},
     {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_rrev2_debug]},
     {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_rrev2_release]},
@@ -324,9 +327,9 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     {"remove": '{}#*kk*'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1,
                                                               bar_rrev2_release_prev2]},
     {"remove": '{}#*'.format(bar_rrev2_release), "prevs": []},
-    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_rrev2_release),
+    {"remove": '{}#{}* -p "build_type=Debug"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
-    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_rrev2_release),
+    {"remove": '{}#{}* -p "build_type=Release"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1]},
     {"remove": '{}#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
     {"remove": '{}#* -p "build_type=Debug"'.format(bar_rrev2_release),
