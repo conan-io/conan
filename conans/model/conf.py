@@ -325,7 +325,7 @@ class Conf:
     def copy_conaninfo_conf(self):
         """
         Get a new `Conf()` object with all the configurations required by the consumer
-        to be included into the final `ConanInfo().package_id()` computation. For instance, let's
+        to be included in the final `ConanInfo().package_id()` computation. For instance, let's
         suppose that we have this Conan `profile`:
 
         ```
@@ -351,8 +351,8 @@ class Conf:
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
             value = self.get(conf_name)
-            # Pruning None values, those should not affect package ID
-            if value is not None:
+            # Pruning any empty values, those should not affect package ID
+            if value:
                 result.define(conf_name, value)
         return result
 

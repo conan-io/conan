@@ -39,15 +39,14 @@ def test_package_id_including_confs(package_id_confs, package_id):
     client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
 
 
-PKG_ID_4 = "5dc2f1d489aabf1f3f1cdc53ca1748560f6c9b6c"
-PKG_ID_5 = "9a11cde1f104602e41b217a5f777f441de73a9f2"
-PKG_ID_6 = "ea3b400a04f1c479b6817e49b745ca7cf10a9f67"
+PKG_ID_4 = "9a11cde1f104602e41b217a5f777f441de73a9f2"
+PKG_ID_5 = "ea3b400a04f1c479b6817e49b745ca7cf10a9f67"
 
 
 @pytest.mark.parametrize("cxx_flags, package_id", [
-    ('[]', PKG_ID_4),
-    ('["--flag1", "--flag2"]', PKG_ID_5),
-    ('["--flag3", "--flag4"]', PKG_ID_6),
+    ('[]', PKG_ID_NO_CONF),
+    ('["--flag1", "--flag2"]', PKG_ID_4),
+    ('["--flag3", "--flag4"]', PKG_ID_5),
 ])
 def test_same_package_id_configurations_but_changing_values(cxx_flags, package_id):
     client = TestClient()
