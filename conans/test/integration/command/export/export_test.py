@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import stat
@@ -514,3 +515,12 @@ def test_export_invalid_refs():
     assert "ERROR: Invalid package user 'user%'" in c.out
     c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
     assert "ERROR: Invalid package channel 'channel%'" in c.out
+
+
+def test_export_json():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=foo --version=0.1 --format json")
+    info = json.loads(c.stdout)
+    assert info["reference"] == "foo/0.1#4d670581ccb765839f2239cc8dff8fbd"
+    assert len(info) == 1  # Only "reference" key yet
