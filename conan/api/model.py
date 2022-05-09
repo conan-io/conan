@@ -27,14 +27,6 @@ class Remote:
                                                              not self.disabled)
 
 
-class PkgConfiguration:
-
-    def __init__(self, data):
-        self.settings = data.get("settings", {})
-        self.options = data.get("options", {})
-        self.requires = data.get("requires", [])
-
-
 class _RecipeUploadData:
     def __init__(self, ref, prefs=None):
         self.ref = ref

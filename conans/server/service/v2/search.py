@@ -5,7 +5,6 @@ from fnmatch import translate
 
 from conans.cli.output import ConanOutput
 from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
-from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
@@ -38,14 +37,8 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
                 content = load(info_path)
-                info = ConanInfo.loads(content)
                 # From Conan 1.48 the conaninfo.txt is sent raw.
                 result[package_id] = {"content": content}
-                # FIXME: This could be removed in the conan_server, Artifactory should keep it
-                #        to guarantee compatibility with old conan clients.
-                conan_vars_info = info.serialize_min()
-                result[package_id].update(conan_vars_info)
-
             except Exception as exc:  # FIXME: Too wide
                 ConanOutput().error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
