@@ -281,7 +281,8 @@ class PythonRequiresInfo:
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    parser = ConfigParser(text, ["settings", "options", "requires"],
+    # TODO: Generalize
+    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires"],
                           raise_unexpected_field=False)
 
     def _loads_settings(settings_text):
@@ -294,6 +295,7 @@ def load_binary_info(text):
         return settings_result
 
     settings = _loads_settings(parser.settings)
+    settings_target = _loads_settings(parser.settings_target)
     options = Options.loads(parser.options)
     # TODO: We need to generalize this reading.
     requires = parser.requires.splitlines() if parser.requires else []
@@ -301,7 +303,8 @@ def load_binary_info(text):
 
     conan_info_json = {"settings": dict(settings),
                        "options": dict(options.serialize())["options"],
-                       "requires": requires
+                       "requires": requires,
+                       "settings_target": dict(settings_target)
                        }
     return conan_info_json
 
@@ -312,6 +315,7 @@ class ConanInfo:
                  python_requires=None):
         self.invalid = None
         self.settings = settings
+        self.settings_target = None  # needs to be explicitly defined by recipe package_id()
         self.options = options
         self.requires = reqs_info
         self.build_requires = build_requires_info
@@ -340,6 +344,11 @@ class ConanInfo:
         settings_dumps = self.settings.dumps()
         if settings_dumps:
             result.append(settings_dumps)
+        if self.settings_target:
+            settings_target_dumps = self.settings_target.dumps()
+            if settings_target_dumps:
+                result.append("[settings_target]")
+                result.append(settings_target_dumps)
         result.append("[options]")
         options_dumps = self.options.dumps()
         if options_dumps:
@@ -356,6 +365,7 @@ class ConanInfo:
             result.append(self.build_requires.dumps())
         if hasattr(self, "conf"):
             result.append(self.conf.dumps())
+
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
