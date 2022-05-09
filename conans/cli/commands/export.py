@@ -1,3 +1,4 @@
+import json
 import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
@@ -11,7 +12,11 @@ def common_args_export(parser):
     add_reference_args(parser)
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+def json_export(ref):
+    return json.dumps({"reference": ref.repr_notime()})
+
+
+@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export})
 def export(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache
@@ -33,3 +38,4 @@ def export(conan_api, parser, *args):
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
     ConanOutput().success("Exported recipe: {}".format(ref.repr_humantime()))
+    return ref
