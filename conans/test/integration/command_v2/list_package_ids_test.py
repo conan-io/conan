@@ -93,7 +93,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          ERROR: There are no recipes matching the expression 'whatever/0.1#""")
+          There are no packages""")
 
         self.client.run(f"list packages {self._get_fake_recipe_refence('whatever/0.1')}")
         assert expected_output in self.client.out
@@ -106,9 +106,9 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         Local Cache:
           There are no packages
         remote1:
-          There are no packages
+          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote1]
         remote2:
-          There are no packages
+          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote2]
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
@@ -306,7 +306,8 @@ class TestListPackages:
                 .with_settings("os", "arch").with_shared_option(False)})
         c.run("create dep")
         c.run("create pkg -s os=Windows -s arch=x86")
-        c.run("list packages pkg/2.3.4")
+        # Revision is needed explicitly!
+        c.run("list packages pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8")
         expected = textwrap.dedent("""\
             Local Cache:
               pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5

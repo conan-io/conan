@@ -82,9 +82,9 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         expected_output = ("Local Cache:\n"
                            "  There are no matching recipe references\n"
                            "remote1:\n"
-                           "  There are no matching recipe references\n"
+                           "  ERROR: Recipe not found: 'whatever/1.0@_/_'. [Remote: remote1]\n"
                            "remote2:\n"
-                           "  There are no matching recipe references\n")
+                           "  ERROR: Recipe not found: 'whatever/1.0@_/_'. [Remote: remote2]\n")
 
         self.client.run('list recipe-revisions -r="*" -c whatever/1.0')
         assert expected_output == self.client.out
@@ -151,7 +151,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
 
         expected_output = (
             "remote1:\n"
-            "  There are no matching recipe references\n"
+            "  ERROR: Recipe not found: 'test_recipe/1.0.0@_/_'. [Remote: remote1]\n"
         )
 
         assert expected_output in self.client.out
@@ -163,7 +163,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
             r"remote1:\n"
             r"  test_recipe/1.0.0@user/channel#.*\n"
             r"remote2:\n"
-            r"  There are no matching recipe references\n"
+            r"  ERROR: Recipe not found: 'test_recipe/1.0.0@user/channel'.*\n"
         )
 
         remote1 = "remote1"
