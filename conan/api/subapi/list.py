@@ -2,7 +2,6 @@ from typing import Dict
 
 from conan.api.model import Remote
 from conans.cli.conan_app import ConanApp
-from conans.model.info import BinaryInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages
@@ -64,7 +63,7 @@ class ListAPI:
         return results
 
     def packages_configurations(self, ref: RecipeReference,
-                                remote=None) -> Dict[PkgReference, BinaryInfo]:
+                                remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
         if not remote:

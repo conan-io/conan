@@ -349,50 +349,31 @@ class PythonRequiresInfo(object):
     recipe_revision_mode = full_mode
 
 
-class BinaryInfo:
-    """ class to load a conaninfo.txt and be able to use it for the 'conan list packages'
-    command (previos conan search <ref>). As the server will transmit the whole
-    conaninfo.txt contents, it will be used in the client
-    """
-    def __init__(self, settings, options, requires, build_requires):
-        self.settings = settings
-        self.options = options
-        self.requires = requires
-        self.build_requires = build_requires
+def load_binary_info(text):
+    # This is used for search functionality, search prints info from this file
+    parser = ConfigParser(text, ["settings", "options", "requires"],
+                          raise_unexpected_field=False)
 
-    @staticmethod
-    def loads(text):
-        # This is used for search functionality, search prints info from this file
-        parser = ConfigParser(text, ["settings", "options", "requires"],
-                              raise_unexpected_field=False)
+    def _loads_settings(settings_text):
+        settings_result = []
+        for line in settings_text.splitlines():
+            if not line.strip():
+                continue
+            name, value = line.split("=", 1)
+            settings_result.append((name.strip(), value.strip()))
+        return settings_result
 
-        def _loads_settings(settings_text):
-            settings_result = []
-            for line in settings_text.splitlines():
-                if not line.strip():
-                    continue
-                name, value = line.split("=", 1)
-                settings_result.append((name.strip(), value.strip()))
-            return settings_result
+    settings = _loads_settings(parser.settings)
+    options = Options.loads(parser.options)
+    # TODO: We need to generalize this reading.
+    requires = parser.requires.splitlines() if parser.requires else []
+    requires = [r for r in requires if r]
 
-        settings = _loads_settings(parser.settings)
-        options = Options.loads(parser.options)
-        # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        # FIXME: remove this uglyness
-        requires = parser.requires.splitlines() if parser.requires else []
-        requires = [r for r in requires if r]
-        return BinaryInfo(settings, options, requires, None)
-
-    def serialize_min(self):
-        """
-        This info will be shown in search results.
-        """
-        # self.settings is already a simple serialized list, it has been loaded from conaninfo.txt
-        conan_info_json = {"settings": dict(self.settings),
-                           "options": dict(self.options.serialize())["options"],
-                           "requires": self.requires
-                           }
-        return conan_info_json
+    conan_info_json = {"settings": dict(settings),
+                       "options": dict(options.serialize())["options"],
+                       "requires": requires
+                       }
+    return conan_info_json
 
 
 class ConanInfo:

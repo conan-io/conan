@@ -5,7 +5,6 @@ from json import JSONEncoder
 from typing import List
 
 from conan.api.model import Remote
-from conans.model.info import BinaryInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -63,8 +62,6 @@ class ConanJSONEncoder(JSONEncoder):
             return repr(o)
         elif isinstance(o, Remote):
             return o.name
-        elif isinstance(o, BinaryInfo):
-            return o.serialize_min()
         raise TypeError("Don't know how to serialize a {} object".format(o.__class__))
 
 

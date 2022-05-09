@@ -6,7 +6,7 @@ from typing import Dict
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.info import BinaryInfo
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
@@ -14,7 +14,7 @@ from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 
 
-def filter_packages(query, results: Dict[PkgReference, BinaryInfo]):
+def filter_packages(query, results: Dict[PkgReference, dict]):
     if query is None:
         return results
     try:
@@ -32,7 +32,7 @@ def filter_packages(query, results: Dict[PkgReference, BinaryInfo]):
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info: BinaryInfo):
+def _evaluate_postfix_with_info(postfix, binary_info):
 
     # Evaluate conaninfo with the expression
 
@@ -41,12 +41,12 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info: BinaryInfo):
         Uses conan_vars_info in the closure to evaluate it"""
         name, value = expression.split("=", 1)
         value = value.replace("\"", "")
-        return _evaluate(name, value, conan_vars_info)
+        return _evaluate(name, value, binary_info)
 
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info: BinaryInfo):
+def _evaluate(prop_name, prop_value, binary_info):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -102,7 +102,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, BinaryInfo]:
+def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     """
     param package_layout: Layout for the given reference
     """
@@ -122,11 +122,10 @@ def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, BinaryInf
             continue
         conan_info_content = load(info_path)
 
-        info = BinaryInfo.loads(conan_info_content)
-        conan_vars_info = info.serialize_min()
+        info = load_binary_info(conan_info_content)
         pref = pkg_layout.reference
         # The key shoudln't have the latest package revision, we are asking for package configs
         pref.revision = None
-        result[pkg_layout.reference] = conan_vars_info
+        result[pkg_layout.reference] = info
 
     return result

@@ -4,10 +4,9 @@ import unittest
 
 import pytest
 
-from conans.model.info import ConanInfo, BinaryInfo
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import bad_value_msg
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -21,7 +20,7 @@ class SettingsTest(unittest.TestCase):
         pkg_ids = client.cache.get_package_references(ref)
         pref = client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_folder = client.cache.pkg_layout(pref).package()
-        return BinaryInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
+        return load_binary_info(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):
         settings = """os:
@@ -147,13 +146,13 @@ class SayConan(ConanFile):
         client.run("create . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info.settings[0], ("os", "Windows"))
+        self.assertEqual(conan_info["settings"]["os"], "Windows")
 
         client.run("remove say/0.1 -f")
         client.run("create . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info.settings[0], ("os", "Linux"))
+        self.assertEqual(conan_info["settings"]["os"], "Linux")
 
     def test_settings_as_a_list_conanfile(self):
         # Now with conanfile as a list
@@ -169,7 +168,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info.settings[1],  ("os", "Windows"))
+        self.assertEqual(conan_info["settings"]["os"], "Windows")
 
     def test_settings_as_a_dict_conanfile(self):
         # Now with conanfile as a dict
@@ -186,7 +185,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
         conan_info = self._get_conaninfo("say/0.1@", client)
-        self.assertEqual(conan_info.settings[1],  ("os", "Windows"))
+        self.assertEqual(conan_info["settings"]["os"], "Windows")
 
     def test_invalid_settings3(self):
         client = TestClient()
@@ -242,7 +241,7 @@ class SayConan(ConanFile):
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
         conan_info = self._get_conaninfo("say/0.1", client)
-        self.assertEqual(conan_info.settings, [])
+        self.assertEqual(conan_info["settings"], {})
 
         # Settings is {}
         content = """
@@ -260,4 +259,4 @@ class SayConan(ConanFile):
 
         conan_info = self._get_conaninfo("say/0.1", client)
 
-        self.assertEqual(conan_info.settings, [])
+        self.assertEqual(conan_info["settings"], {})
