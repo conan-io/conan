@@ -5,7 +5,7 @@ import tempfile
 from contextlib import contextmanager
 from io import StringIO
 
-from conans.errors import CalledProcessErrorWithStderr, ConanException
+from conans.errors import ConanException
 from conans.util.env import environment_update
 from conans.util.files import load
 
@@ -119,7 +119,8 @@ def check_output_runner(cmd, stderr=None):
 
         if process.returncode:
             # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
+            msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
+            raise ConanException(msg)
 
         output = load(tmp_file)
         return output
