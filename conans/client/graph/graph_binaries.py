@@ -289,9 +289,12 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, lockfile):
         build_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
-            self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+                if node.path is not None and node.path.endswith(".py"):
+                    # For .py we keep evaluating the package_id, validate(), etc
+                    self._evaluate_package_id(node)
                 continue
+            self._evaluate_package_id(node)
             if lockfile:
                 locked_prev = lockfile.resolve_prev(node)
                 if locked_prev:

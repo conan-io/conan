@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration, conanfile_remove_attr
+    ConanErrorConfiguration, conanfile_remove_attr, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 
 
@@ -70,3 +70,5 @@ def run_validate_package_id(conanfile):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info'], "package_id"):
                 conanfile.package_id()
+
+    conanfile.info.validate()
