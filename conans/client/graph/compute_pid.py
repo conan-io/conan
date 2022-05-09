@@ -3,7 +3,6 @@ from collections import OrderedDict
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanErrorConfiguration, conanfile_remove_attr
-from conans.model.conf import Conf
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 
 
@@ -19,7 +18,6 @@ def compute_package_id(node, new_config):
     embed_mode = new_config.get("core.package_id:default_embed_mode", default="full_mode")
     python_mode = new_config.get("core.package_id:default_python_mode", default="minor_mode")
     build_mode = new_config.get("core.package_id:default_build_mode", default=None)
-    conf_names = new_config.get("core.package_id:confs", default=[], check_type=list)
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
@@ -42,19 +40,12 @@ def compute_package_id(node, new_config):
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
 
-    # Creating Conf() object with only the configurations defined by core.package_id:confs
-    conf = Conf()
-    for conf_name in conf_names:
-        value = conanfile.conf.get(conf_name)
-        if value is not None:
-            conf.define(conf_name, value)
-
     conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
                                options=conanfile.options.copy_conaninfo_options(),
                                reqs_info=reqs_info,
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,
-                               conf=conf)
+                               conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
 
     run_validate_package_id(conanfile)

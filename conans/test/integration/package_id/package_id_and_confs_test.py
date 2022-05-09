@@ -1,27 +1,39 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
+PKG_ID_NO_CONF = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"
+PKG_ID_1 = "f0d8262dfb519d89cc56a6d8574e421736f9f6b7"
+PKG_ID_2 = "f6d6fc8edeffa6f4c30fbe3510d1375488d0137a"
+PKG_ID_3 = "853419ed5bc44fe366b8d09ea1c4bda45d601747"
 
-def test_package_id_include_confs():
+
+@pytest.mark.parametrize("package_id_confs, package_id", [
+    ('[]', PKG_ID_NO_CONF),
+    ('["tools.fake:no_existing_conf"]', PKG_ID_NO_CONF),
+    ('["tools.build:cxxflags", "tools.build:cflags"]', PKG_ID_1),
+    ('["tools.build:defines"]', PKG_ID_2),
+    ('["tools.build:cxxflags", "tools.build:sharedlinkflags"]', PKG_ID_3),
+])
+def test_package_id_including_confs(package_id_confs, package_id):
     client = TestClient()
-    client.save({"global.conf": 'core.package_id:confs=["tools.build:cxxflags", "tools.build:cflags"]'},
-                path=client.cache.cache_folder)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
         """)
-    profile = textwrap.dedent("""
+    profile = textwrap.dedent(f"""
     include(default)
     [conf]
+    tools.info.package_id:confs={package_id_confs}
     tools.build:cxxflags=["--flag1", "--flag2"]
     tools.build:cflags+=["--flag3", "--flag4"]
+    tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+    tools.build:exelinkflags=["--flag7", "--flag8"]
+    tools.build:defines=["D1", "D2"]
     """)
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
-    # client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038",
-    #                                          "Build")})
-    # client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler=msvc '
-    #            '-s compiler.version=190 -s build_type=Debug -s compiler.runtime=dynamic')
-    # client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038", "Cache")})
+    client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})

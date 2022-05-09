@@ -15,13 +15,6 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
-    # Package ID related
-    "core.package_id:confs": "List of configurations that should be included as part of the package_id, e.g., 'tools.build:cxxflags'",
-    "core.package_id:default_unknown_mode": "",
-    "core.package_id:default_non_embed_mode": "",
-    "core.package_id:default_embed_mode": "",
-    "core.package_id:default_python_mode": "",
-    "core.package_id:default_build_mode": "",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
@@ -327,6 +320,40 @@ class Conf:
         for k, v in self._values.items():
             if _is_profile_module(k):
                 result._values[k] = v
+        return result
+
+    def copy_conaninfo_conf(self):
+        """
+        Get a new `Conf()` object with all the configurations required by the consumer
+        to be included into the final `ConanInfo().package_id()` computation. For instance, let's
+        suppose that we have this Conan `profile`:
+
+        ```
+        ...
+        [conf]
+        tools.info.package_id:confs=["tools.build:cxxflags", "tools.build:cflags"]
+        tools.build:cxxflags=["flag1xx"]
+        tools.build:cflags=["flag1"]
+        tools.build:defines=["DEF1"]
+        ...
+
+        Then, the resulting `Conf()` will have only these configuration lines:
+
+        >>> print(conf.dumps())
+        tools.build:cxxflags=["flag1xx"]
+        tools.build:cflags=["flag1"]
+        ```
+
+        :return: a new `< Conf object >` with the configuration selected by `core.package_id:confs`.
+        """
+        result = Conf()
+        # Reading the list of all the configurations selected by the user to use for the package_id
+        package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
+        for conf_name in package_id_confs:
+            value = self.get(conf_name)
+            # Pruning None values, those should not affect package ID
+            if value is not None:
+                result.define(conf_name, value)
         return result
 
 
