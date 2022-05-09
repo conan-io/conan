@@ -55,8 +55,9 @@ def _evaluate(prop_name, prop_value, binary_info):
     def compatible_prop(setting_value, _prop_value):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
-    info_settings = conan_vars_info.settings
-    info_options = conan_vars_info.options
+    # TODO: Necessary to generalize this query evaluation to include all possible fields
+    info_settings = binary_info.get("settings")
+    info_options = binary_info.get("options")
     properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
