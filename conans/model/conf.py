@@ -344,7 +344,7 @@ class Conf:
         tools.build:cflags=["flag1"]
         ```
 
-        :return: a new `< Conf object >` with the configuration selected by `core.package_id:confs`.
+        :return: a new `< Conf object >` with the configuration selected by `tools.info.package_id:confs`.
         """
         result = Conf()
         # Reading the list of all the configurations selected by the user to use for the package_id
