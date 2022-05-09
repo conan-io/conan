@@ -26,11 +26,15 @@ def runenv_from_cpp_info(dep, os_name):
 
 
 class VirtualRunEnv:
-    """ captures the conanfile environment that is defined from its
-    dependencies, and also from profiles
+    """ Calculates the environment variables of the build time context and produces a conanbuildenv
+        .bat or .sh script
     """
 
     def __init__(self, conanfile):
+        """
+
+        :param conanfile:  The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"
@@ -51,8 +55,10 @@ class VirtualRunEnv:
         return f
 
     def environment(self):
-        """ collects the runtime information from dependencies. For normal libraries should be
-        very occasional
+        """
+        Returns an ``Environment`` object containing the environment variables of the run context.
+
+        :return: an ``Environment`` object instance containing the obtained variables.
         """
         runenv = Environment()
         # FIXME: Missing profile info
@@ -70,9 +76,18 @@ class VirtualRunEnv:
         return runenv
 
     def vars(self, scope="run"):
+        """
+        :param scope: Scope to be used.
+        :return: An ``EnvVars`` instance containing the computed environment variables.
+        """
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="run"):
+        """
+        Produces the launcher scripts activating the variables for the run context.
+
+        :param scope: Scope to be used.
+        """
         run_env = self.environment()
         if run_env:
             run_env.vars(self._conanfile, scope=scope).save_script(self._filename)
