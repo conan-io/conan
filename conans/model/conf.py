@@ -8,7 +8,6 @@ from conans.model.recipe_ref import ref_matches
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
-    "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
@@ -16,6 +15,13 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    # Package ID related
+    "core.package_id:confs": "List of configurations that should be included as part of the package_id, e.g., 'tools.build:cxxflags'",
+    "core.package_id:default_unknown_mode": "",
+    "core.package_id:default_non_embed_mode": "",
+    "core.package_id:default_embed_mode": "",
+    "core.package_id:default_python_mode": "",
+    "core.package_id:default_build_mode": "",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",

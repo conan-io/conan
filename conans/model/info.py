@@ -379,13 +379,14 @@ def load_binary_info(text):
 class ConanInfo:
 
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
-                 python_requires=None):
+                 python_requires=None, conf=None):
         self.invalid = None
         self.settings = settings
         self.options = options
         self.requires = reqs_info
         self.build_requires = build_requires_info
         self.python_requires = python_requires
+        self.conf = conf
 
     def clone(self):
         """ Useful for build_id implementation and for compatibility()
@@ -397,6 +398,7 @@ class ConanInfo:
         result.requires = self.requires.copy()
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
+        result.conf = self.conf.copy()
         return result
 
     def dumps(self):
@@ -406,6 +408,8 @@ class ConanInfo:
         :return: `str` with the result of joining all the information, e.g.,
             `"[settings]\nos=Windows\n[options]\n[requires]\n"`
         """
+        # FIXME: Refactor this method to not include headers with empty content. It'll break
+        #        one or two tests...
         result = ["[settings]"]
         settings_dumps = self.settings.dumps()
         if settings_dumps:
@@ -424,7 +428,9 @@ class ConanInfo:
         if self.build_requires:
             result.append("[build_requires]")
             result.append(self.build_requires.dumps())
-        if hasattr(self, "conf"):
+        conf_dumps = self.conf.dumps()
+        if conf_dumps:
+            # result.append("[conf]")  # Let's do it when apply FIXME above
             result.append(self.conf.dumps())
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
