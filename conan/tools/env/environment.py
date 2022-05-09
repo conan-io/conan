@@ -207,7 +207,7 @@ class Environment:
 
         :param name: Name of the variable to append a new value
         :param value: New value
-        :param separator: The character to separate the appended value with the previous value
+        :param separator: The character to separate the appended value with the previous value. By default it will use a blank space.
         """
         self._values.setdefault(name, _EnvValue(name)).append(value, separator)
 

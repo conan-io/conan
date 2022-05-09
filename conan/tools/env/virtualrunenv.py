@@ -26,7 +26,7 @@ def runenv_from_cpp_info(dep, os_name):
 
 
 class VirtualRunEnv:
-    """ Calculates the environment variables of the build time context and produces a conanbuildenv
+    """ Calculates the environment variables of the runtime context and produces a conanrunenv
         .bat or .sh script
     """
 
