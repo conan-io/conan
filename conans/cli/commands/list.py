@@ -87,6 +87,8 @@ def print_list_package_ids(results: List[CommandResult]):
                 _tmp_pref.revision = None  # Do not show the revision of the package
                 out.writeln(f"  {_tmp_pref.repr_notime()}", fg=reference_color)
                 for item, contents in binary_info.items():
+                    if not contents:
+                        continue
                     out.writeln(f"    {item}:", fg=field_color)
                     if not isinstance(contents, dict):
                         for c in contents:
