@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration, conanfile_remove_attr, ConanException
+    ConanErrorConfiguration, conanfile_remove_attr
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 
 
