@@ -352,7 +352,7 @@ class PythonRequiresInfo(object):
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
     # TODO: Generalize
-    parser = ConfigParser(text, ["settings", "settings", "options", "requires"],
+    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires"],
                           raise_unexpected_field=False)
 
     def _loads_settings(settings_text):
