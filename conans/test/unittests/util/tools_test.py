@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-import platform
 import subprocess
 import unittest
 
-import pytest
-from mock.mock import mock_open, patch
-
 from conan.tools.files import replace_in_file, collect_libs
-from conans.client.conf.detect_vs import vswhere
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
@@ -138,69 +133,6 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual(os.getenv("A", None), None)
         self.assertEqual(os.getenv("B", None), None)
         self.assertEqual(os.getenv("Z", None), None)
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires vswhere")
-    def test_vswhere_description_strip(self):
-        myoutput = """
-[
-  {
-    "instanceId": "17609d7c",
-    "installDate": "2018-06-11T02:15:04Z",
-    "installationName": "VisualStudio/15.7.3+27703.2026",
-    "installationPath": "",
-    "installationVersion": "15.7.27703.2026",
-    "productId": "Microsoft.VisualStudio.Product.Enterprise",
-    "productPath": "",
-    "isPrerelease": false,
-    "displayName": "Visual Studio Enterprise 2017",
-    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
-    "channelId": "VisualStudio.15.Release",
-    "channelUri": "https://aka.ms/vs/15/release/channel",
-    "enginePath": "",
-    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
-    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
-    "updateDate": "2018-06-11T02:15:04.7009868Z",
-    "catalog": {
-      "buildBranch": "d15.7",
-      "buildVersion": "15.7.27703.2026",
-      "id": "VisualStudio/15.7.3+27703.2026",
-      "localBuild": "build-lab",
-      "manifestName": "VisualStudio",
-      "manifestType": "installer",
-      "productDisplayVersion": "15.7.3",
-      "productLine": "Dev15",
-      "productLineVersion": "2017",
-      "productMilestone": "RTW",
-      "productMilestoneIsPreRelease": "False",
-      "productName": "Visual Studio",
-      "productPatchVersion": "3",
-      "productPreReleaseMilestoneSuffix": "1.0",
-      "productRelease": "RTW",
-      "productSemanticVersion": "15.7.3+27703.2026",
-      "requiredEngineVersion": "1.16.1187.57215"
-    },
-    "properties": {
-      "campaignId": "",
-      "canceled": "0",
-      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
-      "nickname": "",
-      "setupEngineFilePath": ""
-    }
-  },
-  {
-    "instanceId": "VisualStudio.12.0",
-    "installationPath": "",
-    "installationVersion": "12.0"
-  }
-]
-
-"""
-        myoutput = myoutput.encode()
-        myrunner = mock_open()
-        myrunner.check_output = lambda x: myoutput
-        with patch('conans.client.conf.detect_vs.subprocess', myrunner):
-            json = vswhere()
-            self.assertNotIn("descripton", json)
 
     def test_check_output_runner(self):
         original_temp = temp_folder()
