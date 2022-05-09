@@ -41,11 +41,12 @@ def compute_package_id(node, new_config):
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
 
-    conanfile.info = ConanInfo(conanfile.settings.copy_conaninfo_settings(),
-                               conanfile.options.copy_conaninfo_options(),
-                               reqs_info,
-                               build_requires_info,
-                               python_requires=python_requires)
+    conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
+                               options=conanfile.options.copy_conaninfo_options(),
+                               reqs_info=reqs_info,
+                               build_requires_info=build_requires_info,
+                               python_requires=python_requires,
+                               conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
 
     run_validate_package_id(conanfile)
