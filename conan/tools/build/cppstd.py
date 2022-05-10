@@ -15,7 +15,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
            cannot compare.
         4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
 
-    :param conanfile: ConanFile instance with cppstd to be compared
+    :param conanfile: The current recipe object. Always use ``self``.
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
@@ -48,7 +48,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
 def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     """ Validate if current cppstd fits the minimal version required.
 
-    :param conanfile: ConanFile instance with cppstd to be compared
+    :param conanfile: The current recipe object. Always use ``self``.
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
     :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
@@ -60,33 +60,47 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     return True
 
 
-def default_cppstd(compiler, compiler_version):
+def default_cppstd(conanfile, compiler=None, compiler_version=None):
     """
-    Get the default of the "compiler.cppstd" setting for the specified compiler
+    Get the default ``compiler.cppstd`` for the "conanfile.settings.compiler" and "conanfile
+    settings.compiler_version" or for the parameters "compiler" and "compiler_version" if specified.
+
+    :param conanfile: The current recipe object. Always use ``self``.
     :param compiler: Name of the compiler e.g: gcc
     :param compiler_version: Version of the compiler e.g: 12
-    :return:
+    :return The default ``compiler.cppstd`` for the specified compiler
     """
     from conans.client.conf.detect import _cppstd_default
-    compiler_version = Version(compiler_version)
-    return _cppstd_default(compiler, compiler_version)
+    compiler = compiler or conanfile.settings.get_safe("compiler")
+    compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
+    if not compiler or not compiler_version:
+        raise ConanException("Called default_cppstd with no compiler or no compiler.version")
+    return _cppstd_default(compiler, Version(compiler_version))
 
 
-def supported_cppstd(compiler, compiler_version):
+def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     """
-    Return a list of supported "compiler.cppstd" values for the specified compiler
+    Get the a list of supported ``compiler.cppstd`` for the "conanfile.settings.compiler" and
+    "conanfile.settings.compiler_version" or for the parameters "compiler" and "compiler_version"
+    if specified.
+
+    :param conanfile: The current recipe object. Always use ``self``.
     :param compiler: Name of the compiler e.g: gcc
     :param compiler_version: Version of the compiler e.g: 12
-    :return:
+    :return a list of supported ``cppstd`` values.
     """
-    version = Version(compiler_version)
+    compiler = compiler or conanfile.settings.get_safe("compiler")
+    compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
+    if not compiler or not compiler_version:
+        raise ConanException("Called supported_cppstd with no compiler or no compiler.version")
+
     func = {"apple-clang": _apple_clang_supported_cppstd,
             "gcc": _gcc_supported_cppstd,
             "msvc": _msvc_supported_cppstd,
             "clang": _clang_supported_cppstd,
             "mcst-lcc": _mcst_lcc_supported_cppstd}.get(compiler)
     if func:
-        return func(version)
+        return func(Version(compiler_version))
     return None
 
 
