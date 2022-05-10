@@ -235,15 +235,14 @@ def list_packages(conan_api, parser, subparser, *args):
         name = getattr(remote, "name", None)
         if ref.revision == "latest":
             try:
-                refs = conan_api.search.recipe_revisions(args.reference, remote)
+                ref.revision = None
+                ref = conan_api.list.latest_recipe_revision(ref, remote)
             except Exception as e:
                 results[name] = {"error": str(e)}
                 continue
-            if not refs:
+            if not ref:
                 results[name] = {"error": "There are no recipes matching '{}'".format(args.reference)}
                 continue
-            assert len(refs) == 1
-            ref = refs[0]  # To resolve the "latest"
         try:
             # TODO: This should error in the cache if the revision doesn't exist
             results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
