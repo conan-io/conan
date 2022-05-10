@@ -491,8 +491,10 @@ def test_tool_requires_and_requires():
                 assert len(self.dependencies.build.values()) == 4
     """)
     client.save({"conanfile.py": consumer})
-    client.run("create . consumer/1.0@")
+    # Note that I pass the -s:b os=Windows that enable the "build" profile and context
+    client.run("create . consumer/1.0@ -s:b os=Windows")
     assert """Requirements
+    consumer/1.0 from local cache - Cache
     tool4/1.0 from local cache - Cache""" in client.out
     assert """Build requirements
     tool1/1.0 from local cache - Cache
