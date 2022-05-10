@@ -1,4 +1,5 @@
 import platform
+import sys
 import textwrap
 import os
 
@@ -17,6 +18,7 @@ toolchain_props = """
 """
 
 
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
 def test_msbuildtoolchain_props_with_extra_flags():
     """

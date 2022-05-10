@@ -1,9 +1,11 @@
+import json
 import os
 import platform
 import textwrap
 
 import pytest
 
+from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -327,4 +329,113 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
-    assert 'add_compile_definitions( D1 D2)' in toolchain
+    assert 'add_compile_definitions( "D1" "D2")' in toolchain
+
+
+def test_cmake_presets_binary_dir_available():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+        generators = "CMakeToolchain"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def layout(self):
+            cmake_layout(self)
+
+    """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    if platform.system() != "Windows":
+        build_dir = os.path.join(client.current_folder, "cmake-build-release")
+    else:
+        build_dir = os.path.join(client.current_folder, "build")
+
+    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
+    assert presets["configurePresets"][0]["binaryDir"] == build_dir
+
+
+def test_cmake_presets_multiconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Windows
+        arch = x86_64
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=static
+        compiler.runtime_type=Release
+    """)
+    client.save({"conanfile.py": GenConanfile(), "profile": profile})
+    client.run("create . mylib/1.0@ -s build_type=Release --profile:h=profile")
+    client.run("create . mylib/1.0@ -s build_type=Debug --profile:h=profile")
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=RelWithDebInfo --profile:h=profile")
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=MinSizeRel --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    # Repeat one
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "default"
+
+
+def test_cmake_presets_singleconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Linux
+        arch = x86_64
+        compiler=gcc
+        compiler.version=8
+    """)
+    client.save({"conanfile.py": GenConanfile(), "profile": profile})
+    client.run("create . mylib/1.0@ -s build_type=Release --profile:h=profile")
+    client.run("create . mylib/1.0@ -s build_type=Debug --profile:h=profile")
+
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Release"
+
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configurePreset"] == "Release"
+
+    # Now two configurePreset, but named correctly
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 2
+    assert presets["configurePresets"][1]["name"] == "Debug"
+
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][1]["configurePreset"] == "Debug"
+
+    # Repeat configuration, it shouldn't add a new one
+    client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 2

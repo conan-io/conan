@@ -226,7 +226,9 @@ def _get_link_order_from_cmake(content):
         if 'main.cpp.o -o example' in line:
             _, links = line.split("main.cpp.o -o example")
             for it_lib in links.split():
-                if it_lib.startswith("-l"):
+                if it_lib.startswith("-L") or it_lib.startswith("-Wl,-rpath"):
+                    continue
+                elif it_lib.startswith("-l"):
                     libs.append(it_lib[2:])
                 elif it_lib == "-framework":
                     continue
@@ -258,6 +260,9 @@ def _get_link_order_from_xcode(content):
     start_key = '-headerpad_max_install_names",'
     end_key = ');'
     libs_content = content.split(start_key, 1)[1].split(end_key, 1)[0]
+    if libs_content == '"$(inherited)"':
+        # FIXME: Dirty hack, sometimes the library list is not at the 1 but at 2
+        libs_content = content.split(start_key, 1)[2].split(end_key, 1)[0]
     libs_unstripped = libs_content.split(",")
     for lib in libs_unstripped:
         if ".a" in lib:
@@ -280,7 +285,7 @@ def _create_find_package_project(client):
             CMakeToolchain
             """),
         'CMakeLists.txt': textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8.12)
+            cmake_minimum_required(VERSION 3.15)
             project(executable CXX)
 
             find_package(libD)

@@ -76,4 +76,5 @@ def test_ios():
 
     conanbuild = load_toolchain_args(client.current_folder)
     configure_args = conanbuild["configure_args"]
-    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+    assert configure_args == "'--disable-shared' '--enable-static' '--with-pic' " \
+                             "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"

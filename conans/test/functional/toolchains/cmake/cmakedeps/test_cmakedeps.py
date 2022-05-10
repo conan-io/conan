@@ -81,8 +81,8 @@ def test_transitive_multi(client):
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
         else:
-            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
+            # The CMakePresets IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
+            replace_in_file(os.path.join(client.current_folder, "CMakePresets.json"),
                             "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
@@ -375,6 +375,6 @@ def test_system_dep():
 
     client.run("install consumer")
     if platform.system() != "Windows":
-        data = os.path.join("consumer/cmake-build-release/conan/mylib-release-x86_64-data.cmake")
+        data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
