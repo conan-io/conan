@@ -340,26 +340,25 @@ class ConanInfo:
         Get all the information contained in settings, options, requires,
         python_requires, build_requires and conf.
         :return: `str` with the result of joining all the information, e.g.,
-            `"[settings]\nos=Windows\n[options]\n[requires]\n"`
+            `"[settings]\nos=Windows\n[options]\nuse_Qt=True"`
         """
-        # FIXME: Refactor this method to not include headers with empty content. It'll break
-        #        one or two tests...
-        result = ["[settings]"]
+        result = []
         settings_dumps = self.settings.dumps()
         if settings_dumps:
+            result.append("[settings]")
             result.append(settings_dumps)
         if self.settings_target:
             settings_target_dumps = self.settings_target.dumps()
             if settings_target_dumps:
                 result.append("[settings_target]")
                 result.append(settings_target_dumps)
-        result.append("[options]")
         options_dumps = self.options.dumps()
         if options_dumps:
+            result.append("[options]")
             result.append(options_dumps)
-        result.append("[requires]")
         requires_dumps = self.requires.dumps()
         if requires_dumps:
+            result.append("[requires]")
             result.append(requires_dumps)
         if self.python_requires:
             result.append("[python_requires]")
@@ -367,11 +366,9 @@ class ConanInfo:
         if self.build_requires:
             result.append("[build_requires]")
             result.append(self.build_requires.dumps())
-        conf_dumps = self.conf.dumps()
-        if conf_dumps:
-            # result.append("[conf]")  # Let's do it when apply FIXME above
+        if self.conf:
+            result.append("[conf]")
             result.append(self.conf.dumps())
-
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
