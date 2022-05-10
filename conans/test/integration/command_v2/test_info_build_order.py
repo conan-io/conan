@@ -22,7 +22,7 @@ def test_info_build_order():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
@@ -40,7 +40,7 @@ def test_info_build_order():
                 ],
                 "packages": [
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
@@ -71,7 +71,7 @@ def test_info_build_order_build_require():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "build",
@@ -89,7 +89,7 @@ def test_info_build_order_build_require():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
@@ -128,7 +128,7 @@ def test_info_build_order_options():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
+                        "package_id": "1124b99dc8cd3c8bbf79121c7bf86ce40c725a40",
                         'prev': None,
                         'filenames': [],
                         "context": "build",
@@ -138,7 +138,7 @@ def test_info_build_order_options():
                         ]
                     },
                     {
-                        "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
+                        "package_id": "a9035d84c5880b26c4b44acf70078c9a7dd37412",
                         'prev': None,
                         'filenames': [],
                         "context": "build",
@@ -158,7 +158,7 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
@@ -175,7 +175,7 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
@@ -214,7 +214,7 @@ def test_info_build_order_merge_multi_product():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo1", "bo2"],
                         "context": "host",
@@ -232,7 +232,7 @@ def test_info_build_order_merge_multi_product():
                 ],
                 "packages": [
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo1"],
                         "context": "host",
@@ -248,7 +248,7 @@ def test_info_build_order_merge_multi_product():
                 ],
                 "packages": [
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo2"],
                         "context": "host",
@@ -297,7 +297,7 @@ def test_info_build_order_merge_conditionals():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_win"],
                         "context": "host",
@@ -311,7 +311,7 @@ def test_info_build_order_merge_conditionals():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_nix"],
                         "context": "host",
@@ -330,7 +330,7 @@ def test_info_build_order_merge_conditionals():
                 ],
                 "packages": [
                     {
-                        "package_id": "fe0818ee6bf52c8906f551e114ea476081219a57",
+                        "package_id": "b23846b9b10455081d89a9dfacd01f7712d04b95",
                         'prev': None,
                         'filenames': ["bo_win"],
                         "context": "host",
@@ -338,7 +338,7 @@ def test_info_build_order_merge_conditionals():
                         "options": []
                     },
                     {
-                        "package_id": "089e881a859748afac9c03e5badf9163f62a6cf9",
+                        "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
                         'prev': None,
                         'filenames': ["bo_nix"],
                         "context": "host",
