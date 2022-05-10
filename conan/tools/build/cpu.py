@@ -5,6 +5,12 @@ from conans.util.files import load
 
 
 def build_jobs(conanfile):
+    """
+    Compile jobs number, from the conf ``tools.build:jobs`` or autodetected
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return:
+    """
     njobs = conanfile.conf.get("tools.build:jobs",
                                default=_cpu_count(),
                                check_type=int)
