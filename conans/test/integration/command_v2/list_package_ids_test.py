@@ -102,6 +102,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
+        # TODO: Improve consistency of error messages
         expected_output = textwrap.dedent("""\
         Local Cache:
           There are no packages
@@ -115,9 +116,13 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run(f'list packages -c -r="*" {rrev}')
         assert expected_output == self.client.out
 
-    def test_fail_if_no_configured_remotes(self):
+    def test_fail_no_revision(self):
         self.client.run('list packages -r="*" whatever/1.0', assert_error=True)
-        assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "ERROR: Invalid 'whatever/1.0' missing revision" in self.client.out
+
+    def test_fail_if_no_configured_remotes(self):
+        self.client.run('list packages -r="*" whatever/1.0#123', assert_error=True)
+        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -125,12 +130,11 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("remote disable remote1")
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
-        self.client.run("list packages whatever/1.0 -r remote1 -r remote2", assert_error=True)
+        self.client.run("list packages whatever/1.0#123 -r remote1 -r remote2", assert_error=True)
         assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
-        (ConanConnectionError("Review your network!"),
-         "ERROR: Review your network!"),
+        (ConanConnectionError("Review your network!"), "ERROR: Review your network!"),
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):

@@ -224,18 +224,32 @@ def list_packages(conan_api, parser, subparser, *args):
         raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
                              f" in the form name/version[@user/channel][#RECIPE_REVISION]")
 
+    if not ref.revision:
+        raise ConanException(f"Invalid '{args.reference}' missing revision. Please specify one "
+                             "revision or '#latest' one")
+
     remotes = _selected_cache_remotes(conan_api, args)
 
     results = OrderedDict()
     for remote in remotes:
-        # TODO: Discuss: we cannot deduce "latest" recipe revision for each remote, it could be
-        #  different and the output would be a mess?
         name = getattr(remote, "name", None)
+        if ref.revision == "latest":
+            try:
+                refs = conan_api.search.recipe_revisions(args.reference, remote)
+            except Exception as e:
+                results[name] = {"error": str(e)}
+                continue
+            if not refs:
+                results[name] = {"error": "There are no recipes matching '{}'".format(args.reference)}
+                continue
+            assert len(refs) == 1
+            ref = refs[0]  # To resolve the "latest"
         try:
             # TODO: This should error in the cache if the revision doesn't exist
             results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
         except Exception as e:
             results[name] = {"error": str(e)}
+        results[name]["reference"] = ref
 
     print_list_package_ids(results)
     return results
