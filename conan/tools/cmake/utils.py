@@ -26,5 +26,13 @@ def get_find_mode(conanfile):
     """
     tmp = conanfile.cpp_info.get_property("cmake_find_mode")
     if tmp is None:
-        return None
+        has_mod = conanfile.cpp_info.get_property("cmake_module_file_name") is not None
+        has_conf = conanfile.cpp_info.get_property("cmake_file_name") is not None
+        if has_mod and has_conf:
+            return "both"
+        if has_mod:
+            return "module"
+        if has_conf:
+            return "config"
+        return "none"
     return tmp.lower()
