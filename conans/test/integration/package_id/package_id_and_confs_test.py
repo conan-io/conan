@@ -37,12 +37,6 @@ def test_package_id_including_confs(package_id_confs, package_id):
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
     client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
-    revision = client.exported_recipe_revision()
-    client.run(f"list packages pkg/0.1#{revision}")
-    if "cxxflags" in package_id_confs:
-        assert "tools.build:cxxflags=['--flag1', '--flag2']" in client.out
-    if "cflags" in package_id_confs:
-        assert "tools.build:cflags=['--flag3', '--flag4']" in client.out
 
 
 PKG_ID_4 = "59ce68f66c5ab01c785f1264a0c938daee2abb40"
