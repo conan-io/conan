@@ -319,3 +319,26 @@ class TestListPackages:
                   dep/1.2.Z
             """)
         assert expected == c.out
+
+    def test_list_conf(self):
+        """ test that tools.info.package_id:confs works, affecting the package_id and
+        can be listed when we are listing packages
+        """
+        client = TestClient()
+        conanfile = GenConanfile().with_settings("os")
+        profile = textwrap.dedent(f"""
+            [conf]
+            tools.info.package_id:confs=["tools.build:cxxflags", "tools.build:cflags"]
+            tools.build:cxxflags=["--flag1", "--flag2"]
+            tools.build:cflags+=["--flag3", "--flag4"]
+            tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+            """)
+        client.save({"conanfile.py": conanfile, "profile": profile})
+        client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
+        client.assert_listed_binary({"pkg/0.1": ("35ca9c38e318a353ca11ef482c80a9fe7964f272",
+                                                 "Build")})
+        revision = client.exported_recipe_revision()
+        client.run(f"list packages pkg/0.1#{revision}")
+        assert "tools.build:cxxflags=['--flag1', '--flag2']" in client.out
+        assert "tools.build:cflags=['--flag3', '--flag4']" in client.out
+        assert "sharedlinkflags" not in client.out
