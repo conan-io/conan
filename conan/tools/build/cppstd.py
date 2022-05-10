@@ -66,9 +66,9 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
     settings.compiler_version" or for the parameters "compiler" and "compiler_version" if specified.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param compiler: Name of the compiler e.g: gcc
-    :param compiler_version: Version of the compiler e.g: 12
-    :return The default ``compiler.cppstd`` for the specified compiler
+    :param compiler: Name of the compiler e.g. gcc
+    :param compiler_version: Version of the compiler e.g. 12
+    :return: The default ``compiler.cppstd`` for the specified compiler
     """
     from conans.client.conf.detect import _cppstd_default
     compiler = compiler or conanfile.settings.get_safe("compiler")
@@ -87,7 +87,7 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     :param conanfile: The current recipe object. Always use ``self``.
     :param compiler: Name of the compiler e.g: gcc
     :param compiler_version: Version of the compiler e.g: 12
-    :return a list of supported ``cppstd`` values.
+    :return: a list of supported ``cppstd`` values.
     """
     compiler = compiler or conanfile.settings.get_safe("compiler")
     compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
