@@ -208,7 +208,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
                                                        "redhat", "rhel", "xenserver", "amazon",
-                                                       "oracle", "amzn", "almalinux")
+                                                       "oracle", "amzn", "almalinux", "rocky")
 
     @property
     def with_dnf(self):

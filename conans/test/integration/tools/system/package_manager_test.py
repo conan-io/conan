@@ -47,6 +47,7 @@ def test_msys2():
     ("ubuntu", "apt-get"),
     ("debian", "apt-get"),
     ("pidora", "yum"),
+    ("rocky", "yum"),
     ("fedora", "dnf"),
     ("arch", "pacman"),
     ("opensuse", "zypper"),
