@@ -30,7 +30,8 @@ def compute_package_id(node, new_config):
         require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
                                        non_embed_mode, embed_mode, build_mode, unknown_mode)
         if require.package_id_mode is not None:
-            req_info = RequirementInfo(dep_node.pref, require.package_id_mode)
+            req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
+                                       require.package_id_mode)
             if require.build:
                 build_data[require] = req_info
             else:
@@ -40,11 +41,12 @@ def compute_package_id(node, new_config):
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
 
-    conanfile.info = ConanInfo(conanfile.settings.copy_conaninfo_settings(),
-                               conanfile.options.copy_conaninfo_options(),
-                               reqs_info,
-                               build_requires_info,
-                               python_requires=python_requires)
+    conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
+                               options=conanfile.options.copy_conaninfo_options(),
+                               reqs_info=reqs_info,
+                               build_requires_info=build_requires_info,
+                               python_requires=python_requires,
+                               conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
 
     run_validate_package_id(conanfile)

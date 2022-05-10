@@ -174,12 +174,16 @@ class Environment:
         return repr(self._values)
 
     def dumps(self):
-        # A string with a profile-like original definition, not the full environment values
+
+        """
+        :return: A string with a profile-like original definition, not the full environment
+                 values
+        """
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
         """
-        Define the environment variable `name` with a `value`
+        Define `name` environment variable with value `value`
 
         :param name: Name of the variable
         :param value: Value that the environment variable will take
@@ -200,7 +204,7 @@ class Environment:
 
     def append(self, name, value, separator=None):
         """
-        Append the `value` to an environment variable named `name`
+        Append the `value` to an environment variable `name`
 
         :param name: Name of the variable to append a new value
         :param value: New value
@@ -210,8 +214,7 @@ class Environment:
 
     def append_path(self, name, value):
         """
-        Similar to "append" method but indicating that the variable is a filesystem path.
-        It will automatically handle the path separators depending on the operating system.
+        Similar to "append" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
 
         :param name: Name of the variable to append a new value
         :param value: New value
@@ -230,8 +233,7 @@ class Environment:
 
     def prepend_path(self, name, value):
         """
-        Similar to "prepend" method but indicating that the variable is a filesystem path.
-        It will automatically handle the path separators depending on the operating system.
+        Similar to "prepend" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
 
         :param name: Name of the variable to prepend a new value
         :param value: New value
@@ -285,8 +287,8 @@ class Environment:
 
 class EnvVars:
     """
-    Represents an instance of environment variables for a given system.
-    It is obtained from the generic Environment class.
+    Represents an instance of environment variables for a given system. It is obtained from the generic Environment class.
+
     """
     def __init__(self, conanfile, env, scope):
         self._values = env._values  # {var_name: _EnvValue}, just a reference to the Environment

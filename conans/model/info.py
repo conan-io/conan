@@ -63,8 +63,9 @@ class _VersionRepr:
 
 class RequirementInfo:
 
-    def __init__(self, pref, default_package_id_mode):
-        self._pref = pref
+    def __init__(self, ref, package_id, default_package_id_mode):
+        self._ref = ref
+        self._package_id = package_id
         self.name = self.version = self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
@@ -77,7 +78,7 @@ class RequirementInfo:
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self._pref, "unrelated_mode")
+        result = RequirementInfo(self._ref, self._package_id, "unrelated_mode")
         for f in ("name", "version", "user", "channel", "recipe_revision", "package_id"):
             setattr(result, f, getattr(self, f))
         return result
@@ -94,58 +95,58 @@ class RequirementInfo:
         self.recipe_revision = None
 
     def semver_mode(self):
-        self.name = self._pref.ref.name
-        self.version = _VersionRepr(self._pref.ref.version).stable()
+        self.name = self._ref.name
+        self.version = _VersionRepr(self._ref.version).stable()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
     def full_version_mode(self):
-        self.name = self._pref.ref.name
-        self.version = self._pref.ref.version
+        self.name = self._ref.name
+        self.version = self._ref.version
         self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
     def patch_mode(self):
-        self.name = self._pref.ref.name
-        self.version = _VersionRepr(self._pref.ref.version).patch()
+        self.name = self._ref.name
+        self.version = _VersionRepr(self._ref.version).patch()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
     def minor_mode(self):
-        self.name = self._pref.ref.name
-        self.version = _VersionRepr(self._pref.ref.version).minor()
+        self.name = self._ref.name
+        self.version = _VersionRepr(self._ref.version).minor()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
     def major_mode(self):
-        self.name = self._pref.ref.name
-        self.version = _VersionRepr(self._pref.ref.version).major()
+        self.name = self._ref.name
+        self.version = _VersionRepr(self._ref.version).major()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = None
 
     def full_recipe_mode(self):
-        self.name = self._pref.ref.name
-        self.version = self._pref.ref.version
-        self.user = self._pref.ref.user
-        self.channel = self._pref.ref.channel
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
         self.package_id = None
         self.recipe_revision = None
 
     def full_package_mode(self):
-        self.name = self._pref.ref.name
-        self.version = self._pref.ref.version
-        self.user = self._pref.ref.user
-        self.channel = self._pref.ref.channel
-        self.package_id = self._pref.package_id
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = self._package_id
         self.recipe_revision = None
 
     def full_mode(self):
-        self.name = self._pref.ref.name
-        self.version = self._pref.ref.version
-        self.user = self._pref.ref.user
-        self.channel = self._pref.ref.channel
-        self.package_id = self._pref.package_id
-        self.recipe_revision = self._pref.ref.revision
+        self.name = self._ref.name
+        self.version = self._ref.version
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = self._package_id
+        self.recipe_revision = self._ref.revision
 
     recipe_revision_mode = full_mode  # to not break everything and help in upgrade
 
@@ -220,83 +221,12 @@ class RequirementsInfo(UserRequirementsDict):
     recipe_revision_mode = full_mode  # to not break everything and help in upgrade
 
 
-class PythonRequireInfo(object):
-
-    def __init__(self, ref, default_package_id_mode):
-        self._ref = ref
-        self._name = None
-        self._version = None
-        self._user = None
-        self._channel = None
-        self._revision = None
-
-        try:
-            func_package_id_mode = getattr(self, default_package_id_mode)
-        except AttributeError:
-            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
-        else:
-            func_package_id_mode()
-
-    def dumps(self):
-        ref = RecipeReference(self._name, self._version, self._user, self._channel, self._revision)
-        return repr(ref)
-
-    def semver_mode(self):
-        self._name = self._ref.name
-        self._version = _VersionRepr(self._ref.version).stable()
-        self._user = self._channel = None
-        self._revision = None
-
-    def full_version_mode(self):
-        self._name = self._ref.name
-        self._version = self._ref.version
-        self._user = self._channel = None
-        self._revision = None
-
-    def patch_mode(self):
-        self._name = self._ref.name
-        self._version = _VersionRepr(self._ref.version).patch()
-        self._user = self._channel = None
-        self._revision = None
-
-    def minor_mode(self):
-        self._name = self._ref.name
-        self._version = _VersionRepr(self._ref.version).minor()
-        self._user = self._channel = None
-        self._revision = None
-
-    def major_mode(self):
-        self._name = self._ref.name
-        self._version = _VersionRepr(self._ref.version).major()
-        self._user = self._channel = None
-        self._revision = None
-
-    def full_recipe_mode(self):
-        self._name = self._ref.name
-        self._version = self._ref.version
-        self._user = self._ref.user
-        self._channel = self._ref.channel
-        self._revision = None
-
-    def full_mode(self):
-        self._name = self._ref.name
-        self._version = self._ref.version
-        self._user = self._ref.user
-        self._channel = self._ref.channel
-        self._revision = self._ref.revision
-
-    recipe_revision_mode = full_mode
-
-    def unrelated_mode(self):
-        self._name = self._version = self._user = self._channel = self._revision = None
-
-
-class PythonRequiresInfo(object):
+class PythonRequiresInfo:
 
     def __init__(self, refs, default_package_id_mode):
         self._default_package_id_mode = default_package_id_mode
         if refs:
-            self._refs = [PythonRequireInfo(r, default_package_id_mode=default_package_id_mode)
+            self._refs = [RequirementInfo(r, None, default_package_id_mode=default_package_id_mode)
                           for r in sorted(refs)]
         else:
             self._refs = None
@@ -351,7 +281,8 @@ class PythonRequiresInfo(object):
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    parser = ConfigParser(text, ["settings", "options", "requires"],
+    # TODO: Generalize
+    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires"],
                           raise_unexpected_field=False)
 
     def _loads_settings(settings_text):
@@ -364,6 +295,7 @@ def load_binary_info(text):
         return settings_result
 
     settings = _loads_settings(parser.settings)
+    settings_target = _loads_settings(parser.settings_target)
     options = Options.loads(parser.options)
     # TODO: We need to generalize this reading.
     requires = parser.requires.splitlines() if parser.requires else []
@@ -371,7 +303,8 @@ def load_binary_info(text):
 
     conan_info_json = {"settings": dict(settings),
                        "options": dict(options.serialize())["options"],
-                       "requires": requires
+                       "requires": requires,
+                       "settings_target": dict(settings_target)
                        }
     return conan_info_json
 
@@ -379,13 +312,15 @@ def load_binary_info(text):
 class ConanInfo:
 
     def __init__(self, settings=None, options=None, reqs_info=None, build_requires_info=None,
-                 python_requires=None):
+                 python_requires=None, conf=None):
         self.invalid = None
         self.settings = settings
+        self.settings_target = None  # needs to be explicitly defined by recipe package_id()
         self.options = options
         self.requires = reqs_info
         self.build_requires = build_requires_info
         self.python_requires = python_requires
+        self.conf = conf
 
     def clone(self):
         """ Useful for build_id implementation and for compatibility()
@@ -397,6 +332,7 @@ class ConanInfo:
         result.requires = self.requires.copy()
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
+        result.conf = self.conf.copy()
         return result
 
     def dumps(self):
@@ -406,10 +342,17 @@ class ConanInfo:
         :return: `str` with the result of joining all the information, e.g.,
             `"[settings]\nos=Windows\n[options]\n[requires]\n"`
         """
+        # FIXME: Refactor this method to not include headers with empty content. It'll break
+        #        one or two tests...
         result = ["[settings]"]
         settings_dumps = self.settings.dumps()
         if settings_dumps:
             result.append(settings_dumps)
+        if self.settings_target:
+            settings_target_dumps = self.settings_target.dumps()
+            if settings_target_dumps:
+                result.append("[settings_target]")
+                result.append(settings_target_dumps)
         result.append("[options]")
         options_dumps = self.options.dumps()
         if options_dumps:
@@ -424,8 +367,11 @@ class ConanInfo:
         if self.build_requires:
             result.append("[build_requires]")
             result.append(self.build_requires.dumps())
-        if hasattr(self, "conf"):
+        conf_dumps = self.conf.dumps()
+        if conf_dumps:
+            # result.append("[conf]")  # Let's do it when apply FIXME above
             result.append(self.conf.dumps())
+
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
