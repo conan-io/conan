@@ -1,4 +1,3 @@
-import fnmatch
 from collections import OrderedDict
 
 
@@ -339,7 +338,6 @@ class Conf:
 
         Then, the resulting `Conf()` will have only these configuration lines:
 
-        >>> print(conf.dumps())
         tools.build:cxxflags=["flag1xx"]
         tools.build:cflags=["flag1"]
         ```
@@ -370,8 +368,6 @@ class ConfDefinition:
 
     def __bool__(self):
         return bool(self._pattern_confs)
-
-    __nonzero__ = __bool__
 
     def __getitem__(self, module_name):
         """
