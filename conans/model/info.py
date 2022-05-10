@@ -364,11 +364,15 @@ class ConanInfo:
             result.append("[requires]")
             result.append(requires_dumps)
         if self.python_requires:
-            result.append("[python_requires]")
-            result.append(self.python_requires.dumps())
+            python_reqs_dumps = self.python_requires.dumps()
+            if python_reqs_dumps:
+                result.append("[python_requires]")
+                result.append(python_reqs_dumps)
         if self.build_requires:
-            result.append("[build_requires]")
-            result.append(self.build_requires.dumps())
+            build_requires_dumps = self.build_requires.dumps()
+            if build_requires_dumps:
+                result.append("[build_requires]")
+                result.append(build_requires_dumps)
         if self.conf:
             # TODO: Think about the serialization of Conf, not 100% sure if dumps() is the best
             result.append("[conf]")

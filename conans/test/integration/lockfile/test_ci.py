@@ -105,10 +105,10 @@ def test_single_config_centralized(client_setup):
     c.run("install --requires=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
-    c.assert_listed_binary({"pkgawin/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                            "pkgb/0.2": ("bf0518650d942fd1fad0c359bcba1d832682e64b", "Cache"),
-                            "pkgc/0.1": ("5c677c308daaa52d869a58a77500ed33e0fbc0ba", "Build"),
-                            "app1/0.1": ("570be7df332d2320b566b83489e4468d03dfd88a", "Build")})
+    c.assert_listed_binary({"pkgawin/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                            "pkgb/0.2": ("65becc9bdccee92972f365ae4f742dd4b046d1e0", "Cache"),
+                            "pkgc/0.1": ("2a23b96aea3b4787fcd1816182e8a403349b0815", "Build"),
+                            "app1/0.1": ("f8e4cc2232dff5983eeb2e7403b9c2dc755be44f", "Build")})
     assert "pkgb/0.2" in c.out
     assert "pkgb/0.1" not in c.out
     assert "app1/0.1: DEP FILE pkgawin: HelloA" in c.out
@@ -148,10 +148,10 @@ def test_single_config_centralized_out_range(client_setup):
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     # Nothing changed, the change is outside the range, app1 not affected!!
-    c.assert_listed_binary({"pkgawin/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                            "pkgb/0.1": ("bf0518650d942fd1fad0c359bcba1d832682e64b", "Cache"),
-                            "pkgc/0.1": ("a55e51982e7ba0fb0c08b74e99fdb47abb95ae33", "Cache"),
-                            "app1/0.1": ("d9b0acfe99a36ba30ea619415e8392bf79736163", "Cache")})
+    c.assert_listed_binary({"pkgawin/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                            "pkgb/0.1": ("65becc9bdccee92972f365ae4f742dd4b046d1e0", "Cache"),
+                            "pkgc/0.1": ("3b0c170cc929d4a1916489ce2dbb881fdad07f2e", "Cache"),
+                            "app1/0.1": ("3b0234ea72056ce9a0eb06584b4be6d73089e0e2", "Cache")})
     assert "pkgb/0.2" not in c.out
     assert "app1/0.1: DEP FILE pkgawin: HelloA" in c.out
     assert "app1/0.1: DEP FILE pkgb: HelloB" in c.out
@@ -194,10 +194,10 @@ def test_single_config_centralized_change_dep(client_setup):
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     assert "pkga" not in c.out
-    c.assert_listed_binary({"pkgj/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                            "pkgb/0.2": ("a2975e79c48a00781132d2ec57bd8d9416e81abe", "Cache"),
-                            "pkgc/0.1": ("19cf7301aa609fce0561d42bd42f685555b58ba2", "Build"),
-                            "app1/0.1": ("ba387b6f1ed67a4b0eb953de1d1a74b8d4e62884", "Build")})
+    c.assert_listed_binary({"pkgj/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                            "pkgb/0.2": ("79caa65bc5877c4ada84a2b454775f47a5045d59", "Cache"),
+                            "pkgc/0.1": ("67e4e9b17f41a4c71ff449eb29eb716b8f83767b", "Build"),
+                            "app1/0.1": ("f7eb3b81ac34ddecd04301afad031ee078c5ab3c", "Build")})
     assert "app1/0.1: DEP FILE pkgj: HelloJ" in c.out
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in c.out
 
@@ -242,10 +242,10 @@ def test_multi_config_centralized(client_setup):
     # Now lets build the application, to see everything ok
     c.run("install --requires=app1/0.1@  --lockfile=app1_win.lock --lockfile-out=app1_win.lock "
           "--build=missing  -s os=Windows")
-    c.assert_listed_binary({"pkgawin/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                            "pkgb/0.2": ("bf0518650d942fd1fad0c359bcba1d832682e64b", "Cache"),
-                            "pkgc/0.1": ("5c677c308daaa52d869a58a77500ed33e0fbc0ba", "Build"),
-                            "app1/0.1": ("570be7df332d2320b566b83489e4468d03dfd88a", "Build")})
+    c.assert_listed_binary({"pkgawin/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                            "pkgb/0.2": ("65becc9bdccee92972f365ae4f742dd4b046d1e0", "Cache"),
+                            "pkgc/0.1": ("2a23b96aea3b4787fcd1816182e8a403349b0815", "Build"),
+                            "app1/0.1": ("f8e4cc2232dff5983eeb2e7403b9c2dc755be44f", "Build")})
     assert "pkgb/0.2" in c.out
     assert "pkgb/0.1" not in c.out
     assert "app1/0.1: DEP FILE pkgawin: HelloA" in c.out
@@ -254,10 +254,10 @@ def test_multi_config_centralized(client_setup):
     # Now lets build the application, to see everything ok
     c.run("install --requires=app1/0.1@  --lockfile=app1_nix.lock --lockfile-out=app1_nix.lock "
           "--build=missing  -s os=Linux")
-    c.assert_listed_binary({"pkganix/0.1": ("02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", "Cache"),
-                            "pkgb/0.2": ("d169a8a97fd0ef581801b24d7c61a9afb933aa13", "Cache"),
-                            "pkgc/0.1": ("0796c8d93fa07b543df4479cc0309631dc0cd8fa", "Build"),
-                            "app1/0.1": ("1674d669f4416c10e32da07b06ea1909e376a458", "Build")})
+    c.assert_listed_binary({"pkganix/0.1": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Cache"),
+                            "pkgb/0.2": ("c753def4818cdc538183046f6149134eb4be7a32", "Cache"),
+                            "pkgc/0.1": ("2a4113733176ffbce61bbcb4dd0e76ecc162439c", "Build"),
+                            "app1/0.1": ("6c198f82674d988b90eed54b52a494a5bbf09c41", "Build")})
     assert "pkgb/0.2" in c.out
     assert "pkgb/0.1" not in c.out
     assert "app1/0.1: DEP FILE pkganix: HelloA" in c.out
@@ -343,8 +343,8 @@ def test_single_config_decentralized(client_setup):
                       % (ref, ref))
                 c.assert_listed_binary(
                     {str(ref): (package_id, "Build"),
-                     "pkgawin/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                     "pkgb/0.2": ("bf0518650d942fd1fad0c359bcba1d832682e64b", "Cache")})
+                     "pkgawin/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                     "pkgb/0.2": ("65becc9bdccee92972f365ae4f742dd4b046d1e0", "Cache")})
                 assert "pkgb/0.2" in c.out
                 assert "pkgb/0.1" not in c.out
                 assert "DEP FILE pkgawin: HelloA" in c.out
@@ -423,16 +423,16 @@ def test_multi_config_decentralized(client_setup):
 
                 if the_os == "Windows":
                     c.assert_listed_binary(
-                        {"pkgawin/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Cache"),
-                         "pkgb/0.2": ("bf0518650d942fd1fad0c359bcba1d832682e64b", "Cache")})
+                        {"pkgawin/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache"),
+                         "pkgb/0.2": ("65becc9bdccee92972f365ae4f742dd4b046d1e0", "Cache")})
                     assert "pkgb/0.2" in c.out
                     assert "pkgb/0.1" not in c.out
                     assert "DEP FILE pkgawin: HelloA" in c.out
                     assert "DEP FILE pkgb: ByeB World!!" in c.out
                 else:
                     c.assert_listed_binary(
-                        {"pkganix/0.1": ("02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", "Cache"),
-                         "pkgb/0.2": ("d169a8a97fd0ef581801b24d7c61a9afb933aa13", "Cache")})
+                        {"pkganix/0.1": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Cache"),
+                         "pkgb/0.2": ("c753def4818cdc538183046f6149134eb4be7a32", "Cache")})
                     assert "pkgb/0.2" in c.out
                     assert "pkgb/0.1" not in c.out
                     assert "DEP FILE pkganix: HelloA" in c.out
