@@ -8,17 +8,18 @@ from conans.util.files import mkdir
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
          ignore_case=True, copy_symlink_folders=True):
-    """ It will copy the files matching the pattern from the src folder to the dst, including the
-        symlinks to files. If a folder from "src" doesn't contain any file to be copied, it won't be
-        created empty at the "dst".
-        If in "src" there are symlinks to folders, they will be created at "dst" irrespective if
+    """ Copy the files matching the ``pattern`` from the ``src`` folder to the ``dst``, including the
+        symlinks to files. If a folder from ``src`` doesn't contain any file to be copied, it won't be
+        created empty at the ``dst``.
+        If in ``src`` there are symlinks to folders, they will be created at ``dst`` irrespective if
         they (or the folder where points) have files to be copied or not, unless
         "copy_symlink_folders=False" is specified.
 
-        :param pattern: an fnmatch file pattern of the files that should be copied. Eg. .dll
-        :param dst: the destination local folder, wrt to current conanfile dir, to which
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param pattern: An fnmatch file pattern of the files that should be copied. Eg. .dll
+        :param dst: The destination local folder, wrt to current conanfile dir, to which
             the files will be copied. Eg: "bin"
-        :param src: the source folder in which those files will be searched. This folder
+        :param src: The source folder in which those files will be searched. This folder
             will be stripped from the dst name. Eg.: lib/Debug/x86
         :param keep_path: False if you want the relative paths to be maintained from src
             to dst folders, or just drop. False is useful if you want to collect e.g. many
