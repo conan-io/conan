@@ -474,10 +474,17 @@ class TestCliOverride:
                         self.requires('cuda/[>=10.1 <=11.4.2]')
             """)
         client.save({"conanfile.py": conanfile})
+        client.run("install .")  # Check that without override, it resolves to 10.3
+        assert "cuda/10.3" in client.out
+        assert "cuda/10.2" not in client.out
+        # Now check overrides for different commands
         client.run("create . opencv/1.0@ --require-override=cuda/10.2")
         assert "cuda/10.2" in client.out
         assert "cuda/10.3" not in client.out
         client.run("install . --require-override=cuda/10.2")
+        assert "cuda/10.2" in client.out
+        assert "cuda/10.3" not in client.out
+        client.run("install opencv/1.0@ --require-override=cuda/10.2")
         assert "cuda/10.2" in client.out
         assert "cuda/10.3" not in client.out
 
