@@ -15,14 +15,14 @@ source = textwrap.dedent("""
     #include "{name}.h"
     {include}
 
-    void {name}(){
+    void {name}(){{
         {call}
         #ifdef NDEBUG
-        std::cout << "{name}/1.0: Hello World Release!\n";
+        std::cout << "{name}/1.0: Hello World Release!";
         #else
-        std::cout << "{name}/1.0: Hello World Debug!\n";
+        std::cout << "{name}/1.0: Hello World Debug!";
         #endif
-    }
+    }}
     """)
 
 cmakelists = textwrap.dedent("""
@@ -31,17 +31,17 @@ cmakelists = textwrap.dedent("""
 
     find_package(tcp REQUIRED CONFIG)
 
-    add_library(core src/core.cpp include/core/core.h)
-    add_library(client src/client.cpp include/client/client.h)
-    add_library(server src/server.cpp include/server/server.h)
+    add_library(core src/core.cpp include/core.h)
+    add_library(client src/client.cpp include/client.h)
+    add_library(server src/server.cpp include/server.h)
 
-    target_include_directories(core PUBLIC include/core)
-    target_include_directories(client PUBLIC include/client)
-    target_include_directories(server PUBLIC include/server)
+    target_include_directories(core PUBLIC include)
+    target_include_directories(client PUBLIC include)
+    target_include_directories(server PUBLIC include)
 
-    set_target_properties(core PROPERTIES PUBLIC_HEADER "include/core/core.h")
-    set_target_properties(client PROPERTIES PUBLIC_HEADER "include/client/client.h")
-    set_target_properties(server PROPERTIES PUBLIC_HEADER "include/server/server.h")
+    set_target_properties(core PROPERTIES PUBLIC_HEADER "include/core.h")
+    set_target_properties(client PROPERTIES PUBLIC_HEADER "include/client.h")
+    set_target_properties(server PROPERTIES PUBLIC_HEADER "include/server.h")
 
     target_link_libraries(client core tcp::tcp)
     target_link_libraries(server core tcp::tcp)
@@ -56,12 +56,10 @@ conanfile_py = textwrap.dedent("""
     from conan.tools.cmake import CMake, cmake_layout
 
 
-    class NetworkLibConan(ConanFile):
-        name = "network"
-        version = "1.0"
+    class LibConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         exports_sources = "CMakeLists.txt", "src/*", "include/*"
-        requires = "tcp/1.0"
+        {requires}
         generators = "CMakeToolchain", "CMakeDeps"
 
         def layout(self):
@@ -75,18 +73,7 @@ conanfile_py = textwrap.dedent("""
         def package(self):
             cmake = CMake(self)
             cmake.install()
-
-        def package_info(self):
-            self.cpp_info.components["core"].libs = ["core"]
-            self.cpp_info.components["core"].includedirs.append(os.path.join("include", "core"))
-
-            self.cpp_info.components["client"].libs = ["client"]
-            self.cpp_info.components["client"].includedirs.append(os.path.join("include", "client"))
-            self.cpp_info.components["client"].requires.extend(["core", "tcp::tcp"])
-
-            self.cpp_info.components["server"].libs = ["server"]
-            self.cpp_info.components["server"].includedirs.append(os.path.join("include", "server"))
-            self.cpp_info.components["server"].requires.extend(["core", "tcp::tcp"])
+        {package_info}
     """)
 
 
@@ -99,17 +86,108 @@ def test_xcodedeps_components():
     client.run("new tcp/1.0 -m=cmake_lib")
     client.run("create . -tf=None")
 
+    network_pi = """
+    def package_info(self):
+        self.cpp_info.components["core"].libs = ["core"]
+        self.cpp_info.components["core"].includedirs.append("include")
+        self.cpp_info.components["core"].libdirs.append("lib")
+
+        self.cpp_info.components["client"].libs = ["client"]
+        self.cpp_info.components["client"].includedirs.append("include")
+        self.cpp_info.components["client"].libdirs.append("lib")
+        self.cpp_info.components["client"].requires.extend(["core", "tcp::tcp"])
+
+        self.cpp_info.components["server"].libs = ["server"]
+        self.cpp_info.components["server"].includedirs.append("include")
+        self.cpp_info.components["server"].libdirs.append("lib")
+        self.cpp_info.components["server"].requires.extend(["core", "tcp::tcp"])
+    """
+
     client.save({
-        "include/core/core.h": header.format(name="core"),
-        "include/server/server.h": header.format(name="server"),
-        "include/client/client.h": header.format(name="client"),
-        "src/core.cpp": header.format(name="core", include="", call=""),
-        "src/server.cpp": header.format(name="server", include='#include "core.h"', call="core(); tcp();"),
-        "src/client.cpp": header.format(name="client", include='#include "core.h"', call="core(); tcp();"),
-        "conanfile.py": conanfile_py,
+        "include/core.h": header.format(name="core"),
+        "include/server.h": header.format(name="server"),
+        "include/client.h": header.format(name="client"),
+        "src/core.cpp": source.format(name="core", include="", call=""),
+        "src/server.cpp": source.format(name="server", include='#include "core.h"\n#include "tcp.h"', call="core(); tcp();"),
+        "src/client.cpp": source.format(name="client", include='#include "core.h"\n#include "tcp.h"', call="core(); tcp();"),
+        "conanfile.py": conanfile_py.format(requires='requires= "tcp/1.0"', package_info=network_pi),
         "CMakeLists.txt": cmakelists,
     }, clean_first=True)
 
-    client.run("create .")
+    client.run("create . network/1.0@")
 
-    client.run("install network/1.0@ -g XcodeDeps")
+    chat_pi = """
+    def package_info(self):
+        self.cpp_info.libs = ["chat"]
+        self.cpp_info.includedirs.append("include")
+        self.cpp_info.libdirs.append("lib")
+        self.cpp_info.requires.append("network::client")
+    """
+
+    cmakelists_chat = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(chat CXX)
+        find_package(network REQUIRED CONFIG)
+        add_library(chat src/chat.cpp include/chat.h)
+        target_include_directories(chat PUBLIC include)
+        set_target_properties(chat PROPERTIES PUBLIC_HEADER "include/chat.h")
+        target_link_libraries(chat network::client)
+        install(TARGETS chat)
+        """)
+
+    client.save({
+        "include/chat.h": header.format(name="chat"),
+        "src/chat.cpp": source.format(name="chat", include='#include "client.h"', call="chat();client();"),
+        "conanfile.py": conanfile_py.format(requires='requires= "network/1.0"', package_info=chat_pi),
+        "CMakeLists.txt": cmakelists_chat,
+    }, clean_first=True)
+
+    client.run("create . chat/1.0@")
+
+    xcode_project = textwrap.dedent("""
+        name: ChatApp
+
+        options:
+          createIntermediateGroups: true
+          usesTabs: false
+          indentWidth: 4
+          tabWidth: 4
+          deploymentTarget:
+            macOS: "11.3"
+
+        settings:
+          CLANG_CXX_LANGUAGE_STANDARD: c++17
+          CLANG_CXX_LIBRARY: libc++
+          GCC_C_LANGUAGE_STANDARD: c11
+          CLANG_WARN_DOCUMENTATION_COMMENTS: false
+
+        fileGroups:
+          - conan
+
+        configFiles:
+          Debug: conan/conan_config.xcconfig
+          Release: conan/conan_config.xcconfig
+
+        targets:
+          ChatApp:
+            type: application
+            platform: macOS
+            info:
+              path: Generated/Info.plist
+            sources:
+              - src
+            configFiles:
+              Debug: conan/conan_config.xcconfig
+              Release: conan/conan_config.xcconfig
+        """)
+
+    client.save({
+        "src/main.cpp": '#include "chat.h"\nint main(){chat();return 0;}',
+        "project.yml": xcode_project
+    }, clean_first=True)
+
+    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan")
+    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan -s build_type=Debug --build=missing")
+    client.run_command("xcodegen generate")
+    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Release -arch x86_64 -alltargets")
+    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Debug -arch x86_64 -alltargets")

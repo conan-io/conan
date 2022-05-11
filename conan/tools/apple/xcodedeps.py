@@ -248,7 +248,6 @@ class XcodeDeps(object):
         for dep in self._conanfile.dependencies.host.values():
             dep_name = _format_name(dep.ref.name)
 
-            cpp_info = dep.cpp_info.aggregated_components()
             include_components_names = []
             if dep.cpp_info.has_components:
                 for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
@@ -263,7 +262,8 @@ class XcodeDeps(object):
             else:
                 public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
                                dep.dependencies.direct_host.items() if r.visible]
-                root_content = self.get_content_for_component(dep_name, dep_name, cpp_info, public_deps)
+                required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
+                root_content = self.get_content_for_component(dep_name, dep_name, dep.cpp_info, required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
