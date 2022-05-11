@@ -78,7 +78,7 @@ def apply_conandata_patches(conanfile):
     ``conanfile.version``. If versions are not defined in ``conandata.yml`` it will apply all the
     patches directly under ``patches`` keyword.
 
-    The key entries will be passed as kwargs to the :ref:`patch<conan_tools_files_patch>` function.
+    The key entries will be passed as kwargs to the ``patch`` function.
     """
 
     patches = conanfile.conan_data.get('patches')
