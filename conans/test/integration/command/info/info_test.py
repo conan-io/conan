@@ -139,12 +139,12 @@ class TestAdvancedCliOutput:
         client.run("export .")
         client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")}, clean_first=True)
         client.run("graph info . -s build_type=Release")
-        assert "build_id: 0fd133f1e4dcd2142c739d230905104b42f660df" in client.out
-        assert "package_id: e53d55fd33066c49eb97a4ede6cb50cd8036fe8b" in client.out
+        assert "build_id: ec0cd314abe055f7de86cd6493e31977d2b87884" in client.out
+        assert "package_id: efa83b160a55b033c4ea706ddb980cd708e3ba1b" in client.out
 
         client.run("graph info . -s build_type=Debug")
-        assert "build_id: 0fd133f1e4dcd2142c739d230905104b42f660df" in client.out
-        assert "package_id: 040ce2bd0189e377b2d15eb7246a4274d1c63317" in client.out
+        assert "build_id: ec0cd314abe055f7de86cd6493e31977d2b87884" in client.out
+        assert "package_id: 9e186f6d94c008b544af1569d1a6368d8339efc5" in client.out
 
 
 class TestEditables:
