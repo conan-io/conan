@@ -93,7 +93,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          ERROR: There are no recipes matching the expression 'whatever/0.1#""")
+          There are no packages""")
 
         self.client.run(f"list packages {self._get_fake_recipe_refence('whatever/0.1')}")
         assert expected_output in self.client.out
@@ -102,22 +102,27 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
+        # TODO: Improve consistency of error messages
         expected_output = textwrap.dedent("""\
         Local Cache:
           There are no packages
         remote1:
-          There are no packages
+          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote1]
         remote2:
-          There are no packages
+          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote2]
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
         self.client.run(f'list packages -c -r="*" {rrev}')
         assert expected_output == self.client.out
 
-    def test_fail_if_no_configured_remotes(self):
+    def test_fail_no_revision(self):
         self.client.run('list packages -r="*" whatever/1.0', assert_error=True)
-        assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "ERROR: Invalid 'whatever/1.0' missing revision" in self.client.out
+
+    def test_fail_if_no_configured_remotes(self):
+        self.client.run('list packages -r="*" whatever/1.0#123', assert_error=True)
+        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -125,12 +130,11 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("remote disable remote1")
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
-        self.client.run("list packages whatever/1.0 -r remote1 -r remote2", assert_error=True)
+        self.client.run("list packages whatever/1.0#123 -r remote1 -r remote2", assert_error=True)
         assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
-        (ConanConnectionError("Review your network!"),
-         "ERROR: Review your network!"),
+        (ConanConnectionError("Review your network!"), "ERROR: Review your network!"),
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
@@ -296,3 +300,50 @@ class TestRemotes(TestListPackageIdsBase):
         rrev = self._get_fake_recipe_refence(remote1_recipe1)
         self.client.run(f"list packages -r wrong_remote {rrev}", assert_error=True)
         assert expected_output in self.client.out
+
+
+class TestListPackages:
+    def test_list_packages(self):
+        c = TestClient(default_server_user=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
+                "pkg/conanfile.py": GenConanfile("pkg", "2.3.4").with_requires("dep/1.2.3")
+                .with_settings("os", "arch").with_shared_option(False)})
+        c.run("create dep")
+        c.run("create pkg -s os=Windows -s arch=x86")
+        # Revision is needed explicitly!
+        c.run("list packages pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8")
+        expected = textwrap.dedent("""\
+            Local Cache:
+              pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5
+                settings:
+                  arch=x86
+                  os=Windows
+                options:
+                  shared=False
+                requires:
+                  dep/1.2.Z
+            """)
+        assert expected == c.out
+
+    def test_list_conf(self):
+        """ test that tools.info.package_id:confs works, affecting the package_id and
+        can be listed when we are listing packages
+        """
+        client = TestClient()
+        conanfile = GenConanfile().with_settings("os")
+        profile = textwrap.dedent(f"""
+            [conf]
+            tools.info.package_id:confs=["tools.build:cxxflags", "tools.build:cflags"]
+            tools.build:cxxflags=["--flag1", "--flag2"]
+            tools.build:cflags+=["--flag3", "--flag4"]
+            tools.build:sharedlinkflags=+["--flag5", "--flag6"]
+            """)
+        client.save({"conanfile.py": conanfile, "profile": profile})
+        client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
+        client.assert_listed_binary({"pkg/0.1": ("35ca9c38e318a353ca11ef482c80a9fe7964f272",
+                                                 "Build")})
+        revision = client.exported_recipe_revision()
+        client.run(f"list packages pkg/0.1#{revision}")
+        assert "tools.build:cxxflags=['--flag1', '--flag2']" in client.out
+        assert "tools.build:cflags=['--flag3', '--flag4']" in client.out
+        assert "sharedlinkflags" not in client.out

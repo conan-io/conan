@@ -10,72 +10,81 @@ from conans.util.files import save
 # TODO: Define other compatibility besides applications
 default_compat = """
 from app_compat import app_compat
+from cppstd_compat import cppstd_compat
+
 def compatibility(conanfile):
     if conanfile.package_type == "application":
         return app_compat(conanfile)
 
-    # TODO: Define compat for libraries and other stuff
+    configs = cppstd_compat(conanfile)
+    # TODO: Append more configurations for your custom compatibility rules
+    return configs
 """
 
-# TODO: missing runtime, libcxx, cppstd, etc
-# TODO: Improve definition of cppstd for each compiler version
+
+default_cppstd_compat = """
+from conan.tools.build import supported_cppstd
+
+
+def cppstd_compat(conanfile):
+    # It will try to find packages with all the cppstd versions
+
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    cppstd = conanfile.settings.get_safe("compiler.cppstd")
+    if not compiler or not compiler_version or not cppstd:
+        return []
+    base = dict(conanfile.settings.values_list)
+    cppstd_possible_values = supported_cppstd(conanfile)
+    ret = []
+    for _cppstd in cppstd_possible_values:
+        if _cppstd is None or _cppstd == cppstd:
+            continue
+        configuration = base.copy()
+        configuration["compiler.cppstd"] = _cppstd
+        ret.append({"settings": [(k, v) for k, v in configuration.items()]})
+
+    return ret
+
+"""
+
+
 default_app_compat = """
-from itertools import product
+from conan.tools.build import default_cppstd
+
 def app_compat(conanfile):
-    # os, and arch should be at least defined, if not, not try
+    # Will try to find a binary for the latest compiler version. In case it is not defined
+    # os, and arch should be at least defined.
     os_ = conanfile.settings.get_safe("os")
     arch = conanfile.settings.get_safe("arch")
     if os_ is None or arch is None:
         return
 
-    factors = []
-    build_type = conanfile.settings.get_safe("build_type")
-    if build_type is None:
-        factors.append([("build_type", "Release")])
-
     compiler = conanfile.settings.get_safe("compiler")
-    if compiler is None:
-        compilers = {"Windows": "msvc",
-                     "Macos": "apple-clang"}
-        compiler = compilers.get(os_, "gcc")
-        factors.append([("compiler", compiler)])
+    compiler = compiler or {"Windows": "msvc", "Macos": "apple-clang"}.get(os_, "gcc")
+    configuration = {"compiler": compiler}
 
-    versions = {"gcc": ["9", "10", "11", "12"],
-                "msvc": ["190", "191", "192", "193"],
-                "clang": ["12", "13", "14", "15"],
-                "apple-clang": ["10.0", "11.0", "12.0", "13"]
-                }
-    valid_versions = versions.get(compiler)
-    if valid_versions:
-        possible_versions = reversed(valid_versions)
-        factors.append([("compiler.version", v) for v in possible_versions])
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    if not compiler_version:
+        # Latest compiler version
+        definition = conanfile.settings.get_definition()
+        compiler_versions = definition["compiler"][compiler]["version"]
+        compiler_version = compiler_versions[-1] # Latest
 
-    # This will be simplified if we know if the language is pure C
-    cppstds = {"gcc": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
-                       "20", "gnu20", "23", "gnu23"],
-               "msvc": ["98", "14", "17", "20", "23"],
-               "clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
-                         "20", "gnu20", "23", "gnu23"],
-               "apple-clang": [None, "98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17",
-                               "20", "gnu20"]
-               }
-    # This can be improved reducing the cppstd to the compiler versions. A conan.tools helper?
-    valid_cppstds = cppstds.get(compiler)
-    if valid_cppstds:
-       valid_cppstds = reversed(valid_cppstds)
-       factors.append([("compiler.cppstd", v) for v in valid_cppstds])
+    configuration["compiler.version"] = compiler_version
+
+    build_type = conanfile.settings.get_safe("build_type")
+    configuration["build_type"] = build_type or "Release"
 
     if compiler == "msvc":
         runtime = conanfile.settings.get_safe("compiler.runtime")
         if runtime is None:
-            factors.append([("compiler.runtime", "dynamic")])
-            factors.append([("compiler.runtime_type", build_type or "Release")])
+            configuration["compiler.runtime"] = "dynamic"
+            configuration["compiler.runtime_type"] = configuration["build_type"]
 
-    result = []
-    combinations = list(product(*factors))
-    for combination in combinations:
-        result.append({"settings": combination})
-    return result
+    configuration["compiler.cppstd"] = conanfile.settings.get_safe("compiler.cppstd") or default_cppstd(conanfile, compiler, compiler_version)
+    return [{"settings": [(k, v) for k, v in configuration.items()]}]
+
 """
 
 
@@ -86,26 +95,36 @@ class BinaryCompatibility:
         if not os.path.isfile(compatible_file):
             save(compatible_file, default_compat)
             save(os.path.join(compatible_folder, "app_compat.py"), default_app_compat)
+            save(os.path.join(compatible_folder, "cppstd_compat.py"), default_cppstd_compat)
         mod, _ = load_python_file(compatible_file)
         self._compatibility = mod.compatibility
 
     def compatibles(self, conanfile):
         compat_infos = []
-        if hasattr(conanfile, "compatibility") and callable(conanfile.compatibility):
+        if hasattr(conanfile, "compatibility"):
             with conanfile_exception_formatter(conanfile, "compatibility"):
                 recipe_compatibles = conanfile.compatibility()
                 compat_infos.extend(self._compatible_infos(conanfile, recipe_compatibles))
 
         plugin_compatibles = self._compatibility(conanfile)
         compat_infos.extend(self._compatible_infos(conanfile, plugin_compatibles))
+        if not compat_infos:
+            return {}
 
         result = OrderedDict()
+        original_info = conanfile.info
         for c in compat_infos:
             conanfile.info = c
+            conanfile.settings = c.settings
+            conanfile.options = c.options
             run_validate_package_id(conanfile)
             pid = c.package_id()
             if pid not in result and not c.invalid:
                 result[pid] = c
+        # Restore the original state
+        conanfile.info = original_info
+        conanfile.settings = original_info.settings
+        conanfile.options = original_info.options
         return result
 
     @staticmethod

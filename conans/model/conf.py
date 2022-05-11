@@ -1,4 +1,3 @@
-import fnmatch
 from collections import OrderedDict
 
 
@@ -8,7 +7,6 @@ from conans.model.recipe_ref import ref_matches
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
-    "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
@@ -59,6 +57,9 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
     "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
     "tools.apple:sdk_path": "Path to the SDK to be used",
+    "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
+    "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
+    "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     # Flags configuration
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -206,11 +207,6 @@ class Conf:
         for k, v in self._values.items():
             yield k, v.value
 
-    @property
-    def sha(self):
-        # FIXME: Keeping backward compatibility
-        return self.dumps()
-
     @staticmethod
     def _get_boolean_value(value):
         if type(value) is bool:
@@ -325,6 +321,39 @@ class Conf:
                 result._values[k] = v
         return result
 
+    def copy_conaninfo_conf(self):
+        """
+        Get a new `Conf()` object with all the configurations required by the consumer
+        to be included in the final `ConanInfo().package_id()` computation. For instance, let's
+        suppose that we have this Conan `profile`:
+
+        ```
+        ...
+        [conf]
+        tools.info.package_id:confs=["tools.build:cxxflags", "tools.build:cflags"]
+        tools.build:cxxflags=["flag1xx"]
+        tools.build:cflags=["flag1"]
+        tools.build:defines=["DEF1"]
+        ...
+
+        Then, the resulting `Conf()` will have only these configuration lines:
+
+        tools.build:cxxflags=["flag1xx"]
+        tools.build:cflags=["flag1"]
+        ```
+
+        :return: a new `< Conf object >` with the configuration selected by `tools.info.package_id:confs`.
+        """
+        result = Conf()
+        # Reading the list of all the configurations selected by the user to use for the package_id
+        package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
+        for conf_name in package_id_confs:
+            value = self.get(conf_name)
+            # Pruning any empty values, those should not affect package ID
+            if value:
+                result.define(conf_name, value)
+        return result
+
 
 class ConfDefinition:
 
@@ -339,8 +368,6 @@ class ConfDefinition:
 
     def __bool__(self):
         return bool(self._pattern_confs)
-
-    __nonzero__ = __bool__
 
     def __getitem__(self, module_name):
         """

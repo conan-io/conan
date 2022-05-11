@@ -3,8 +3,8 @@ from conan.tools.env.virtualrunenv import runenv_from_cpp_info
 
 
 class VirtualBuildEnv:
-    """ captures the conanfile environment that is defined from its
-    dependencies, and also from profiles
+    """ Calculates the environment variables of the build time context and produces a conanbuildenv
+        .bat or .sh script
     """
 
     def __init__(self, conanfile):
@@ -29,8 +29,10 @@ class VirtualBuildEnv:
         return f
 
     def environment(self):
-        """ collects the buildtime information from dependencies. This is the typical use case
-        of build_requires defining information for consumers
+        """
+        Returns an ``Environment`` object containing the environment variables of the build context.
+
+        :return: an ``Environment`` object instance containing the obtained variables.
         """
         # FIXME: Cache value?
         build_env = Environment()
@@ -64,9 +66,19 @@ class VirtualBuildEnv:
         return build_env
 
     def vars(self, scope="build"):
+        """
+        :param scope: Scope to be used.
+        :return: An ``EnvVars`` instance containing the computed environment variables.
+        """
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        """
+        Produces the launcher scripts activating the variables for the build context.
+
+        :param scope: Scope to be used.
+        """
+
         build_env = self.environment()
         if build_env:  # Only if there is something defined
             build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

@@ -43,11 +43,11 @@ class Variables(OrderedDict):
     def quote_preprocessor_strings(self):
         for key, var in self.items():
             if isinstance(var, str):
-                self[key] = '"{}"'.format(var)
+                self[key] = str(var).replace('"', '\\"')
         for config, data in self._configuration_types.items():
             for key, var in data.items():
                 if isinstance(var, str):
-                    data[key] = '"{}"'.format(var)
+                    data[key] = str(var).replace('"', '\\"')
 
 
 class CMakeToolchain(object):
@@ -59,8 +59,11 @@ class CMakeToolchain(object):
             {% for it, values in var_config.items() %}
                 {% set genexpr = namespace(str='') %}
                 {% for conf, value in values -%}
+                set(CONAN_DEF_{{ conf }}{{ it }} "{{ value }}")
+                {% endfor %}
+                {% for conf, value in values -%}
                     {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,' + value|string + ',' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + conf|string + it|string + '},' %}
                     {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
@@ -68,7 +71,7 @@ class CMakeToolchain(object):
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_compile_definitions' %}
+                {% elif action=='add_compile_definitions' -%}
                 add_compile_definitions({{ it }}={{ genexpr.str }})
                 {% endif %}
             {% endfor %}
@@ -104,7 +107,7 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() %}
-        add_compile_definitions({{ it }}={{ value }})
+        add_compile_definitions("{{ it }}={{ value }}")
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
@@ -142,6 +145,7 @@ class CMakeToolchain(object):
         """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
+
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
@@ -160,6 +164,9 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
+        """
+          This method will save the generated files to the conanfile.generators_folder
+        """
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
@@ -170,7 +177,7 @@ class CMakeToolchain(object):
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
         toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
-        write_cmake_presets(self._conanfile,toolchain , self.generator)
+        write_cmake_presets(self._conanfile, toolchain, self.generator)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

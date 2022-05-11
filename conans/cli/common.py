@@ -1,6 +1,7 @@
 import os
 
 from conans.cli.command import Extender, OnceArgument, ExtenderValueRequired
+from conans.cli.commands import make_abs_path
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
@@ -101,12 +102,13 @@ def _add_common_install_arguments(parser, build_help, update_help=None):
 def add_lockfile_args(parser):
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
-    parser.add_argument("--lockfile-strict", action="store_true",
-                        help="Raise an error if some dependency is not found in lockfile")
+    parser.add_argument("--lockfile-partial", action="store_true",
+                        help="Do not raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
                         help="Lock package-id and package-revision information")
+    parser.add_argument("--lockfile-clean", action="store_true", help="remove unused")
 
 
 def get_profiles_from_args(conan_api, args):
@@ -136,14 +138,37 @@ def get_remote_selection(conan_api, remote_patterns):
     return ret_remotes
 
 
-def get_lockfile(lockfile, strict=False):
-    graph_lock = None
-    if lockfile:
-        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock = Lockfile.load(lockfile)
-        graph_lock.strict = strict
-        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
+def get_lockfile(lockfile_path, cwd, conanfile_path, partial=False):
+    if lockfile_path == "None":
+        # Allow a way with ``--lockfile=None`` to opt-out automatic usage of conan.lock
+        return
+    if lockfile_path is None:
+        # if conanfile_path is defined, take it as reference
+        base_path = os.path.dirname(conanfile_path) if conanfile_path else cwd
+        lockfile_path = make_abs_path(LOCKFILE, base_path)
+        if not os.path.isfile(lockfile_path):
+            return
+    else:
+        lockfile_path = make_abs_path(lockfile_path, cwd)
+        if not os.path.isfile(lockfile_path):
+            raise ConanException("Lockfile doesn't exist: {}".format(lockfile_path))
+
+    graph_lock = Lockfile.load(lockfile_path)
+    graph_lock.partial = partial
+    ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
     return graph_lock
+
+
+def save_lockfile_out(args, graph, lockfile, cwd):
+    if args.lockfile_out is None:
+        return
+    lockfile_out = make_abs_path(args.lockfile_out, cwd)
+    if lockfile is None or args.lockfile_clean:
+        lockfile = Lockfile(graph, args.lockfile_packages)
+    else:
+        lockfile.update_lock(graph, args.lockfile_packages)
+    lockfile.save(lockfile_out)
+    ConanOutput().info(f"Generated lockfile: {lockfile_out}")
 
 
 def get_multiple_remotes(conan_api, remote_names=None):

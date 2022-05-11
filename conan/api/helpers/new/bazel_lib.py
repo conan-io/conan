@@ -6,7 +6,7 @@ from conan import ConanFile
 from conan.tools.google import Bazel, bazel_layout
 from conan.tools.files import copy
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}Recipe(ConanFile):
+class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
 
@@ -54,7 +54,7 @@ from conan.tools.google import Bazel, bazel_layout
 from conan.tools.build import cross_building
 
 
-class {{class_name or name.replace("-", "_").replace("+", "_").replace(".", "_")}}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "BazelToolchain", "BazelDeps"
 

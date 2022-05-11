@@ -36,6 +36,15 @@ class TestNewCommand:
         client.run("export . --user=myuser --channel=testing")
         assert "pkg/1.3@myuser/testing" in client.out
 
+    def test_new_missing_definitions(self):
+        client = TestClient()
+        client.run("new cmake_lib", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
+        client.run("new cmake_lib -d name=myname", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
+        client.run("new cmake_lib -d version=myversion", assert_error=True)
+        assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
+
 
 class TestNewCommandUserTemplate:
 
@@ -80,7 +89,7 @@ class TestNewCommandUserTemplate:
         save(os.path.join(path, "conanfile.py"), template1)
         save(os.path.join(path, "file.h"), "{{header}}")
 
-        client.run(f"new mytemplate -d name=hello -d version=0.1")
+        client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=")
         assert not os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
         client.run(f"new mytemplate -d name=hello -d version=0.1 -d header=xxx -f")

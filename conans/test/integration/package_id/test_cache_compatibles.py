@@ -119,14 +119,14 @@ def test_cppstd_validated():
     client.save({"dep/conanfile.py": conanfile,
                  "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
 
-    base_settings = "-s compiler=gcc -s compiler.version=7 -s compiler.libcxx=libstdc++11"
+    base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
     client.run(f"create dep {base_settings} -s compiler.cppstd=20")
     package_id = client.created_package_id("dep/0.1")
 
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     # This message here proves it, only 1 configuraton passed the check
     assert "dep/0.1: Checking 1 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package '715bb35af433e3df6ae656e0f0a9a6d6e122d4d8' missing. "\
+    assert "dep/0.1: Main binary package 'e981c4b043330c584dd4eeaca7a31310099a4c60' missing. "\
            f"Using compatible package '{package_id}'" in client.out
 
 
@@ -148,9 +148,10 @@ class TestDefaultCompat:
         build_type = "Release"
         arch = "x86_64"
         compiler = "msvc"
-        version = "191"
+        version = "193"  # This is latest
         cppstd = "14"
         runtime = "dynamic"
+
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
@@ -182,7 +183,7 @@ class TestDefaultCompat:
         build_type = "Release"
         arch = "x86_64"
         compiler = "msvc"
-        version = "191"
+        version = "193"
         cppstd = "14"
         runtime = "dynamic"
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
@@ -195,8 +196,43 @@ class TestDefaultCompat:
               f"-s compiler.version={version} -s compiler.cppstd=17 "
               f"-s compiler.runtime={runtime}")
         package_id2 = c.created_package_id("app/1.0")
-        assert package_id1 == package_id2  # It does not depend on package_id
+        assert package_id1 == package_id2  # It does not depend on 'compiler.cppstd'
 
         c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
+               f"Using compatible package '{package_id1}'"
+
+    def test_default_cppstd_compatibility(self):
+        c = TestClient()
+        save(c.cache.default_profile_path, "")
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "mylib"
+                version = "1.0"
+                package_type = "library"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                settings = "os", "arch", "compiler", "build_type"
+            """)
+        c.save({"conanfile.py": conanfile})
+        os_ = "Windows"
+        build_type = "Release"
+        arch = "x86_64"
+        compiler = "msvc"
+        version = "191"
+        cppstd = "17"
+        runtime = "dynamic"
+        c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
+              f"-s compiler={compiler} "
+              f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
+              f"-s compiler.runtime={runtime}")
+        package_id1 = c.created_package_id("mylib/1.0")
+
+        # Try to install with cppstd 14, it will find cppstd 17 as compatible
+        c.run(f"install --requires=mylib/1.0@ -s os={os_} -s arch={arch} -s build_type={build_type} "
+              f"-s compiler={compiler} "
+              f"-s compiler.version={version} -s compiler.cppstd=14 "
+              f"-s compiler.runtime={runtime}")
+        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"

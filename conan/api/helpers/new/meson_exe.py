@@ -4,7 +4,7 @@ conanfile_exe = """from conan import ConanFile
 from conan.tools.meson import MesonToolchain, Meson
 
 
-class {{class_name or name}}Conan(ConanFile):
+class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "application"
@@ -37,7 +37,7 @@ from conan import ConanFile
 from conan.tools.build import cross_building
 
 
-class {{class_name or name}}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):

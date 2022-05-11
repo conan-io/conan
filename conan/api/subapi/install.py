@@ -38,7 +38,7 @@ class InstallAPI:
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
-        if conanfile.info.invalid:
+        if conanfile.info is not None and conanfile.info.invalid:
             binary, reason = conanfile.info.invalid
             msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
@@ -106,8 +106,8 @@ def full_deploy(conanfile, output_folder):
     conanfile.output.info(f"Conan built-in full deployer to {output_folder}")
     for dep in conanfile.dependencies.values():
         folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
-        build_type = str(dep.info.settings.build_type)
-        arch = str(dep.info.settings.arch)
+        build_type = dep.info.settings.get_safe("build_type")
+        arch = dep.info.settings.get_safe("arch")
         if build_type:
             folder_name = os.path.join(folder_name, build_type)
         if arch:

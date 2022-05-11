@@ -4,7 +4,7 @@ from conans.cli.command import conan_command, COMMAND_GROUPS
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, _get_conanfile_path
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_multiple_remotes, add_lockfile_args, add_reference_args
+    get_multiple_remotes, add_lockfile_args, add_reference_args, save_lockfile_out
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
@@ -31,7 +31,7 @@ def build(conan_api, parser, *args):
     folder = os.path.dirname(path)
     remote = get_multiple_remotes(conan_api, args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
     out.highlight("\n-------- Installing packages ----------")
@@ -49,7 +49,4 @@ def build(conan_api, parser, *args):
     conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager, conanfile_path=path)
 
-    if args.lockfile_out:
-        lockfile_out = make_abs_path(args.lockfile_out, cwd)
-        out.info(f"Saving lockfile: {lockfile_out}")
-        lockfile.save(lockfile_out)
+    save_lockfile_out(args, deps_graph, lockfile, cwd)

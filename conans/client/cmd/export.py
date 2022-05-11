@@ -80,9 +80,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             set_dirty(source_folder)
 
     scoped_output.info("Exported revision: %s" % revision)
-    if graph_lock is not None:
-        graph_lock.update_lock_export_ref(ref)
-
     return ref
 
 
@@ -98,7 +95,7 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
     else:
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1').strip()
+                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
@@ -141,7 +138,9 @@ def export_source(conanfile, destination_source_folder):
     output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     report_files_copied(copied, package_output)
-    _run_method(conanfile, "export_sources", destination_source_folder)
+    conanfile.folders.set_base_export_sources(destination_source_folder)
+    _run_method(conanfile, "export_sources")
+    conanfile.folders.set_base_export_sources(None)
 
 
 def export_recipe(conanfile, destination_folder):
@@ -169,17 +168,18 @@ def export_recipe(conanfile, destination_folder):
         copied.extend(tmp)
     report_files_copied(copied, package_output)
 
-    _run_method(conanfile, "export", destination_folder)
+    conanfile.folders.set_base_export(destination_folder)
+    _run_method(conanfile, "export")
+    conanfile.folders.set_base_export(None)
 
 
-def _run_method(conanfile, method, destination_folder):
+def _run_method(conanfile, method):
     export_method = getattr(conanfile, method, None)
     if export_method:
         if not callable(export_method):
             raise ConanException("conanfile '%s' must be a method" % method)
+
         conanfile.output.highlight("Calling %s()" % method)
-        folder_name = "%s_folder" % method
-        setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
         options = conanfile.options
         try:
@@ -192,4 +192,3 @@ def _run_method(conanfile, method, destination_folder):
         finally:
             conanfile.default_options = default_options
             conanfile.options = options
-            delattr(conanfile, folder_name)

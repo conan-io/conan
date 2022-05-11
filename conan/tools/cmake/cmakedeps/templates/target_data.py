@@ -59,6 +59,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 "dependency_find_modes": dependency_find_modes}
 
     @property
+    def cmake_package_type(self):
+        return {"shared-library": "SHARED",
+                "static-library": "STATIC"}.get(str(self.conanfile.package_type), "UNKNOWN")
+
+    @property
+    def is_host_windows(self):
+        # to account for all WindowsStore, WindowsCE and Windows OS in settings
+        return "Windows" in self.conanfile.settings.get_safe("os", "")
+
+    @property
     def template(self):
         # This will be at: XXX-release-data.cmake
         ret = textwrap.dedent("""\
@@ -94,6 +104,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }} {{ global_cpp.cflags_list }})
               set({{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} {{ global_cpp.cxxflags_list}})
               set({{ pkg_name }}_LIB_DIRS{{ config_suffix }} {{ global_cpp.lib_paths }})
+              set({{ pkg_name }}_BIN_DIRS{{ config_suffix }} {{ global_cpp.bin_paths }})
+              set({{ pkg_name }}_LIBRARY_TYPE{{ config_suffix }} {{ global_cpp.library_type }})
+              set({{ pkg_name }}_IS_HOST_WINDOWS{{ config_suffix }} {{ global_cpp.is_host_windows }})
               set({{ pkg_name }}_LIBS{{ config_suffix }} {{ global_cpp.libs }})
               set({{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }} {{ global_cpp.system_libs }})
               set({{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ global_cpp.framework_paths }})
@@ -108,6 +121,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
               set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_BIN_DIRS{{ config_suffix }} {{ cpp.bin_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIBRARY_TYPE{{ config_suffix }} {{ cpp.library_type }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_IS_HOST_WINDOWS{{ config_suffix }} {{ cpp.is_host_windows }})
               set({{ pkg_name }}_{{ comp_variable_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_DEFINITIONS{{ config_suffix }} {{ cpp.defines }})
               set({{ pkg_name }}_{{ comp_variable_name }}_OBJECTS{{ config_suffix }} {{ cpp.objects_list }})
@@ -134,8 +150,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
+        # TODO: Read a property to discard this is shared
         return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
-                                  self.require)
+                                  self.require, self.cmake_package_type, self.is_host_windows)
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -145,8 +162,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
+            # TODO: Read a property from the component to discard this is shared
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
-                                                self.conanfile.package_folder, self.require)
+                                                self.conanfile.package_folder, self.require,
+                                                self.cmake_package_type, self.is_host_windows)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -200,7 +219,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 class _TargetDataContext(object):
 
-    def __init__(self, cpp_info, pfolder_var_name, package_folder, require=None):
+    def __init__(self, cpp_info, pfolder_var_name, package_folder, require, library_type,
+                 is_host_windows):
 
         def join_paths(paths):
             """
@@ -250,6 +270,8 @@ class _TargetDataContext(object):
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
+        self.library_type = library_type
+        self.is_host_windows = "1" if is_host_windows else "0"
         if require and not require.libs:
             self.lib_paths = ""
             self.libs = ""

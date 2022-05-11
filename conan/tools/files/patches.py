@@ -53,7 +53,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
     if patch_file:
         # trick *1: patch_file path could be absolute (e.g. conanfile.build_folder), in that case
         # the join does nothing and works.
-        patch_path = os.path.join(conanfile.base_source_folder, patch_file)
+        patch_path = os.path.join(conanfile.export_sources_folder, patch_file)
         patchset = patch_ng.fromfile(patch_path)
     else:
         patchset = patch_ng.fromstring(patch_string.encode())
@@ -109,7 +109,7 @@ def apply_conandata_patches(conanfile):
     for it in entries:
         if "patch_file" in it:
             # The patch files are located in the root src
-            patch_file = os.path.join(conanfile.folders.base_source, it.pop("patch_file"))
+            patch_file = os.path.join(conanfile.export_sources_folder, it.pop("patch_file"))
             patch(conanfile, patch_file=patch_file, **it)
         elif "patch_string" in it:
             patch(conanfile, **it)

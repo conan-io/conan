@@ -1,7 +1,8 @@
 import fnmatch
 import os
+import re
 
-from jinja2 import Template
+from jinja2 import Template, StrictUndefined
 
 from conan.api.subapi import api_method
 from conans.util.files import load
@@ -26,6 +27,8 @@ class NewAPI:
         from conan.api.helpers.new.msbuild_exe import msbuild_exe_files
         from conan.api.helpers.new.bazel_lib import bazel_lib_files
         from conan.api.helpers.new.bazel_exe import bazel_exe_files
+        from conan.api.helpers.new.autotools_lib import autotools_lib_files
+        from conan.api.helpers.new.autoools_exe import autotools_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
@@ -34,6 +37,8 @@ class NewAPI:
                          "msbuild_exe": msbuild_exe_files,
                          "bazel_lib": bazel_lib_files,
                          "bazel_exe": bazel_exe_files,
+                         "autotools_lib": autotools_lib_files,
+                         "autotools_exe": autotools_exe_files,
                          "alias": alias_file}
         template_files = new_templates.get(template_name)
         return template_files
@@ -81,10 +86,12 @@ class NewAPI:
     @staticmethod
     def render(template_files, definitions):
         result = {}
+        name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
+        definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
         for k, v in template_files.items():
-            k = Template(k, keep_trailing_newline=True).render(**definitions)
-            v = Template(v, keep_trailing_newline=True).render(**definitions)
+            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
+            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
             if v:
                 result[k] = v
         return result

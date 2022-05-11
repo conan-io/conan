@@ -1,9 +1,12 @@
+import os
+
 from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
+from conans.client.loader import parse_conanfile
 
 from conans.errors import ConanException
 
@@ -98,7 +101,7 @@ class GraphAPI:
         graph of recipes, but packages are not computed yet (package_ids) will be empty in the
         result. The result might have errors, like version or configuration conflicts, but it is still
         possible to inspect it. Only trying to install such graph will fail
-        
+
         :param root_node: the starting point, an already initialized Node structure, as
             returned by the "load_root_node" api
         :param profile_host: The host profile
@@ -141,3 +144,11 @@ class GraphAPI:
         conan_app.load_remotes(remotes, update=update)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile)
+
+    @api_method
+    def load_conanfile_class(self, path):
+        """ Given a path to a conanfile.py file, it loads its class (not instance) to allow
+        inspecting the class attributes, like 'name', 'version', 'description', 'options' etc"""
+        path = os.path.join(os.getcwd(), path)
+        _, ret = parse_conanfile(path)
+        return ret
