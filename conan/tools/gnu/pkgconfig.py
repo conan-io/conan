@@ -7,7 +7,11 @@ class PkgConfig:
 
     def __init__(self, conanfile, library, pkg_config_path=None):
         """
-        :param library: library (package) name, such as libastral
+
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param library: The library which ``.pc`` file is to be parsed. It must exist in the pkg_config path.
+        :param pkg_config_path:  If defined it will be prepended to ``PKG_CONFIG_PATH`` environment
+               variable, so the execution finds the required files.
         """
         self._conanfile = conanfile
         self._library = library
@@ -73,6 +77,14 @@ class PkgConfig:
         return self._variables
 
     def fill_cpp_info(self, cpp_info, is_system=True, system_libs=None):
+        """
+        Method to fill a cpp_info object from the PkgConfig configuration
+
+        :param cpp_info: Can be the global one (self.cpp_info) or a component one (self.components["foo"].cpp_info).
+        :param is_system: If ``True``, all detected libraries will be assigned to ``cpp_info.system_libs``, and none to ``cpp_info.libs``.
+        :param system_libs: If ``True``, all detected libraries will be assigned to ``cpp_info.system_libs``, and none to ``cpp_info.libs``.
+
+        """
         if not self.provides:
             raise ConanException("PkgConfig error, '{}' files not available".format(self._library))
         if is_system:

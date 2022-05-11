@@ -14,6 +14,18 @@ def join_arguments(args):
 class Autotools(object):
 
     def __init__(self, conanfile, namespace=None, build_script_folder=None):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param namespace: this argument avoids collisions when you have multiple toolchain calls in
+                          the same recipe. By setting this argument, the *conanbuild.conf* file used
+                          to pass information to thetoolchain will be named as:
+                          *<namespace>_conanbuild.conf*. The default value is ``None`` meaning that
+                          the name of the generated file is *conanbuild.conf*. This namespace must
+                          be also set with the same value in the constructor of the AutotoolsToolchain
+                          so that it reads the information from the proper file.
+        :param build_script_folder: Subfolder where the `configure` script is located. If not specified
+                                    conanfile.source_folder is used.
+        """
         self._conanfile = conanfile
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
@@ -26,9 +38,13 @@ class Autotools(object):
 
     def configure(self):
         """
-        http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
-        https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+
+        Call the configure script
+
         """
+        # http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
+        # https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+
         configure_args = []
         if self.default_configure_install_args and self._conanfile.package_folder:
             def _get_argument(argument_name, cppinfo_name):
@@ -55,6 +71,13 @@ class Autotools(object):
         self._conanfile.run(cmd)
 
     def make(self, target=None):
+        """
+        Call the make program.
+
+        :param target: (Optional, Defaulted to ``None``): Choose which target to build. This allows
+                       building of e.g., docs, shared libraries or install for some AutoTools
+                       projects
+        """
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
         str_args = self._make_args
@@ -95,6 +118,10 @@ class Autotools(object):
                     _fix_install_name(shared_lib, full_folder)
 
     def install(self):
+        """
+        This is just an "alias" of ``self.make(target="install")``
+
+        """
         # FIXME: we have to run configure twice because the local flow won't work otherwise
         #  because there's no package_folder until the package step
         self.configure()
