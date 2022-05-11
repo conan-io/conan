@@ -38,7 +38,7 @@ class TestCacheCompatibles:
         package_id = client.created_package_id("dep/0.1")
 
         client.run("install consumer -s build_type=Debug")
-        assert "dep/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing. "\
+        assert "dep/0.1: Main binary package '9e186f6d94c008b544af1569d1a6368d8339efc5' missing. "\
                f"Using compatible package '{package_id}'" in client.out
 
     def test_compatible_recipe_reference(self, client):
@@ -85,11 +85,11 @@ def test_cppstd():
 
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     assert "dep/0.1: Checking 3 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package '24697c4fc0c8af2b85b468de52e6d5323c4b4f0d' missing. "\
+    assert "dep/0.1: Main binary package 'ec174bec4a5ee2d44d3e33d9f4fdacd9b65a6772' missing. "\
            f"Using compatible package '{package_id}'" in client.out
 
     client.run(f"install consumer {base_settings} -s build_type=Debug -s compiler.cppstd=17")
-    assert "dep/0.1: Main binary package 'c3d18617551d2975da867453ee96f409034f1365' missing. " \
+    assert "dep/0.1: Main binary package '94758b7bbcb365aaf355913b35431c0da6ed6da5' missing. " \
            f"Using compatible package '{package_id}'" in client.out
 
 
@@ -126,7 +126,7 @@ def test_cppstd_validated():
     client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
     # This message here proves it, only 1 configuraton passed the check
     assert "dep/0.1: Checking 1 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package 'e981c4b043330c584dd4eeaca7a31310099a4c60' missing. "\
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. "\
            f"Using compatible package '{package_id}'" in client.out
 
 

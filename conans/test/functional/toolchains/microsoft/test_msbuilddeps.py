@@ -980,7 +980,7 @@ def test_build_requires():
     with client.chdir("consumer"):
         client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release")
-        client.assert_listed_binary({"dep/0.1": ("6745936d8a913181e35fed8eb321e5aa6cf7500c",
+        client.assert_listed_binary({"dep/0.1": ("62e589af96a19807968167026d906e63ed4de1f5",
                                                  "Cache")}, build=True)
         deps_props = client.load("conandeps.props")
         assert "conan_dep_build.props" in deps_props

@@ -29,10 +29,10 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=libd --version=1.0", assert_error=True)
         # both B and C require a new binary
         client.assert_listed_binary(
-            {"liba/1.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
-             "libb/1.0": ("46c8f4521a594111030a345f3e9226be694a7af9", "Missing"),
-             "libc/1.0": ("46f469d728bc56e1ed16b9c55694c9c01242aab2", "Missing"),
-             "libd/1.0": ("0a6175c4d1f80c58309f6181970cc5a9a7bf1183", "Build")
+            {"liba/1.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+             "libb/1.0": ("efdeb15efa0e3e6ce0c9ef9bd82c56e4b2188c8a", "Missing"),
+             "libc/1.0": ("fea281081e89fcc36242a68b0dbb16276a84f624", "Missing"),
+             "libd/1.0": ("13a3ed814d78c8b91f303db7d4cdd7c4e614323c", "Build")
              })
 
     def test_transitive_major_mode(self):
@@ -56,7 +56,7 @@ class TransitiveIdsTest(unittest.TestCase):
                                                    .with_package_id(major_mode)})
         client.run("create . --name=libc --version=1.0")
         # Check the LibC ref with RREV keeps the same
-        client.assert_listed_binary({"libc/1.0": ("de5eb15e850454460888e474aa49c3e3e0bca1ff",
+        client.assert_listed_binary({"libc/1.0": ("2aa3bb6726dfc6c825a91f3b465b769e770ee902",
                                                   "Build")})
         # LibD -> LibC
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
@@ -68,11 +68,11 @@ class TransitiveIdsTest(unittest.TestCase):
         # Check the LibC ref with RREV keeps the same, it is in cache, not missing
         # But LibD package ID changes and is missing, because it depends transitively on LibA
         client.assert_listed_binary(
-            {"liba/1.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
-             "libb/1.0": ("46c8f4521a594111030a345f3e9226be694a7af9", "Missing"),
-             "libc/1.0": ("de5eb15e850454460888e474aa49c3e3e0bca1ff", "Cache"),
-             "libd/1.0": ("0a6175c4d1f80c58309f6181970cc5a9a7bf1183", "Missing"),
-             "libe/1.0": ("8058c868f0bea030a54158bf13965fd976401b03", "Build")
+            {"liba/1.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+             "libb/1.0": ("efdeb15efa0e3e6ce0c9ef9bd82c56e4b2188c8a", "Missing"),
+             "libc/1.0": ("2aa3bb6726dfc6c825a91f3b465b769e770ee902", "Cache"),
+             "libd/1.0": ("13a3ed814d78c8b91f303db7d4cdd7c4e614323c", "Missing"),
+             "libe/1.0": ("f93a37dd8bc53991d7485235c6b3e448942c52ff", "Build")
              })
 
     @pytest.mark.xfail(reason="package_id have changed")
@@ -154,10 +154,9 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=libd --version=1.0")
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
                                                    .with_requirement("liba/2.0", force=True)})
-
         # USE THE NEW FIXED PACKAGE_ID
         client.run("create . --name=libd --version=1.0", assert_error=True)
-        client.assert_listed_binary({"liba/2.0": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
-                                     "libb/1.0": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
-                                     "libc/1.0": ("663774e443032ab6e9ba77f5e36244a5404787f6", "Missing"),
+        client.assert_listed_binary({"liba/2.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                     "libb/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                     "libc/1.0": ("2d7000cf800f37e01880897faf74a366a21bebdc", "Missing"),
                                      })

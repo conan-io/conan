@@ -80,7 +80,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("install . -pr=myprofile --build=missing")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable":
-                                     ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Build")})
+                                     ("1ded27c9546219fbd04d4440e05b2298f8230047", "Build")})
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
@@ -138,7 +138,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("install . -o pkg/*:optimized=2")
         # Information messages
-        missing_id = "508da41e46d27c4c4996d7b31df7942c7bba1e27"
+        missing_id = "0a8157f8083f5ece34828d27fb2bf5373ba26366"
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Option optimized 1!", client.out)
         self.assertIn("pkg/0.1@user/stable: Compatible package ID "
                       f"{missing_id} equal to the default package ID",
@@ -191,24 +191,24 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "b1e86fb9bafd7388fdafb0882a6ea0a1e366e59f"
+        consumer_id = "96465a24a53766aaac28e270d196db295e2fd22a"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
         # Create package with gcc 4.9
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile")
-        self.assertIn("pkg/0.1@user/stable: Package 'c6715d73365c2dd62f68836b2dee8359a312ff12'"
-                      " created", client.out)
+        package_id = "1ded27c9546219fbd04d4440e05b2298f8230047"
+        self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
+                      f" created", client.out)
 
         # Consume it
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
-        client.assert_listed_binary({"pkg/0.1@user/stable":
-                                         ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Cache")})
+        client.assert_listed_binary({"pkg/0.1@user/stable": (f"{package_id}", "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "3d3958b1d42fd882cbcf0f702aab5c5d0b2a8333"
+        consumer_id = "41bc915fa380e9a046aacbc21256fcb46ad3179d"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
@@ -313,10 +313,10 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create pkgc --name=pkgc --version=0.1 -s build_type=Release")
 
         client.run("install pkgd -s build_type=Debug")
-        assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \
+        assert "pkga/0.1: Main binary package '9e186f6d94c008b544af1569d1a6368d8339efc5' missing" \
                in client.out
         client.assert_listed_binary({"pkga/0.1":
-                                    ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
+                                    ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Cache")})
 
 
 class TestNewCompatibility:
@@ -351,11 +351,12 @@ class TestNewCompatibility:
                 "myprofile": profile})
         # Create package with gcc 4.8
         c.run("create .  -pr=myprofile -s compiler.version=4.8")
-        assert "pkg/0.1: Package '40761d41da4685cba51efd7d1785c1e18370260e' created" in c.out
+        package_id = "c0c95d81351786c6c1103566a27fb1c1f78629ac"
+        assert f"pkg/0.1: Package '{package_id}' created" in c.out
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         c.run("install . -pr=myprofile")
         assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
-        c.assert_listed_binary({"pkg/0.1": ("40761d41da4685cba51efd7d1785c1e18370260e", "Cache")})
+        c.assert_listed_binary({"pkg/0.1": (f"{package_id}", "Cache")})
         assert "pkg/0.1: Already installed!" in c.out

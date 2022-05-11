@@ -32,7 +32,7 @@ class _SystemPackageManagerTool(object):
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
-                                   "almalinux"],
+                                   "almalinux", "rocky"],
                            "dnf": ["fedora", "rhel", "centos", "mageia"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2"],

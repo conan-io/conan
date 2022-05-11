@@ -26,11 +26,15 @@ class PatchLogHandler(logging.Handler):
 
 
 def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
-    """ Applies a diff from file (patch_file)  or string (patch_string) in base_path directory
-    or current dir if None
+    """
+    Applies a diff from file (patch_file) or string (patch_string) in the conanfile.source_folder
+    directory. The folder containing the sources can be customized with the self.folders attribute
+    in the layout(self) method.
 
-    :param base_path: Base path where the patch should be applied.
-    :param patch_file: Patch file that should be applied.
+    :param base_path: The path is a relative path to conanfile.export_sources_folder unless an
+           absolute path is provided.
+    :param patch_file: Patch file that should be applied. The path is relative to the
+           conanfile.source_folder unless an absolute path is provided.
     :param patch_string: Patch string that should be applied.
     :param strip: Number of folders to be stripped from the path.
     :param output: Stream object.
@@ -69,32 +73,12 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
 
 def apply_conandata_patches(conanfile):
     """
-    Applies patches stored in 'conanfile.conan_data' (read from 'conandata.yml' file). It
-    will apply all the patches under 'patches' entry that matches the given
-    'conanfile.version'. If versions are not defined in 'conandata.yml' it will apply all
-    the patches directly under 'patches' keyword.
+    Applies patches stored in ``conanfile.conan_data`` (read from ``conandata.yml`` file).
+    It will apply all the patches under ``patches`` entry that matches the given
+    ``conanfile.version``. If versions are not defined in ``conandata.yml`` it will apply all the
+    patches directly under ``patches`` keyword.
 
-    Example of 'conandata.yml' without versions defined::
-
-        patches:
-        - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-        base_path: "source_subfolder"
-        - patch_file: "patches/0002-implicit-copy-constructor.patch"
-        patch_type: backport
-        patch_source: https://github.com/google/flatbuffers/pull/5650
-        patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
-
-    Example of 'conandata.yml' with different patches for different versions::
-
-        patches:
-        "1.11.0":
-            - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-            - patch_file: "patches/0002-implicit-copy-constructor.patch"
-            patch_type: backport
-            patch_source: https://github.com/google/flatbuffers/pull/5650
-            patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
-        "1.12.0":
-            - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
+    The key entries will be passed as kwargs to the ``patch`` function.
     """
 
     patches = conanfile.conan_data.get('patches')
