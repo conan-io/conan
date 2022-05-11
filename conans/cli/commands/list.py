@@ -86,10 +86,10 @@ def print_list_package_ids(results):
                 # It is legal not to have binaries
                 out.writeln("  There are no packages")
             else:
+                ref = result.get("reference")
+                out.writeln(f"  {ref}", fg=reference_color)
                 for pref, binary_info in packages.items():
-                    _tmp_pref = copy.copy(pref)
-                    _tmp_pref.revision = None  # Do not show the revision of the package
-                    out.writeln(f"  {_tmp_pref.repr_notime()}", fg=reference_color)
+                    out.writeln(f"  {pref}", fg=reference_color)
                     for item, contents in binary_info.items():
                         if not contents:
                             continue
@@ -241,14 +241,16 @@ def list_packages(conan_api, parser, subparser, *args):
                 results[name] = {"error": str(e)}
                 continue
             if not ref:
-                results[name] = {"error": "There are no recipes matching '{}'".format(args.reference)}
+                results[name] = {"error": f"There are no recipes matching '{ref}'"}
                 continue
         try:
             # TODO: This should error in the cache if the revision doesn't exist
-            results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
+            packages = conan_api.list.packages_configurations(ref, remote=remote)
+            packages = {repr(pref): p for pref, p in packages.items()}
+            results[name] = {"packages": packages}
         except Exception as e:
             results[name] = {"error": str(e)}
-        results[name]["reference"] = ref
+        results[name]["reference"] = ref.repr_humantime()
 
     print_list_package_ids(results)
     return results
