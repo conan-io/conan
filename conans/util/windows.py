@@ -85,7 +85,7 @@ def path_shortener(path, short_paths):
     # to current user to avoid
     # access problems in cygwin/msys2 windows subsystems when using short_home folder
     try:
-        userdomain, username = os.getenv("USERDOMAIN"), os.environ["USERNAME"]
+        userdomain, username = os.getenv("USERDOMAIN"), os.getenv("USERNAME")
         domainname = "%s\%s" % (userdomain, username) if userdomain else username
         cmd = r'cacls %s /E /G "%s":F' % (short_home, domainname)
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, quiet
