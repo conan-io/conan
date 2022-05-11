@@ -106,14 +106,17 @@ class MesonToolchain(object):
             self._b_vscrt = str(vscrt).lower()
         else:
             self._b_vscrt = None
-
+        #: Dict-like object to be used in the ``[properties]`` properties as ``key=value``
         self.properties = {}
+        #: Dict-like object to be used in the ``[project options]`` properties as ``key=value``
         self.project_options = {
             "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
         }
+        #: Dict-like object to be used as the ``preprocessor_definitions`` variable
         self.preprocessor_definitions = {}
+        #: It is the ``PKG_CONFIG_PATH`` value for Meson
         self.pkg_config_path = self._conanfile.generators_folder
-
+        #: Dict-like object with the build, host and target system information
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
@@ -146,18 +149,31 @@ class MesonToolchain(object):
 
         # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
+        #: ``c`` Meson variable value
         self.c = build_env.get("CC") or default_comp
+        #: ``cpp`` Meson variable value
         self.cpp = build_env.get("CXX") or default_comp_cpp
+        #: ``c_ld`` Meson variable value
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
+        #: ``cpp_ld`` Meson variable value
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
+        #: ``ar`` Meson variable value
         self.ar = build_env.get("AR")
+        #: ``strip`` Meson variable value
         self.strip = build_env.get("STRIP")
+        #: ``as`` Meson variable value
         self.as_ = build_env.get("AS")
+        #: ``windres`` Meson variable value
         self.windres = build_env.get("WINDRES")
+        #: ``pkgconfig`` Meson variable value
         self.pkgconfig = build_env.get("PKG_CONFIG")
+        #: ``c_args`` Meson variable value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
+        #: ``c_link_args`` Meson variable value
         self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
+        #: ``cpp_args`` Meson variable value
         self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
+        #: ``cpp_link_args`` Meson variable value
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
         # Apple flags
