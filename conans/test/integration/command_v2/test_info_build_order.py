@@ -120,74 +120,35 @@ def test_info_build_order_options():
 
     c.run("graph build-order  consumer --build=missing --format=json")
     bo_json = json.loads(c.stdout)
-
     result = [
         [
-            {
-                "ref": "tool/0.1#b4c19a1357b43877a2019dd2804336a9",
-                "depends": [],
-                "packages": [
-                    {
-                        "package_id": "1124b99dc8cd3c8bbf79121c7bf86ce40c725a40",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "build",
-                        "binary": "Build",
-                        "options": [
-                                "tool/0.1:myopt=1"
-                        ]
-                    },
-                    {
-                        "package_id": "a9035d84c5880b26c4b44acf70078c9a7dd37412",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "build",
-                        "binary": "Build",
-                        "options": [
-                                "tool/0.1:myopt=2"
-                        ]
-                    }
-                ]
-            }
+            {'ref': 'tool/0.1#b4c19a1357b43877a2019dd2804336a9',
+             'depends': [],
+             'packages': [
+                 {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
+                  'context': 'build',
+                  'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': []},
+                 {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
+                  'context': 'build',
+                  'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
+                  'filenames': []}
+             ]}
         ],
         [
-            {
-                "ref": "dep1/0.1#7f0d80f9cb8c6bab06def7f6fb8f3b86",
-                "depends": [
-                    "tool/0.1#b4c19a1357b43877a2019dd2804336a9"
-                ],
-                "packages": [
-                    {
-                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        "binary": "Build",
-                        "options": [
-                        ]
-                    }
-                ]
-            },
-            {
-                "ref": "dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e",
-                "depends": [
-                    "tool/0.1#b4c19a1357b43877a2019dd2804336a9"
-                ],
-                "packages": [
-                    {
-                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        "binary": "Build",
-                        "options": [
-                        ]
-                    }
-                ]
-            }
+            {'ref': 'dep1/0.1#7f0d80f9cb8c6bab06def7f6fb8f3b86',
+             'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
+             'packages': [
+                 {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
+                  'context': 'host', 'binary': 'Build', 'options': [], 'filenames': []}
+             ]},
+            {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
+             'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
+             'packages': [
+                 {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
+                  'context': 'host', 'binary': 'Build', 'options': [], 'filenames': []}
+             ]}
         ]
     ]
-
     assert bo_json == result
 
 

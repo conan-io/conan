@@ -130,7 +130,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#66c6", client.out)
+        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:da39#eb26", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
