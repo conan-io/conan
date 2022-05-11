@@ -66,8 +66,9 @@ class TestOtherCommands:
         assert "There are no matching" in t.out
 
         t.run("create .")
+        package_id = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         t.assert_listed_require({"lib/0.1": "Editable"})
-        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+        t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
         assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
         t.run("list recipes *")
@@ -75,12 +76,12 @@ class TestOtherCommands:
 
         t.run("install consumer --build=*")
         t.assert_listed_require({"lib/0.1": "Editable"})
-        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+        t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
         assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
 
         t.run("install consumer --build=editable")
         t.assert_listed_require({"lib/0.1": "Editable"})
-        t.assert_listed_binary({"lib/0.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+        t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
         assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
