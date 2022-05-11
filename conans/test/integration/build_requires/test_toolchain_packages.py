@@ -82,21 +82,21 @@ def test_android_ndk():
 
     # Creating the NDK packages for Windows, Linux
     c.run("create . -pr:b=windows -pr:h=android --build-require")
-    c.assert_listed_binary({"androidndk/0.1": ("e340edd75790e7156c595edebd3d98b10a2e091e", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Build")},
                            build=True)
     # The same NDK can be used for different architectures, this should not require a new NDK build
     c.run("create . -pr:b=windows -pr:h=android -s:h arch=armv8 --build=missing  --build-require")
-    c.assert_listed_binary({"androidndk/0.1": ("e340edd75790e7156c595edebd3d98b10a2e091e", "Cache")},
+    c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Cache")},
                            build=True)
     assert "androidndk/0.1: Already installed!" in c.out
     # But a different build architecture is a different NDK executable
     c.run("create . -pr:b=windows -s:b arch=x86 -pr:h=android --build-require")
-    c.assert_listed_binary({"androidndk/0.1": ("e24801f77febd5dd0f5f3eae7444b4132644a856", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("c11e463c49652ba9c5adc62573ee49f966bd8417", "Build")},
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
     # But a different build OS is a different NDK executable
     c.run("create . -pr:b=linux -pr:h=android  --build-require")
-    c.assert_listed_binary({"androidndk/0.1": ("bd2c61d8ce335cd78bd92489d2a54435785a7653", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("63fead0844576fc02943e16909f08fcdddd6f44b", "Build")},
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
 
@@ -108,14 +108,14 @@ def test_android_ndk():
 
     # Creating the NDK packages for Windows, Linux
     c.run("create . -pr:b=windows -pr:h=android")
-    c.assert_listed_binary({"androidndk/0.1": ("e340edd75790e7156c595edebd3d98b10a2e091e", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Build")},
                            build=True)
     assert "androidndk/0.1 (test package): NDK LIBS: ['libndklib-armv7']!!!" in c.out
     assert "androidndk/0.1 (test package): MYNDK-Windows-x86_64 exe!" in c.out
     assert "androidndk/0.1 (test package): MY-VAR: android-armv7" in c.out
     # The same NDK can be used for different architectures, this should not require a new NDK build
     c.run("create . -pr:b=windows -pr:h=android -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"androidndk/0.1": ("e340edd75790e7156c595edebd3d98b10a2e091e", "Cache")},
+    c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Cache")},
                            build=True)
     assert "androidndk/0.1: Already installed!" in c.out
     assert "androidndk/0.1 (test package): NDK LIBS: ['libndklib-armv8']!!!" in c.out
@@ -124,7 +124,7 @@ def test_android_ndk():
 
     # But a different build architecture is a different NDK executable
     c.run("create . -pr:b=windows -s:b arch=x86 -pr:h=android --build=missing")
-    c.assert_listed_binary({"androidndk/0.1": ("e24801f77febd5dd0f5f3eae7444b4132644a856", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("c11e463c49652ba9c5adc62573ee49f966bd8417", "Build")},
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
     assert "androidndk/0.1 (test package): NDK LIBS: ['libndklib-armv7']!!!" in c.out
@@ -133,7 +133,7 @@ def test_android_ndk():
 
     # But a different build OS is a different NDK executable
     c.run("create . -pr:b=linux -pr:h=android --build=missing")
-    c.assert_listed_binary({"androidndk/0.1": ("bd2c61d8ce335cd78bd92489d2a54435785a7653", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("63fead0844576fc02943e16909f08fcdddd6f44b", "Build")},
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
     assert "androidndk/0.1 (test package): NDK LIBS: ['libndklib-armv7']!!!" in c.out
@@ -146,13 +146,13 @@ def test_android_ndk():
             "linux": linux,
             "android": android}, clean_first=True)
     c.run("install . -pr:b=windows -pr:h=android")
-    c.assert_listed_binary({"androidndk/0.1": ("e340edd75790e7156c595edebd3d98b10a2e091e", "Cache")},
+    c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Cache")},
                            build=True)
     assert "conanfile.py: NDK LIBS: ['libndklib-armv7']!!!" in c.out
     assert "conanfile.py: MYNDK-Windows-x86_64 exe!" in c.out
     # And build on the fly the NDK if not binary exists
     c.run("install . -pr:b=linux -s:b arch=x86 -pr:h=android -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"androidndk/0.1": ("ad53c1725b66f2a80456fbc4d5fb7698978bbe2e", "Build")},
+    c.assert_listed_binary({"androidndk/0.1": ("f14494c6e4810a63f050d6f5f37e9776ed48d3c9", "Build")},
                            build=True)
     assert "conanfile.py: NDK LIBS: ['libndklib-armv8']!!!" in c.out
     assert "conanfile.py: MYNDK-Linux-x86 exe!" in c.out
@@ -238,28 +238,28 @@ def test_libcxx():
             "ios": ios})
 
     c.run("create . -pr:b=macos -pr:h=ios")
-    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("cd83035dfa71d83329e31a13b54b03fd38836815", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv7!" in c.out
 
     # Same host profile should be same binary, the build profile is not factored in
     c.run("create . -pr:b=macos -s:b build_type=Debug -s:b arch=armv8 -pr:h=ios --build=missing")
-    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Cache")},
+    c.assert_listed_binary({"libcxx/0.1": ("cd83035dfa71d83329e31a13b54b03fd38836815", "Cache")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv7!" in c.out
 
     # But every change in host, is a different binary
     c.run("create . -pr:b=macos -pr:h=ios -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"libcxx/0.1": ("27e8e4d68b22fe333b1a2af763046f527803f0d2", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("af2d5e0458816f1d7e61c82315d143c20e3db2e3", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphoneos-iOS-armv8!" in c.out
 
     # But every change in host, is a different binary
     c.run("create . -pr:b=macos -pr:h=ios -s:h arch=armv8 -s:h os.sdk=iphonesimulator ")
-    c.assert_listed_binary({"libcxx/0.1": ("3f0ed22aac7950c3e9519bd67307e0fd98301fe8", "Build")},
+    c.assert_listed_binary({"libcxx/0.1": ("c7e3b0fbb4fac187f59bf97e7958631b96fda2a6", "Build")},
                            build=True)
     assert "libcxx/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "libcxx/0.1 (test package): libcxxiphonesimulator-iOS-armv8!" in c.out
@@ -269,7 +269,7 @@ def test_libcxx():
             "macos": macos,
             "ios": ios}, clean_first=True)
     c.run("install . -pr:b=macos -pr:h=ios")
-    c.assert_listed_binary({"libcxx/0.1": ("0fd4843ed7259997325ec69056e6bc6eb3c26bd1", "Cache")},
+    c.assert_listed_binary({"libcxx/0.1": ("cd83035dfa71d83329e31a13b54b03fd38836815", "Cache")},
                            build=True)
     assert "conanfile.py: LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "conanfile.py: libcxxiphoneos-iOS-armv7!" in c.out
@@ -352,7 +352,7 @@ def test_compiler_gcc():
             "rpi": rpi})
 
     c.run("create . -pr:b=linux -pr:h=rpi")
-    c.assert_listed_binary({"gcc/0.1": ("37b084dfd1318fb5c559173f7a3838b76f4bfb00", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("6190ea2804cd4777609ec7174ccfdee22c6318c3", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv7!" in c.out
@@ -360,7 +360,7 @@ def test_compiler_gcc():
 
     # Same host profile, but different build profile is a different binary
     c.run("create . -pr:b=linux  -s:b os=Windows -s:b arch=armv8 -pr:h=rpi")
-    c.assert_listed_binary({"gcc/0.1": ("398ff960a11d4d5c412fabc0d855be906056a166", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("687fdc5f43017300a98643948869b4c5560ca82c", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv7!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv7!" in c.out
@@ -368,7 +368,7 @@ def test_compiler_gcc():
 
     # Same build but different host is also a new binary
     c.run("create . -pr:b=linux -pr:h=rpi -s:h arch=armv8 --build=missing")
-    c.assert_listed_binary({"gcc/0.1": ("d2c168f06afa5cc443d2e8cbaf23d1bcb204fca8", "Build")},
+    c.assert_listed_binary({"gcc/0.1": ("0521de9a6b94083bd47474a51570a3b856b77406", "Build")},
                            build=True)
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv8!" in c.out

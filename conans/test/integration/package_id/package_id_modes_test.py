@@ -26,7 +26,7 @@ def test_basic_default_modes_unknown():
     c.run("create matrix --version=2.0.0")
     c.run("create engine --build=missing")
     c.assert_listed_require({"matrix/2.0.0": "Cache"})
-    c.assert_listed_binary({"engine/1.0": ("11ade076cdae4106ebd55a1c28d29bc7663f919c", "Build")})
+    c.assert_listed_binary({"engine/1.0": ("805fafebc9f7769a90dafb8c008578c6aa7f5d86", "Build")})
 
 
 def test_basic_default_modes_application():
@@ -46,6 +46,6 @@ def test_basic_default_modes_application():
     c.run("create matrix --version=1.0.1")
     c.run("create engine --build=missing")
     c.assert_listed_require({"matrix/1.0.1": "Cache"})
-    new_package_id = "d8081b7749215c197cecf386aad03c516bcee5eb"
+    new_package_id = "efe870a1b1b4fe60e55aa6e2d17436665404370f"
     assert new_package_id != package_id
     c.assert_listed_binary({"engine/1.0": (new_package_id, "Build")})

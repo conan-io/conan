@@ -728,7 +728,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                                       "python_requires2/1.0@user/test": "Cache"}, python=True)
         #   - packages
         client.assert_listed_binary({"project/1.0@user/test":
-                                     ("f9d5c46e6766f3cad7ae39c013485379b7b62e68", "Build")})
+                                     ("1d71f9c410465b607aaf217320808237e019989f", "Build")})
 
         #   - no mention to alias
         self.assertNotIn("alias", client.out)

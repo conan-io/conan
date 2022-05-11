@@ -48,7 +48,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save, load
 
-NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
+NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):

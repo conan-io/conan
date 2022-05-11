@@ -4,10 +4,10 @@ import pytest
 
 from conans.test.utils.tools import TestClient
 
-PKG_ID_NO_CONF = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"
-PKG_ID_1 = "35ca9c38e318a353ca11ef482c80a9fe7964f272"
-PKG_ID_2 = "48de645f3e178a49e7def6ac475e8dc2b340493d"
-PKG_ID_3 = "ae4a35658809278ae62e2d0529964f695d44803a"
+PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"
+PKG_ID_2 = "7f9ed92704709f56ecc7b133322479caf3ffd7ad"
+PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
 
 
 @pytest.mark.parametrize("package_id_confs, package_id", [
@@ -39,8 +39,8 @@ def test_package_id_including_confs(package_id_confs, package_id):
     client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
 
 
-PKG_ID_4 = "59ce68f66c5ab01c785f1264a0c938daee2abb40"
-PKG_ID_5 = "d12019000a9fa48717c1f980b6707775663fae61"
+PKG_ID_4 = "9b334fc314f2f2ce26e5280901eabcdd7b3f55a6"
+PKG_ID_5 = "5510413d2e6186662cb473fb16ce0a18a3f9e98f"
 
 
 @pytest.mark.parametrize("cxx_flags, package_id", [

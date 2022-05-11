@@ -107,7 +107,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, inputs=["user", "password"])
         ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
-        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "871e6d06bd4bbea0172937df1717e075")
+        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but
@@ -172,13 +172,13 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 # populated packages of bar
 bar_rrev = "bar/1.1#7db54b020cc95b8bdce49cd6aa5623c0"
 bar_rrev2 = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
-pkg_id_debug = "040ce2bd0189e377b2d15eb7246a4274d1c63317"
-pkg_id_release = "e53d55fd33066c49eb97a4ede6cb50cd8036fe8b"
+pkg_id_debug = "9e186f6d94c008b544af1569d1a6368d8339efc5"
+pkg_id_release = "efa83b160a55b033c4ea706ddb980cd708e3ba1b"
 bar_rrev2_debug = '{}:{}'.format(bar_rrev2, pkg_id_debug)
 bar_rrev2_release = '{}:{}'.format(bar_rrev2, pkg_id_release)
 
-bar_prev1 = "51ef5374f2df568657c8f5198a77fa4d"
-bar_prev2 = "42ff219d456bdf6b29d165e5fb5db7ec"
+bar_prev1 = "ee1ca5821b390a75d7168f4567f9ba75"
+bar_prev2 = "f523273047249d5a136fe48d33f645bb"
 bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
