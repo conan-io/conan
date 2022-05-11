@@ -66,7 +66,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
              "core.package_id:default_python_mode=unrelated_mode")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        pkg_id = "500bf771b637713bd1d017929a8e8ebab63b905c"
+        pkg_id = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 

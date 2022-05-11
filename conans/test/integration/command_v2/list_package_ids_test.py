@@ -335,7 +335,7 @@ class TestListPackages:
             """)
         client.save({"conanfile.py": conanfile, "profile": profile})
         client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
-        client.assert_listed_binary({"pkg/0.1": ("35ca9c38e318a353ca11ef482c80a9fe7964f272",
+        client.assert_listed_binary({"pkg/0.1": ("89d32f25195a77f4ae2e77414b870781853bdbc1",
                                                  "Build")})
         revision = client.exported_recipe_revision()
         client.run(f"list packages pkg/0.1#{revision}")
