@@ -8,28 +8,27 @@ from conans.util.files import mkdir
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
          ignore_case=True, copy_symlink_folders=True):
-    """ Copy the files matching the ``pattern`` from the ``src`` folder to the ``dst``, including the
-        symlinks to files. If a folder from ``src`` doesn't contain any file to be copied, it won't be
-        created empty at the ``dst``.
-        If in ``src`` there are symlinks to folders, they will be created at ``dst`` irrespective if
-        they (or the folder where points) have files to be copied or not, unless
-        "copy_symlink_folders=False" is specified.
+    """
+    Copy the files matching the pattern (fnmatch) at the src folder to a dst folder.
 
-        :param conanfile: The current recipe object. Always use ``self``.
-        :param pattern: An fnmatch file pattern of the files that should be copied. Eg. .dll
-        :param dst: The destination local folder, wrt to current conanfile dir, to which
-            the files will be copied. Eg: "bin"
-        :param src: The source folder in which those files will be searched. This folder
-            will be stripped from the dst name. Eg.: lib/Debug/x86
-        :param keep_path: False if you want the relative paths to be maintained from src
-            to dst folders, or just drop. False is useful if you want to collect e.g. many
-            .libs among many dirs into a single lib dir
-        :param excludes: Single pattern or a tuple of patterns to be excluded from the
-            copy
-        :param ignore_case: will do a case-insensitive pattern matching when True
-        :param copy_symlink_folders: Copy the symlink folders at the "dst" folder.
-        :return: list of copied files
-        """
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param pattern: (Required) An fnmatch file pattern of the files that should be copied.
+           It must not start with ``..`` relative path or an exception will be raised.
+    :param src: (Required) Source folder in which those files will be searched. This folder
+           will be stripped from the dst parameter. E.g., lib/Debug/x86.
+    :param dst: (Required) Destination local folder. It must be different from src value or an
+           exception will be raised.
+    :param keep_path: (Optional, defaulted to ``True``) Means if you want to keep the relative
+           path when you copy the files from the src folder to the dst one.
+    :param excludes: (Optional, defaulted to ``None``) A tuple/list of fnmatch patterns or even a
+           single one to be excluded from the copy.
+    :param ignore_case: (Optional, defaulted to ``True``) If enabled, it will do a
+           case-insensitive pattern matching. will do a case-insensitive pattern matching when
+           ``True``
+    :param copy_symlink_folders: (Optional, defaulted to True) If enabled, it will copy symlink
+           folders, no matter where they point to.
+    :return: list of copied files
+    """
     assert src != dst
     assert not pattern.startswith("..")
 

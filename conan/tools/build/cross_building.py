@@ -1,7 +1,8 @@
 
 def cross_building(conanfile=None, skip_x64_x86=False):
     """
-    Return ``True`` or ``False`` if we are cross building according to the settings.
+    Check it we are cross building comparing the *build* and *host* settings. Returns ``True``
+    in the case that we are cross-building.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param skip_x64_x86: Do not consider cross building when building to 32 bits from 64 bits:

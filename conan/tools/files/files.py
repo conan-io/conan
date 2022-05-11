@@ -21,11 +21,13 @@ from conans.util.files import rmdir as _internal_rmdir
 
 def load(conanfile, path, encoding="utf-8"):
     """
-    Read the file located at ``path`` and returns the contents.
+    Utility function to load files in one line. It will manage the open and close of the file,
+    and load binary encodings. Returns the content of the file.
+
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the file to read
-    :param encoding: Encoding to be used.
+    :param encoding: (Optional, Defaulted to ``utf-8``): Specifies the input file text encoding.
     :return: The contents of the file
     """
     with open(path, 'rb') as handle:
@@ -35,13 +37,15 @@ def load(conanfile, path, encoding="utf-8"):
 
 def save(conanfile, path, content, append=False, encoding="utf-8"):
     """
-    Save the ``content`` to a file located at ``path``.
+    Utility function to save files in one line. It will manage the open and close of the file
+    and creating directories if necessary.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path of the file to be created.
     :param content: Content (str or bytes) to be write to the file.
-    :param append: If ``True`` the contents will be appended to the existing one.
-    :param encoding: Encoding to be used.
+    :param append: (Optional, Defaulted to False): If ``True`` the contents will be appended to the
+           existing one.
+    :param encoding: (Optional, Defaulted to utf-8): Specifies the output file text encoding.
     """
     if append:
         mode = "ab"
@@ -70,7 +74,8 @@ def save(conanfile, path, content, append=False, encoding="utf-8"):
 
 def mkdir(conanfile, path):
     """
-    Creates a folder. It works recursively. It doesn't fail if the ``path`` already exists.
+    Utility functions to create a directory. The existence of the specified directory is checked,
+    so mkdir() will do nothing if the directory already exists.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the folder to be created.
@@ -82,7 +87,8 @@ def mkdir(conanfile, path):
 
 def rmdir(conanfile, path):
     """
-    Remove a folder and all the contents
+    Utility functions to remove a directory. The existence of the specified directory is checked,
+    so rmdir() will do nothing if the directory doesn’t exists.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the folder to be removed.
@@ -94,31 +100,27 @@ def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename=""
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """
-    Download and decompress the file at the specified ``url`` and optionally check the hash. Finally, it
-    removes the downloaded zipped file. It support different compression formats.
+    High level download and decompressing of a tgz, zip or other compressed format file.
+    Just a high level wrapper for download, unzip, and remove the temporary zip file once unzipped.
+    You can pass hash checking parameters: ``md5``, ``sha1``, ``sha256``. All the specified
+    algorithms will be checked. If any of them doesn't match, it will raise a ``ConanException``.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param url: URL of the zipped file.
-    :param md5 (Optional): Check if the md5sum matches, raising an Exception if not matches.
-    :param sha1: Check if the sha1 matches, raising an Exception if not matches.
-    :param sha256: Check if the sha256 matches, raising an Exception if not matches.
-    :param destination: Destination folder
-    :param filename: If provided, the saved file will have the specified name,
+    :param destination: (Optional defaulted to ``.``) Destination folder
+    :param filename: (Optional defaulted to '') If provided, the saved file will have the specified name,
            otherwise it is deduced from the URL
-    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the
-           zip was not created in a NIX system, the bits could produce undefined permission
-           schema. Use this option only if you are sure that the zip was created correctly.
-    :param pattern: Extract only paths matching the pattern. This should be a Unix
-           shell-style wildcard, see fnmatch documentation for more details.
-    :param verify: When False, disables https certificate validation.
-    :param retry: Number of retries in case of failure. Default is overridden by
-           "tools.files.download:retry" conf
-    :param retry_wait: Seconds to wait between download attempts. Default is overriden by
-           "tools.files.download:retry_wait" conf.
-    :param auth: A tuple of user and password to use HTTPBasic authentication
-    :param headers: A dictionary with additional headers
-    :param strip_root: If True, and all the unzipped contents are in a single folder it will flat the
-           folder moving all the contents to the parent folder.
+    :param url: forwarded to ``tools.file.download()``.
+    :param md5: forwarded to ``tools.file.download()``.
+    :param sha1:  forwarded to ``tools.file.download()``.
+    :param sha256:  forwarded to ``tools.file.download()``.
+    :param keep_permissions:  forwarded to ``tools.file.unzip()``.
+    :param pattern: forwarded to ``tools.file.unzip()``.
+    :param verify:  forwarded to ``tools.file.download()``.
+    :param retry:  forwarded to ``tools.file.download()``.
+    :param retry_wait: S forwarded to ``tools.file.download()``.
+    :param auth:  forwarded to ``tools.file.download()``.
+    :param headers:  forwarded to ``tools.file.download()``.
+    :param strip_root: forwarded to ``tools.file.unzip()``.
     """
 
     if not filename:  # deduce filename from the URL
@@ -138,7 +140,8 @@ def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename=""
 
 def ftp_download(conanfile, host, filename, login='', password=''):
     """
-    Download a file from a FTP server.
+    Ftp download of a file. Retrieves a file from an FTP server. This doesn’t support SSL, but you
+    might implement it yourself using the standard Python FTP library.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param host: IP or host of the FTP server
@@ -172,9 +175,12 @@ def ftp_download(conanfile, host, filename, login='', password=''):
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
              auth=None, headers=None, md5='', sha1='', sha256=''):
     """
-    Retrieves a file from a given ``url`` into a file with a given ``filename``.
-    It uses certificates from a list of known verifiers for https downloads,
-    but this can be optionally disabled.
+    Retrieves a file from a given URL into a file with a given filename. It uses certificates from
+    a list of known verifiers for https downloads, but this can be optionally disabled.
+
+    You can pass hash checking parameters: ``md5``, ``sha1``, ``sha256``. All the specified
+    algorithms will be checked. If any of them doesn’t match, the downloaded file will be removed
+    and it will raise a ``ConanException``.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
@@ -230,11 +236,15 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
 def rename(conanfile, src, dst):
     """
-    Rename a file or folder. It avoids "Access is denied" errors on Windows by using ``robocopy``
+    Utility functions to rename a file or folder src to dst with retrying. ``os.rename()``
+    frequently raises “Access is denied” exception on Windows.
+    This function renames file or folder using robocopy to avoid the exception on Windows.
+
+
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param src: Source file or folder
-    :param dst: Destination file or folder
+    :param src: Path to be renamed.
+    :param dst: Path to be renamed to.
     """
 
     # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
@@ -306,11 +316,10 @@ def save_toolchain_args(content, generators_folder=None, namespace=None):
 @contextmanager
 def chdir(conanfile, newdir):
     """
-    contextmanager to change the current working directory to ``newdir``. It will
-    return to the previous folder when it exit the context.
+    This is a context manager that allows to temporary change the current directory in your conanfile
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param newdir: Folder to change
+    :param newdir: Directory path name to change the current directory.
 
     """
     old_path = os.getcwd()
@@ -324,18 +333,19 @@ def chdir(conanfile, newdir):
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
           strip_root=False):
     """
-    Unzip a zipped file
+    Extract different compressed formats
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param filename: Path to the compressed file.
-    :param destination: Destination folder (or file for .gz files)
-    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the
-           zip was not created in a NIX system, the bits could produce undefined permission
-           schema. Use this option only if you are sure that the zip was created correctly.
-    :param pattern: Extract only paths matching the pattern. This should be a Unix
-           shell-style wildcard, see fnmatch documentation for more details.
-    :param strip_root: If True, and all the unzipped contents are in a single folder it will flat the
-           folder moving all the contents to the parent folder.
+    :param destination: (Optional, Defaulted to ``.``) Destination folder (or file for .gz files)
+    :param keep_permissions: (Optional, Defaulted to ``False``) Keep the zip permissions.
+           WARNING: Can be dangerous if the zip was not created in a NIX system, the bits could
+           produce undefined permission schema. Use this option only if you are sure that the zip
+           was created correctly.
+    :param pattern: (Optional, Defaulted to ``None``) Extract only paths matching the pattern.
+           This should be a Unix shell-style wildcard, see fnmatch documentation for more details.
+    :param strip_root: (Optional, Defaulted to False) If True, and all the unzipped contents are
+           in a single folder it will flat the folder moving all the contents to the parent folder.
     """
 
     output = conanfile.output
@@ -480,28 +490,53 @@ def _human_size(size_bytes):
 
 
 def check_sha1(conanfile, file_path, signature):
+    """
+    Check that the specified ``sha1`` of the ``file_path`` matches with signature.
+    If doesn’t match it will raise a ``ConanException``.
+
+    :param conanfile: Conanfile object.
+    :param file_path: Path of the file to check.
+    :param signature: Expected sha1sum
+    """
     check_with_algorithm_sum("sha1", file_path, signature)
 
 
 def check_md5(conanfile, file_path, signature):
+    """
+    Check that the specified ``md5sum`` of the ``file_path`` matches with ``signature``.
+    If doesn’t match it will raise a ``ConanException``.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param file_path: Path of the file to check.
+    :param signature: Expected md5sum.
+    """
     check_with_algorithm_sum("md5", file_path, signature)
 
 
 def check_sha256(conanfile, file_path, signature):
+    """
+    Check that the specified ``sha256`` of the ``file_path`` matches with signature.
+    If doesn’t match it will raise a ``ConanException``.
+
+    :param conanfile: Conanfile object.
+    :param file_path: Path of the file to check.
+    :param signature: Expected sha256sum
+    """
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
 def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
     """
-    Replace the appearances of a string ``search`` with a string ``replace`` in the file located at
-    ``file_path``.
+    Replace a string ``search`` in the contents of the file ``file_path`` with the string replace.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param file_path: Path to the file
-    :param search: string to search
-    :param replace: string to replace the matches
-    :param strict: Raise in case "search" is not found in the file contents
-    :param encoding: encoding to save the file.
+    :param file_path: File path of the file to perform the replacing.
+    :param search: String you want to be replaced.
+    :param replace: String to replace the searched string.
+    :param strict: (Optional, Defaulted to ``True``) If ``True``, it raises an error if the searched
+           string is not found, so nothing is actually replaced.
+    :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
+           encoding.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
@@ -517,6 +552,20 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
 
 
 def collect_libs(conanfile, folder=None):
+    """
+    Returns a sorted list of library names from the libraries (files with extensions *.so*, *.lib*,
+    *.a* and *.dylib*) located inside the ``conanfile.cpp_info.libdirs`` (by default) or the
+    **folder** directory relative to the package folder. Useful to collect not inter-dependent
+    libraries or with complex names like ``libmylib-x86-debug-en.lib``.
+
+    For UNIX libraries staring with **lib**, like *libmath.a*, this tool will collect the library
+    name **math**.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param folder (Optional, Defaulted to ``None``): String indicating the subfolder name inside
+           ``conanfile.package_folder`` where the library files are.
+    :return: A list with the library names
+    """
     if not conanfile.package_folder:
         return []
     if folder:
@@ -544,6 +593,7 @@ def collect_libs(conanfile, folder=None):
                     result.append(name)
     result.sort()
     return result
+
 
 
 # TODO: Do NOT document this yet. It is unclear the interface, maybe should be split

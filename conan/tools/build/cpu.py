@@ -6,10 +6,11 @@ from conans.util.files import load
 
 def build_jobs(conanfile):
     """
-    Compile jobs number, from the conf ``tools.build:jobs`` or autodetected
+    Get the number of jobs to use while building. Read from the conf ``tools.build:jobs``
+    or autodetected
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :return:
+    :return: ``int`` with the number of jobs
     """
     njobs = conanfile.conf.get("tools.build:jobs",
                                default=_cpu_count(),
