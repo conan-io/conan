@@ -282,7 +282,7 @@ class PythonRequiresInfo:
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
     # TODO: Generalize
-    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires"],
+    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires", "conf"],
                           raise_unexpected_field=False)
 
     def _loads_settings(settings_text):
@@ -300,11 +300,14 @@ def load_binary_info(text):
     # TODO: We need to generalize this reading.
     requires = parser.requires.splitlines() if parser.requires else []
     requires = [r for r in requires if r]
+    # TODO: Temporary reading of conf as raw lines
+    conf = parser.conf.splitlines() if parser.conf else []
 
     conan_info_json = {"settings": dict(settings),
                        "options": dict(options.serialize())["options"],
                        "requires": requires,
-                       "settings_target": dict(settings_target)
+                       "settings_target": dict(settings_target),
+                       "conf": conf
                        }
     return conan_info_json
 
@@ -367,9 +370,9 @@ class ConanInfo:
         if self.build_requires:
             result.append("[build_requires]")
             result.append(self.build_requires.dumps())
-        conf_dumps = self.conf.dumps()
-        if conf_dumps:
-            # result.append("[conf]")  # Let's do it when apply FIXME above
+        if self.conf:
+            # TODO: Think about the serialization of Conf, not 100% sure if dumps() is the best
+            result.append("[conf]")
             result.append(self.conf.dumps())
 
         result.append("")  # Append endline so file ends with LF

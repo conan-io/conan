@@ -1,6 +1,7 @@
+from collections import OrderedDict
+
 from conan.api.conan_api import ConanAPIV2
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
-from conans.cli.commands import CommandResult
 from conans.cli.commands.list import print_list_recipes, json_formatter
 from conans.cli.common import get_remote_selection
 
@@ -18,14 +19,14 @@ def search(conan_api: ConanAPIV2, parser, *args):
                              "in all remotes")
     args = parser.parse_args(*args)
 
-    results = []
     remotes = get_remote_selection(conan_api, args.remote)
+
+    results = OrderedDict()
     for remote in remotes:
-        result = CommandResult(remote=remote)
+        name = getattr(remote, "name", None)
         try:
-            result.elements = conan_api.search.recipes(args.query, remote)
+            results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
         except Exception as e:
-            result.error = str(e)
-        results.append(result)
+            results[name] = {"error": str(e)}
     print_list_recipes(results)
     return results
