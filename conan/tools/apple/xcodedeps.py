@@ -17,6 +17,11 @@ GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
 GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
+def _format_name(name):
+    name = name.replace(".", "_").replace("-", "_")
+    return name.lower()
+
+
 def _xcconfig_settings_filename(settings):
     arch = settings.get_safe("arch")
     architecture = to_apple_arch(arch) or arch
@@ -25,8 +30,7 @@ def _xcconfig_settings_filename(settings):
              ("sdk name", settings.get_safe("os.sdk")),
              ("sdk version", settings.get_safe("os.sdk_version"))]
     name = "".join("_{}".format(v) for _, v in props if v is not None and v)
-    name = name.replace(".", "_").replace("-", "_")
-    return name.lower()
+    return _format_name(name)
 
 
 def _xcconfig_conditional(settings):
@@ -90,10 +94,10 @@ class XcodeDeps(object):
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{name}}
         // Includes all configurations for each dependency
-        {% for dep in deps -%}
-        // Includes for {{dep}} dependency
-        #include "conan_{{dep}}.xcconfig"
-        {%- endfor %}
+        {% for dep in deps %}
+        // Includes for {{dep[0]}}::{{dep[1]}} dependency
+        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
         HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{name}})
@@ -110,6 +114,11 @@ class XcodeDeps(object):
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file
         // Includes all direct dependencies
+        """)
+
+    _pkg_xconfig = textwrap.dedent("""\
+        // Conan XcodeDeps generated file
+        // Includes all components for the package
         """)
 
     def __init__(self, conanfile):
@@ -131,7 +140,7 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _vars_xconfig_file(self, dep, name, cpp_info):
+    def _vars_xconfig_file(self, name, cpp_info):
         """
         returns a .xcconfig file with the variables definition for one package for one configuration
         """
@@ -164,7 +173,7 @@ class XcodeDeps(object):
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name)
         return content_multi
 
-    def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename, deps):
+    def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename, reqs):
         # Current directory is the generators_folder
         multi_path = name_general
         if os.path.isfile(multi_path):
@@ -173,7 +182,7 @@ class XcodeDeps(object):
             content_multi = self._dep_xconfig
             content_multi = Template(content_multi).render({"name": name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": deps})
+                                                            "deps": reqs})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -189,8 +198,18 @@ class XcodeDeps(object):
         content_multi = self._all_xconfig
 
         for req, dep in deps.items():
-            dep_name = dep.ref.name.replace(".", "_").replace("-", "_")
+            dep_name = _format_name(dep.ref.name)
             content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
+        return content_multi
+
+    def _pkg_xconfig_file(self, components):
+        """
+        this is a .xcconfig file including the components for each package
+        """
+        content_multi = self._pkg_xconfig
+        for pkg_name, comp_name in components:
+            content_multi = content_multi + '\n#include "conan_{}_{}.xcconfig"\n'.format(pkg_name,
+                                                                                         comp_name)
         return content_multi
 
     @property
@@ -199,27 +218,54 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
+    def get_content_for_component(self, pkg_name, component_name, cpp_info, reqs):
+        result = {}
+
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
+        # One file per configuration, with just the variables
+        vars_xconfig_name = "conan_{}_{}_vars{}.xcconfig".format(pkg_name, component_name, conf_name)
+        result[vars_xconfig_name] = self._vars_xconfig_file(component_name, cpp_info)
+
+        props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
+        result[props_name] = self._conf_xconfig_file(component_name, vars_xconfig_name)
+
+        # The entry point for each package
+        file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
+        dep_content = self._dep_xconfig_file(component_name, file_dep_name, props_name, reqs)
+
+        result[file_dep_name] = dep_content
+        return result
+
     def _content(self):
         result = {}
-        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
+        # Generate the config files for each component with name conan_pkgname_compname.xcconfig
+        # If a package has no components the name is conan_pkgname_pkgname.xcconfig
+        # Then all components are included in the conan_pkgname.xcconfig file
         for dep in self._conanfile.dependencies.host.values():
-            dep_name = dep.ref.name
-            dep_name = dep_name.replace(".", "_").replace("-", "_")
+            dep_name = _format_name(dep.ref.name)
+
             cpp_info = dep.cpp_info.aggregated_components()
-            public_deps = [d.ref.name.replace(".", "_").replace("-", "_")
-                           for r, d in dep.dependencies.direct_host.items() if r.visible]
+            include_components_names = []
+            if dep.cpp_info.has_components:
+                for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
+                    component_deps = []
+                    for req in comp_cpp_info.requires:
+                        req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
+                        component_deps.append((req_pkg, req_cmp))
 
-            # One file per configuration, with just the variables
-            vars_xconfig_name = "conan_{}_vars{}.xcconfig".format(dep_name, conf_name)
-            result[vars_xconfig_name] = self._vars_xconfig_file(dep, dep_name, cpp_info)
-            props_name = "conan_{}{}.xcconfig".format(dep_name, conf_name)
-            result[props_name] = self._conf_xconfig_file(dep_name, vars_xconfig_name)
+                    component_content = self.get_content_for_component(dep_name, comp_name, comp_cpp_info, component_deps)
+                    include_components_names.append((dep_name, comp_name))
+                    result.update(component_content)
+            else:
+                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
+                               dep.dependencies.direct_host.items() if r.visible]
+                root_content = self.get_content_for_component(dep_name, dep_name, cpp_info, public_deps)
+                include_components_names.append((dep_name, dep_name))
+                result.update(root_content)
 
-            # The entry point for each package
-            file_dep_name = "conan_{}.xcconfig".format(dep_name)
-            dep_content = self._dep_xconfig_file(dep_name, file_dep_name, props_name, public_deps)
-            result[file_dep_name] = dep_content
+            result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
+
 
         # Include all direct build_requires for host context.
         direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
