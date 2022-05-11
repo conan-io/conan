@@ -25,6 +25,9 @@ class _Patterns(object):
 class AutoPackager(object):
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.patterns = _Patterns()
 
