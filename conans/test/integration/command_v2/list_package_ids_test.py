@@ -1,3 +1,4 @@
+import json
 import re
 import textwrap
 from unittest.mock import Mock, patch
@@ -312,9 +313,10 @@ class TestListPackages:
         c.run("create pkg -s os=Windows -s arch=x86")
         # Revision is needed explicitly!
         c.run("list packages pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8")
-        expected = textwrap.dedent("""\
+        pref = "pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5"
+        expected = textwrap.dedent(f"""\
             Local Cache:
-              pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5
+              {pref}
                 settings:
                   arch=x86
                   os=Windows
@@ -324,6 +326,12 @@ class TestListPackages:
                   dep/1.2.Z
             """)
         assert expected == c.out
+
+        c.run("list packages pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8 --format=json",
+              redirect_stdout="packages.json")
+        pkgs_json = c.load("packages.json")
+        pkgs_json = json.loads(pkgs_json)
+        assert pkgs_json["Local Cache"]["packages"][pref]["settings"]["os"] == "Windows"
 
     def test_list_conf(self):
         """ test that tools.info.package_id:confs works, affecting the package_id and
