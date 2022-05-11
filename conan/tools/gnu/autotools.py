@@ -18,7 +18,7 @@ class Autotools(object):
         :param conanfile: The current recipe object. Always use ``self``.
         :param namespace: this argument avoids collisions when you have multiple toolchain calls in
                           the same recipe. By setting this argument, the *conanbuild.conf* file used
-                          to pass information to thetoolchain will be named as:
+                          to pass information to the toolchain will be named as:
                           *<namespace>_conanbuild.conf*. The default value is ``None`` meaning that
                           the name of the generated file is *conanbuild.conf*. This namespace must
                           be also set with the same value in the constructor of the AutotoolsToolchain
