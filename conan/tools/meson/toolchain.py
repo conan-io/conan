@@ -107,15 +107,15 @@ class MesonToolchain(object):
             self._b_vscrt = str(vscrt).lower()
         else:
             self._b_vscrt = None
-        #: Dict-like object to be used in the ``[properties]`` properties as ``key=value``
+        #: Dict-like object that defines Meson``properties`` with ``key=value`` format
         self.properties = {}
-        #: Dict-like object to be used in the ``[project options]`` properties as ``key=value``
+        #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
             "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
         }
-        #: Dict-like object to be used as the ``preprocessor_definitions`` variable
+        #: Dict-like object that defines Meson ``preprocessor definitions``
         self.preprocessor_definitions = {}
-        #: It is the ``PKG_CONFIG_PATH`` value for Meson
+        #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
@@ -150,32 +150,36 @@ class MesonToolchain(object):
 
         # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        #: Defines ``c`` Meson variable. Defaulted to ``CC`` build environment value
+        #: Defines the Meson ``c`` variable. Defaulted to ``CC`` build environment value
         self.c = build_env.get("CC") or default_comp
-        #: Defines ``cpp`` Meson variable. Defaulted to ``CXX`` build environment value
+        #: Defines the Meson ``cpp`` variable. Defaulted to ``CXX`` build environment value
         self.cpp = build_env.get("CXX") or default_comp_cpp
-        #: Defines ``c_ld`` Meson variable. Defaulted to ``CC_LD`` or ``LD`` build environment value
+        #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD`` or ``LD`` build
+        #: environment value
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
-        #: Defines ``cpp_ld`` Meson variable. Defaulted to ``CXX_LD`` or ``LD`` build
+        #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD`` or ``LD`` build
         #: environment value
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
-        #: Defines ``ar`` Meson variable. Defaulted to ``AR`` build environment value
+        #: Defines the Meson ``ar`` variable. Defaulted to ``AR`` build environment value
         self.ar = build_env.get("AR")
-        #: Defines ``strip`` Meson variable. Defaulted to ``STRIP`` build environment value
+        #: Defines the Meson ``strip`` variable. Defaulted to ``STRIP`` build environment value
         self.strip = build_env.get("STRIP")
-        #: Defines ``as`` Meson variable. Defaulted to ``AS`` build environment value
+        #: Defines the Meson ``as`` variable. Defaulted to ``AS`` build environment value
         self.as_ = build_env.get("AS")
-        #: Defines ``windres`` Meson variable. Defaulted to ``WINDRES`` build environment value
+        #: Defines the Meson ``windres`` variable. Defaulted to ``WINDRES`` build environment value
         self.windres = build_env.get("WINDRES")
-        #: Defines ``pkgconfig`` Meson variable. Defaulted to ``PKG_CONFIG`` build environment value
+        #: Defines the Meson ``pkgconfig`` variable. Defaulted to ``PKG_CONFIG``
+        #: build environment value
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        #: Defines ``c_args`` Meson variable. Defaulted to ``CFLAGS`` build environment value
+        #: Defines the Meson ``c_args`` variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
-        #: Defines ``c_link_args`` Meson variable. Defaulted to ``LDFLAGS`` build environment value
+        #: Defines the Meson ``c_link_args`` variable. Defaulted to ``LDFLAGS`` build
+        #: environment value
         self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
-        #: Defines ``cpp_args`` Meson variable. Defaulted to ``CXXFLAGS`` build environment value
+        #: Defines the Meson ``cpp_args`` variable. Defaulted to ``CXXFLAGS`` build environment value
         self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
-        #: Defines ``cpp_link_args`` Meson variable. Defaulted to ``LDFLAGS`` build environment value
+        #: Defines the Meson ``cpp_link_args`` variable. Defaulted to ``LDFLAGS`` build
+        #: environment value
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
         # Apple flags
