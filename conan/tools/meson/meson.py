@@ -12,7 +12,7 @@ class Meson(object):
 
     def __init__(self, conanfile):
         """
-        :param conanfile: The current recipe object. Always use ``self``.
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
 

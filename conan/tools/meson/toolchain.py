@@ -72,7 +72,8 @@ class MesonToolchain(object):
 
     def __init__(self, conanfile, backend=None):
         """
-        :param conanfile: The current recipe object. Always use ``self``.
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
