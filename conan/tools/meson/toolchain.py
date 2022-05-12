@@ -116,7 +116,7 @@ class MesonToolchain(object):
         self.preprocessor_definitions = {}
         #: It is the ``PKG_CONFIG_PATH`` value for Meson
         self.pkg_config_path = self._conanfile.generators_folder
-        #: Dict-like object with the build, host and target system information
+        #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
@@ -149,36 +149,40 @@ class MesonToolchain(object):
 
         # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        #: ``c`` Meson variable value
+        #: Defines ``c`` Meson variable. Defaulted to ``CC`` build environment value
         self.c = build_env.get("CC") or default_comp
-        #: ``cpp`` Meson variable value
+        #: Defines ``cpp`` Meson variable. Defaulted to ``CXX`` build environment value
         self.cpp = build_env.get("CXX") or default_comp_cpp
-        #: ``c_ld`` Meson variable value
+        #: Defines ``c_ld`` Meson variable. Defaulted to ``CC_LD`` or ``LD`` build environment value
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
-        #: ``cpp_ld`` Meson variable value
+        #: Defines ``cpp_ld`` Meson variable. Defaulted to ``CXX_LD`` or ``LD`` build
+        #: environment value
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
-        #: ``ar`` Meson variable value
+        #: Defines ``ar`` Meson variable. Defaulted to ``AR`` build environment value
         self.ar = build_env.get("AR")
-        #: ``strip`` Meson variable value
+        #: Defines ``strip`` Meson variable. Defaulted to ``STRIP`` build environment value
         self.strip = build_env.get("STRIP")
-        #: ``as`` Meson variable value
+        #: Defines ``as`` Meson variable. Defaulted to ``AS`` build environment value
         self.as_ = build_env.get("AS")
-        #: ``windres`` Meson variable value
+        #: Defines ``windres`` Meson variable. Defaulted to ``WINDRES`` build environment value
         self.windres = build_env.get("WINDRES")
-        #: ``pkgconfig`` Meson variable value
+        #: Defines ``pkgconfig`` Meson variable. Defaulted to ``PKG_CONFIG`` build environment value
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        #: ``c_args`` Meson variable value
+        #: Defines ``c_args`` Meson variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
-        #: ``c_link_args`` Meson variable value
+        #: Defines ``c_link_args`` Meson variable. Defaulted to ``LDFLAGS`` build environment value
         self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
-        #: ``cpp_args`` Meson variable value
+        #: Defines ``cpp_args`` Meson variable. Defaulted to ``CXXFLAGS`` build environment value
         self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
-        #: ``cpp_link_args`` Meson variable value
+        #: Defines ``cpp_link_args`` Meson variable. Defaulted to ``LDFLAGS`` build environment value
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
         # Apple flags
+        #: Apple arch flag as a list, e.g., ["-arch", "i386"]
         self.apple_arch_flag = []
+        #: Apple sysroot flag as a list, e.g., ["-isysroot", "./Platforms/MacOSX.platform"]
         self.apple_isysroot_flag = []
+        #: Apple minimum binary version flag as a list, e.g., ["-mios-version-min", "10.8"]
         self.apple_min_version_flag = []
 
         self._resolve_apple_flags()
@@ -295,11 +299,21 @@ class MesonToolchain(object):
 
     @property
     def content(self):
+        """
+        Gets content of the file to be used by Meson as its context.
+
+        :return: ``str`` Meson context variables.
+        """
         context = self._context()
         content = Template(self._meson_file_template).render(context)
         return content
 
     def generate(self):
+        """
+        Creates a ``conan_meson_native.ini`` (if native builds) or a
+        ``conan_meson_cross.ini`` (if cross builds) with the proper content.
+        If Windows OS, it will be created a ``conanvcvars.bat`` as well.
+        """
         filename = self.native_filename if not self.cross_build else self.cross_filename
         save(filename, self.content)
         # FIXME: Should we check the OS and compiler to call VCVars?
