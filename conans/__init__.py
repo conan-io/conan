@@ -4,4 +4,4 @@ ONLY_V2 = "only_v2"  # Remotes and virtuals from Artifactory returns this capabi
 OAUTH_TOKEN = "oauth_token"
 
 
-__version__ = '2.0.0-alpha6'
+__version__ = '2.0.0-alpha7'
