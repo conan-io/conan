@@ -1,9 +1,7 @@
-import platform
 import textwrap
 import time
 import unittest
 
-import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -581,29 +579,49 @@ def test_msvc_visual_incompatible():
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
 
 
-@pytest.mark.skipif(platform.system() != "Darwin", reason="requires OSX")
-def test_apple_clang_compatible():
-    """
-    From apple-clang version 13 we detect apple-clang version as 13 and we make
-    this compiler version compatible with 13.0
-    """
-    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
-    client = TestClient()
-    profile = textwrap.dedent("""
-        [settings]
-        os=Macos
-        arch=x86_64
-        compiler=apple-clang
-        compiler.version=13
-        compiler.libcxx=libc++
-        build_type=Release
-        """)
-    client.save({"conanfile.py": conanfile,
-                 "profile": profile})
-    client.run('create . pkg/0.1@ -s os=Macos -s compiler="apple-clang" -s compiler.version=13.0 '
-               '-s build_type=Release -s arch=x86_64')
-    client.run("install pkg/0.1@ -pr=profile")
-    assert "Using compatible package" in client.out
+class TestAppleClang13Compatible:
+    def test_apple_clang_compatible(self):
+        """
+        From apple-clang version 13 we detect apple-clang version as 13 and we make
+        this compiler version compatible with 13.0
+        """
+        conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+        client = TestClient()
+        profile = textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            compiler.libcxx=libc++
+            build_type=Release
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        client.run('create . pkg/0.1@ -pr=profile -s compiler.version=13.0')
+        client.run("install pkg/0.1@ -pr=profile -s compiler.version=13")
+        assert "Using compatible package" in client.out
+
+    def test_apple_clang_not_compatible(self):
+        """
+        From apple-clang version 13 we detect apple-clang version as 13 and we make
+        this compiler version compatible with 13.0
+        """
+        conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+        client = TestClient()
+        profile = textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            compiler.libcxx=libc++
+            build_type=Release
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        client.run('create . pkg/0.1@ -pr=profile -s compiler.version=13.0')
+        client.run("install pkg/0.1@ -pr=profile -s compiler.version=13.1", assert_error=True)
+        assert "Using compatible package" not in client.out
+        assert "ERROR: Missing binary" in client.out
 
 
 class TestNewCompatibility:
