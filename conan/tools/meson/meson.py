@@ -22,7 +22,7 @@ class Meson(object):
         command, where ``FILE`` could be ``--native-file conan_meson_native.ini``
         (if native builds) or ``--cross-file conan_meson_cross.ini`` (if cross builds).
 
-        :param reconfigure: ``bool`` value that adds `` --reconfigure`` param to the final command.
+        :param reconfigure: ``bool`` value that adds ``--reconfigure`` param to the final command.
         """
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder

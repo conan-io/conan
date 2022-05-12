@@ -178,11 +178,11 @@ class MesonToolchain(object):
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
         # Apple flags
-        #: Apple arch flag as a list, e.g., ["-arch", "i386"]
+        #: Apple arch flag as a list, e.g., ``["-arch", "i386"]``
         self.apple_arch_flag = []
-        #: Apple sysroot flag as a list, e.g., ["-isysroot", "./Platforms/MacOSX.platform"]
+        #: Apple sysroot flag as a list, e.g., ``["-isysroot", "./Platforms/MacOSX.platform"]``
         self.apple_isysroot_flag = []
-        #: Apple minimum binary version flag as a list, e.g., ["-mios-version-min", "10.8"]
+        #: Apple minimum binary version flag as a list, e.g., ``["-mios-version-min", "10.8"]``
         self.apple_min_version_flag = []
 
         self._resolve_apple_flags()
@@ -302,7 +302,7 @@ class MesonToolchain(object):
         """
         Gets content of the file to be used by Meson as its context.
 
-        :return: ``str`` Meson context variables.
+        :return: ``str`` whole Meson context content.
         """
         context = self._context()
         content = Template(self._meson_file_template).render(context)
