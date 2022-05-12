@@ -25,8 +25,8 @@ from webtest.app import TestApp
 
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import REVISIONS
-from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.api.model import Remote
+from conan.api.conan_api import ConanAPIV2
+from conan.api.model import Remote
 from conans.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
@@ -48,7 +48,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save, load
 
-NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
+NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
@@ -705,6 +705,11 @@ class TestClient(object):
         package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
                                str(self.out)).group(1)
         return package_id
+
+    def created_package_reference(self, ref):
+        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
+        return PkgReference.loads(pref)
 
     def exported_recipe_revision(self):
         return re.search(r"Exported revision: (\S+)", str(self.out)).group(1)

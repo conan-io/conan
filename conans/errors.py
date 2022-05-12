@@ -9,18 +9,8 @@
 
 """
 from contextlib import contextmanager
-from subprocess import CalledProcessError
 
 from conans.util.env import get_env
-from conans.util.files import decode_text
-
-
-class CalledProcessErrorWithStderr(CalledProcessError):
-    def __str__(self):
-        ret = super(CalledProcessErrorWithStderr, self).__str__()
-        if self.output:
-            ret += "\n" + decode_text(self.output)
-        return ret
 
 
 @contextmanager

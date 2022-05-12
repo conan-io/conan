@@ -139,9 +139,8 @@ def test_create_build_requires():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=br --version=0.1  --build-require -s:h os=Linux -s:b os=Windows")
-    client.assert_listed_binary({"br/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Build")},
+    client.assert_listed_binary({"br/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Build")},
                                 build=True)
-    assert "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31" not in client.out
     assert "br/0.1: MYOS=Windows!!!" in client.out
     assert "br/0.1: MYTARGET=Linux!!!" in client.out
     assert "br/0.1: MYOS=Linux!!!" not in client.out

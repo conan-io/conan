@@ -136,7 +136,7 @@ def test_patch_real(no_copy_source):
 
             def source(self):
                 save(self, "myfile.h", "//dummy contents")
-                patch(self, patch_file="../patches/mypatch_h", patch_type="security")
+                patch(self, patch_file="patches/mypatch_h", patch_type="security")
                 self.output.info("SOURCE: {}".format(load(self, "myfile.h")))
 
             def build(self):
@@ -144,7 +144,7 @@ def test_patch_real(no_copy_source):
                 if self.no_copy_source:
                     patch_file = os.path.join(self.source_folder, "../patches/mypatch_cpp")
                 else:
-                    patch_file = "../patches/mypatch_cpp"
+                    patch_file = "patches/mypatch_cpp"
                 patch(self, patch_file=patch_file, patch_type="security",
                       base_path=self.build_folder)
                 self.output.info("BUILD: {}".format(load(self, "myfile.cpp")))

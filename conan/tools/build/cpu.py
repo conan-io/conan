@@ -5,6 +5,13 @@ from conans.util.files import load
 
 
 def build_jobs(conanfile):
+    """
+    Get the number of jobs to use while building. Read from the conf ``tools.build:jobs``
+    or autodetected, by default it will return the number of CPUs available.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return: ``int`` with the number of jobs
+    """
     njobs = conanfile.conf.get("tools.build:jobs",
                                default=_cpu_count(),
                                check_type=int)

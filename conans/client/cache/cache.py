@@ -11,12 +11,11 @@ from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
-from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
+from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
 
@@ -153,29 +152,6 @@ class ClientCache(object):
     @property
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
-
-    @property
-    def artifacts_properties_path(self):
-        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
-
-    def read_artifacts_properties(self):
-        ret = {}
-        if not os.path.exists(self.artifacts_properties_path):
-            save(self.artifacts_properties_path, "")
-            return ret
-        try:
-            contents = load(self.artifacts_properties_path)
-            for line in contents.splitlines():
-                if line and not line.strip().startswith("#"):
-                    tmp = line.split("=", 1)
-                    if len(tmp) != 2:
-                        raise Exception()
-                    name = tmp[0].strip()
-                    value = tmp[1].strip()
-                    ret[str(name)] = str(value)
-            return ret
-        except Exception:
-            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
     def new_config_path(self):

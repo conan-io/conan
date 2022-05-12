@@ -5,11 +5,13 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, 
     Extender
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, common_graph_args
+from conans.cli.common import save_lockfile_out
 from conans.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot, \
     print_graph_info
 from conans.cli.output import ConanOutput
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
+from conans.model.graph_lock import Lockfile
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
@@ -44,7 +46,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
     out.highlight("-------- Computing the build order ----------")
@@ -96,14 +98,12 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, strict=args.lockfile_strict)
+    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
+                                         allow_error=True)
     if not args.format:
         print_graph_info(deps_graph, args.filter, args.package_filter)
 
-    if args.lockfile_out:
-        lockfile_out = make_abs_path(args.lockfile_out, os.getcwd())
-        ConanOutput().info(f"Saving lockfile: {lockfile_out}")
-        lockfile.save(lockfile_out)
+    save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
 
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")
 

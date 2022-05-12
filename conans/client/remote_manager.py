@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-from collections import OrderedDict
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -10,35 +9,17 @@ from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import rmdir
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import mkdir, tar_extract, touch_folder, rmdir
+from conans.util.files import mkdir, tar_extract, touch_folder
+
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
                                 log_uncompressed_file)
-
-CONAN_REQUEST_HEADER_SETTINGS = 'Conan-PkgID-Settings'
-CONAN_REQUEST_HEADER_OPTIONS = 'Conan-PkgID-Options'
-
-
-def _headers_for_info(info):
-    if not info:
-        return None
-
-    r = {}
-    settings = info.full_settings.as_list()
-    if settings:
-        settings = ['{}={}'.format(*it) for it in settings]
-        r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})
-
-    options = info.options._package_options.items()  # FIXME
-    if options:
-        options = filter(lambda u: u[0] in ['shared', 'fPIC', 'header_only'], options)
-        options = ['{}={}'.format(*it) for it in options]
-        r.update({CONAN_REQUEST_HEADER_OPTIONS: ';'.join(options)})
-    return r
 
 
 class RemoteManager(object):
@@ -139,18 +120,16 @@ class RemoteManager(object):
         pkg_layout = self._cache.get_or_create_pkg_layout(pref)
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
-            info = getattr(conanfile, 'info', None)
-            self._get_package(pkg_layout, pref, remote, conanfile.output, info=info)
+            self._get_package(pkg_layout, pref, remote, conanfile.output)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.package_id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, scoped_output, info):
+    def _get_package(self, layout, pref, remote, scoped_output):
         t1 = time.time()
         try:
-            if pref.revision is None:
-                pref = self.get_latest_package_reference(pref, remote, info=info)
+            assert pref.revision is not None
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -184,14 +163,12 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref):
-        infos = self._call_remote(remote, "search_packages", ref)
-        ret = OrderedDict()
-        for package_id, data in infos.items():
-            # FIXME: we don't have the package reference, it uses the latest, we could check
-            #        here doing N requests or improve the Artifactory API.
-            if not data.get("recipe_hash"):  # To filter out Conan 1.X packages in same repo
-                ret[PkgReference(ref, package_id)] = data
-        return ret
+        packages = self._call_remote(remote, "search_packages", ref)
+        # Avoid serializing conaninfo in server side
+        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                    if "content" in data else data
+                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        return packages
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)
@@ -223,10 +200,9 @@ class RemoteManager(object):
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
+    def get_latest_package_reference(self, pref, remote) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
-        headers = _headers_for_info(info) if info else None
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
+        return self._call_remote(remote, "get_latest_package_reference", pref, headers=None)
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"

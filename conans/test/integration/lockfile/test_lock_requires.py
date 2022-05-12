@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -15,17 +16,31 @@ def test_conanfile_txt_deps_ranges(requires):
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
-    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.txt")
     assert "pkg/0.1@user/testing#" in client.out
 
     client.run("create pkg --name=pkg --version=0.2 --user=user --channel=testing")
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+    client.run("install consumer/conanfile.txt")
     assert "pkg/0.1@user/testing#" in client.out
     assert "pkg/0.2" not in client.out
+
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.txt")
     assert "pkg/0.2@user/testing#" in client.out
     assert "pkg/0.1" not in client.out
+
+
+@pytest.mark.parametrize("command", ["install", "create", "graph info", "export-pkg"])
+def test_lockfile_out(command):
+    # Check that lockfile out is generated for different commands
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
+    c.run("create dep")
+    c.run(f"{command} pkg --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "dep/0.1" in lock
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
@@ -40,15 +55,17 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
     client.run("create dep --name=dep --version=0.1 --user=user --channel=testing")
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
 
-    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.txt")
     assert "dep/0.1@user/testing#" in client.out
     assert "pkg/0.1@user/testing#" in client.out
 
     client.run("create dep --name=dep --version=0.2 --user=user --channel=testing")
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+    client.run("install consumer/conanfile.txt")
     assert "dep/0.1@user/testing#" in client.out
     assert "dep/0.2" not in client.out
+
+    os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.txt", assert_error=True)
     assert "dep/0.2@user/testing#" in client.out
     assert "dep/0.1" not in client.out
@@ -63,7 +80,7 @@ def test_conanfile_txt_strict(requires):
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
-    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.txt")
     assert "pkg/0.1@user/testing#" in client.out
 
     client.run("create pkg --name=pkg --version=0.2 --user=user --channel=testing")
@@ -72,12 +89,24 @@ def test_conanfile_txt_strict(requires):
     # Not strict mode works
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/[>1.0]@user/testing"})
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock --lockfile-strict",
-               assert_error=True)
+    client.run("install consumer/conanfile.txt", assert_error=True)
     assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
 
-    client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+    client.run("install consumer/conanfile.txt --lockfile-partial")
     assert "pkg/1.2@user/testing" in client.out
+    assert "pkg/1.2" not in client.load("consumer/conan.lock")
+
+    # test it is possible to capture new changes too, when not strict, mutating the lockfile
+    client.run("install consumer/conanfile.txt --lockfile-partial --lockfile-out=conan.lock")
+    assert "pkg/1.2@user/testing" in client.out
+    lock = client.load("conan.lock")
+    assert "pkg/1.2" in lock
+    assert "pkg/0.1" in lock  # both versions are locked now
+    # clean legacy versions
+    client.run("lock create consumer/conanfile.txt --lockfile-out=conan.lock --lockfile-clean")
+    lock = client.load("conan.lock")
+    assert "pkg/1.2" in lock
+    assert "pkg/0.1" not in lock
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
@@ -107,12 +136,12 @@ def test_conditional_os(requires):
     client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
     client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
-    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=consumer.lock -s os=Windows"
                " -s:b os=Windows")
     assert "win/0.1#" in client.out
     assert "pkg/0.1#" in client.out
-    client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
-               "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
+    client.run("lock create consumer/conanfile.txt  --lockfile=consumer.lock "
+               "--lockfile-out=consumer.lock -s os=Linux -s:b os=Linux")
     assert "nix/0.1#" in client.out
     assert "pkg/0.1#" in client.out
 
@@ -122,7 +151,7 @@ def test_conditional_os(requires):
     client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
     client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
-    client.run("install consumer --lockfile=conan.lock -s os=Windows -s:b os=Windows")
+    client.run("install consumer --lockfile=consumer.lock -s os=Windows -s:b os=Windows")
     assert "win/0.1#" in client.out
     assert "win/0.2" not in client.out
     client.run("install consumer -s os=Windows -s:b os=Windows")
@@ -130,7 +159,7 @@ def test_conditional_os(requires):
     assert "win/0.1" not in client.out
     assert "nix/0.1" not in client.out
 
-    client.run("install consumer --lockfile=conan.lock -s os=Linux -s:b os=Linux")
+    client.run("install consumer --lockfile=consumer.lock -s os=Linux -s:b os=Linux")
     assert "nix/0.1#" in client.out
     assert "nix/0.2" not in client.out
     client.run("install consumer -s os=Linux -s:b os=Linux")
@@ -301,14 +330,22 @@ def test_partial_lockfile():
     c.run("create pkgb --lockfile=b.lock")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("install pkgc --lockfile=b.lock")
+    c.run("install pkgc --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("create pkgc  --lockfile=b.lock")
+    c.run("create pkgc  --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("create app --lockfile=b.lock")
+    c.run("create app --lockfile=b.lock --lockfile-partial")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
-    c.run("create app --lockfile=b.lock --lockfile-strict", assert_error=True)
+    c.run("create app --lockfile=b.lock", assert_error=True)
     assert "ERROR: Requirement 'pkgc/[*]' not in lockfile" in c.out
+
+
+def test_ux_defaults():
+    # Make sure the when explicit ``--lockfile`` argument, the file must exist, even if is conan.lock
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    c.run("install . --lockfile=conan.lock", assert_error=True)
+    assert "ERROR: Lockfile doesn't exist" in c.out

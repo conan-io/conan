@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import stat
@@ -101,11 +102,15 @@ class ExportSettingsTest(unittest.TestCase):
     def test_code_parent(self):
         # when referencing the parent, the relative folder "sibling" will be kept
         base = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
-    exports = "../*.txt"
+    def export(self):
+        copy(self, "*.txt", src=os.path.join(self.recipe_folder, ".."),
+             dst=self.export_folder)
 """
         for conanfile in (base, base.replace("../*.txt", "../sibling*")):
             client = TestClient()
@@ -123,11 +128,15 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = """
+import os
 from conan import ConanFile
+from conan.tools.files import copy
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
-    exports = "../sibling/*.txt"
+    def export(self):
+        copy(self, "*.txt", src=os.path.join(self.recipe_folder, "..", "sibling"),
+             dst=self.export_folder)
 """
         files = {"recipe/conanfile.py": conanfile,
                  "sibling/file.txt": "Hello World!"}
@@ -144,11 +153,21 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
-                exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+                # exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+                def export_sources(self):
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "test", "src"),
+                         dst=self.export_sources_folder)
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "cpp"),
+                         dst=self.export_sources_folder)
+                    copy(self, "*", src=os.path.join(self.recipe_folder, "..", "include"),
+                         dst=self.export_sources_folder)
+
             """)
         client.save({"recipe/conanfile.py": conanfile,
                      "test/src/file.txt": "Hello World!",
@@ -496,3 +515,12 @@ def test_export_invalid_refs():
     assert "ERROR: Invalid package user 'user%'" in c.out
     c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
     assert "ERROR: Invalid package channel 'channel%'" in c.out
+
+
+def test_export_json():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=foo --version=0.1 --format json")
+    info = json.loads(c.stdout)
+    assert info["reference"] == "foo/0.1#4d670581ccb765839f2239cc8dff8fbd"
+    assert len(info) == 1  # Only "reference" key yet

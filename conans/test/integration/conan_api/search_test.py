@@ -1,6 +1,6 @@
 import pytest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -148,13 +148,14 @@ def test_resolve_package_revisions(mode_remote):
         assert set(sot) == set([pref for pref in prefs if "1" in pref.revision])
 
         sot = api.search.package_revisions("f*o/*#*:*#*", query="build_type=Debug", remote=remote)
+        package_id = "9e186f6d94c008b544af1569d1a6368d8339efc5"
         assert set(sot) == set([pref for pref in prefs
-                                if pref.package_id == "040ce2bd0189e377b2d15eb7246a4274d1c63317" and
+                                if pref.package_id == package_id and
                                 pref.ref.name == "foo"])
 
         sot = api.search.package_revisions("*/2.0#*:*#*", query="build_type=Debug", remote=remote)
         assert set(sot) == set([pref for pref in prefs
-                                if pref.package_id == "040ce2bd0189e377b2d15eb7246a4274d1c63317" and
+                                if pref.package_id == package_id and
                                 pref.ref.name == "bar"])
 
         sot = api.search.package_revisions(prefs[0].repr_notime(), remote=remote)

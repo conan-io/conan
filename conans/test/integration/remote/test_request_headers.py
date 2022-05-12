@@ -3,7 +3,6 @@ import unittest
 
 import pytest
 
-from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS, CONAN_REQUEST_HEADER_OPTIONS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 

@@ -1,15 +1,16 @@
+import os
 import textwrap
 from collections import OrderedDict
 
 from jinja2 import Template
 
 from conan.tools.build import use_win_mingw
+from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
     SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
-from conan.tools.files.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -42,11 +43,11 @@ class Variables(OrderedDict):
     def quote_preprocessor_strings(self):
         for key, var in self.items():
             if isinstance(var, str):
-                self[key] = '"{}"'.format(var)
+                self[key] = str(var).replace('"', '\\"')
         for config, data in self._configuration_types.items():
             for key, var in data.items():
                 if isinstance(var, str):
-                    data[key] = '"{}"'.format(var)
+                    data[key] = str(var).replace('"', '\\"')
 
 
 class CMakeToolchain(object):
@@ -58,8 +59,11 @@ class CMakeToolchain(object):
             {% for it, values in var_config.items() %}
                 {% set genexpr = namespace(str='') %}
                 {% for conf, value in values -%}
+                set(CONAN_DEF_{{ conf }}{{ it }} "{{ value }}")
+                {% endfor %}
+                {% for conf, value in values -%}
                     {% set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,' + value|string + ',' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,${CONAN_DEF_' + conf|string + it|string + '},' %}
                     {% if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
@@ -67,8 +71,8 @@ class CMakeToolchain(object):
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_definitions' %}
-                add_definitions(-D{{ it }}={{ genexpr.str }})
+                {% elif action=='add_compile_definitions' -%}
+                add_compile_definitions({{ it }}={{ genexpr.str }})
                 {% endif %}
             {% endfor %}
         {% endmacro %}
@@ -92,24 +96,26 @@ class CMakeToolchain(object):
 
         # Variables
         {% for it, value in variables.items() %}
+        {% if value is boolean %}
+        set({{ it }} {{ value|cmake_value }} CACHE BOOL "Variable {{ it }} conan-toolchain defined")
+        {% else %}
         set({{ it }} {{ value|cmake_value }} CACHE STRING "Variable {{ it }} conan-toolchain defined")
+        {% endif %}
         {% endfor %}
         # Variables  per configuration
         {{ iterate_configs(variables_config, action='set') }}
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() %}
-        # add_compile_definitions only works in cmake >= 3.12
-        add_definitions(-D{{ it }}={{ value }})
+        add_compile_definitions("{{ it }}={{ value }}")
         {% endfor %}
         # Preprocessor definitions per configuration
-        {{ iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
+        {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
         """)
 
-    def __init__(self, conanfile, generator=None, namespace=None):
+    def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
-        self._namespace = namespace
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
@@ -139,6 +145,7 @@ class CMakeToolchain(object):
         """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
+
         blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
@@ -157,27 +164,20 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
+        """
+          This method will save the generated files to the conanfile.generators_folder
+        """
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
-            save(self.filename, self.content)
+            save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        self._writebuild(toolchain_file)
-
-    def _writebuild(self, toolchain_file):
-        result = {}
-        # TODO: Lets do it compatible with presets soon
-        if self.generator is not None:
-            result["cmake_generator"] = self.generator
-
-        result["cmake_toolchain_file"] = toolchain_file or self.filename
-
-        if result:
-            save_toolchain_args(result, namespace=self._namespace)
+        toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
+        write_cmake_presets(self._conanfile, toolchain, self.generator)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

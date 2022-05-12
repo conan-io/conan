@@ -39,6 +39,7 @@ def mock_patch_ng(monkeypatch):
 def test_single_patch_file(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file')
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
@@ -49,6 +50,7 @@ def test_single_patch_file(mock_patch_ng):
 def test_single_patch_file_from_forced_build(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='/my_build/patch-file')
     assert mock_patch_ng.filename == '/my_build/patch-file'
@@ -59,16 +61,19 @@ def test_single_patch_file_from_forced_build(mock_patch_ng):
 def test_base_path(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
+    conanfile.folders.source = "src"  # This not applies to find the patch file but for applying it
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file', base_path="subfolder")
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
     assert mock_patch_ng.string is None
-    assert mock_patch_ng.apply_args == (os.path.join("/my_source", "subfolder"), 0, False)
+    assert mock_patch_ng.apply_args == (os.path.join("/my_source", "src", "subfolder"), 0, False)
 
 
 def test_apply_in_build_from_patch_in_source(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file', base_path="/my_build/subfolder")
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
@@ -81,6 +86,7 @@ def test_apply_in_build_from_patch_in_source(mock_patch_ng):
 def test_single_patch_string(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("my_folder")
+    conanfile.folders.set_base_export_sources("my_folder")
     conanfile.display_name = 'mocked/ref'
     output = RedirectedTestOutput()
     with redirect_output(output):
@@ -94,6 +100,7 @@ def test_single_patch_arguments(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
     conanfile.folders.set_base_source("/path/to/sources")
+    conanfile.folders.set_base_export_sources("/path/to/sources")
     patch(conanfile, patch_file='patch-file', strip=23, fuzz=True)
     assert mock_patch_ng.filename.replace("\\", "/") == '/path/to/sources/patch-file'
     assert mock_patch_ng.apply_args == ("/path/to/sources", 23, True)

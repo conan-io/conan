@@ -66,10 +66,12 @@ class RecipeReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp,
-                self.revision) \
-               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp,
-                  ref.revision)
+        # When no timestamp is given, it will always have lower priority, to avoid comparison
+        # errors float <> None
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp or 0,
+                self.revision or "") \
+               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp or 0,
+                  ref.revision or "")
 
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.

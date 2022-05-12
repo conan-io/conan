@@ -13,12 +13,21 @@ from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
 
 class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None):
+        """
+
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param namespace: This argument avoids collisions when you have multiple toolchain calls in
+               the same recipe. By setting this argument, the *conanbuild.conf* file used to pass
+               information to the build helper will be named as *<namespace>_conanbuild.conf*. The default
+               value is ``None`` meaning that the name of the generated file is *conanbuild.conf*. This
+               namespace must be also set with the same value in the constructor of the Autotools build
+               helper so that it reads the information from the proper file.
+        """
         self._conanfile = conanfile
         self._namespace = namespace
 
         self.configure_args = []
         self.make_args = []
-        self.default_configure_install_args = True
 
         # Flags
         self.cxxflags = []
@@ -106,13 +115,14 @@ class AutotoolsToolchain:
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ldflags = self._conanfile.conf.get("tools.build:ldflags", default=[], check_type=list)
-        cppflags = self._conanfile.conf.get("tools.build:cppflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "cppflags": cppflags,
-            "ldflags": ldflags
+            "defines": defines,
+            "ldflags": sharedlinkflags + exelinkflags
         }
 
     def environment(self):
@@ -129,7 +139,7 @@ class AutotoolsToolchain:
                            + self.build_type_flags + apple_flags + extra_flags["cflags"])
         self.ldflags.extend([self.arch_flag] + self.build_type_link_flags
                             + apple_flags + extra_flags["ldflags"])
-        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["cppflags"])
+        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
 
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
@@ -139,6 +149,7 @@ class AutotoolsToolchain:
         env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
         env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
         env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
+        env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
 
         return env
 
@@ -152,26 +163,20 @@ class AutotoolsToolchain:
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
 
+    def _shared_static_args(self):
+        args = []
+        if self._conanfile.options.get_safe("shared", False):
+            args.extend(["--enable-shared", "--disable-static"])
+        else:
+            args.extend(["--disable-shared", "--enable-static", "--with-pic"
+                        if self._conanfile.options.get_safe("fPIC", True)
+                        else "--without-pic"])
+        return args
+
     def generate_args(self):
         configure_args = []
+        configure_args.extend(self._shared_static_args())
         configure_args.extend(self.configure_args)
-
-        if self.default_configure_install_args and self._conanfile.package_folder:
-            def _get_cpp_info_value(name):
-                # Why not taking cpp.build? because this variables are used by the "cmake install"
-                # that correspond to the package folder (even if the root is the build directory)
-                elements = getattr(self._conanfile.cpp.package, name)
-                return elements[0] if elements else None
-
-            # If someone want arguments but not the defaults can pass them in args manually
-            configure_args.extend(
-                    ['--prefix=%s' % self._conanfile.package_folder.replace("\\", "/"),
-                     "--bindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                     "--sbindir=${prefix}/%s" % _get_cpp_info_value("bindirs"),
-                     "--libdir=${prefix}/%s" % _get_cpp_info_value("libdirs"),
-                     "--includedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                     "--oldincludedir=${prefix}/%s" % _get_cpp_info_value("includedirs"),
-                     "--datarootdir=${prefix}/%s" % _get_cpp_info_value("resdirs")])
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:

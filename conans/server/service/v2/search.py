@@ -5,7 +5,6 @@ from fnmatch import translate
 
 from conans.cli.output import ConanOutput
 from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
-from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
@@ -37,10 +36,9 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 info_path = os.path.join(server_store.package(pref), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
-                conan_info_content = load(info_path)
-                info = ConanInfo.loads(conan_info_content)
-                conan_vars_info = info.serialize_min()
-                result[package_id] = conan_vars_info
+                content = load(info_path)
+                # From Conan 1.48 the conaninfo.txt is sent raw.
+                result[package_id] = {"content": content}
             except Exception as exc:  # FIXME: Too wide
                 ConanOutput().error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):

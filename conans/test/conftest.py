@@ -73,6 +73,11 @@ tools_locations = {
             "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
+        },
+        "3.23": {
+            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+                     'Linux': '/usr/share/cmake-3.23.1/bin'}
         }
     },
     'ninja': {
@@ -120,6 +125,10 @@ tools_locations = {
     'premake': {},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
+    'android_ndk': {
+        "platform": "Darwin",
+        "exe": "ndk-build",
+    },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
@@ -184,7 +193,8 @@ except ImportError as e:
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
 }
 
 

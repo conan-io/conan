@@ -42,10 +42,11 @@ class HelloConan(ConanFile):
         default_settings = default_settings.replace("runtime:", "# runtime:")
         default_settings = default_settings.replace("runtime_type:", "# runtime_type:")
         save(self.client.cache.settings_path, default_settings)
-        save(self.client.cache.default_profile_path, "")
+        save(self.client.cache.default_profile_path,
+             "[settings]\nos=Windows\ncompiler=msvc\ncompiler.version=191")
         # Ensure the runtime setting is not there anymore
-        self.client.run('install --requires=hello0/0.1@lasote/channel --build missing -s '
-                        'compiler="msvc" -s compiler.runtime="dynamic"', assert_error=True)
+        self.client.run('install --requires=hello0/0.1@lasote/channel --build missing '
+                        '-s compiler.runtime="dynamic"', assert_error=True)
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'msvc'",
                       self.client.out)
 

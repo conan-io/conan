@@ -1,6 +1,11 @@
+import json
 import os
+import platform
 import textwrap
 
+import pytest
+
+from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -225,6 +230,69 @@ def test_find_builddirs():
         assert "/path/to/builddir" in contents
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_cmaketoolchain_cmake_system_processor_cross_apple():
+    """
+    https://github.com/conan-io/conan/pull/10434
+    CMAKE_SYSTEM_PROCESSOR was not set when cross-building in Mac
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_apple_vars_overwrite_user_conf():
+    """
+        tools.cmake.cmaketoolchain:system_name and tools.cmake.cmaketoolchain:system_version
+        will be overwritten by the apple block
+    """
+    client = TestClient()
+    client.save({"hello.py": GenConanfile().with_name("hello")
+                                           .with_version("1.0")
+                                           .with_settings("os", "arch", "compiler", "build_type")})
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+    client.save({"profile_ios": profile_ios})
+    client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain "
+               "-c tools.cmake.cmaketoolchain:system_name=tvOS "
+               "-c tools.cmake.cmaketoolchain:system_version=15.1 "
+               "-c tools.cmake.cmaketoolchain:system_processor=x86_64 ")
+
+    toolchain = client.load("conan_toolchain.cmake")
+
+    # should set the conf values but system/version are overwritten by the apple block
+    assert "CMAKE_SYSTEM_NAME tvOS" in toolchain
+    assert "CMAKE_SYSTEM_NAME iOS" not in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.1" in toolchain
+    assert "CMAKE_SYSTEM_VERSION 15.0" not in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR x86_64" in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR armv8" not in toolchain
+
+
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -240,6 +308,7 @@ def test_extra_flags_via_conf():
         tools.build:cflags+=["--flag3", "--flag4"]
         tools.build:sharedlinkflags=+["--flag5", "--flag6"]
         tools.build:exelinkflags=["--flag7", "--flag8"]
+        tools.build:defines=["D1", "D2"]
         """)
 
     client = TestClient(path_with_spaces=False)
@@ -254,3 +323,122 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
+    assert 'add_compile_definitions( "D1" "D2")' in toolchain
+
+
+def test_cmake_presets_binary_dir_available():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+        generators = "CMakeToolchain"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def layout(self):
+            cmake_layout(self)
+
+    """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    if platform.system() != "Windows":
+        build_dir = os.path.join(client.current_folder, "cmake-build-release")
+    else:
+        build_dir = os.path.join(client.current_folder, "build")
+
+    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
+    assert presets["configurePresets"][0]["binaryDir"] == build_dir
+
+
+def test_cmake_presets_multiconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Windows
+        arch = x86_64
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=static
+        compiler.runtime_type=Release
+    """)
+    client.save({"conanfile.py": GenConanfile("mylib", "1.0"), "profile": profile})
+    client.run("create . -s build_type=Release --profile:h=profile")
+    client.run("create . -s build_type=Debug --profile:h=profile")
+
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=RelWithDebInfo --profile:h=profile")
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=MinSizeRel --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    # Repeat one
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=Debug --profile:h=profile")
+    client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
+               "-s build_type=Debug --profile:h=profile")
+    assert len(presets["buildPresets"]) == 4
+    assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "default"
+
+
+def test_cmake_presets_singleconfig():
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Linux
+        arch = x86_64
+        compiler=gcc
+        compiler.version=8
+    """)
+    client.save({"conanfile.py": GenConanfile("mylib", "1.0"), "profile": profile})
+    client.run("create . -s build_type=Release --profile:h=profile")
+    client.run("create . -s build_type=Debug --profile:h=profile")
+
+    client.run("install --requires=mylib/1.0@ "
+               "-g CMakeToolchain -s build_type=Release --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Release"
+
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configurePreset"] == "Release"
+
+    # Now two configurePreset, but named correctly
+    client.run("install --requires=mylib/1.0@ "
+               "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 2
+    assert presets["configurePresets"][1]["name"] == "Debug"
+
+    assert len(presets["buildPresets"]) == 2
+    assert presets["buildPresets"][1]["configurePreset"] == "Debug"
+
+    # Repeat configuration, it shouldn't add a new one
+    client.run("install --requires=mylib/1.0@ "
+               "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 2

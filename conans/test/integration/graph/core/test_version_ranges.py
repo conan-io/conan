@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.cli.api.model import Remote
+from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -389,7 +389,7 @@ def test_remote_version_ranges():
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
-        t.assert_listed_binary({f"dep/{solution}": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+        t.assert_listed_binary({f"dep/{solution}": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                     "Download (default)")})
 
 

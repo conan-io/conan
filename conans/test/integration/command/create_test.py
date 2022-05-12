@@ -352,7 +352,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[requires]\n    hello/0.1\n", conaninfo)
+        self.assertIn("[requires]\nhello/0.1\n", conaninfo)
 
     @pytest.mark.xfail(reason="--json output has been disabled")
     def test_compoents_json_output(self):
@@ -380,3 +380,11 @@ class MyPkg(ConanFile):
         self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
         self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
         self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+
+
+def test_lockfile_input_not_specified():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_name("foo").with_version("1.0")})
+    client.run("lock create . --lockfile-out locks/conan.lock")
+    client.run("create . --lockfile-out locks/conan.lock")
+    assert "Generated lockfile:" in client.out

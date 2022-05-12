@@ -29,6 +29,6 @@ def test_package_id(client):
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("create . --name=pkg --version=0.1 -pr=profile1")
-    client.assert_listed_binary({"pkg/0.1": ("a3122d010800dcb58876215fc9da0874b486165c", "Build")})
+    client.assert_listed_binary({"pkg/0.1": ("bf9f277ff9c5ce88c27d42e2de02d8ee3433ddd9", "Build")})
     client.run("create . --name=pkg --version=0.1 -pr=profile2")
-    client.assert_listed_binary({"pkg/0.1": ("b00c0fad28de4d64e6080815a67fc28aaab06440", "Build")})
+    client.assert_listed_binary({"pkg/0.1": ("aafb08585a95c8a51b765f758507cbee1e680867", "Build")})

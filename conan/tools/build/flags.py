@@ -394,6 +394,7 @@ def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
+    # FIXME: What is this "03"?? that is not a valid cppstd in the settings.yml
     flag = {"98": "c++98", "gnu98": "gnu++98",
             "03": "c++03", "gnu03": "gnu++03",
             "11": v11, "gnu11": vgnu11,

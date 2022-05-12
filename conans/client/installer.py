@@ -24,7 +24,7 @@ from conans.util.tracer import log_package_built, log_package_got_from_local_cac
 def build_id(conan_file):
     if hasattr(conan_file, "build_id"):
         # construct new ConanInfo
-        build_id_info = conan_file.info.copy()
+        build_id_info = conan_file.info.clone()
         conan_file.info_build = build_id_info
         # effectively call the user function to change the package values
         with conanfile_exception_formatter(conan_file, "build_id"):
@@ -85,6 +85,7 @@ class _PackageBuilder(object):
         retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
@@ -359,7 +360,7 @@ class BinaryInstaller(object):
             # but better make sure here, and be able to report the actual folder in case
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
-            self._out.info("Package folder %s" % node.conanfile.package_folder)
+            node.conanfile.output.info("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
 

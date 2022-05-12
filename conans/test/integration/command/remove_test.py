@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.cli.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPIV2
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -107,7 +107,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, inputs=["user", "password"])
         ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
-        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "a397cb03d51fb3b129c78d2968e2676f")
+        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but
@@ -172,11 +172,15 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 # populated packages of bar
 bar_rrev = "bar/1.1#7db54b020cc95b8bdce49cd6aa5623c0"
 bar_rrev2 = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
-bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
-bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
+pkg_id_debug = "9e186f6d94c008b544af1569d1a6368d8339efc5"
+pkg_id_release = "efa83b160a55b033c4ea706ddb980cd708e3ba1b"
+bar_rrev2_debug = '{}:{}'.format(bar_rrev2, pkg_id_debug)
+bar_rrev2_release = '{}:{}'.format(bar_rrev2, pkg_id_release)
 
-bar_rrev2_release_prev1 = "{}#61ceea29651eaf24b902e4ccdd49cc44".format(bar_rrev2_release)
-bar_rrev2_release_prev2 = "{}#c1c8d8ef1f9f9278d7963f6e35527bc7".format(bar_rrev2_release)
+bar_prev1 = "ee1ca5821b390a75d7168f4567f9ba75"
+bar_prev2 = "f523273047249d5a136fe48d33f645bb"
+bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
+bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
 @pytest.fixture()
@@ -240,10 +244,10 @@ def populated_client():
     {"remove": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
     {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
                                                       'fbar/1.1']},
+    {"remove": "foo/*@", "recipes": ['foo/1.0@user/channel', 'bar/1.1', 'fbar/1.1']},
     # These are errors
     {"remove": "foo", "error": True,
      "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
-    {"remove": "*/*@", "error": True},
     {"remove": "*#", "error": True},
     {"remove": "*/*#", "error": True},
 ])
@@ -283,10 +287,10 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
-    {"remove": "bar/1.1#*:*cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
-    {"remove": "{}:*bd0189e377b2d15e*".format(bar_rrev2), "prefs": [bar_rrev2_release]},
-    {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_rrev2_release]},
+    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
+    {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
+    {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_rrev2_release, bar_rrev2_debug]},
     {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_rrev2_debug]},
     {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_rrev2_release]},
@@ -323,9 +327,9 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     {"remove": '{}#*kk*'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1,
                                                               bar_rrev2_release_prev2]},
     {"remove": '{}#*'.format(bar_rrev2_release), "prevs": []},
-    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_rrev2_release),
+    {"remove": '{}#{}* -p "build_type=Debug"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
-    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_rrev2_release),
+    {"remove": '{}#{}* -p "build_type=Release"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1]},
     {"remove": '{}#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
     {"remove": '{}#* -p "build_type=Debug"'.format(bar_rrev2_release),

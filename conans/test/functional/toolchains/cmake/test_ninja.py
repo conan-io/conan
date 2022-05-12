@@ -4,6 +4,7 @@ import platform
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
@@ -61,8 +62,8 @@ def test_locally_build_linux(build_type, shared, client):
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type,
                                                                                        shared)
     client.run("install . {}".format(settings))
-    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:
@@ -180,8 +181,8 @@ def test_locally_build_gcc(build_type, shared, client):
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello/*:shared={}'
                .format(build_type, shared))
-    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:
@@ -216,8 +217,10 @@ def test_ninja_conf():
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("install . -pr=profile")
-    conanbuild = load_toolchain_args(client.current_folder)
-    assert conanbuild["cmake_generator"] == "Ninja"
+    presets = load_cmake_presets(client.current_folder)
+    generator = presets["configurePresets"][0]["generator"]
+
+    assert generator == "Ninja"
     vcvars = client.load("conanvcvars.bat")
     assert "2017" in vcvars
 

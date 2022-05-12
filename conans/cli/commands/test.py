@@ -1,18 +1,13 @@
 import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conans.cli.commands import make_abs_path
 from conans.cli.commands.create import test_package
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    get_multiple_remotes, add_lockfile_args
-from conans.cli.conan_app import ConanApp
+    get_multiple_remotes, add_lockfile_args, save_lockfile_out
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
-from conans.client.conanfile.build import run_build_method
-from conans.errors import conanfile_exception_formatter
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import chdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -31,8 +26,8 @@ def test(conan_api, parser, *args):
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=args.lockfile_strict)
+    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
+                            partial=args.lockfile_partial)
     remotes = get_multiple_remotes(conan_api, args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -59,6 +54,7 @@ def test(conan_api, parser, *args):
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
@@ -66,9 +62,6 @@ def test(conan_api, parser, *args):
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
-    if args.lockfile_out:
-        lockfile_out = make_abs_path(args.lockfile_out, cwd)
-        out.info(f"Saving lockfile: {lockfile_out}")
-        lockfile.save(lockfile_out)
+    save_lockfile_out(args, deps_graph, lockfile, cwd)
 
     test_package(conan_api, deps_graph, path)
