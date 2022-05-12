@@ -48,7 +48,7 @@ class Meson(object):
         You can specify ``N_JOBS`` through the configuration line ``tools.build:jobs=N_JOBS``
         in your profile ``[conf]`` section.
 
-        :param target: ``str`` target name to be added to the final command.
+        :param target: ``str`` Specifies the target to be executed.
         """
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson compile -C "{}"'.format(meson_build_folder)
