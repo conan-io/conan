@@ -303,7 +303,7 @@ class MesonToolchain(object):
         }
 
     @property
-    def content(self):
+    def _content(self):
         """
         Gets content of the file to be used by Meson as its context.
 
@@ -320,6 +320,6 @@ class MesonToolchain(object):
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
         filename = self.native_filename if not self.cross_build else self.cross_filename
-        save(filename, self.content)
+        save(filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()
