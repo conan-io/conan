@@ -149,7 +149,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     ```shell
     # for Linux/macOS
     $ conan install . --install-folder cmake-build-release --build=missing
-    $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake
+    $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
     $ cmake --build .
 
     # for Windows and Visual Studio 2017
