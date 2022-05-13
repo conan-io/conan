@@ -23,7 +23,8 @@ class VCVars:
         Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
         variables to configure the command line for native 32-bit or 64-bit compilation.
 
-        :param scope: ``str`` Context to be used to activate all the variables.
+        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
+                      if ``build``, then it'll be used the ``conanbuild`` launcher.
         """
         conanfile = self._conanfile
         os_ = conanfile.settings.get_safe("os")
