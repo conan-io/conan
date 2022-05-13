@@ -20,7 +20,8 @@ class VCVars:
 
     def generate(self, scope="build"):
         """
-        Creates a ``conanvcvars.bat`` file with the good args from settings.
+        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
+        variables to configure the command line for native 32-bit or 64-bit compilation.
 
         :param scope: ``str`` Context to be used to activate all the variables.
         """

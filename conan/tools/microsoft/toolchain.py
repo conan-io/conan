@@ -49,13 +49,22 @@ class MSBuildToolchain(object):
         self._conanfile = conanfile
         #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
+        #: Dict-like that defines the preprocessor definitions
         self.compile_options = {}
+        #: List of all the CXX flags
         self.cxxflags = []
+        #: List of all the C flags
         self.cflags = []
+        #: List of all the LD linker flags
         self.ldflags = []
+        #: The build type. By default, the ``conanfile.settings.build_type`` value
         self.configuration = conanfile.settings.build_type
+        #: The runtime flag. By default, it'll be based on the `compiler.runtime` setting.
         self.runtime_library = self._runtime_library(conanfile.settings)
+        #: cppstd value. By default, ``compiler.cppstd`` one.
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
+        #: VS IDE Toolset, e.g., ``"v140"``. If ``compiler=msvc``, you can use ``compiler.toolset``
+        #: setting, else, it'll be based on ``msvc`` version.
         self.toolset = self._msvs_toolset(conanfile)
 
     def _name_condition(self, settings):
@@ -70,7 +79,10 @@ class MSBuildToolchain(object):
 
     def generate(self):
         """
-        Generates the `conantoolchain.props`
+        Generates a ``conantoolchain.props``, a ``conantoolchain_<config>.props``, and,
+        if ``compiler=msvc``, a ``conanvcvars.bat`` files. In the first two cases, they'll have the
+        valid XML format with all the good settings like any other VS project ``*.props`` file. The
+        last one emulates the ``vcvarsall.bat`` env script. See also :class:`VCVars`.
         """
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
