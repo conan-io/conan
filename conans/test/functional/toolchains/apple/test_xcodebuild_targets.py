@@ -14,16 +14,17 @@ xcode_project = textwrap.dedent("""
         sources:
           - src
         configFiles:
-          Debug: conan_config.xcconfig
-          Release: conan_config.xcconfig
+          Debug: static.xcconfig
+          Release: static.xcconfig
       hello-dynamic:
         type: library.dynamic
         platform: macOS
         sources:
           - src
         configFiles:
-          Debug: conan_config.xcconfig
-          Release: conan_config.xcconfig
+          Debug: dynamic.xcconfig
+          Release: dynamic.xcconfig
+
     """)
 
 hello_cpp = textwrap.dedent("""
@@ -116,7 +117,7 @@ conanfile = textwrap.dedent("""
         version = "1.0"
         settings = "os", "compiler", "build_type", "arch"
         generators = "XcodeToolchain"
-        exports_sources = "HelloLibrary.xcodeproj/*", "src/*"
+        exports_sources = "HelloLibrary.xcodeproj/*", "src/*", "static.xcconfig", "dynamic.xcconfig"
         options = {"shared": [True, False], "fPIC": [True, False]}
         default_options = {"shared": False, "fPIC": True}
 
@@ -153,14 +154,17 @@ def test_shared_static_targets():
                  "test_package/conanfile.py": test,
                  "test_package/src/example.cpp": test_src,
                  "test_package/CMakeLists.txt": cmakelists,
-                 "conan_config.xcconfig": ""})
+                 "conan_config.xcconfig": "",
+                 "static.xcconfig": "#include \"conan_config.xcconfig\"\nLD_DYLIB_INSTALL_NAME = @rpath/libhello-static.dylib",
+                 "dynamic.xcconfig": "#include \"conan_config.xcconfig\"\nLD_DYLIB_INSTALL_NAME = @rpath/hello-dynamic.dylib"},
+    )
 
     client.run_command("xcodegen generate")
 
     client.run("create . -o *:shared=True -tf None")
     assert "Packaged 1 '.dylib' file: hello-dynamic.dylib" in client.out
     client.run("test test_package hello/1.0@ -o *:shared=True")
-    assert "/build/Release/hello-dynamic.dylib" in client.out
+    assert "@rpath/hello-dynamic.dylib" in client.out
 
     client.run("create . -tf None")
     assert "Packaged 1 '.a' file: libhello-static.a" in client.out
