@@ -226,7 +226,7 @@ class BinaryInstaller(object):
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
-                for package in install_reference.packages:
+                for package in install_reference.packages.values():
                     self._handle_package(package, install_reference)
 
     def _download_bulk(self, install_order):
@@ -236,7 +236,7 @@ class BinaryInstaller(object):
         downloads = []
         for level in install_order:
             for node in level:
-                for package in node.packages:
+                for package in node.packages.values():
                     if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                         downloads.append(package)
         if not downloads:

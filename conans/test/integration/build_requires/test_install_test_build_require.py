@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 
@@ -202,6 +203,17 @@ def test_bootstrap_other_architecture():
 
     # TODO: The --build=tool that builds always both needs solution
     c.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
-    print(c.out)
     c.assert_listed_binary({"tool/1.0": (linux_pkg_id, "Build")})
     c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Cache")}, build=True)
+
+    c.run("graph build-order --requires=tool/1.0 -s:b os=Windows -s:h os=Linux --build=* "
+          "--format=json", redirect_stdout="o.json")
+    order = json.loads(c.load("o.json"))
+    package1 = order[0][0]["packages"][0][0]
+    package2 = order[0][0]["packages"][1][0]
+    assert package1["package_id"] == win_pkg_id
+    assert package1["depends"] == []
+    assert package2["package_id"] == linux_pkg_id
+    assert package2["depends"] == [win_pkg_id]
+
+
