@@ -12,6 +12,9 @@ from conans.util.files import save, load
 
 
 class MSBuildToolchain(object):
+    """
+    MSBuildToolchain class generator
+    """
 
     filename = "conantoolchain.props"
 
@@ -40,7 +43,11 @@ class MSBuildToolchain(object):
     """)
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
+        #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
         self.compile_options = {}
         self.cxxflags = []
@@ -62,6 +69,9 @@ class MSBuildToolchain(object):
         return name.lower(), condition
 
     def generate(self):
+        """
+        Generates the `conantoolchain.props`
+        """
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files
