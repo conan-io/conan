@@ -176,3 +176,32 @@ def test_install_multiple_tool_requires_cli():
     c.run("install --tool-requires=cmake/0.1 --tool-requires=gcc/0.2 --requires=zlib/1.1")
     c.assert_listed_require({"cmake/0.1": "Cache", "gcc/0.2": "Cache"}, build=True)
     c.assert_listed_require({"zlib/1.1": "Cache"})
+
+
+def test_bootstrap_other_architecture():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import cross_building
+
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "1.0"
+            settings = "os"
+            def build_requirements(self):
+                if cross_building(self):
+                    self.tool_requires("tool/1.0")
+        """)
+    c.save({"conanfile.py": conanfile})
+    win_pkg_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+    linux_pkg_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
+
+    c.run("create . -s:b os=Windows -s:h os=Windows")
+    c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")})
+    assert "Build requirements" not in c.out
+
+    # TODO: The --build=tool that builds always both needs solution
+    c.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+    print(c.out)
+    c.assert_listed_binary({"tool/1.0": (linux_pkg_id, "Build")})
+    c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Cache")}, build=True)

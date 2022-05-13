@@ -74,6 +74,7 @@ class _InstallRecipeReference:
         self.ref = None
         self.packages = []  # _InstallPackageReference
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
+        self.package_depends = []  # dependencies between internal packages
         # implementation detail
         self._package_ids = {}  # caching {package_id: _InstallPackageReference}
 
@@ -110,7 +111,10 @@ class _InstallRecipeReference:
 
         for dep in node.dependencies:
             if dep.dst.binary != BINARY_SKIP:
-                self.depends.append(dep.dst.ref)
+                if dep.dst.ref == node.ref:  # If the node is itself, then it is internal dep
+                    self.package_depends.append(dep.dst.pref)
+                else:
+                    self.depends.append(dep.dst.ref)
 
     def serialize(self):
         return {"ref": self.ref.repr_notime(),
@@ -201,6 +205,9 @@ class InstallGraph:
         return levels
 
     def install_build_order(self):
+        """ used for graph build-order and graph build-order-merge commands
+        This is basically a serialization of the build-order
+        """
         install_order = self.install_order()
         result = []
         for level in install_order:
