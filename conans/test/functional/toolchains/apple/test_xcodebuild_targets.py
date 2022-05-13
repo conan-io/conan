@@ -138,6 +138,16 @@ conanfile = textwrap.dedent("""
             self.cpp_info.libs = ["hello-{}".format("dynamic.dylib" if self.options.shared else "static")]
     """)
 
+static_xcconfig = textwrap.dedent("""
+    #include \"conan_config.xcconfig\"
+    LD_DYLIB_INSTALL_NAME = @rpath/libhello-static.dylib
+""")
+
+dynamic_xcconfig = textwrap.dedent("""
+    #include \"conan_config.xcconfig\"
+    LD_DYLIB_INSTALL_NAME = @rpath/hello-dynamic.dylib
+""")
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_xcodebuild
@@ -155,9 +165,8 @@ def test_shared_static_targets():
                  "test_package/src/example.cpp": test_src,
                  "test_package/CMakeLists.txt": cmakelists,
                  "conan_config.xcconfig": "",
-                 "static.xcconfig": "#include \"conan_config.xcconfig\"\nLD_DYLIB_INSTALL_NAME = @rpath/libhello-static.dylib",
-                 "dynamic.xcconfig": "#include \"conan_config.xcconfig\"\nLD_DYLIB_INSTALL_NAME = @rpath/hello-dynamic.dylib"},
-    )
+                 "static.xcconfig": static_xcconfig,
+                 "dynamic.xcconfig": dynamic_xcconfig})
 
     client.run_command("xcodegen generate")
 
