@@ -25,6 +25,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
+
+        if self.filename == "module-Fontconfig-release-armv8-data.cmake":
+            foo = "trece"
+
         global_cpp = self._get_global_cpp_cmake()
         if not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
@@ -172,7 +176,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                     req = direct_host[dep_name]
                     ret.append(get_file_name(req))
         elif direct_host:
-            ret = [get_file_name(r) for r in direct_host.values()]
+            ret = [get_file_name(r, self.find_module_mode) for r in direct_host.values()]
+            #ret = [get_file_name(r) for r in direct_host.values()]
 
         return ret
 
@@ -182,7 +187,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
-            dep_file_name = get_file_name(dep)
+            dep_file_name = get_file_name(dep, self.find_module_mode)
+            #dep_file_name = get_file_name(dep)
             find_mode = get_find_mode(dep)
             default_value = "NO_MODULE" if not self.find_module_mode else "MODULE"
             values = {
