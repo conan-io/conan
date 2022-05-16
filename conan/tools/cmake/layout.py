@@ -1,3 +1,5 @@
+import os
+
 from conans.errors import ConanException
 
 
@@ -23,7 +25,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         build_type = build_type.lower()
         conanfile.folders.build = "cmake-build-{}".format(build_type)
 
-    conanfile.folders.generators = "build/generators"
+    conanfile.folders.generators = os.path.join("build", "generators")
     conanfile.cpp.source.includedirs = ["include"]
 
     if multi:
