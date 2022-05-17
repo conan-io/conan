@@ -26,7 +26,7 @@ class ConanJSONEncoder(JSONEncoder):
             return repr(o)
         elif isinstance(o, Remote):
             return o.name
-        raise TypeError("Don't know how to serialize a {} object".format(o.__class__))
+        return JSONEncoder.default(self, o)
 
 
 def json_formatter(data):

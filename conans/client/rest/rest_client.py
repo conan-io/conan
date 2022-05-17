@@ -72,12 +72,6 @@ class RestApiClient(object):
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
 
-    def get_recipe_file(self, ref, path):
-        return self._get_api().get_recipe_file(ref, path)
-
-    def get_package_file(self, pref, path):
-        return self._get_api().get_package_file(pref, path)
-
     def upload_recipe(self, ref, files_to_upload, deleted):
         return self._get_api().upload_recipe(ref, files_to_upload, deleted)
 
