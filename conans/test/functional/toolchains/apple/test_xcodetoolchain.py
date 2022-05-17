@@ -33,7 +33,9 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     client.run("export .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
         from conan.tools.apple import XcodeBuild
         class MyApplicationConan(ConanFile):
             name = "myapplication"
@@ -48,7 +50,8 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
                 self.run("otool -l build/{}/app".format(self.settings.build_type))
 
             def package(self):
-                self.copy("*/app", dst="bin", src=".", keep_path=False)
+                copy(self, "build/{}/app".format(self.settings.build_type), self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
 
             def package_info(self):
                 self.cpp_info.bindirs = ["bin"]
