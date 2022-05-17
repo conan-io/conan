@@ -327,20 +327,11 @@ class UploadExecutor:
         force = recipe.force
         files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
 
-        # TODO: Loading here the conanfile, just to pass it to the hook is a bad symptom. It
-        #   should probably be removed and converted to a plugin
-        ref_layout = self._app.cache.ref_layout(ref)
-        conanfile_path = ref_layout.conanfile()
-        self._app.hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                       reference=ref, remote=remote)
-
         upload_ref = ref
         self._app.remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote)
 
         duration = time.time() - t1
         log_recipe_upload(ref, duration, cache_files, remote.name)
-        self._app.hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
-                                       reference=ref, remote=remote)
         return ref
 
     def upload_package(self, package, remote):
@@ -350,18 +341,10 @@ class UploadExecutor:
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        ref_layout = self._app.cache.ref_layout(pref.ref)
-        conanfile_path = ref_layout.conanfile()
-        self._app.hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                       reference=pref.ref,
-                                       package_id=pref.package_id,
-                                       remote=remote)
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, remote)
-        self._app.hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                       reference=pref.ref, package_id=pref.package_id, remote=remote)
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):

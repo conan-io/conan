@@ -22,13 +22,20 @@ from conans.util.tracer import (log_package_download,
                                 log_uncompressed_file)
 
 
+class PkgSignVerifier:
+
+    def verify(self, folder, files):
+        print("Verify signature", folder)
+        print("Verify files", files)
+        files.pop("signature.asc", None)
+
+
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
     def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
         self._auth_manager = auth_manager
-        self._hook_manager = hook_manager
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -55,7 +62,6 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         assert ref.revision, "get_recipe without revision specified"
-        self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
@@ -69,8 +75,11 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
+        pkg_verifier = PkgSignVerifier()
+        pkg_verifier.verify(download_export, zipped_files)
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+
         check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
             uncompress_file(tgz_file, export_folder)
@@ -81,10 +90,6 @@ class RemoteManager(object):
         # Make sure that the source dir is deleted
         rmdir(layout.source())
         touch_folder(export_folder)
-        conanfile_path = layout.conanfile()
-
-        self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
@@ -106,12 +111,6 @@ class RemoteManager(object):
         touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, pref, remote):
-        ref_layout = self._cache.ref_layout(pref.ref)
-        conanfile_path = ref_layout.conanfile()
-        self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
-                                   conanfile=conanfile)
-
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
                                                                            remote.name))
 
@@ -122,10 +121,6 @@ class RemoteManager(object):
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, conanfile.output)
 
-        self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
-                                   conanfile=conanfile)
-
     def _get_package(self, layout, pref, remote, scoped_output):
         t1 = time.time()
         try:
@@ -134,7 +129,8 @@ class RemoteManager(object):
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
-
+            pkg_verifier = PkgSignVerifier()
+            pkg_verifier.verify(download_pkg_folder, zipped_files)
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 
