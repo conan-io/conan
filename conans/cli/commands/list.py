@@ -133,7 +133,7 @@ def list_recipes(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
         except Exception as e:
@@ -160,7 +160,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
         except Exception as e:
@@ -194,7 +194,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
         except Exception as e:
