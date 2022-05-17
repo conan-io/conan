@@ -25,10 +25,10 @@ class _InstallPackageReference:
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
-        self.depends = []  # Possible dependencies to other binary, e.g. cross-build ICU
-
-    def __eq__(self, other):
-        return self.package_id == other.package_id
+        # If some package, like ICU, requires itself, built for the "build" context architecture
+        # to cross compile, there will be a dependency from the current "self" (host context)
+        # to that "build" package_id.
+        self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
 
     @staticmethod
     def create(node):
