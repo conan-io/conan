@@ -7,111 +7,86 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager)
+                               gzopen_without_timestamps, set_dirty_context_manager, save)
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
 
 
-class _RecipeData:
-    def __init__(self, ref, prefs=None):
-        self.ref = ref
-        self.upload = None
-        self.force = None
-        self.build_always = None
-        self.files = None
-        self.packages = [_PackageData(p) for p in prefs or []]
-
-    def serialize(self):
-        return {
-            "ref": repr(self.ref),
-            "upload": self.upload,
-            "force": self.force,
-            "build_always": self.build_always,
-            "files": self.files,
-            "packages": [r.serialize() for r in self.packages]
-        }
-
-
-class _PackageData:
-    def __init__(self, pref):
-        self.pref = pref
-        self.upload = None
-        self.files = None
-        self.force = None
-
-    def serialize(self):
-        return {
-            "pref": repr(self.pref),
-            "upload": self.upload,
-            "force": self.force,
-            "files": self.files
-        }
-
-
-class _UploadData:
-    def __init__(self):
-        self.recipes = []
-
-    def serialize(self):
-        return [r.serialize() for r in self.recipes]
-
-    def add_ref(self, ref):
-        self.recipes.append(_RecipeData(ref))
-
-    def add_prefs(self, prefs):
-        self.recipes.append(_RecipeData(prefs[0].ref, prefs))
-
-
-class UploadChecker:
+class IntegrityChecker:
     """
     Check:
-        - Performs a package corruption integrity check
+        - Performs a corruption integrity check in the cache. This is done by loading the existing
+        conanmanifest.txt and comparing against a computed conanmanifest.txt. It
+        doesn't address someone tampering with the conanmanifest.txt, just accidental
+        modifying of a package contents, like if some file has been added after computing the
+        manifest.
+        This is to be done over the package contents, not the compressed conan_package.tgz
+        artifacts
     """
     def __init__(self, app):
         self._app = app
-        self._output = ConanOutput()
 
     def check(self, upload_data):
+        corrupted = False
         for recipe in upload_data.recipes:
+            corrupted = self._recipe_corrupted(recipe.ref) or corrupted
             for package in recipe.packages:
-                self._package_integrity_check(package.pref)
+                corrupted = self._package_corrupted(package.pref) or corrupted
+        if corrupted:
+            raise ConanException("There are corrupted artifacts, check the error logs")
 
-    def _package_integrity_check(self, pref):
-        self._output.rewrite_line("Checking package integrity...")
-
-        # short_paths = None is enough if there exist short_paths
-        pkg_layout = self._app.cache.pkg_layout(pref)
-        read_manifest, expected_manifest = pkg_layout.package_manifests()
+    def _recipe_corrupted(self, ref: RecipeReference):
+        layout = self._app.cache.ref_layout(ref)
+        output = ConanOutput()
+        read_manifest, expected_manifest = layout.recipe_manifests()
 
         if read_manifest != expected_manifest:
-            self._output.writeln("")
+            output.error(f"{ref}: Manifest mismatch")
+            output.error(f"Folder: {layout.export()}")
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                self._output.warning("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                     % (fname, h1, h2))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
-        else:
-            self._output.rewrite_line("Package integrity OK!")
-        self._output.writeln("")
+                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})")
+            return True
+        output.info(f"{ref}: Integrity checked: ok")
+
+    def _package_corrupted(self, ref: PkgReference):
+        layout = self._app.cache.pkg_layout(ref)
+        output = ConanOutput()
+        read_manifest, expected_manifest = layout.package_manifests()
+
+        if read_manifest != expected_manifest:
+            output.error(f"{ref}: Manifest mismatch")
+            output.error(f"Folder: {layout.package()}")
+            diff = read_manifest.difference(expected_manifest)
+            for fname, (h1, h2) in diff.items():
+                output.error(f"    '{fname}' (manifest: {h1}, file: {h2})")
+            return True
+        output.info(f"{ref}: Integrity checked: ok")
 
 
 class UploadUpstreamChecker:
-
+    """ decides if something needs to be uploaded or force-uploaded checking if that exact
+    revision already exists in the remote server, or if the --force parameter is forcing the upload
+    This is completely irrespective of the actual package contents, it only uses the local
+    computed revision and the remote one
+    """
     def __init__(self, app: ConanApp):
         self._app = app
         self._output = ConanOutput()
 
     def check(self, upload_bundle, remote, force):
         for recipe in upload_bundle.recipes:
-            if recipe.upload:
+            if recipe.upload:  # TODO: Why check it if it is always initialized to True?
                 self._check_upstream_recipe(recipe, remote, force)
                 for package in recipe.packages:
-                    if package.upload:
+                    if package.upload:  # TODO: Why check it if it is always initialized to True?
                         self._check_upstream_package(package, remote, force)
 
     def _check_upstream_recipe(self, recipe, remote, force):
@@ -121,7 +96,7 @@ class UploadUpstreamChecker:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
             server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
-            assert server_ref
+            assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
             recipe.force = False
         else:
@@ -182,9 +157,6 @@ class PackagePreparator:
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
-        - check if package is ok to be uploaded
-        - check if the remote recipe is newer, raise
-        - compare and decide which files need to be uploaded (and deleted from server)
         """
         try:
             ref = recipe.ref
@@ -278,7 +250,45 @@ class PackagePreparator:
                 CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
+class PkgSigning:
+    def __init__(self, app: ConanApp):
+        self._app = app
+
+    def sign(self, upload_data):
+        print("Signing")
+        for recipe in upload_data.recipes:
+            if recipe.upload:
+                self.sign_recipe(recipe)
+            for package in recipe.packages:
+                if package.upload:
+                    self.sign_package(package)
+
+    def sign_recipe(self, recipe):
+        ref = recipe.ref
+        print("SINGING RECIPE ", ref)
+        ref_layout = self._app.cache.ref_layout(ref)
+        download_export_folder = ref_layout.download_export()
+        signature_file = os.path.join(download_export_folder, "signature.asc")
+        content = "\n".join(recipe.files)
+        save(signature_file, content)
+        recipe.files["signature.asc"] = signature_file
+
+    def sign_package(self, package):
+        pref = package.pref
+        print("SINGING package ", pref)
+        pkg_layout = self._app.cache.pkg_layout(pref)
+        download_pkg_folder = pkg_layout.download_package()
+        signature_file = os.path.join(download_pkg_folder, "signature.asc")
+        content = "\n".join(package.files)
+        save(signature_file, content)
+        package.files["signature.asc"] = signature_file
+
+
 class UploadExecutor:
+    """ does the actual file transfer to the remote. The files to be uploaded have already
+    been computed and are passed in the ``upload_data`` parameter, so this executor is also
+    agnostic about which files are transferred
+    """
     def __init__(self, app: ConanApp):
         self._app = app
         self._output = ConanOutput()
@@ -317,6 +327,8 @@ class UploadExecutor:
         force = recipe.force
         files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
 
+        # TODO: Loading here the conanfile, just to pass it to the hook is a bad symptom. It
+        #   should probably be removed and converted to a plugin
         ref_layout = self._app.cache.ref_layout(ref)
         conanfile_path = ref_layout.conanfile()
         self._app.hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
