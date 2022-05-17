@@ -106,13 +106,30 @@ def test_xcodedeps_dashes_names_and_arch():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.py": GenConanfile().with_name("hello-dashes").with_version("0.1")})
     client.run("export .")
-    client.save({"conanfile.txt": "[requires]\nhello-dashes/0.1\n"}, clean_first=True)
     main = "int main(int argc, char *argv[]) { return 0; }"
-    create_xcode_project(client, "app", main)
+
+    xcode_project = textwrap.dedent("""
+        name: app
+        targets:
+          chat:
+            type: tool
+            platform: macOS
+            sources:
+              - main.cpp
+            configFiles:
+              Debug: conan_config.xcconfig
+              Release: conan_config.xcconfig
+        """)
+
+    client.save({"conanfile.txt": "[requires]\nhello-dashes/0.1\n",
+                 "main.cpp": main,
+                 "project.yml": xcode_project}, clean_first=True)
     client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
     assert os.path.exists(os.path.join(client.current_folder,
                                        "conan_hello_dashes_hello_dashes_vars_release_arm64.xcconfig"))
-    client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")
+    client.run_command("xcodegen generate")
+    client.run_command("xcodebuild -project app.xcodeproj")
+    assert "BUILD SUCCEEDED" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
