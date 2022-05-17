@@ -33,30 +33,6 @@ def pre_package(output, **kwargs):
 
 def post_package(output, **kwargs):
     output.info("post_package()")
-
-def pre_upload(output, **kwargs):
-    output.info("pre_upload()")
-
-def post_upload(output, **kwargs):
-    output.info("post_upload()")
-
-def pre_upload_package(output, **kwargs):
-    output.info("pre_upload_package()")
-
-def post_upload_package(output, **kwargs):
-    output.info("post_upload_package()")
-
-def pre_download(output, **kwargs):
-    output.info("pre_download()")
-
-def post_download(output, **kwargs):
-    output.info("post_download()")
-
-def pre_download_package(output, **kwargs):
-    output.info("pre_download_package()")
-
-def post_download_package(output, **kwargs):
-    output.info("post_download_package()")
 """
 
 
@@ -73,7 +49,7 @@ class HookManagerTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             hook_manager = self._init(my_hook)
-            self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
+            self.assertEqual(8, len(hook_manager.hooks))  # Checks number of methods loaded
 
     def test_check_output(self):
         output = RedirectedTestOutput()

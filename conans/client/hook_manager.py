@@ -8,12 +8,6 @@ valid_hook_methods = ["pre_export", "post_export",
                       "pre_source", "post_source",
                       "pre_build", "post_build",
                       "pre_package", "post_package",
-                      "pre_upload", "post_upload",
-                      "pre_upload_recipe", "post_upload_recipe",
-                      "pre_upload_package", "post_upload_package",
-                      "pre_download", "post_download",
-                      "pre_download_recipe", "post_download_recipe",
-                      "pre_download_package", "post_download_package",
                       "pre_package_info", "post_package_info"]
 
 
