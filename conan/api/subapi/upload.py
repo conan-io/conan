@@ -2,7 +2,7 @@ from conan.api.model import UploadBundle
 from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
-    UploadUpstreamChecker, PkgSigning
+    UploadUpstreamChecker
 from conans.errors import ConanException
 
 
@@ -58,13 +58,11 @@ class UploadAPI:
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there"""
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes()  # Necessary to load remotes, as exports_sources might need to be
-                            # retrieved to prepare the artifacts
+        # Necessary to load remotes, as exports_sources might need to be retrieved to
+        # prepare the artifacts
+        app.load_remotes()
         preparator = PackagePreparator(app)
         preparator.prepare(upload_bundle)
-        # FIXME: POC: Signing all packages to see what breaks
-        signer = PkgSigning(app)
-        signer.sign(upload_bundle)
 
     @api_method
     def upload_bundle(self, upload_bundle, remote):

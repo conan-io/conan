@@ -153,7 +153,7 @@ class UploadTest(unittest.TestCase):
         client.run("install --requires=hello0/1.2.1@frodo/stable --build='*' -r default")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 7)
+        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
     def _set_global_conf(self, client, retry=None, retry_wait=None):
         lines = []
@@ -210,7 +210,7 @@ class UploadTest(unittest.TestCase):
         client.run("install --requires=hello0/1.2.1@frodo/stable --build='*'")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 7)
+        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
     def test_upload_same_package_dont_compress(self):
         client = self._get_client()
