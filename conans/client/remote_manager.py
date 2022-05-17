@@ -179,12 +179,6 @@ class RemoteManager(object):
     def remove_all_packages(self, ref, remote):
         return self._call_remote(remote, "remove_all_packages", ref)
 
-    def get_recipe_file(self, ref, path, remote):
-        return self._call_remote(remote, "get_recipe_file", ref, path)
-
-    def get_package_file(self, pref, path, remote):
-        return self._call_remote(remote, "get_package_file", pref, path)
-
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
 

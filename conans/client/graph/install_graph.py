@@ -2,6 +2,7 @@ import json
 import os
 import textwrap
 
+from conans.cli.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
@@ -236,7 +237,7 @@ class InstallGraph:
         result = [[n.serialize() for n in level] for level in install_order]
         return result
 
-    def raise_errors(self, out):
+    def raise_errors(self):
         missing, invalid = [], []
         for ref, install_node in self._nodes.items():
             for package in install_node.packages.values():
@@ -253,49 +254,38 @@ class InstallGraph:
                 msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
             raise ConanInvalidConfiguration("\n".join(msg))
         if missing:
-            raise_missing(missing, out)
+            self._raise_missing(missing)
 
+    @staticmethod
+    def _raise_missing(missing):
+        # TODO: Remove out argument
+        # TODO: A bit dirty access to .pref
+        missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
+        missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+        out = ConanOutput()
+        for pref_str in missing_prefs_str:
+            out.error("Missing binary: %s" % pref_str)
+        out.writeln("")
 
-def raise_missing(missing, out):
-    # TODO: Remove out argument
-    # TODO: A bit dirty access to .pref
-    missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-    missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
-    for pref_str in missing_prefs_str:
-        out.error("Missing binary: %s" % pref_str)
-    out.writeln("")
+        # Report details just the first one
+        install_node = missing[0]
+        node = install_node.nodes[0]
+        package_id = node.package_id
+        ref, conanfile = node.ref, node.conanfile
 
-    # Report details just the first one
-    install_node = missing[0]
-    node = install_node.nodes[0]
-    package_id = node.package_id
-    ref, conanfile = node.ref, node.conanfile
-    dependencies = [str(dep.dst) for dep in node.dependencies]
+        msg = f"Can't find a '{ref}' package binary '{package_id}' for the configuration:\n"\
+              f"{conanfile.info.dumps()}"
+        conanfile.output.warning(msg)
+        missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
+        if len(missing_prefs) >= 5:
+            build_str = "--build=missing"
+        else:
+            build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
 
-    settings_text = ", ".join(conanfile.info.settings.dumps().splitlines())
-    options_text = ", ".join(conanfile.info.options.dumps().splitlines())
-    dependencies_text = ', '.join(dependencies)
-    requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
+        raise ConanException(textwrap.dedent('''\
+           Missing prebuilt package for '%s'
+           Use 'conan list packages %s --format=html -r=remote > table.html' and open the table.html file to see available packages
+           Or try to build locally from sources with '%s'
 
-    msg = textwrap.dedent('''\
-       Can't find a '%s' package for the specified settings, options and dependencies:
-       - Settings: %s
-       - Options: %s
-       - Dependencies: %s
-       - Requirements: %s
-       - Package ID: %s
-       ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
-    conanfile.output.warning(msg)
-    missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
-    if len(missing_prefs) >= 5:
-        build_str = "--build=missing"
-    else:
-        build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
-
-    raise ConanException(textwrap.dedent('''\
-       Missing prebuilt package for '%s'
-       Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
-       Or try to build locally from sources with '%s'
-
-       More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-       ''' % (missing_pkgs, ref, build_str)))
+           More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
+           ''' % (missing_pkgs, ref, build_str)))
