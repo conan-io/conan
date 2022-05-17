@@ -167,7 +167,7 @@ class AutotoolsToolchain:
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
 
-    def _shared_static_args(self):
+    def shared_static_configure_args(self):
         args = []
         if self._conanfile.options.get_safe("shared", False):
             args.extend(["--enable-shared", "--disable-static"])
@@ -179,7 +179,6 @@ class AutotoolsToolchain:
 
     def generate_args(self):
         configure_args = []
-        configure_args.extend(self._shared_static_args())
         configure_args.extend(self.configure_args)
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
