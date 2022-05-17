@@ -9,7 +9,7 @@ from conans.paths import CONANINFO
 from conans.util.files import save, mkdir, chdir
 
 
-def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref):
+def run_package_method(conanfile, package_id, hook_manager, ref):
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
@@ -25,8 +25,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     scoped_output.info("Generating the package")
     scoped_output.info("Temporary package folder %s" % conanfile.package_folder)
 
-    hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref, package_id=package_id)
+    hook_manager.execute("pre_package", conanfile=conanfile)
 
     scoped_output.highlight("Calling package()")
 
@@ -35,8 +34,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
             with conanfile_remove_attr(conanfile, ['info'], "package"):
                 conanfile.package()
 
-    hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref, package_id=package_id)
+    hook_manager.execute("post_package", conanfile=conanfile)
 
     save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
     manifest = FileTreeManifest.create(conanfile.package_folder)

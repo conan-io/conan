@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.output import ScopedOutput, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
 
@@ -19,16 +19,16 @@ class HookManager:
         self._load_hooks()  # A bit dirty, but avoid breaking tests
         self._output = ConanOutput()
 
-    def execute(self, method_name, **kwargs):
+    def execute(self, method_name, conanfile):
         assert method_name in valid_hook_methods, \
             "Method '{}' not in valid hooks methods".format(method_name)
         hooks = self.hooks.get(method_name)
         if hooks is None:
             return
         for name, method in hooks:
+            scoped_output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self._output)
             try:
-                scoped_output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self._output)
-                method(output=scoped_output, **kwargs)
+                method(conanfile)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 

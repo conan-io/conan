@@ -22,14 +22,12 @@ complete_hook = """
 import os
 
 
-def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
-    assert conanfile
-    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
-    output.info("conanfile_path={}".format(conanfile_path))
-    output.info("reference={}".format(repr(reference)))
+def pre_export(conanfile):
+    [HOOK - complete_hook/complete_hook.py] post_download_package()
+    output.info("[pre_export]: conanfile_path={}".format(conanfile.recipe_folder))
+    output.info("reference={}".format(repr(conanfile.ref)))
 
-def post_export(output, conanfile, conanfile_path, reference, **kwargs):
-    assert conanfile
+def post_export(conanfile):
     # In this case the recipe folder is different than the final export folder
     # TODO: If export_folder will be defined it should match
     assert conanfile.recipe_folder != os.path.dirname(conanfile_path)

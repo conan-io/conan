@@ -58,8 +58,7 @@ class ExportAPI:
         conanfile.folders.set_base_generators(conanfile_folder)
 
         with pkg_layout.set_dirty_context_manager():
-            conan_file_path = cache.ref_layout(ref).conanfile()
-            prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
+            prev = run_package_method(conanfile, package_id, hook_manager, ref)
 
         pref = PkgReference(pref.ref, pref.package_id, prev)
         pkg_layout.reference = pref

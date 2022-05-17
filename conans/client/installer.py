@@ -89,8 +89,7 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        config_source(export_source_folder, conanfile,
-                      conanfile_path, pref.ref, self._hook_manager)
+        config_source(export_source_folder, conanfile, self._hook_manager)
 
     @staticmethod
     def _copy_sources(conanfile, source_folder, build_folder):
@@ -110,8 +109,7 @@ class _PackageBuilder(object):
         write_generators(conanfile)
 
         try:
-            run_build_method(conanfile, self._hook_manager, reference=pref.ref,
-                             package_id=pref.package_id)
+            run_build_method(conanfile, self._hook_manager)
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
@@ -121,7 +119,7 @@ class _PackageBuilder(object):
                 raise exc
             raise ConanException(exc)
 
-    def _package(self, conanfile, pref, conanfile_path):
+    def _package(self, conanfile, pref):
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
         conanfile.output.info("Generated %s" % CONANINFO)
@@ -129,8 +127,7 @@ class _PackageBuilder(object):
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
         # While installing, the infos goes to build folder
-        prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
-                                  pref.ref)
+        prev = run_package_method(conanfile, package_id, self._hook_manager, pref.ref)
 
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
@@ -145,7 +142,6 @@ class _PackageBuilder(object):
         recipe_layout = self._cache.ref_layout(pref.ref)
 
         base_source = recipe_layout.source()
-        conanfile_path = recipe_layout.conanfile()
         base_package = package_layout.package()
 
         base_build, skip_build = self._get_build_folder(conanfile, package_layout)
@@ -177,7 +173,7 @@ class _PackageBuilder(object):
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
-                prev = self._package(conanfile, pref, conanfile_path)
+                prev = self._package(conanfile, pref)
                 assert prev
                 node.prev = prev
                 log_package_built(pref, time.time() - t1)
@@ -299,7 +295,7 @@ class BinaryInstaller:
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_source(None)
             conanfile.folders.set_base_build(None)
-            self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
+            self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         # It will only run generation
@@ -334,7 +330,7 @@ class BinaryInstaller:
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
             # TODO: Check this base_path usage for editable when not defined
-            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
+            self._call_package_info(conanfile, package_folder=base_path, is_editable=True)
 
     def _handle_node_build(self, package, pkg_layout):
         node = package.nodes[0]
@@ -361,11 +357,11 @@ class BinaryInstaller:
             node.conanfile.folders.set_base_package(pkg_layout.package())
             node.conanfile.output.info("Package folder %s" % node.conanfile.package_folder)
 
-    def _call_package_info(self, conanfile, package_folder, ref, is_editable):
+    def _call_package_info(self, conanfile, package_folder, is_editable):
 
         with chdir(package_folder):
             with conanfile_exception_formatter(conanfile, "package_info"):
-                self._hook_manager.execute("pre_package_info", conanfile=conanfile, reference=ref)
+                self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 conanfile.package_info()
 
@@ -391,4 +387,4 @@ class BinaryInstaller:
                     # the one defined in the conanfile cpp_info
                     conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
-                self._hook_manager.execute("post_package_info", conanfile=conanfile, reference=ref)
+                self._hook_manager.execute("post_package_info", conanfile=conanfile)
