@@ -96,27 +96,6 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_recipe_file(self, ref, path):
-        url = self.router.recipe_snapshot(ref)
-        files = self._get_file_list_json(url)
-        if self._is_dir(path, files):
-            return self._list_dir_contents(path, files)
-        else:
-            url = self.router.recipe_file(ref, path)
-            content = self._get_remote_file_contents(url, use_cache=True)
-            return decode_text(content)
-
-    def get_package_file(self, pref, path):
-        """Gets a file content or a directory list"""
-        url = self.router.package_snapshot(pref)
-        files = self._get_file_list_json(url)
-        if self._is_dir(path, files):
-            return self._list_dir_contents(path, files)
-        else:
-            url = self.router.package_file(pref, path)
-            content = self._get_remote_file_contents(url, use_cache=True)
-            return decode_text(content)
-
     @staticmethod
     def _is_dir(path, files):
         if path == ".":
