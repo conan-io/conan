@@ -1,5 +1,6 @@
-import copy
+import json
 from collections import OrderedDict
+from json import JSONEncoder
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
@@ -20,8 +21,7 @@ value_color = Color.CYAN
 def print_list_recipes(results):
     out = ConanOutput()
     for remote, result in results.items():
-        name = remote if remote is not None else "Local Cache"
-        out.writeln(f"{name}:", fg=remote_color)
+        out.writeln(f"{remote}:", fg=remote_color)
         if result.get("error"):
             out.writeln(f"  ERROR: {result.get('error')}", fg=error_color)
         else:
@@ -87,9 +87,7 @@ def print_list_package_ids(results):
                 out.writeln("  There are no packages")
             else:
                 for pref, binary_info in packages.items():
-                    _tmp_pref = copy.copy(pref)
-                    _tmp_pref.revision = None  # Do not show the revision of the package
-                    out.writeln(f"  {_tmp_pref.repr_notime()}", fg=reference_color)
+                    out.writeln(f"  {pref.repr_notime()}", fg=reference_color)
                     for item, contents in binary_info.items():
                         if not contents:
                             continue
@@ -135,7 +133,7 @@ def list_recipes(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
         except Exception as e:
@@ -162,7 +160,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
         except Exception as e:
@@ -196,7 +194,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
         except Exception as e:
@@ -206,7 +204,18 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     return results
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+def _list_packages_json(data):
+    for remote, d in data.items():
+        d["reference"] = repr(d["reference"])
+        try:
+            d["packages"] = {k.repr_notime(): v for k, v in d["packages"].items()}
+        except KeyError:
+            pass
+    myjson = json.dumps(data, indent=4)
+    return myjson
+
+
+@conan_subcommand(formatters={"json": _list_packages_json})
 def list_packages(conan_api, parser, subparser, *args):
     """
     List all the package IDs for a given recipe reference. If the reference doesn't
@@ -232,7 +241,7 @@ def list_packages(conan_api, parser, subparser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        name = getattr(remote, "name", "Local Cache")
         if ref.revision == "latest":
             try:
                 ref.revision = None
@@ -241,7 +250,7 @@ def list_packages(conan_api, parser, subparser, *args):
                 results[name] = {"error": str(e)}
                 continue
             if not ref:
-                results[name] = {"error": "There are no recipes matching '{}'".format(args.reference)}
+                results[name] = {"error": f"There are no recipes matching '{ref}'"}
                 continue
         try:
             # TODO: This should error in the cache if the revision doesn't exist

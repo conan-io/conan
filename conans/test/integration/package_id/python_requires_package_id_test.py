@@ -5,6 +5,10 @@ from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
 
+PKG_ID_1 = "47b42eaf657374a3d040394f03961b66c53bda5e"
+PKG_ID_2 = "8b7006bf91e5b52cc1ac24a7a4d9c326ee954bb2"
+
+
 class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def setUp(self):
@@ -24,20 +28,21 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
     def test_default(self):
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("eda9a39e318258650fd92c53c544261297e11514",
+        pkg_id = "170e82ef3a6bf0bbcda5033467ab9d7805b11d0b"
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("eda9a39e318258650fd92c53c544261297e11514",
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 
         # With a minor change, it fires a rebuild
         self.client.run("export . --name=tool --version=1.2.0")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.2.0", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("cc0b4f4392034760802175c1b51bfaabc1d743d2",
+        self.client2.assert_listed_binary({"pkg/0.1": ("5eb1e7ea93fdd67fe3c3b166d240844648ba2b7a",
                                                        "Build")})
 
     def test_change_mode_conf(self):
@@ -45,14 +50,14 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         save(self.client2.cache.new_config_path, "core.package_id:default_python_mode=patch_mode")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("4001d4ba359a3f3d6583a134d38a3462fe936733",
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1,
                                                        "Build")})
 
         # with a patch change, new ID
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("0fdcb8439123abfc619b4221353d9fabb87d8fba",
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,
                                                        "Build")})
 
     def test_unrelated_conf(self):
@@ -61,14 +66,15 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
              "core.package_id:default_python_mode=unrelated_mode")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("6e8459b64df7b6506a13ccaeaec024bc5d365968",
+        pkg_id = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 
         # with any change the package id doesn't change
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1 --build missing")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("6e8459b64df7b6506a13ccaeaec024bc5d365968",
+        self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Cache")})
 
     def test_change_mode_package_id(self):
@@ -83,14 +89,14 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.client2.save({"conanfile.py": conanfile})
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("4001d4ba359a3f3d6583a134d38a3462fe936733",
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_1,
                                                        "Build")})
 
         # with a patch change, new ID
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.client2.assert_listed_binary({"pkg/0.1": ("0fdcb8439123abfc619b4221353d9fabb87d8fba",
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,
                                                        "Build")})
 
 
@@ -114,17 +120,17 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
 
         client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
         self.assertIn("tool/1.1.1", client2.out)
-        self.assertIn("pkg/0.1: Package '4001d4ba359a3f3d6583a134d38a3462fe936733' created",
+        self.assertIn(f"pkg/0.1: Package '{PKG_ID_1}' created",
                       client2.out)
 
         client.run("create . --name=tool --version=1.1.2")
         client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
-        self.assertIn("ERROR: Missing binary: pkg/0.1:0fdcb8439123abfc619b4221353d9fabb87d8fba",
+        self.assertIn(f"ERROR: Missing binary: pkg/0.1:{PKG_ID_2}",
                       client2.out)
         self.assertIn("tool/1.1.2", client2.out)
         self.assertNotIn("tool/1.1.1", client2.out)
 
         client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
         # self.assertIn("pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
-        self.assertIn("pkg/0.1: Package '0fdcb8439123abfc619b4221353d9fabb87d8fba' created",
+        self.assertIn(f"pkg/0.1: Package '{PKG_ID_2}' created",
                       client2.out)

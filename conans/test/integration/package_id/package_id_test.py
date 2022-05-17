@@ -137,9 +137,9 @@ def test_build_type_remove_windows():
     client.save({"conanfile.py": conanfile})
     client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler=msvc '
                '-s compiler.version=190 -s build_type=Release -s compiler.runtime=dynamic')
-    client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038",
-                                             "Build")})
+    package_id = "6a98270da6641cc6668b83daf547d67451910cf0"
+    client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
     client.run('install --requires=pkg/0.1@ -s os=Windows -s compiler=msvc '
                '-s compiler.version=190 -s build_type=Debug -s compiler.runtime=dynamic')
-    client.assert_listed_binary({"pkg/0.1": ("115c314122246da287f43c08de5eeab316596038", "Cache")})
+    client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 

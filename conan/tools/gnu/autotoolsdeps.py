@@ -34,7 +34,11 @@ class AutotoolsDeps:
 
     @property
     def environment(self):
-        # TODO: Seems we want to make this uniform, equal to other generators
+        """
+
+        :return: An ``Environment`` object containing the computed variables. If you need
+                 to modify some of the computed values you can access to the ``environment`` object.
+        """
         if self._environment is None:
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
