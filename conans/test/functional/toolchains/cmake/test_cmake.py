@@ -45,7 +45,9 @@ def test_simple_cmake_mingw():
 def test_cmake_and_cmake_program_env_var():
     client = TestClient()
     client.run("new hello/1.0 -m cmake_lib")
-    cmake_path = client.run_command("which cmake")
+    client.run_command("which cmake")
+    cmake_path = str(client.out).splitlines()[0]
+
     client.save({"cmake_program": """
         include(default)
 
