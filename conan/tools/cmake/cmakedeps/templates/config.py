@@ -45,13 +45,6 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
-        # Check that the -DCMAKE_BUILD_TYPE argument is always present
-        get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-        if(NOT isMultiConfig AND NOT CMAKE_BUILD_TYPE)
-            message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
-                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
-        endif()
-
         {% if is_module %}
         include(FindPackageHandleStandardArgs)
         set({{ file_name }}_FOUND 1)
@@ -66,6 +59,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
+
+        check_build_type_defined()
 
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
             # Check that we have not already called a find_package with the transitive dependency
