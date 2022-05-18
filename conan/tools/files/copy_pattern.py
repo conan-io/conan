@@ -53,11 +53,11 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 def _create_symlinked_folders(src, dst, symlinked_folders):
     """If in the src folder there are folders that are symlinks, create them in the dst folder
        pointing exactly to the same place."""
-    for folder in symlinked_folders:
-        relative_path = os.path.relpath(folder, src)
+    for relative_path in symlinked_folders:
+        abs_path = os.path.join(src, relative_path)
         symlink_path = os.path.join(dst, relative_path)
         # We create the same symlink in dst, no matter if it is absolute or relative
-        link_dst = os.readlink(folder)  # This could be perfectly broken
+        link_dst = os.readlink(abs_path)  # This could be perfectly broken
 
         # Create the parent directory that will contain the symlink file
         mkdir(os.path.dirname(symlink_path))
@@ -82,16 +82,15 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     else:
         excludes = []
 
-    for root, subfolders, files in os.walk(src, followlinks=True):
+    for root, subfolders, files in os.walk(src):
         if root == excluded_folder:
             subfolders[:] = []
             continue
 
-        if os.path.islink(root):
-            symlinked_folders.append(root)
-            # This is a symlink folder, the symlink will be copied, so stop iterating this folder
-            subfolders[:] = []
-            continue
+        # Check if any of the subfolders is a symlink
+        for subfolder in subfolders:
+            if os.path.islink(os.path.join(root, subfolder)):
+                symlinked_folders.append(os.path.relpath(os.path.join(root, subfolder), src))
 
         relative_path = os.path.relpath(root, src)
         compare_relative_path = relative_path.lower() if ignore_case else relative_path

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import mock
 import os
 import platform
@@ -61,6 +63,48 @@ class ToolCopyTest(unittest.TestCase):
         self.assertEqual("hello1", load(os.path.join(folder2, "texts/file1.txt")))
         self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
         self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
+    def test_symlinks_folder_behavior(self):
+        """
+        https://github.com/conan-io/conan/issues/11150
+
+        test.h
+        inc/test2.h
+        gen/test.bin
+        sym/ => gen
+        """
+        build_folder = temp_folder()
+        test = Path(build_folder, "test.h")
+        test.touch()
+        inc_folder = Path(build_folder, "inc")
+        inc_folder.mkdir(parents=True, exist_ok=True)
+        test2 = inc_folder.joinpath("test2.h")
+        test2.touch()
+        gen_folder = Path(build_folder, "gen")
+        gen_folder.mkdir(parents=True, exist_ok=True)
+        bin = gen_folder.joinpath("test.bin")
+        bin.touch()
+        sym_folder = Path(build_folder, "sym")
+        sym_folder.symlink_to(gen_folder, target_is_directory=True)
+
+        package_folder = temp_folder()
+        # Pattern with the sym/ should copy the files (but keeping the sym folder)
+        copy(None, "sym/*.bin", build_folder, package_folder)
+        assert os.path.exists(os.path.join(package_folder, "sym"))
+        assert os.path.islink(os.path.join(package_folder, "sym"))
+        assert os.path.exists(os.path.join(package_folder, "sym", "test.bin"))
+
+        # Pattern searches in the "inc/" subfolder, "sym/" shouldn't be copied
+        copy(None, "inc/*.h", build_folder, package_folder)
+        assert not os.path.exists(os.path.join(package_folder, "sym")), \
+            "The sym folder shouldn't exist in package_folder"
+
+        # There is no *.h files in "sym/" (gen/) so it shouldn't be copied
+        copy(None, "*.h", build_folder, package_folder)
+        assert not os.path.exists(os.path.join(package_folder, "sym")), \
+            "The sym folder shouldn't exist in package_folder"
+
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_missing_error(self):
