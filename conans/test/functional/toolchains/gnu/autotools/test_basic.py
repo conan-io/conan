@@ -250,6 +250,7 @@ def test_autotools_with_pkgconfigdeps():
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 @pytest.mark.tool_autotools()
 def test_autotools_option_checking():
+    # https://github.com/conan-io/conan/issues/11265
     client = TestClient(path_with_spaces=False)
     client.run("new mylib/1.0@ -m autotools_lib")
     conanfile = textwrap.dedent("""
@@ -296,7 +297,7 @@ def test_autotools_option_checking():
     client.save({"test_package/conanfile.py": conanfile})
     client.run("create . -tf=None")
 
-    # will fail because using the unrecognized options: --disable-shared, --enable-static, --with-pic
+    # check that the shared flags are not added to the exe's configure, making it fail
     client.run("test test_package mylib/1.0@")
     assert "configure: error: unrecognized options: --disable-shared, --enable-static, --with-pic" \
            not in client.out
