@@ -121,11 +121,6 @@ def test_reuse_with_modules_and_config(client):
     client.run("build .")
 
 
-<<<<<<< HEAD
-@pytest.mark.tool("cmake")
-@pytest.mark.parametrize("find_mode", ["both", "config", "module"])
-def test_transitive_modules_found(find_mode):
-=======
 find_modes = [
     ("both", "both", ""),
     ("config", "config", ""),
@@ -135,9 +130,9 @@ find_modes = [
 ]
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("find_mode_PKGA, find_mode_PKGB, find_mode_consumer", find_modes)
 def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_consumer):
->>>>>>> develop
     """
     related to https://github.com/conan-io/conan/issues/10224
     modules files variables were set with the pkg_name_FOUND or pkg_name_VERSION
