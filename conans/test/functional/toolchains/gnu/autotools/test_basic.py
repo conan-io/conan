@@ -247,6 +247,8 @@ def test_autotools_with_pkgconfigdeps():
     assert re.search("L.*hello.*1.0.*package", str(client.out))
 
 
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool_autotools()
 def test_autotools_option_checking():
     client = TestClient(path_with_spaces=False)
     client.run("new mylib/1.0@ -m autotools_lib")
