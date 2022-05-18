@@ -12,6 +12,19 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_xcodebuild
 @pytest.mark.tool_xcodegen
 def test_xcodedeps_components():
+    """
+    tcp/1.0 is a lib without components
+    network/1.0 lib that requires tcp/1.0 and has three components:
+     - core
+     - client -> requires core component and tcp::tcp
+     - server -> requires core component and tcp::tcp
+
+    chat/1.0 -> lib that requires network::client component
+
+    We create an application called ChatApp that uses XcodeDeps for chat/1.0 dependency
+    And check that we are not requiring more than the needed components,
+    nothing from network::server for example
+    """
     client = TestClient(path_with_spaces=False)
 
     client.run("new tcp/1.0 -m=cmake_lib")
