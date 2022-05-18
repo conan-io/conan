@@ -704,3 +704,27 @@ def test_profile_override_conflict():
     assert "protoc/0.2 (test package)" in client.out
     assert "WARN: The package created was 'protoc/0.1' but the reference being tested " \
            "is 'protoc/0.2'" in client.out
+
+
+def test_visible_tool_require():
+    c = TestClient()
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class Tool(ConanFile):
+            name = "tool"
+            version = "1.0"
+            def package_info(self):
+                self.buildenv_info.append_path("PATH", "mytoolpath")
+        """)
+    c.save({"tool/conanfile.py": tool,
+            "lib/conanfile.py": GenConanfile("lib", "1.0").with_tool_requirement("tool/1.0",
+                                                                                 visible=True),
+            "app/conanfile.py": GenConanfile().with_requires("lib/1.0")})
+    c.run("create tool")
+    c.run("create lib")
+    c.run("install app")
+    print(c.out)
+    print(c.current_folder)
+    ext = "bat" if platform.system() == "Windows" else "sh"
+    buildenv = c.load(f"app/conanbuildenv.{ext}")
+    print(buildenv)
