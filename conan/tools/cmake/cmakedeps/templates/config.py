@@ -45,6 +45,13 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
+        # Check that the -DCMAKE_BUILD_TYPE argument is always present
+        get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+        if(NOT isMultiConfig AND NOT CMAKE_BUILD_TYPE)
+            message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
+                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
+        endif()
+
         {% if is_module %}
         include(FindPackageHandleStandardArgs)
         set({{ file_name }}_FOUND 1)

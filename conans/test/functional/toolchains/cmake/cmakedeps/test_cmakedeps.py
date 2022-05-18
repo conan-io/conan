@@ -378,3 +378,56 @@ def test_system_dep():
         data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
+
+
+@pytest.mark.tool_cmake
+def test_error_missing_build_type():
+    # https://github.com/conan-io/conan/issues/11168
+    client = TestClient()
+
+    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("create . -tf=None")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        hello/1.0
+        [generators]
+        CMakeDeps
+        CMakeToolchain
+    """)
+
+    main = textwrap.dedent("""
+        #include <hello.h>
+        int main() {hello();return 0;}
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app)
+        find_package(hello REQUIRED)
+        add_executable(app)
+        target_link_libraries(app hello::hello)
+        target_sources(app PRIVATE main.cpp)
+    """)
+
+    client.save({
+        "conanfile.txt": conanfile,
+        "main.cpp": main,
+        "CMakeLists.txt": cmakelists
+    }, clean_first=True)
+
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake", assert_error=True)
+    assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
+
+    client.save({
+        "conanfile.txt": conanfile,
+        "main.cpp": main,
+        "CMakeLists.txt": cmakelists
+    }, clean_first=True)
+
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G Xcode")
+    client.run_command("cmake --build . --config Release")
+    client.run_command("./Release/app")
+    assert "Hello World Release!" in client.out
