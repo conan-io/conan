@@ -55,13 +55,14 @@ class Autotools(object):
     def make(self, target=None, args=None):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
-        str_args = self._make_args + " ".join(args) if args else ""
+        str_args = self._make_args
+        str_extra_args = " ".join(args) if args else ""
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
             if njobs:
                 jobs = "-j{}".format(njobs)
-        command = join_arguments([make_program, target, str_args, jobs])
+        command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
     def _fix_osx_shared_install_name(self):
