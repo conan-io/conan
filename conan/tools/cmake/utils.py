@@ -22,9 +22,9 @@ def get_file_name(conanfile, forced_module_mode=None):
 def get_find_mode(conanfile):
     """
     :param conanfile: conanfile of the requirement
-    :return: "none" or "config" or "module" or "both" or None when not set
+    :return: "none" or "config" or "module" or "both" or "config" when not set
     """
     tmp = conanfile.cpp_info.get_property("cmake_find_mode")
     if tmp is None:
-        return None
+        return "config"
     return tmp.lower()
