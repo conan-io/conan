@@ -41,6 +41,21 @@ def test_simple_cmake_mingw():
 
 
 @pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() == "Windows", reason="Needs UNIX")
+def test_cmake_and_cmake_program_env_var():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    cmake_path = client.run_command("which cmake")
+    client.save({"cmake_program": """
+        include(default)
+
+        [buildenv]
+        CMAKE_PROGRAM={}
+        """.format(cmake_path)})
+    client.run("create . --profile=cmake_program")
+
+
+@pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent(r"""
