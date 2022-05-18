@@ -427,7 +427,13 @@ def test_error_missing_build_type():
     }, clean_first=True)
 
     client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G Xcode")
+
+    generator = {
+        "Windows": '-G "Visual Studio 15 Win64"',
+        "Darwin": '-G "Xcode"',
+        "Linux": '-G "Ninja Multi-Config"'
+    }.get(platform.system())
+
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
     client.run_command("cmake --build . --config Release")
-    client.run_command("./Release/app")
-    assert "Hello World Release!" in client.out
+    assert "BUILD SUCCEEDED" in client.out
