@@ -11,7 +11,7 @@ from conans.util.runners import check_output_runner
 
 class Autotools(object):
 
-    def __init__(self, conanfile, namespace=None, build_script_folder=None):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
@@ -19,14 +19,14 @@ class Autotools(object):
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
         self.default_configure_install_args = True
-        self.build_script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
-            if build_script_folder else self._conanfile.source_folder
 
-    def configure(self):
+    def configure(self, build_script_folder=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
+        script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
+            if build_script_folder else self._conanfile.source_folder
         configure_args = []
         if self.default_configure_install_args:
             def _get_argument(argument_name, cppinfo_name):
@@ -45,7 +45,7 @@ class Autotools(object):
         self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args)) \
                                if configure_args else self._configure_args
 
-        configure_cmd = "{}/configure".format(self.build_script_folder)
+        configure_cmd = "{}/configure".format(script_folder)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
         configure_cmd = subsystem_path(subsystem, configure_cmd)
         cmd = '"{}" {}'.format(configure_cmd, self._configure_args)
