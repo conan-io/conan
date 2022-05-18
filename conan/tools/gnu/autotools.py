@@ -94,6 +94,9 @@ class Autotools(object):
                     _fix_install_name(shared_lib, full_folder)
 
     def install(self):
+        # FIXME: we have to run configure twice because the local flow won't work otherwise
+        #  because there's no package_folder until the package step
+        self.configure()
         self.make(target="install", args=["DESTDIR={}".format(self._conanfile.package_folder)])
         if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
             self._fix_osx_shared_install_name()
