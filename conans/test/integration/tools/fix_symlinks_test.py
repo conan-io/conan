@@ -80,7 +80,7 @@ class FixSymlinksTestCase(unittest.TestCase):
 
         # Check the work is done
         pkg_ref = t.get_latest_package_reference(self.name_ref,
-                                                 '99efc6979ac688ef4d6962ebf14fdb47034b4dcb')
+                                                 '0e800d1d59927b8d9dcb8309a9ed120f01566b9d')
         assert pkg_ref is not None
         package_folder = t.get_latest_pkg_layout(pkg_ref).package()
 

@@ -154,6 +154,10 @@ class _EnvValue:
 
 
 class Environment:
+    """
+    Generic class that helps to define modifications to the environment variables.
+    """
+
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
@@ -170,12 +174,21 @@ class Environment:
         return repr(self._values)
 
     def dumps(self):
-        """ returns a string with a profile-like original definition, not the full environment
-        values
+
+        """
+        :return: A string with a profile-like original definition, not the full environment
+                 values
         """
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
+        """
+        Define `name` environment variable with value `value`
+
+        :param name: Name of the variable
+        :param value: Value that the environment variable will take
+        :param separator: The character to separate appended or prepended values
+        """
         self._values[name] = _EnvValue(name, value, separator, path=False)
 
     def define_path(self, name, value):
@@ -184,31 +197,66 @@ class Environment:
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
+
+        :param name: Name of the variable to unset
         """
         self._values[name] = _EnvValue(name, None)
 
     def append(self, name, value, separator=None):
+        """
+        Append the `value` to an environment variable `name`
+
+        :param name: Name of the variable to append a new value
+        :param value: New value
+        :param separator: The character to separate the appended value with the previous value. By default it will use a blank space.
+        """
         self._values.setdefault(name, _EnvValue(name)).append(value, separator)
 
     def append_path(self, name, value):
+        """
+        Similar to "append" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
+
+        :param name: Name of the variable to append a new value
+        :param value: New value
+        """
         self._values.setdefault(name, _EnvValue(name, path=True)).append(value)
 
     def prepend(self, name, value, separator=None):
+        """
+        Prepend the `value` to an environment variable `name`
+
+        :param name: Name of the variable to prepend a new value
+        :param value: New value
+        :param separator: The character to separate the prepended value with the previous value
+        """
         self._values.setdefault(name, _EnvValue(name)).prepend(value, separator)
 
     def prepend_path(self, name, value):
+        """
+        Similar to "prepend" method but indicating that the variable is a filesystem path. It will automatically handle the path separators depending on the operating system.
+
+        :param name: Name of the variable to prepend a new value
+        :param value: New value
+        """
         self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
 
     def remove(self, name, value):
+        """
+        Removes the `value` from the variable `name`.
+
+        :param name: Name of the variable
+        :param value: Value to be removed.
+        """
         self._values[name].remove(value)
 
     def compose_env(self, other):
-        """ 
+        """
+        Compose an Environment object with another one.
         ``self`` has precedence, the "other" will add/append if possible and not
         conflicting, but ``self`` mandates what to do. If ``self`` has ``define()``, without
-        placeholder, that will remain
+        placeholder, that will remain.
 
-        :param other: the "other" environment
+        :param other: the "other" Environment
         :type other: class:`Environment`
         """
         for k, v in other._values.items():
@@ -228,10 +276,20 @@ class Environment:
         return other._values == self._values
 
     def vars(self, conanfile, scope="build"):
+        """
+        Return an EnvVars object from the current Environment object
+        :param conanfile: Instance of a conanfile, usually ``self`` in a recipe
+        :param scope: Determine the scope of the declared variables.
+        :return:
+        """
         return EnvVars(conanfile, self, scope)
 
 
 class EnvVars:
+    """
+    Represents an instance of environment variables for a given system. It is obtained from the generic Environment class.
+
+    """
     def __init__(self, conanfile, env, scope):
         self._values = env._values  # {var_name: _EnvValue}, just a reference to the Environment
         self._conanfile = conanfile
@@ -255,12 +313,21 @@ class EnvVars:
         return v.get_value(self._subsystem, self._pathsep)
 
     def items(self):
-        """returns ``{str: str}`` (varname: value)"""
+        """
+        Returns a dict with variable name as keys and variable values as values
+
+        :return: ``{str: str}`` (varname: value)
+        """
         return {k: v.get_value(self._subsystem, self._pathsep)
                 for k, v in self._values.items()}.items()
 
     @contextmanager
     def apply(self):
+        """
+        Context manager to apply the declared variables to the current ``os.environ`` restoring
+        the original environment when the context ends.
+
+        """
         apply_vars = self.items()
         old_env = dict(os.environ)
         os.environ.update(apply_vars)
@@ -353,7 +420,7 @@ class EnvVars:
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
            echo Capturing current environment in "{deactivate_file}"
-           echo echo Restoring environment >> "{deactivate_file}"
+           echo "echo Restoring environment" >> "{deactivate_file}"
            for v in {vars}
            do
                value=$(printenv $v)
@@ -382,6 +449,15 @@ class EnvVars:
         save(file_location, content)
 
     def save_script(self, filename):
+        """
+        Saves a script file (bat, sh, ps1) with a launcher to set the environment.
+        If the conf "tools.env.virtualenv:powershell" is set to True it will generate powershell
+        launchers if Windows.
+
+        :param filename: Name of the file to generate. If the extension is provided, it will generate
+                         the launcher script for that extension, otherwise the format will be deduced
+                         checking if we are running inside Windows (checking also the subsystem) or not.
+        """
         name, ext = os.path.splitext(filename)
         if ext:
             is_bat = ext == ".bat"

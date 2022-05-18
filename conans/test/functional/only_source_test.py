@@ -31,7 +31,7 @@ class OnlySourceTest(unittest.TestCase):
                       "--build=hello1/1.1@lasote/stable'",
                       client.out)
         # Only 1 reference!
-        assert "Use 'conan search hello0/0.0@lasote/stable --table=table.html" in client.out
+        assert "Use 'conan list packages hello0/0.0@lasote/stable" in client.out
 
         # We generate the package for hello0/0.0
         client.run("install --requires=hello0/0.0@lasote/stable --build hello0*")

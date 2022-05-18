@@ -130,7 +130,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:357a#66c6", client.out)
+        self.assertIn("Uploading hello0/1.2.1@user/testing#5dc5:da39#eb26", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
@@ -255,9 +255,9 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
-        self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
-        self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
-        self.assertIn("Cannot upload corrupted package", client.out)
+        self.assertIn("ERROR:     'include/hello.h'", client.out)
+        self.assertIn("ERROR:     'added.txt'", client.out)
+        self.assertIn("ERROR: There are corrupted artifacts, check the error logs", client.out)
 
     def test_upload_modified_recipe(self):
         client = TestClient(default_server_user=True)
@@ -276,7 +276,7 @@ class UploadTest(unittest.TestCase):
         client2.run("export . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         latest_rrev = client2.cache.get_latest_recipe_reference(ref)
-        manifest = client2.cache.ref_layout(latest_rrev).recipe_manifest()
+        manifest, _ = client2.cache.ref_layout(latest_rrev).recipe_manifests()
         manifest.time += 10
         manifest.save(client2.cache.ref_layout(latest_rrev).export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
@@ -304,7 +304,7 @@ class UploadTest(unittest.TestCase):
         client2.run("export . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         rrev2 = client2.cache.get_latest_recipe_reference(ref)
-        manifest = client2.cache.ref_layout(rrev2).recipe_manifest()
+        manifest, _ = client2.cache.ref_layout(rrev2).recipe_manifests()
         manifest.time += 10
         manifest.save(client2.cache.ref_layout(rrev2).export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")

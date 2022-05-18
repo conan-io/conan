@@ -13,6 +13,16 @@ from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
 
 class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None):
+        """
+
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param namespace: This argument avoids collisions when you have multiple toolchain calls in
+               the same recipe. By setting this argument, the *conanbuild.conf* file used to pass
+               information to the build helper will be named as *<namespace>_conanbuild.conf*. The default
+               value is ``None`` meaning that the name of the generated file is *conanbuild.conf*. This
+               namespace must be also set with the same value in the constructor of the Autotools build
+               helper so that it reads the information from the proper file.
+        """
         self._conanfile = conanfile
         self._namespace = namespace
 

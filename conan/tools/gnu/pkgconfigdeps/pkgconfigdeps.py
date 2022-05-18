@@ -9,7 +9,11 @@ class PkgConfigDeps(object):
 
     @property
     def content(self):
-        """Get all the *.pc files content"""
+        """
+        Get all the \*.pc files content
+
+        :return: A dict with file names as keys and contents as values
+        """
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for _, dep in host_req.items():
@@ -27,7 +31,10 @@ class PkgConfigDeps(object):
         return pc_files
 
     def generate(self):
-        """Save all the *.pc files"""
+        """
+        Save all the \*.pc files
+        """
+
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, (content, _) in generator_files.items():

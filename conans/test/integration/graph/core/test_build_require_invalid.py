@@ -21,7 +21,7 @@ class TestInvalidConfiguration:
                 if self.info.settings.os == "Windows":
                     raise ConanInvalidConfiguration("Package does not work in Windows!")
        """)
-    linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
+    linux_package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
     invalid = "Invalid"
 
     @pytest.fixture(scope="class")
@@ -108,7 +108,7 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
                if self.settings.os == "Windows":
                    return [{"settings": [("os", "Linux")]}]
         """)
-    linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
+    linux_package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
     invalid = "ConfigurationError"
 
 
@@ -190,5 +190,5 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
                if self.settings.os == "Windows":
                    return [{"settings": [("os", "Linux")]}]
        """)
-    linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
-    windows_package_id = "cf2e4ff978548fafd099ad838f9ecb8858bf25cb"
+    linux_package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
+    windows_package_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"

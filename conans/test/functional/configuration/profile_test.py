@@ -519,6 +519,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client = TestClient()
         self.client.save({CONANFILE: self.conanfile,
                           "profile1": self.profile1, "profile2": self.profile2})
+        self._pkg_lib_10_id = "9b7f1e80c96289e8d9a3e7ded02830525090d5d4"
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
@@ -539,7 +540,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("graph info . --profile profile1 --profile profile2")
-        self.assertIn("ef4cdf9abf2825f3335ef1287c147076ab24173e", self.client.out)
+        self.assertIn(self._pkg_lib_10_id, self.client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
@@ -569,7 +570,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_export_pkg(self):
         self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
-        self.assertIn("ef4cdf9abf2825f3335ef1287c147076ab24173e", self.client.out)
+        self.assertIn(self._pkg_lib_10_id, self.client.out)
 
     def test_profile_crazy_inheritance(self):
         profile1 = dedent("""

@@ -389,7 +389,7 @@ def test_remote_version_ranges():
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
-        t.assert_listed_binary({f"dep/{solution}": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+        t.assert_listed_binary({f"dep/{solution}": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                     "Download (default)")})
 
 

@@ -35,7 +35,7 @@ def cppstd_compat(conanfile):
     if not compiler or not compiler_version or not cppstd:
         return []
     base = dict(conanfile.settings.values_list)
-    cppstd_possible_values = supported_cppstd(compiler, compiler_version)
+    cppstd_possible_values = supported_cppstd(conanfile)
     ret = []
     for _cppstd in cppstd_possible_values:
         if _cppstd is None or _cppstd == cppstd:
@@ -82,9 +82,7 @@ def app_compat(conanfile):
             configuration["compiler.runtime"] = "dynamic"
             configuration["compiler.runtime_type"] = configuration["build_type"]
 
-
-    configuration["compiler.cppstd"] = conanfile.settings.get_safe("compiler.cppstd") or \
-                                       default_cppstd(compiler, compiler_version)
+    configuration["compiler.cppstd"] = conanfile.settings.get_safe("compiler.cppstd") or default_cppstd(conanfile, compiler, compiler_version)
     return [{"settings": [(k, v) for k, v in configuration.items()]}]
 
 """

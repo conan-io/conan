@@ -197,7 +197,7 @@ def test_conf_package_patterns():
     client.save({"dep/conanfile.py": str(conanfile) + generate,
                  "pkg/conanfile.py": str(conanfile.with_requirement("dep/0.1", visible=False)) + generate,
                  "consumer/conanfile.py": str(conanfile.with_requires("pkg/0.1")
-                .with_settings("os", "build_type", "arch")) + generate})
+                .with_settings("os", "build_type")) + generate})
 
     client.run("export dep --name=dep --version=0.1")
     client.run("export pkg --name=pkg --version=0.1")

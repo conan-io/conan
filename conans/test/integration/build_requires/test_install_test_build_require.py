@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 
@@ -139,9 +140,8 @@ def test_create_build_requires():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=br --version=0.1  --build-require -s:h os=Linux -s:b os=Windows")
-    client.assert_listed_binary({"br/0.1": ("cf2e4ff978548fafd099ad838f9ecb8858bf25cb", "Build")},
+    client.assert_listed_binary({"br/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Build")},
                                 build=True)
-    assert "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31" not in client.out
     assert "br/0.1: MYOS=Windows!!!" in client.out
     assert "br/0.1: MYTARGET=Linux!!!" in client.out
     assert "br/0.1: MYOS=Linux!!!" not in client.out
@@ -177,3 +177,43 @@ def test_install_multiple_tool_requires_cli():
     c.run("install --tool-requires=cmake/0.1 --tool-requires=gcc/0.2 --requires=zlib/1.1")
     c.assert_listed_require({"cmake/0.1": "Cache", "gcc/0.2": "Cache"}, build=True)
     c.assert_listed_require({"zlib/1.1": "Cache"})
+
+
+def test_bootstrap_other_architecture():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import cross_building
+
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "1.0"
+            settings = "os"
+            def build_requirements(self):
+                if cross_building(self):
+                    self.tool_requires("tool/1.0")
+        """)
+    c.save({"conanfile.py": conanfile})
+    win_pkg_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+    linux_pkg_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
+
+    c.run("create . -s:b os=Windows -s:h os=Windows")
+    c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")})
+    assert "Build requirements" not in c.out
+
+    # TODO: The --build=tool that builds always both needs solution
+    c.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+    c.assert_listed_binary({"tool/1.0": (linux_pkg_id, "Build")})
+    c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Cache")}, build=True)
+
+    c.run("graph build-order --requires=tool/1.0 -s:b os=Windows -s:h os=Linux --build=* "
+          "--format=json", redirect_stdout="o.json")
+    order = json.loads(c.load("o.json"))
+    package1 = order[0][0]["packages"][0][0]
+    package2 = order[0][0]["packages"][1][0]
+    assert package1["package_id"] == win_pkg_id
+    assert package1["depends"] == []
+    assert package2["package_id"] == linux_pkg_id
+    assert package2["depends"] == [win_pkg_id]
+
+

@@ -1,11 +1,10 @@
 from typing import Dict
 
-from conan.api.model import Remote, PkgConfiguration
+from conan.api.model import Remote
 from conans.cli.conan_app import ConanApp
-from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.search.search import get_packages_search_info, filter_packages
+from conans.search.search import get_cache_packages_binary_info, filter_packages
 
 
 class ListAPI:
@@ -64,22 +63,20 @@ class ListAPI:
         return results
 
     def packages_configurations(self, ref: RecipeReference,
-                                remote=None) -> Dict[PkgReference, PkgConfiguration]:
+                                remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
         if not remote:
             app = ConanApp(self.conan_api.cache_folder)
             prefs = app.cache.get_package_references(ref)
-            packages = get_packages_search_info(app.cache, prefs)
-            results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
+            packages = get_cache_packages_binary_info(app.cache, prefs)
         else:
             app = ConanApp(self.conan_api.cache_folder)
             if ref.revision == "latest":
                 ref.revision = None
                 ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
             packages = app.remote_manager.search_packages(remote, ref)
-            results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
-        return results
+        return packages
 
     def filter_packages_configurations(self, pkg_configurations, query):
         """

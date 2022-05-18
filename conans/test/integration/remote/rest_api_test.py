@@ -13,7 +13,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
 from conans.util.env import environment_update
 from conans.client.userio import UserInput
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, load_binary_info
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -142,8 +142,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the info about this ConanFileReference
         info = self.api.search_packages(ref1)
-        self.assertEqual(ConanInfo.loads(conan_info).serialize_min(),
-                         ConanInfo.loads(info["1F23223EFDA"]["content"]).serialize_min())
+        self.assertEqual(conan_info, info["1F23223EFDA"]["content"])
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)

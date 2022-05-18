@@ -55,6 +55,8 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
     if not upload_bundle.any_upload:
         return
+
+    conan_api.upload.prepare(upload_bundle)
     conan_api.upload.upload_bundle(upload_bundle, remote)
 
 

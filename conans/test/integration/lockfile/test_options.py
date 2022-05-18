@@ -40,7 +40,7 @@ def test_options():
     to_build = json.loads(json_file)
     ffmpeg = to_build[0][0]
     ref = ffmpeg["ref"]
-    options = " ".join(f"-o {option}" for option in ffmpeg["packages"][0]["options"])
+    options = " ".join(f"-o {option}" for option in ffmpeg["packages"][0][0]["options"])
 
     cmd = "install --requires={} --build={} {}".format(ref, ref, options)
     client.run(cmd)
