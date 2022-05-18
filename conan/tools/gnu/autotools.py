@@ -34,7 +34,7 @@ class Autotools(object):
                 return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
 
             # If someone want arguments but not the defaults can pass them in args manually
-            configure_args.extend(["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
+            configure_args.extend(["--prefix=/",
                                    _get_argument("bindir", "bindirs"),
                                    _get_argument("sbindir", "bindirs"),
                                    _get_argument("libdir", "libdirs"),
@@ -52,10 +52,10 @@ class Autotools(object):
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
 
-    def make(self, target=None):
+    def make(self, target=None, args=None):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
-        str_args = self._make_args
+        str_args = self._make_args + " ".join(args) if args else ""
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
@@ -75,28 +75,26 @@ class Autotools(object):
                                                                                          lib_name))
             self._conanfile.run(command)
 
-        def _is_modified_install_name(lib_name, lib_folder):
+        def _is_modified_install_name(lib_name, full_folder, libdir):
             """
             Check that the user did not change the default install_name using the install_name
             linker flag in that case we do not touch this field
             """
-            command = "otool -D {}".format(os.path.join(lib_folder, lib_name))
-            out = check_output_runner(command).strip().split(":")[1]
-            return False if str(os.path.join(lib_folder, shared_lib)) in out else True
+            command = "otool -D {}".format(os.path.join(full_folder, lib_name))
+            install_path = check_output_runner(command).strip().split(":")[1].strip()
+            default_path = str(os.path.join("/", libdir, shared_lib))
+            return False if default_path == install_path else True
 
         libdirs = getattr(self._conanfile.cpp.package, "libdirs")
-        for folder in libdirs:
-            full_folder = os.path.join(self._conanfile.package_folder, folder)
+        for libdir in libdirs:
+            full_folder = os.path.join(self._conanfile.package_folder, libdir)
             shared_libs = _osx_collect_dylibs(full_folder)
             for shared_lib in shared_libs:
-                if not _is_modified_install_name(shared_lib, full_folder):
+                if not _is_modified_install_name(shared_lib, full_folder, libdir):
                     _fix_install_name(shared_lib, full_folder)
 
     def install(self):
-        # FIXME: we have to run configure twice because the local flow won't work otherwise
-        #  because there's no package_folder until the package step
-        self.configure()
-        self.make(target="install")
+        self.make(target="install", args=["DESTDIR={}".format(self._conanfile.package_folder)])
         if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
             self._fix_osx_shared_install_name()
 
