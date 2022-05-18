@@ -103,7 +103,6 @@ def test_generator_files():
             assert os.path.isfile(config_file)
 
         conandeps = client.load("conandeps.xcconfig")
-        print("jajsjdasdasda")
         assert '#include "conan_hello.xcconfig"' in conandeps
         assert '#include "conan_goodbye.xcconfig"' in conandeps
 
