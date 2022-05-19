@@ -65,52 +65,52 @@ def client():
     return t
 
 
-# @pytest.mark.tool_cmake
-# def test_reuse_with_modules_and_config(client):
-#     cpp = gen_function_cpp(name="main")
+@pytest.mark.tool_cmake
+def test_reuse_with_modules_and_config(client):
+    cpp = gen_function_cpp(name="main")
 
-#     cmake_exe_config = """
-#     add_executable(myapp main.cpp)
-#     find_package(MyDep) # This one will find the config
-#     target_link_libraries(myapp MyDepTarget::MyCrispinTarget)
-#     """
+    cmake_exe_config = """
+    add_executable(myapp main.cpp)
+    find_package(MyDep) # This one will find the config
+    target_link_libraries(myapp MyDepTarget::MyCrispinTarget)
+    """
 
-#     cmake_exe_module = """
-#     add_executable(myapp2 main.cpp)
-#     find_package(mi_dependencia) # This one will find the module
-#     target_link_libraries(myapp2 mi_dependencia_namespace::mi_crispin_target)
-#     """
+    cmake_exe_module = """
+    add_executable(myapp2 main.cpp)
+    find_package(mi_dependencia) # This one will find the module
+    target_link_libraries(myapp2 mi_dependencia_namespace::mi_crispin_target)
+    """
 
-#     cmake = """
-#     set(CMAKE_CXX_COMPILER_WORKS 1)
-#     set(CMAKE_CXX_ABI_COMPILED 1)
-#     set(CMAKE_C_COMPILER_WORKS 1)
-#     set(CMAKE_C_ABI_COMPILED 1)
+    cmake = """
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
 
-#     cmake_minimum_required(VERSION 3.15)
-#     project(project CXX)
-#     {}
-#     """
+    cmake_minimum_required(VERSION 3.15)
+    project(project CXX)
+    {}
+    """
 
-#     # test config
-#     conanfile = GenConanfile().with_name("myapp")\
-#         .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
-#     client.save({"conanfile.py": conanfile,
-#                  "main.cpp": cpp,
-#                  "CMakeLists.txt": cmake.format(cmake_exe_config)})
+    # test config
+    conanfile = GenConanfile().with_name("myapp")\
+        .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
+    client.save({"conanfile.py": conanfile,
+                 "main.cpp": cpp,
+                 "CMakeLists.txt": cmake.format(cmake_exe_config)})
 
-#     client.run("install . -if=install")
-#     client.run("build . -if=install")
+    client.run("install . -if=install")
+    client.run("build . -if=install")
 
-#     # test modules
-#     conanfile = GenConanfile().with_name("myapp")\
-#         .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
-#     client.save({"conanfile.py": conanfile,
-#                  "main.cpp": cpp,
-#                  "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
+    # test modules
+    conanfile = GenConanfile().with_name("myapp")\
+        .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
+    client.save({"conanfile.py": conanfile,
+                 "main.cpp": cpp,
+                 "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
 
-#     client.run("install . -if=install")
-#     client.run("build . -if=install")
+    client.run("install . -if=install")
+    client.run("build . -if=install")
 
 
 find_modes = [
