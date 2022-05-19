@@ -8,9 +8,9 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_xcodedeps_components():
     """
     tcp/1.0 is a lib without components
