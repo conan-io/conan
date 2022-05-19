@@ -316,8 +316,8 @@ def test_autotools_arguments_override():
         from conan.tools.layout import basic_layout
 
 
-        class HelloConan(ConanFile):
-            name = "hello"
+        class MyLibConan(ConanFile):
+            name = "mylib"
             version = "1.0"
 
             # Binary configuration
@@ -353,7 +353,7 @@ def test_autotools_arguments_override():
                 autotools.install(args=['DESTDIR={}/somefolder'.format(self.package_folder)])
 
             def package_info(self):
-                self.cpp_info.libs = ["hello"]
+                self.cpp_info.libs = ["mylib"]
                 self.cpp_info.libdirs = ["somefolder/customlibfolder"]
                 self.cpp_info.includedirs = ["somefolder/customincludefolder"]
         """)
@@ -361,14 +361,12 @@ def test_autotools_arguments_override():
     client.save({"conanfile.py": conanfile})
     client.run("create . -tf=None")
 
-    print(client.out)
-
     # autoreconf args --force that is default should not be there
     assert "--force" not in client.out
     assert "--install" in client.out
 
-    package_id = re.search(r"hello\/1.0: Package (\S+)", str(client.out)).group(1).replace("'", "")
-    pref = PackageReference(ConanFileReference.loads("hello/1.0"), package_id)
+    package_id = re.search(r"mylib\/1.0: Package (\S+)", str(client.out)).group(1).replace("'", "")
+    pref = PackageReference(ConanFileReference.loads("mylib/1.0"), package_id)
     package_folder = client.cache.package_layout(pref.ref).package(pref)
 
     # we override the default DESTDIR in the install
@@ -391,3 +389,6 @@ def test_autotools_arguments_override():
     assert "--warn-undefined-variables" in client.out
     assert "--verbose" in client.out
     assert "--keep-going" in client.out
+
+    client.run("test test_package mylib/1.0@")
+    assert "mylib/1.0: Hello World Release!" in client.out
