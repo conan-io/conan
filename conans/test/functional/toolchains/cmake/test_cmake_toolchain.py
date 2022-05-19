@@ -658,19 +658,13 @@ def test_cmake_presets_multiple_settings_multi_config():
     # We can build with cmake manually
     if platform.system() == "Windows":
         client.run_command("cmake . --preset default-msvc-192-17")
+
         client.run_command("cmake --build --preset Release-msvc-192-17")
-        client.run_command("build-msvc-192-17/Release/hello")
+        client.run_command("build-msvc-192-17\\Release\\hello")
         assert "Hello World Release!" in client.out
-        assert "__cplusplus2017" in client.out
+        assert "MSVC_LANG2017" in client.out
 
-        client.run_command("cmake . --preset default-msvc-192-17")
         client.run_command("cmake --build --preset Debug-msvc-192-17")
-        client.run_command("build-msvc-192-17/Debug/hello")
+        client.run_command("build-msvc-192-17\\Debug\\hello")
         assert "Hello World Debug!" in client.out
-        assert "__cplusplus2017" in client.out
-
-        client.run_command("cmake . --preset default-msvc-193-20")
-        client.run_command("cmake --build --preset Release-193-20")
-        client.run_command("build-msvc-193-20/Debug/hello")
-        assert "Hello World Release!" in client.out
-        assert "__cplusplus2020" in client.out
+        assert "MSVC_LANG2017" in client.out
