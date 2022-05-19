@@ -240,8 +240,9 @@ def test_cmaketoolchain_no_warnings():
 
     client.run("create dep")
     client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release"
-                       "-Werror=dev --warn-uninitialized")
+    build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake {}"
+                       "-Werror=dev --warn-uninitialized".format(build_type))
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully
 
