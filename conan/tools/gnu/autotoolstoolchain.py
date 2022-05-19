@@ -18,6 +18,7 @@ class AutotoolsToolchain:
         self._namespace = namespace
 
         self.configure_args = []
+        self.autoreconf_args = []
         self.make_args = []
 
         # Flags
@@ -186,6 +187,7 @@ class AutotoolsToolchain:
                 configure_args.append('--{}={}'.format(flag, var))
 
         args = {"configure_args": args_to_string(configure_args),
-                "make_args":  args_to_string(self.make_args)}
+                "make_args":  args_to_string(self.make_args),
+                "autoreconf_args": args_to_string(self.autoreconf_args)}
 
         save_toolchain_args(args, namespace=self._namespace)

@@ -16,11 +16,14 @@ class Autotools(object):
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
                                                      namespace=namespace)
+
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
+        self._autoreconf_args = toolchain_file_content.get("autoreconf_args")
+
         self.default_configure_install_args = True
 
-    def configure(self, build_script_folder=None):
+    def configure(self, build_script_folder=None, args=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
@@ -28,6 +31,7 @@ class Autotools(object):
         script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
             if build_script_folder else self._conanfile.source_folder
         configure_args = []
+
         if self.default_configure_install_args:
             def _get_argument(argument_name, cppinfo_name):
                 elements = getattr(self._conanfile.cpp.package, cppinfo_name)
@@ -42,8 +46,9 @@ class Autotools(object):
                                    _get_argument("oldincludedir", "includedirs"),
                                    _get_argument("datarootdir", "resdirs")])
 
-        self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args)) \
-                               if configure_args else self._configure_args
+        configure_args.extend(args or [])
+
+        self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args))
 
         configure_cmd = "{}/configure".format(script_folder)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
@@ -56,7 +61,7 @@ class Autotools(object):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
         str_args = self._make_args
-        str_extra_args = " ".join(args) if args else ""
+        str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
@@ -94,16 +99,15 @@ class Autotools(object):
                 if not _is_modified_install_name(shared_lib, full_folder, libdir):
                     _fix_install_name(shared_lib, full_folder)
 
-    def install(self):
-        self.make(target="install", args=["DESTDIR={}".format(self._conanfile.package_folder)])
+    def install(self, args=None):
+        args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
+        self.make(target="install", args=args)
         if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
             self._fix_osx_shared_install_name()
 
     def autoreconf(self, args=None):
-        command = ["autoreconf"]
-        args = args or ["--force", "--install"]
-        command.extend(args)
-        command = join_arguments(command)
+        args = args if args is not None else ["--force", "--install"]
+        command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
         with chdir(self, self._conanfile.source_folder):
             self._conanfile.run(command)
 

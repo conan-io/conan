@@ -11,7 +11,8 @@ def test_source_folder_works():
     os.chdir(folder)
     save_toolchain_args({
         "configure_args": "-foo bar",
-        "make_args": ""}
+        "make_args": "",
+        "autoreconf_args": ""}
     )
     conanfile = ConanFileMock()
     conanfile.folders.set_base_install(folder)
