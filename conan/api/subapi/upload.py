@@ -58,8 +58,9 @@ class UploadAPI:
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there"""
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes()  # Necessary to load remotes, as exports_sources might need to be
-                            # retrieved to prepare the artifacts
+        # Necessary to load remotes, as exports_sources might need to be retrieved to
+        # prepare the artifacts
+        app.load_remotes()
         preparator = PackagePreparator(app)
         preparator.prepare(upload_bundle)
         # FIXME: POC: Signing all packages to see what breaks

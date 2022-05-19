@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.files.copy_pattern import report_files_copied
-from conans.cli.output import ScopedOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter, conanfile_remove_attr
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
@@ -42,7 +42,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     manifest = FileTreeManifest.create(conanfile.package_folder)
     manifest.save(conanfile.package_folder)
 
-    package_output = ScopedOutput("%s package()" % scoped_output.scope, scoped_output)
+    package_output = ConanOutput(scope="%s package()" % scoped_output.scope)
     _report_files_from_manifest(package_output, manifest)
     scoped_output.success("Package '%s' created" % package_id)
 

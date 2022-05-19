@@ -255,7 +255,6 @@ class PkgSigning:
         self._app = app
 
     def sign(self, upload_data):
-        print("Signing")
         for recipe in upload_data.recipes:
             if recipe.upload:
                 self.sign_recipe(recipe)
@@ -265,20 +264,18 @@ class PkgSigning:
 
     def sign_recipe(self, recipe):
         ref = recipe.ref
-        print("SINGING RECIPE ", ref)
         ref_layout = self._app.cache.ref_layout(ref)
-        download_export_folder = ref_layout.download_export()
-        signature_file = os.path.join(download_export_folder, "signature.asc")
+        recipe_metadata = ref_layout.recipe_metadata()
+        signature_file = os.path.join(recipe_metadata, "signature.asc")
         content = "\n".join(recipe.files)
         save(signature_file, content)
         recipe.files["signature.asc"] = signature_file
 
     def sign_package(self, package):
         pref = package.pref
-        print("SINGING package ", pref)
         pkg_layout = self._app.cache.pkg_layout(pref)
-        download_pkg_folder = pkg_layout.download_package()
-        signature_file = os.path.join(download_pkg_folder, "signature.asc")
+        package_metadata = pkg_layout.package_metadata()
+        signature_file = os.path.join(package_metadata, "signature.asc")
         content = "\n".join(package.files)
         save(signature_file, content)
         package.files["signature.asc"] = signature_file

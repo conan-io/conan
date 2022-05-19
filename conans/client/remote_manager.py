@@ -5,6 +5,7 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
+from conan.cache.conan_reference_layout import METADATA
 from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
@@ -27,7 +28,6 @@ class PkgSignVerifier:
     def verify(self, folder, files):
         print("Verify signature", folder)
         print("Verify files", files)
-        files.pop("signature.asc", None)
 
 
 class RemoteManager(object):
@@ -74,7 +74,9 @@ class RemoteManager(object):
         ref.timestamp = ref_time
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
-
+        # filter metadata files
+        # This could be also optimized in the download, avoiding downloading them, for performance
+        zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(f"{METADATA}/")}
         pkg_verifier = PkgSignVerifier()
         pkg_verifier.verify(download_export, zipped_files)
         export_folder = layout.export()
@@ -129,6 +131,8 @@ class RemoteManager(object):
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
+            zipped_files = {k: v for k, v in zipped_files.items() if
+                            not k.startswith(f"{METADATA}/")}
             pkg_verifier = PkgSignVerifier()
             pkg_verifier.verify(download_pkg_folder, zipped_files)
             duration = time.time() - t1

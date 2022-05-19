@@ -37,24 +37,11 @@ if get_env("CONAN_COLOR_DARK", 0):
     Color.BRIGHT_YELLOW = Fore.MAGENTA
     Color.BRIGHT_GREEN = Fore.GREEN
 
-try:
-    from logging import NullHandler
-except ImportError:  # TODO: Remove if Python > 3.1
-    class NullHandler(logging.Handler):
-        def handle(self, record):
-            pass
 
-        def emit(self, record):
-            pass
-
-        def createLock(self):
-            self.lock = None
-
-
-class ConanOutput(object):
-    def __init__(self):
+class ConanOutput:
+    def __init__(self, scope=""):
         self.stream = sys.stderr
-        self._scope = ""
+        self._scope = scope
         self._color = color_enabled(self.stream)
 
     @property
@@ -134,14 +121,6 @@ class ConanOutput(object):
 
     def flush(self):
         self.stream.flush()
-
-
-class ScopedOutput(ConanOutput):
-
-    def __init__(self, scope, output):
-        ConanOutput.__init__(self)
-        self._scope = scope
-        self._color = output._color
 
 
 def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
