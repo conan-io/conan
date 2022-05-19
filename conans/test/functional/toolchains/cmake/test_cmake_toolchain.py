@@ -532,7 +532,7 @@ def test_cmake_presets_multiple_settings_single_config():
     settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
                "-s compiler.version=11 -s compiler.cppstd=17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-11-17"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-11-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -546,7 +546,7 @@ def test_cmake_presets_multiple_settings_single_config():
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-11-17"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-11-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -565,7 +565,7 @@ def test_cmake_presets_multiple_settings_single_config():
     settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
                "-s compiler.version=12 -s compiler.cppstd=20"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-12-20"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-12-20", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the gcc 11 the [1] is the gcc 12
@@ -611,7 +611,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     settings = "-s compiler=msvc -s compiler.runtime=dynamic " \
                "-s compiler.version=192 -s compiler.cppstd=17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-192-17"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-msvc-192-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -625,7 +625,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-192-17"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-msvc-192-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -643,7 +643,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     settings = "-s compiler=msvc -s compiler.runtime=dynamic " \
                "-s compiler.version=193 -s compiler.cppstd=20"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-193-20"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-msvc-193-20", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the msvc 192 the [1] is the msvc 193
@@ -659,18 +659,18 @@ def test_cmake_presets_multiple_settings_multi_config():
     if platform.system() == "Windows":
         client.run_command("cmake . --preset default-msvc-192-17")
         client.run_command("cmake --build --preset Release-msvc-192-17")
-        client.run_command("./build-gcc-11-17/Release/hello")
+        client.run_command("build-msvc-192-17/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2017" in client.out
 
         client.run_command("cmake . --preset default-msvc-192-17")
         client.run_command("cmake --build --preset Debug-msvc-192-17")
-        client.run_command("./build-gcc-11-17/Debug/hello")
+        client.run_command("build-msvc-192-17/Debug/hello")
         assert "Hello World Debug!" in client.out
         assert "__cplusplus2017" in client.out
 
         client.run_command("cmake . --preset default-msvc-193-20")
         client.run_command("cmake --build --preset Release-193-20")
-        client.run_command("./build-msvc-193-20/Debug/hello")
+        client.run_command("build-msvc-193-20/Debug/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out

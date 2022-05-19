@@ -29,9 +29,8 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     if suffix:
         conanfile.folders.build += "-{}".format(suffix)
 
-    conanfile.folders.generators = os.path.join("build", "generators")
-    if suffix:
-        conanfile.folders.generators += "-{}".format(suffix)
+    conanfile.folders.generators = os.path.join("build" if not suffix else "build-{}".format(suffix),
+                                                "generators")
 
     conanfile.cpp.source.includedirs = ["include"]
 
