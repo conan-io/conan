@@ -9,8 +9,6 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("cmake")
-@pytest.mark.tool("xcodebuild")
-@pytest.mark.tool("xcodegen")
 def test_xcodedeps_components():
     """
     tcp/1.0 is a lib without components
@@ -27,7 +25,7 @@ def test_xcodedeps_components():
     """
     client = TestClient(path_with_spaces=False)
 
-    client.run("new tcp/1.0 -m=cmake_lib")
+    client.run("new cmake_lib -d name=tcp -d version=1.0")
     client.run("create . -tf=None")
 
     header = textwrap.dedent("""
@@ -131,7 +129,7 @@ def test_xcodedeps_components():
         "CMakeLists.txt": cmakelists,
     }, clean_first=True)
 
-    client.run("create . network/1.0@")
+    client.run("create . --name=network --version=1.0")
 
     chat_pi = """
     def package_info(self):
@@ -160,7 +158,7 @@ def test_xcodedeps_components():
         "CMakeLists.txt": cmakelists_chat,
     }, clean_first=True)
 
-    client.run("create . chat/1.0@")
+    client.run("create . --name=chat --version=1.0")
 
     xcode_project = textwrap.dedent("""
         name: ChatApp
@@ -182,10 +180,10 @@ def test_xcodedeps_components():
         "project.yml": xcode_project
     }, clean_first=True)
 
-    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan")
-    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan -s build_type=Debug "
-               "--build=missing")
-    chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
+    client.run("install . --name=chat --version=1.0 -g XcodeDeps --output-folder=conan")
+    client.run("install . --name=chat --version=1.0 -g XcodeDeps --output-folder=conan "
+               "-s build_type=Debug --build=missing")
+    chat_xcconfig = client.load(os.path.join("conan", "build", "generators", "conan_chat_chat.xcconfig"))
     assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
