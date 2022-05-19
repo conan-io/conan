@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -11,7 +12,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -516,3 +517,160 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     dumpbind_cmd = '{} && dumpbin /directives "{}"'.format(vcvars, lib)
     client.run_command(dumpbind_cmd)
     assert "LIBCMTD" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmake_presets_multiple_settings_single_config():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings_layout = '-c tools.cmake.cmake_layout.custom_settings=' \
+                      '\'["compiler", "compiler.version", "compiler.cppstd"]\''
+
+    user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
+
+    # Check that all generated names are expected, both in the layout and in the Presets
+    settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
+               "-s compiler.version=11 -s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-11-17"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    assert len(user_presets["include"]) == 1
+    presets = json.loads(load(user_presets["include"][0]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Release-gcc-11-17"
+    assert presets["buildPresets"][0]["name"] == "Release-gcc-11-17"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-11-17"
+
+    # If we create the "Debug" one, it has the same toolchain and preset file, that is
+    # always multiconfig
+    client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-11-17"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    assert len(user_presets["include"]) == 1
+    presets = json.loads(load(user_presets["include"][0]))
+    assert len(presets["configurePresets"]) == 2
+    assert len(presets["buildPresets"]) == 2
+    assert presets["configurePresets"][0]["name"] == "Release-gcc-11-17"
+    assert presets["configurePresets"][1]["name"] == "Debug-gcc-11-17"
+    assert presets["buildPresets"][0]["name"] == "Release-gcc-11-17"
+    assert presets["buildPresets"][1]["name"] == "Debug-gcc-11-17"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-11-17"
+    assert presets["buildPresets"][1]["configurePreset"] == "Debug-gcc-11-17"
+
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
+               "-s compiler.version=12 -s compiler.cppstd=20"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-gcc-12-20"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    # The [0] is the gcc 11 the [1] is the gcc 12
+    assert len(user_presets["include"]) == 2
+    presets = json.loads(load(user_presets["include"][1]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "Release-gcc-12-20"
+    assert presets["buildPresets"][0]["name"] == "Release-gcc-12-20"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-12-20"
+
+    # We can build with cmake manually
+    if platform.system() == "Linux":
+        client.run_command("cmake . --preset Release-gcc-11-17")
+        client.run_command("cmake --build --preset Release-gcc-11-17")
+        client.run_command("./cmake-build-release-gcc-11-17/hello")
+        assert "Hello World Release!" in client.out
+        assert "__cplusplus2017" in client.out
+
+        client.run_command("cmake . --preset Debug-gcc-11-17")
+        client.run_command("cmake --build --preset Debug-gcc-11-17")
+        client.run_command("./cmake-build-debug-gcc-11-17/hello")
+        assert "Hello World Debug!" in client.out
+        assert "__cplusplus2017" in client.out
+
+        client.run_command("cmake . --preset Release-gcc-12-20")
+        client.run_command("cmake --build --preset Release-gcc-12-20")
+        client.run_command("./cmake-build-release-gcc-12-20/hello")
+        assert "Hello World Release!" in client.out
+        assert "__cplusplus2020" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmake_presets_multiple_settings_multi_config():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings_layout = '-c tools.cmake.cmake_layout.custom_settings=' \
+                      '\'["compiler", "compiler.version", "compiler.cppstd"]\''
+
+    user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
+
+    # Check that all generated names are expected, both in the layout and in the Presets
+    settings = "-s compiler=msvc -s compiler.runtime=dynamic " \
+               "-s compiler.version=192 -s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-192-17"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    assert len(user_presets["include"]) == 1
+    presets = json.loads(load(user_presets["include"][0]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "default-msvc-192-17"
+    assert presets["buildPresets"][0]["name"] == "Release-msvc-192-17"
+    assert presets["buildPresets"][0]["configurePreset"] == "default-msvc-192-17"
+
+    # If we create the "Debug" one, it has the same toolchain and preset file, that is
+    # always multiconfig
+    client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-192-17"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    assert len(user_presets["include"]) == 1
+    presets = json.loads(load(user_presets["include"][0]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 2
+    assert presets["configurePresets"][0]["name"] == "default-msvc-192-17"
+    assert presets["buildPresets"][0]["name"] == "Release-msvc-192-17"
+    assert presets["buildPresets"][1]["name"] == "Debug-msvc-192-17"
+    assert presets["buildPresets"][0]["configurePreset"] == "default-msvc-192-17"
+    assert presets["buildPresets"][1]["configurePreset"] == "default-msvc-192-17"
+
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=msvc -s compiler.runtime=dynamic " \
+               "-s compiler.version=193 -s compiler.cppstd=20"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators-msvc-193-20"))
+    assert os.path.exists(user_presets_path)
+    user_presets = json.loads(load(user_presets_path))
+    # The [0] is the msvc 192 the [1] is the msvc 193
+    assert len(user_presets["include"]) == 2
+    presets = json.loads(load(user_presets["include"][1]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "default-msvc-193-20"
+    assert presets["buildPresets"][0]["name"] == "Release-msvc-193-20"
+    assert presets["buildPresets"][0]["configurePreset"] == "default-msvc-193-20"
+
+    # We can build with cmake manually
+    if platform.system() == "Windows":
+        client.run_command("cmake . --preset default-msvc-192-17")
+        client.run_command("cmake --build --preset Release-msvc-192-17")
+        client.run_command("./build-gcc-11-17/Release/hello")
+        assert "Hello World Release!" in client.out
+        assert "__cplusplus2017" in client.out
+
+        client.run_command("cmake . --preset default-msvc-192-17")
+        client.run_command("cmake --build --preset Debug-msvc-192-17")
+        client.run_command("./build-gcc-11-17/Debug/hello")
+        assert "Hello World Debug!" in client.out
+        assert "__cplusplus2017" in client.out
+
+        client.run_command("cmake . --preset default-msvc-193-20")
+        client.run_command("cmake --build --preset Release-193-20")
+        client.run_command("./build-msvc-193-20/Debug/hello")
+        assert "Hello World Release!" in client.out
+        assert "__cplusplus2020" in client.out

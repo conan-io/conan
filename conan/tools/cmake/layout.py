@@ -24,7 +24,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     if multi:
         conanfile.folders.build = "build"
     else:
-        conanfile.folders.build = "cmake-build-{}".format(build_type)
+        conanfile.folders.build = "cmake-build-{}".format(str(build_type).lower())
 
     if suffix:
         conanfile.folders.build += "-{}".format(suffix)
