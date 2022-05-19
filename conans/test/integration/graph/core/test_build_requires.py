@@ -653,3 +653,92 @@ def test_tool_requires():
                                   "tool2/1.0": "Cache",
                                   "tool3/1.0": "Cache",
                                   "tool4/1.0": "Cache"}, build=True)
+
+
+class TestDuplicateBuildRequires:
+    """ what happens when you require and build_require the same dependency
+    """
+    # https://github.com/conan-io/conan/issues/11179
+
+    @pytest.fixture()
+    def client(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . --name=tool1 --version=1.0")
+        client.run("create . --name=tool2 --version=1.0")
+        client.run("create . --name=tool3 --version=1.0")
+        client.run("create . --name=tool4 --version=1.0")
+
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                tool_requires = "tool2/1.0"
+                build_requires = "tool3/1.0"
+                def requirements(self):
+                    self.requires("tool4/1.0")
+                def build_requirements(self):
+                    self.build_requires("tool4/1.0")
+                    self.tool_requires("tool1/1.0")
+                def generate(self):
+                    host_deps = sorted([d.ref for d, _ in self.dependencies.host.items()])
+                    build_deps = sorted([d.ref for d, _ in self.dependencies.build.items()])
+                    self.output.info("HOST DEPS: {}".format(host_deps))
+                    self.output.info("BUILD DEPS: {}".format(build_deps))
+                    assert len(host_deps) == 1, host_deps
+                    assert len(build_deps) == 4, build_deps
+            """)
+        client.save({"conanfile.py": consumer})
+        return client
+
+    def test_tool_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.tool_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows")
+        # No requires
+        assert textwrap.dedent("""\
+            Build requirements
+                consumer/1.0#c9f0aa49098f6adac0f28e37149f79e3 - Cache
+                tool1/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+                tool2/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+                tool3/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+                tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache""") in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
+
+    def test_test_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.test_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows")
+        assert textwrap.dedent("""\
+        Requirements
+            consumer/1.0#c9f0aa49098f6adac0f28e37149f79e3 - Cache
+            tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+        Build requirements
+            tool1/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+            tool2/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+            tool3/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
+            tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache""") in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
