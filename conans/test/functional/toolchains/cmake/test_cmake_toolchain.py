@@ -610,10 +610,10 @@ def test_cmake_presets_multiple_settings_multi_config():
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
 
     # Check that all generated names are expected, both in the layout and in the Presets
-    settings = "-s compiler=msvc -s compiler.runtime=dynamic " \
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=dynamic " \
                "-s compiler.cppstd=14"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic-14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -627,7 +627,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic-14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -642,10 +642,10 @@ def test_cmake_presets_multiple_settings_multi_config():
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
-    settings = "-s compiler=msvc -s compiler.runtime=static " \
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
                "-s compiler.cppstd=17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-static", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-static-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the msvc 192 the [1] is the msvc 193
@@ -658,12 +658,21 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert presets["buildPresets"][0]["configurePreset"] == "default-static-17"
 
     # We can build with cmake manually
-    client.run_command("cmake . --preset default-dynamic-17")
+    client.run_command("cmake . --preset default-dynamic-14")
 
-    client.run_command("cmake --build --preset Release-dynamic-17")
-    client.run_command("build-dynamic-17\\Release\\hello")
+    client.run_command("cmake --build --preset Release-dynamic-14")
+    client.run_command("build-dynamic-14\\Release\\hello")
     assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake --build --preset Debug-static-17")
-    client.run_command("build-static-17\\Debug\\hello")
+    client.run_command("cmake --build --preset Debug-dynamic-14")
+    client.run_command("build-dynamic-14\\Debug\\hello")
     assert "Hello World Debug!" in client.out
+    assert "MSVC_LANG2014" in client.out
+
+    client.run_command("cmake . --preset default-static-17")
+
+    client.run_command("cmake --build --preset Release-static-17")
+    client.run_command("build-static-17\\Release\\hello")
+    assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2017" in client.out
