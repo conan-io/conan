@@ -519,7 +519,7 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     assert "LIBCMTD" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool_cmake(version="3.23")
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
@@ -529,76 +529,77 @@ def test_cmake_presets_multiple_settings_single_config():
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
 
     # Check that all generated names are expected, both in the layout and in the Presets
-    settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
-               "-s compiler.version=11 -s compiler.cppstd=17"
+    settings = "-s compiler=apple-clang -s compiler.libcxx=libc++ " \
+               "-s compiler.version=12.0 -s compiler.cppstd=gnu17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-11-17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-apple-clang-12.0-gnu17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "Release-gcc-11-17"
-    assert presets["buildPresets"][0]["name"] == "Release-gcc-11-17"
-    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-11-17"
+    assert presets["configurePresets"][0]["name"] == "Release-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][0]["name"] == "Release-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-apple-clang-12.0-gnu17"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-11-17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-apple-clang-12.0-gnu17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 2
     assert len(presets["buildPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "Release-gcc-11-17"
-    assert presets["configurePresets"][1]["name"] == "Debug-gcc-11-17"
-    assert presets["buildPresets"][0]["name"] == "Release-gcc-11-17"
-    assert presets["buildPresets"][1]["name"] == "Debug-gcc-11-17"
-    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-11-17"
-    assert presets["buildPresets"][1]["configurePreset"] == "Debug-gcc-11-17"
+    assert presets["configurePresets"][0]["name"] == "Release-apple-clang-12.0-gnu17"
+    assert presets["configurePresets"][1]["name"] == "Debug-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][0]["name"] == "Release-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][1]["name"] == "Debug-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-apple-clang-12.0-gnu17"
+    assert presets["buildPresets"][1]["configurePreset"] == "Debug-apple-clang-12.0-gnu17"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
-    settings = "-s compiler=gcc -s compiler.libcxx=libstdc++11 " \
-               "-s compiler.version=12 -s compiler.cppstd=20"
+    settings = "-s compiler=apple-clang -s compiler.libcxx=libc++ " \
+               "-s compiler.version=13 -s compiler.cppstd=gnu20"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-gcc-12-20", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-apple-clang-13-gnu20",
+                                       "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
-    # The [0] is the gcc 11 the [1] is the gcc 12
+    # The [0] is the apple-clang 12 the [1] is the apple-clang 13
     assert len(user_presets["include"]) == 2
     presets = json.loads(load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "Release-gcc-12-20"
-    assert presets["buildPresets"][0]["name"] == "Release-gcc-12-20"
-    assert presets["buildPresets"][0]["configurePreset"] == "Release-gcc-12-20"
+    assert presets["configurePresets"][0]["name"] == "Release-apple-clang-13-gnu20"
+    assert presets["buildPresets"][0]["name"] == "Release-apple-clang-13-gnu20"
+    assert presets["buildPresets"][0]["configurePreset"] == "Release-apple-clang-13-gnu20"
 
     # We can build with cmake manually
-    if platform.system() == "Linux":
-        client.run_command("cmake . --preset Release-gcc-11-17")
-        client.run_command("cmake --build --preset Release-gcc-11-17")
-        client.run_command("./cmake-build-release-gcc-11-17/hello")
+    if platform.system() == "Darwin":
+        client.run_command("cmake . --preset Release-apple-clang-12.0-gnu17")
+        client.run_command("cmake --build --preset Release-apple-clang-12.0-gnu17")
+        client.run_command("./cmake-build-release-apple-clang-12.0-gnu17/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset Debug-gcc-11-17")
-        client.run_command("cmake --build --preset Debug-gcc-11-17")
-        client.run_command("./cmake-build-debug-gcc-11-17/hello")
+        client.run_command("cmake . --preset Debug-apple-clang-12.0-gnu17")
+        client.run_command("cmake --build --preset Debug-apple-clang-12.0-gnu17")
+        client.run_command("./cmake-build-debug-apple-clang-12.0-gnu17/hello")
         assert "Hello World Debug!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset Release-gcc-12-20")
-        client.run_command("cmake --build --preset Release-gcc-12-20")
-        client.run_command("./cmake-build-release-gcc-12-20/hello")
+        client.run_command("cmake . --preset Release-apple-clang-13-gnu20")
+        client.run_command("cmake --build --preset Release-apple-clang-13-gnu20")
+        client.run_command("./cmake-build-release-apple-clang-13-gnu20/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool_cmake(version="3.23")
 def test_cmake_presets_multiple_settings_multi_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
