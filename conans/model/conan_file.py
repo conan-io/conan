@@ -382,14 +382,14 @@ class ConanFile(object):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         def _run(cmd, _env):
-            # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
-                                                     msys_mingw=msys_mingw, with_login=with_login)
+                                                     msys_mingw=msys_mingw, with_login=with_login,
+                                                     output=output)
                 elif self.win_bash:  # New, Conan 2.0
                     from conans.client.subsystems import run_in_windows_bash
-                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
+                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env, output=output)
             from conan.tools.env.environment import environment_wrap_command
             if env:
                 wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)

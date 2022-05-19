@@ -639,7 +639,7 @@ def unix_path(path, path_flavor=None):
 
 
 def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None,
-                        with_login=True):
+                        with_login=True, output=True):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
@@ -717,4 +717,4 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
         with environment_append(normalized_env):
-            return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
+            return conanfile._conan_runner(wincmd, output=output, subprocess=True)

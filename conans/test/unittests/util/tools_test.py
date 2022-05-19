@@ -365,6 +365,7 @@ class HelloConan(ConanFile):
                     def __call__(self, command, output, log_filepath=None,
                                  cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
+                        self.output = output
                 self._conan_runner = MyRun()
 
         conanfile = MockConanfile()
@@ -373,6 +374,11 @@ class HelloConan(ConanFile):
             self.assertIn("bash", conanfile._conan_runner.command)
             self.assertIn("--login -c", conanfile._conan_runner.command)
             self.assertIn("^&^& a_command.bat ^", conanfile._conan_runner.command)
+            self.assertTrue(conanfile._conan_runner.output)
+
+            output = sys.stdout
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", output=output)
+            self.assertEqual(output, conanfile._conan_runner.output)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
