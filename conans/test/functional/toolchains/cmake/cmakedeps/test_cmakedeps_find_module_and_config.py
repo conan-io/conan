@@ -65,52 +65,52 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
-def test_reuse_with_modules_and_config(client):
-    cpp = gen_function_cpp(name="main")
+# @pytest.mark.tool_cmake
+# def test_reuse_with_modules_and_config(client):
+#     cpp = gen_function_cpp(name="main")
 
-    cmake_exe_config = """
-    add_executable(myapp main.cpp)
-    find_package(MyDep) # This one will find the config
-    target_link_libraries(myapp MyDepTarget::MyCrispinTarget)
-    """
+#     cmake_exe_config = """
+#     add_executable(myapp main.cpp)
+#     find_package(MyDep) # This one will find the config
+#     target_link_libraries(myapp MyDepTarget::MyCrispinTarget)
+#     """
 
-    cmake_exe_module = """
-    add_executable(myapp2 main.cpp)
-    find_package(mi_dependencia) # This one will find the module
-    target_link_libraries(myapp2 mi_dependencia_namespace::mi_crispin_target)
-    """
+#     cmake_exe_module = """
+#     add_executable(myapp2 main.cpp)
+#     find_package(mi_dependencia) # This one will find the module
+#     target_link_libraries(myapp2 mi_dependencia_namespace::mi_crispin_target)
+#     """
 
-    cmake = """
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    set(CMAKE_CXX_ABI_COMPILED 1)
-    set(CMAKE_C_COMPILER_WORKS 1)
-    set(CMAKE_C_ABI_COMPILED 1)
+#     cmake = """
+#     set(CMAKE_CXX_COMPILER_WORKS 1)
+#     set(CMAKE_CXX_ABI_COMPILED 1)
+#     set(CMAKE_C_COMPILER_WORKS 1)
+#     set(CMAKE_C_ABI_COMPILED 1)
 
-    cmake_minimum_required(VERSION 3.15)
-    project(project CXX)
-    {}
-    """
+#     cmake_minimum_required(VERSION 3.15)
+#     project(project CXX)
+#     {}
+#     """
 
-    # test config
-    conanfile = GenConanfile().with_name("myapp")\
-        .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
-    client.save({"conanfile.py": conanfile,
-                 "main.cpp": cpp,
-                 "CMakeLists.txt": cmake.format(cmake_exe_config)})
+#     # test config
+#     conanfile = GenConanfile().with_name("myapp")\
+#         .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
+#     client.save({"conanfile.py": conanfile,
+#                  "main.cpp": cpp,
+#                  "CMakeLists.txt": cmake.format(cmake_exe_config)})
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+#     client.run("install . -if=install")
+#     client.run("build . -if=install")
 
-    # test modules
-    conanfile = GenConanfile().with_name("myapp")\
-        .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
-    client.save({"conanfile.py": conanfile,
-                 "main.cpp": cpp,
-                 "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
+#     # test modules
+#     conanfile = GenConanfile().with_name("myapp")\
+#         .with_cmake_build().with_exports_sources("*.cpp", "*.txt").with_require("mydep/1.0")
+#     client.save({"conanfile.py": conanfile,
+#                  "main.cpp": cpp,
+#                  "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+#     client.run("install . -if=install")
+#     client.run("build . -if=install")
 
 
 find_modes = [
@@ -168,13 +168,11 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
         message("MYPKGB_INCLUDE_DIR: ${{MYPKGB_INCLUDE_DIR}}")
         message("MYPKGB_LIBRARIES: ${{MYPKGB_LIBRARIES}}")
         message("MYPKGB_DEFINITIONS: ${{MYPKGB_DEFINITIONS}}")
-        message("mypkga_FOUND: ${{mypkga_FOUND}}")
-        message("MYPKGA_FOUND: ${{MYPKGA_FOUND}}")
         """)
 
     client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', module_filename='MYPKGB',
                                              mode=find_mode_PKGB),
-                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='mypkga', mode=find_mode_PKGA),
+                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_PKGA),
                  "consumer.py": consumer,
                  "CMakeLists.txt": cmakelist.format(find_mode=find_mode_consumer)})
     client.run("create pkga.py pkga/1.0@")
@@ -188,5 +186,6 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
     assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
+
     if find_mode_PKGA == "module":
-        assert 'Found mypkga: 1.0 (found version "1.0")' in client.out
+        assert 'Found unicorns: 1.0 (found version "1.0")' in client.out
