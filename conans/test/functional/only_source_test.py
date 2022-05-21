@@ -119,6 +119,7 @@ class MyPackage(ConanFile):
 
         # Try now to upload all packages, should crash because of the "always" build policy
         client.run("upload hello0/1.0@lasote/stable -r default", assert_error=True)
+        print(client.out)
         self.assertIn("no packages can be uploaded", client.out)
 
     def test_reuse(self):

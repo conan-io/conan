@@ -276,7 +276,7 @@ class PkgSigning:
         pkg_layout = self._app.cache.pkg_layout(pref)
         package_metadata = pkg_layout.package_metadata()
         signature_file = os.path.join(package_metadata, "signature.asc")
-        content = "\n".join(package.files)
+        content = "\n".join(package.files or [])
         save(signature_file, content)
         package.files["signature.asc"] = signature_file
 
