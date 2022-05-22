@@ -77,22 +77,28 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
     $ conan --help
 
     Consumer commands
-      install    Installs the requirements specified in a conanfile (.py or .txt).
-      config     Manages configuration. Edits the conan.conf or installs config files.
+      install    Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
+      config     Manages Conan configuration.
       get        Gets a file or list a directory of a given reference or package.
       info       Gets information about the dependency graph of a recipe.
-      search     Searches package recipes and binaries in the local cache or in a remote.
+      search     Searches package recipes and binaries in the local cache or a remote. Unless a
+                 remote is specified only the local cache is searched.
     Creator commands
-      new        Creates a new package recipe template with a 'conanfile.py'.
-      create     Builds a binary package for a recipe (conanfile.py) located in the current dir.
+      new        Creates a new package recipe template with a 'conanfile.py' and optionally,
+                 'test_package' testing files.
+      create     Builds a binary package for a recipe (conanfile.py).
       upload     Uploads a recipe and binary packages to a remote.
       export     Copies the recipe (conanfile.py & associated files) to your local cache.
-      export-pkg Exports a recipe & creates a package with given files calling 'package'.
-      test       Test a package, consuming it with a conanfile recipe with a test() method.
+      export-pkg Exports a recipe, then creates a package from local source and build folders.
+      test       Tests a package consuming it from a conanfile.py with a test() method.
     Package development commands
       source     Calls your local conanfile.py 'source()' method.
       build      Calls your local conanfile.py 'build()' method.
       package    Calls your local conanfile.py 'package()' method.
+      editable   Manages editable packages (packages that reside in the user workspace, but are
+                 consumed as if they were in the cache).
+      workspace  Manages a workspace (a set of packages consumed from the user workspace that
+                 belongs to the same project).
     Misc commands
       profile    Lists profiles in the '.conan/profiles' folder, or shows profile details.
       remote     Manages the remote list and the package recipes associated with a remote.
@@ -100,9 +106,14 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
       imports    Calls your local conanfile.py or conanfile.txt 'imports' method.
       copy       Copies conan recipes and packages to another user/channel.
       remove     Removes packages or binaries matching pattern from local cache or remote.
-      alias      Creates and exports an 'alias recipe'.
+      alias      Creates and exports an 'alias package recipe'.
       download   Downloads recipe and binaries to the local cache, without using settings.
-
+      inspect    Displays conanfile attributes, like name, version, and options. Works locally,
+                 in local cache and remote.
+      help       Shows help for a specific command.
+      lock       Generates and manipulates lock files.
+      frogarian  Conan The Frogarian
+    
     Conan commands. Type "conan <command> -h" for help
 
 Contributing to the project
