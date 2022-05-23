@@ -520,30 +520,30 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     assert "LIBCMTD" in client.out
 
 
-@pytest.mark.tool_cmake(version="3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
                       '\'["options.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
 
 
-@pytest.mark.tool_cmake(version="3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
                       '\'["settings.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
 
 
-@pytest.mark.tool_cmake(version="3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
                       '\'["settings.compiler", "settings.compiler.version", ' \
                       '   "settings.compiler.cppstd"]\''
@@ -622,10 +622,10 @@ def test_cmake_presets_multiple_settings_single_config():
         assert "__cplusplus2020" in client.out
 
 
-@pytest.mark.tool_cmake(version="3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     conf_layout = '-c tools.cmake.cmake_layout.build_folder_vars=\'["settings.compiler", ' \
                   '"options.shared"]\''
 
@@ -661,11 +661,11 @@ def test_cmake_presets_options_single_config():
             assert os.path.exists(path)
 
 
-@pytest.mark.tool_cmake(version="3.23")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_cmake_presets_multiple_settings_multi_config():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
                       '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
 
