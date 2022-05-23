@@ -37,7 +37,6 @@ conanfile_lib = textwrap.dedent("""
 
         def generate(self):
             at_toolchain = AutotoolsToolchain(self)
-            at_toolchain.configure_args = at_toolchain.shared_flags()
             at_toolchain.generate()
 
         def build(self):

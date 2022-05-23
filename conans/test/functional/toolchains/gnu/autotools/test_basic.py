@@ -276,6 +276,7 @@ def test_autotools_option_checking():
 
             def generate(self):
                 at_toolchain = AutotoolsToolchain(self)
+                # we override the default shared/static flags here
                 at_toolchain.configure_args = ['--enable-option-checking=fatal']
                 at_toolchain.generate()
 
