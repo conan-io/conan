@@ -55,7 +55,7 @@ def get_build_folder_vars_suffix(conanfile):
         elif s.startswith("options."):
             _, var = s.split("options.", 1)
             value = conanfile.options.get_safe(var)
-            if value:
+            if value is not None:
                 tmp = "{}_{}".format(var, value)
         else:
             raise ConanException("Invalid 'tools.cmake.cmake_layout.build_folder_vars' value, it has"
