@@ -379,6 +379,7 @@ def test_diamond_repeated():
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))
                 self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
+                env.generate()
        """)
     client = TestClient()
     client.save({"pkga/conanfile.py": pkga,
@@ -397,6 +398,10 @@ def test_diamond_repeated():
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+    # No settings always sh
+    conanrun = client.load("conanrunenv.sh")
+    assert "PATH" not in conanrun
 
 
 @pytest.mark.parametrize("require_run", [True, False])

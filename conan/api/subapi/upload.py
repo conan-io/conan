@@ -1,7 +1,7 @@
 from conan.api.model import UploadBundle
 from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.client.cmd.uploader import UploadChecker, PackagePreparator, UploadExecutor, \
+from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker
 from conans.errors import ConanException
 
@@ -41,7 +41,7 @@ class UploadAPI:
     def check_integrity(self, upload_data):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
         app = ConanApp(self.conan_api.cache_folder)
-        checker = UploadChecker(app)
+        checker = IntegrityChecker(app)
         checker.check(upload_data)
 
     @api_method
@@ -58,6 +58,9 @@ class UploadAPI:
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there"""
         app = ConanApp(self.conan_api.cache_folder)
+        # Necessary to load remotes, as exports_sources might need to be retrieved to
+        # prepare the artifacts
+        app.load_remotes()
         preparator = PackagePreparator(app)
         preparator.prepare(upload_bundle)
 
@@ -65,8 +68,6 @@ class UploadAPI:
     def upload_bundle(self, upload_bundle, remote):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes([remote])
-
-        PackagePreparator(app).prepare(upload_bundle)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(upload_bundle, remote)

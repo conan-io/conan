@@ -123,6 +123,7 @@ tools_locations = {
         }
     },
     'premake': {},
+    'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
     'android_ndk': {
