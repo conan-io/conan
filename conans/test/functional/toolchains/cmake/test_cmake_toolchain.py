@@ -520,6 +520,26 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 
 
 @pytest.mark.tool_cmake(version="3.23")
+def test_cmake_presets_missing_option():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+                      '\'["options.missing"]\''
+    client.run("install . {}".format(settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+
+
+@pytest.mark.tool_cmake(version="3.23")
+def test_cmake_presets_missing_setting():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+                      '\'["settings.missing"]\''
+    client.run("install . {}".format(settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+
+
+@pytest.mark.tool_cmake(version="3.23")
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
