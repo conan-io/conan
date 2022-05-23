@@ -737,3 +737,10 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("build-static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmake_presets_multiple_settings_multi_config():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_lib")
+
