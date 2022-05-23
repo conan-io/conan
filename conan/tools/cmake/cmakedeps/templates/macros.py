@@ -88,4 +88,14 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
        endfunction()
+
+       macro(check_build_type_defined)
+           # Check that the -DCMAKE_BUILD_TYPE argument is always present
+           get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+           if(NOT isMultiConfig AND NOT CMAKE_BUILD_TYPE)
+               message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
+                                   "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
+           endif()
+       endmacro()
+
         """)
