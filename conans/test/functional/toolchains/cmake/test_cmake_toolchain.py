@@ -630,7 +630,7 @@ def test_cmake_presets_options_single_config():
                   '"options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
-                        "Windows": "visual studio",  # FIXME:  replace it with 'msvc' in develop2
+                        "Windows": "msvc",
                         "Linux": "gcc"}.get(platform.system())
 
     for shared in (True, False):
