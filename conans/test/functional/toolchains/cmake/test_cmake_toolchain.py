@@ -2,14 +2,13 @@ import json
 import os
 import platform
 import textwrap
-import re
 
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import replace_in_file
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
