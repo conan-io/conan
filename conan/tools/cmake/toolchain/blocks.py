@@ -837,7 +837,7 @@ class GenericSystemBlock(Block):
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor,
-                "cmake_sysroot": cmake_sysroot}
+                "cmake_sysroot": cmake_sysroot.replace("\\", "/")}
 
 
 class OutputDirsBlock(Block):
