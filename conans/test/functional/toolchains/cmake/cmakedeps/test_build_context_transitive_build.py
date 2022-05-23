@@ -72,7 +72,7 @@ def test_zlib_not_included(client):
                 clean_first=True)
     client.run("install . -pr:h=default -pr:b=default")
     # The compilation works, so it finds the doxygen without transitive failures
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
 
     # Assert there is no zlib target
     assert "Target declared 'zlib::zlib'" not in client.out
