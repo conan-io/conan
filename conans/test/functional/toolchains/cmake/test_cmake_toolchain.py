@@ -741,19 +741,7 @@ def test_cmake_presets_multiple_settings_multi_config():
 
 @pytest.mark.tool_cmake
 def test_cmaketoolchain_sysroot():
-    """
-    Let's test that the CMAKE_SYSROOT works generating some configs for a lib in a fake sysroot folder
-    Then have a CMakeLists with a find_package for the library that has the configs in that folder
-    CMake will search in the CMAKE_SYSROOT path for them besides other prefix folders and will find the package
-    """
-
     client = TestClient(path_with_spaces=False)
-    client.run("new somelib/1.0 --template=cmake_lib")
-    client.run("create . -tf=None")
-
-    client.save({}, clean_first=True)
-
-    client.run("install somelib/1.0@ -g CMakeDeps --install-folder=fakesysroot")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -778,7 +766,7 @@ def test_cmaketoolchain_sysroot():
         cmake_minimum_required(VERSION 3.15)
         set(CMAKE_CXX_COMPILER_WORKS 1)
         project(app CXX)
-        find_package(somelib CONFIG REQUIRED)
+        message("sysroot: ${CMAKE_SYSROOT}")
         """)
 
     client.save({
@@ -786,13 +774,12 @@ def test_cmaketoolchain_sysroot():
         "CMakeLists.txt": cmakelist
     })
 
-    client.run("create . app/1.0@ -c tools.cmake.cmaketoolchain:cmake_sysroot='{}'".format(
-        os.path.join(client.current_folder, "fakesysroot")))
+    fake_sysroot = os.path.join("/usr/fakesysroot")
+    client.run("create . app/1.0@ -c tools.cmake.cmaketoolchain:cmake_sysroot='{}'".format(fake_sysroot))
 
-    assert "Conan: Target declared 'somelib::somelib'" in client.out
+    assert "sysroot: {}".format(fake_sysroot) in client.out
 
-    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(
-        os.path.join(client.current_folder, "fakesysroot"))
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
 
     client.save({
         "conanfile.py": conanfile.format(set_sysroot_in_block),
@@ -800,4 +787,4 @@ def test_cmaketoolchain_sysroot():
 
     client.run("create . app/1.0@")
 
-    assert "Conan: Target declared 'somelib::somelib'" in client.out
+    assert "sysroot: {}".format(fake_sysroot) in client.out

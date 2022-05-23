@@ -651,6 +651,10 @@ class TryCompileBlock(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if cmake_sysroot %}
+        set(CMAKE_SYSROOT {{ cmake_sysroot }})
+        {% endif %}
+
         {% if cmake_system_name %}
         # Cross building
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
@@ -682,9 +686,6 @@ class GenericSystemBlock(Block):
         if(NOT DEFINED ENV{RC})
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
-        {% endif %}
-        {% if cmake_sysroot %}
-        set(CMAKE_SYSROOT {{ cmake_sysroot }})
         {% endif %}
         """)
 
