@@ -683,6 +683,9 @@ class GenericSystemBlock(Block):
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
         {% endif %}
+        {% if cmake_sysroot %}
+        set(CMAKE_SYSROOT {{ cmake_sysroot }})
+        {% endif %}
         """)
 
     def _get_toolset(self, generator):
@@ -824,6 +827,8 @@ class GenericSystemBlock(Block):
 
         system_name, system_version, system_processor = self._get_cross_build()
 
+        cmake_sysroot = self._conanfile.conf.get("tools.cmake.cmaketoolchain:cmake_sysroot")
+
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
@@ -831,7 +836,8 @@ class GenericSystemBlock(Block):
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
-                "cmake_system_processor": system_processor}
+                "cmake_system_processor": system_processor,
+                "cmake_sysroot": cmake_sysroot}
 
 
 class OutputDirsBlock(Block):

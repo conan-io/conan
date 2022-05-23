@@ -2,13 +2,14 @@ import json
 import os
 import platform
 import textwrap
+import re
 
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import replace_in_file
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
@@ -740,7 +741,65 @@ def test_cmake_presets_multiple_settings_multi_config():
 
 
 @pytest.mark.tool_cmake
-def test_cmake_presets_multiple_settings_multi_config():
-    client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+def test_cmaketoolchain_sysroot():
+    """
+    Let's test that the CMAKE_SYSROOT works generating some configs for a lib in a fake sysroot folder
+    Then have a CMakeLists with a find_package for the library that has the configs in that folder
+    CMake will search in the CMAKE_SYSROOT path for them besides other prefix folders and will find the package
+    """
 
+    client = TestClient(path_with_spaces=False)
+    client.run("new somelib/1.0 --template=cmake_lib")
+    client.run("create . -tf=None")
+
+    client.save({}, clean_first=True)
+
+    client.run("install somelib/1.0@ -g CMakeDeps --install-folder=fakesysroot")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+        class AppConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                {}
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        project(app CXX)
+        find_package(somelib CONFIG REQUIRED)
+        """)
+
+    client.save({
+        "conanfile.py": conanfile.format(""),
+        "CMakeLists.txt": cmakelist
+    })
+
+    client.run("create . app/1.0@ -c tools.cmake.cmaketoolchain:cmake_sysroot='{}'".format(
+        os.path.join(client.current_folder, "fakesysroot")))
+
+    assert "Conan: Target declared 'somelib::somelib'" in client.out
+
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(
+        os.path.join(client.current_folder, "fakesysroot"))
+
+    client.save({
+        "conanfile.py": conanfile.format(set_sysroot_in_block),
+        "CMakeLists.txt": cmakelist
+    })
+
+    client.run("create . app/1.0@")
+
+    assert "Conan: Target declared 'somelib::somelib'" in client.out
