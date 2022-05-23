@@ -410,15 +410,16 @@ def test_error_missing_build_type():
         target_sources(app PRIVATE main.cpp)
     """)
 
-    client.save({
-        "conanfile.txt": conanfile,
-        "main.cpp": main,
-        "CMakeLists.txt": cmakelists
-    }, clean_first=True)
+    if platform.system() != "Windows":
+        client.save({
+            "conanfile.txt": conanfile,
+            "main.cpp": main,
+            "CMakeLists.txt": cmakelists
+        }, clean_first=True)
 
-    client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake", assert_error=True)
-    assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
+        client.run("install .")
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'", assert_error=True)
+        assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
 
     client.save({
         "conanfile.txt": conanfile,
@@ -435,5 +436,9 @@ def test_error_missing_build_type():
     }.get(platform.system())
 
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
-    client.run_command("cmake --build . --config Release")
+    if platform.system() in ["Windows", "Darwin"]:
+        client.run_command("cmake --build . --config Release")
+    else:
+        client.run_command("cmake --build .")
+
     assert "BUILD SUCCEEDED" in client.out
