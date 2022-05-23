@@ -55,8 +55,8 @@ class CMake(object):
         self._conanfile = conanfile
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
-        configure_preset = get_configure_preset(cmake_presets,
-                                                conanfile.settings.get_safe("build_type"))
+        configure_preset = get_configure_preset(cmake_presets, conanfile)
+
         self._generator = configure_preset["generator"]
         self._toolchain_file = configure_preset["toolchainFile"]
         self._cache_variables = configure_preset["cacheVariables"]
