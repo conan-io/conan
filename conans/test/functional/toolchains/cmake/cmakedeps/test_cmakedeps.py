@@ -437,5 +437,6 @@ def test_error_missing_build_type():
 
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
     client.run_command("cmake --build . --config Release")
-    client.run_command("./Release/app")
+    run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
+    client.run_command(run_app)
     assert "Hello World Release!" in client.out
