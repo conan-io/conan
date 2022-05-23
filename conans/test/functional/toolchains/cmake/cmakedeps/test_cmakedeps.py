@@ -437,5 +437,5 @@ def test_error_missing_build_type():
 
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
     client.run_command("cmake --build . --config Release")
-
-    assert ("BUILD SUCCEEDED" in client.out or "Build succeeded" in client.out)
+    client.run_command("./Release/app")
+    assert "Hello World Release!" in client.out
