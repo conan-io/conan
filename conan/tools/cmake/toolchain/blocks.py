@@ -828,6 +828,7 @@ class GenericSystemBlock(Block):
         system_name, system_version, system_processor = self._get_cross_build()
 
         cmake_sysroot = self._conanfile.conf.get("tools.cmake.cmaketoolchain:cmake_sysroot")
+        cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
@@ -837,7 +838,7 @@ class GenericSystemBlock(Block):
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor,
-                "cmake_sysroot": cmake_sysroot.replace("\\", "/")}
+                "cmake_sysroot": cmake_sysroot}
 
 
 class OutputDirsBlock(Block):
