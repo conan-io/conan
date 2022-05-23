@@ -436,9 +436,6 @@ def test_error_missing_build_type():
     }.get(platform.system())
 
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
-    if platform.system() in ["Windows", "Darwin"]:
-        client.run_command("cmake --build . --config Release")
-    else:
-        client.run_command("cmake --build .")
+    client.run_command("cmake --build . --config Release")
 
-    assert "BUILD SUCCEEDED" in client.out
+    assert ("BUILD SUCCEEDED" in client.out or "Build succeeded" in client.out)
