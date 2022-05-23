@@ -21,9 +21,9 @@ def test_source_folder_works():
     autotools = Autotools(conanfile)
     autotools.default_configure_install_args = False
     autotools.configure(build_script_folder="subfolder")
-    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/subfolder/configure" -foo bar'
+    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/subfolder/configure" -foo bar '
 
     autotools = Autotools(conanfile)
     autotools.default_configure_install_args = False
     autotools.configure()
-    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar'
+    assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar '
