@@ -796,7 +796,6 @@ def test_cmaketoolchain_sysroot():
 
     client.save({
         "conanfile.py": conanfile.format(set_sysroot_in_block),
-        "CMakeLists.txt": cmakelist
     })
 
     client.run("create . app/1.0@")
