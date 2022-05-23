@@ -2,7 +2,7 @@ import json
 import os
 import platform
 
-from conan.tools.cmake.layout import get_custom_settings_suffix
+from conan.tools.cmake.layout import get_build_folder_vars_suffix
 from conan.tools.cmake.utils import is_multi_configuration
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -20,7 +20,7 @@ def _add_build_preset(conanfile, multiconfig):
 
 def _build_preset_name(conanfile):
     build_type = conanfile.settings.get_safe("build_type")
-    suffix = get_custom_settings_suffix(conanfile)
+    suffix = get_build_folder_vars_suffix(conanfile)
     if suffix:
         if build_type:
             return "{}-{}".format(build_type, suffix)
@@ -31,7 +31,7 @@ def _build_preset_name(conanfile):
 
 def _configure_preset_name(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    suffix = get_custom_settings_suffix(conanfile)
+    suffix = get_build_folder_vars_suffix(conanfile)
     base = "default" if multiconfig or not build_type else build_type
     if suffix:
         return "{}-{}".format(base, suffix)

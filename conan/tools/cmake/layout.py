@@ -20,7 +20,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    suffix = get_custom_settings_suffix(conanfile)
+    suffix = get_build_folder_vars_suffix(conanfile)
     if multi:
         conanfile.folders.build = "build"
     else:
@@ -42,13 +42,22 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_custom_settings_suffix(conanfile):
+def get_build_folder_vars_suffix(conanfile):
 
-    build_settings = conanfile.conf.get("tools.cmake.cmake_layout.custom_settings",
-                                        default=[], check_type=list)
+    build_vars = conanfile.conf.get("tools.cmake.cmake_layout.build_folder_vars",
+                                    default=[], check_type=list)
     ret = []
-    for s in build_settings:
-        tmp = conanfile.settings.get_safe(s)
+    for s in build_vars:
+        if s.startswith("settings."):
+            _, var = s.split("settings.", 1)
+            tmp = conanfile.settings.get_safe(var)
+        elif s.startswith("options."):
+            _, var = s.split("options.", 1)
+            tmp = "{}_{}".format(var, conanfile.options.get_safe(var))
+
+        else:
+            raise ConanException("Invalid 'tools.cmake.cmake_layout.build_folder_vars' value, it has"
+                                 " to start with 'settings.' or 'options.': {}".format(s))
         if tmp:
             ret.append(tmp.lower())
 

@@ -58,7 +58,7 @@ cppstd=11""", client.out)
                       "'c2f0c2641722089d9b11cd646c47d239af044b5a' created",
                       client.out)
 
-    def test_custom_settings(self):
+    def test_build_folder_vars(self):
         settings = textwrap.dedent("""\
             os:
                 None:
