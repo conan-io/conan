@@ -380,7 +380,7 @@ def test_system_dep():
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool_cmake(version="3.19")
 def test_error_missing_build_type():
     # https://github.com/conan-io/conan/issues/11168
     client = TestClient()
@@ -430,7 +430,7 @@ def test_error_missing_build_type():
     client.run("install .")
 
     generator = {
-        "Windows": '-G "Visual Studio 15 Win64"',
+        "Windows": '-G "Visual Studio 15 2017"',
         "Darwin": '-G "Xcode"',
         "Linux": '-G "Ninja Multi-Config"'
     }.get(platform.system())
