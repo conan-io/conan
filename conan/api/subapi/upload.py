@@ -2,7 +2,7 @@ from conan.api.model import UploadBundle
 from conan.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
-    UploadUpstreamChecker, PkgSigning
+    UploadUpstreamChecker, PkgSigningPlugin
 from conans.errors import ConanException
 
 
@@ -64,7 +64,7 @@ class UploadAPI:
         preparator = PackagePreparator(app)
         preparator.prepare(upload_bundle)
         # FIXME: POC: Signing all packages to see what breaks
-        signer = PkgSigning(app)
+        signer = PkgSigningPlugin(app)
         signer.sign(upload_bundle)
 
     @api_method

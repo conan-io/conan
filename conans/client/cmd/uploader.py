@@ -5,6 +5,7 @@ import time
 
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
+from conans.client.loader import load_python_file
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -147,6 +148,8 @@ class PackagePreparator:
                 self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
             if conanfile.build_policy == "always":
                 recipe.build_always = True
+                for package in recipe.packages:
+                    package.upload = False
             else:
                 recipe.build_always = False
                 for package in recipe.packages:
@@ -250,9 +253,17 @@ class PackagePreparator:
                 CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
-class PkgSigning:
+class PkgSigningPlugin:
     def __init__(self, app: ConanApp):
         self._app = app
+        cache = app.cache
+        signer_folder = os.path.join(cache.plugins_path, "sign")
+        signer = os.path.join(signer_folder, "sign.py")
+        if os.path.isfile(signer):
+            mod, _ = load_python_file(signer)
+            self._signer = mod.sign_artifacts
+        else:
+            self._signer = None
 
     def sign(self, upload_data):
         for recipe in upload_data.recipes:
