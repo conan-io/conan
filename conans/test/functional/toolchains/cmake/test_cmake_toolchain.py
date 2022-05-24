@@ -775,7 +775,7 @@ def test_cmaketoolchain_sysroot():
     })
 
     fake_sysroot = os.path.join("/usr/fakesysroot")
-    client.run("create . app/1.0@ -c tools.cmake.cmaketoolchain:cmake_sysroot='{}'".format(fake_sysroot))
+    client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
 
     assert "sysroot: {}".format(fake_sysroot) in client.out
 

@@ -828,8 +828,10 @@ class GenericSystemBlock(Block):
 
         system_name, system_version, system_processor = self._get_cross_build()
 
-        cmake_sysroot = self._conanfile.conf.get("tools.cmake.cmaketoolchain:cmake_sysroot")
-        cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+        # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple 
+        if self._conanfile.settings_build.get_safe("os") != "Macos":
+            cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
+            cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
