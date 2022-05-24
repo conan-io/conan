@@ -113,7 +113,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
                                       "{{ config_suffix }}"
-                                      "{{ pkg_name }}_{{ comp_variable_name }}")
+                                      "{{ pkg_name }}_{{ comp_variable_name }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_NO_SONAME_MODE'+config_suffix+'}' }}")
 
         set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
         {%- endfor %}
