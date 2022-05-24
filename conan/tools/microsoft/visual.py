@@ -8,114 +8,14 @@ from conan.tools.scm import Version
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-class VCVars:
-    """
-    VCVars class generator
-    """
-
-    def __init__(self, conanfile):
-        """
-        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
-        """
-        self._conanfile = conanfile
-
-    def generate(self, scope="build"):
-        """
-        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
-        variables to configure the command line for native 32-bit or 64-bit compilation.
-
-        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
-                      if ``build``, then it'll be used the ``conanbuild`` launcher.
-        """
-        conanfile = self._conanfile
-        os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
-            return
-
-        compiler = conanfile.settings.get_safe("compiler")
-        if compiler != "msvc":
-            return
-
-        vs_version = vs_ide_version(conanfile)
-        vcvarsarch = _vcvars_arch(conanfile)
-        vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
-
-        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
-        # The vs_install_path is like
-        # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
-        # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
-        # C:\Program Files (x86)\Microsoft Visual Studio 14.0
-        vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                                winsdk_version=None, vcvars_ver=vcvars_ver,
-                                vs_install_path=vs_install_path)
-
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(vcvars))
-        from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
-
-
-def _vcvars_path(version, vs_install_path):
-    # TODO: This comes from conans/client/tools/win.py vcvars_command()
-    vs_path = vs_install_path or vs_installation_path(version)
-    if not vs_path or not os.path.isdir(vs_path):
-        raise ConanException("VS non-existing installation: Visual Studio %s" % version)
-
-    if int(version) > 14:
-        vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-    else:
-        vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
-    return vcpath
-
-
-def _vcvars_arch(conanfile):
-    """
-    Computes the vcvars command line architecture based on conanfile settings (host) and
-    settings_build.
-    """
-    settings_host = conanfile.settings
-    settings_build = conanfile.settings_build
-
-    arch_host = str(settings_host.arch)
-    arch_build = str(settings_build.arch)
-
-    arch = None
-    if arch_build == 'x86_64':
-        arch = {'x86': "amd64_x86",
-                'x86_64': 'amd64',
-                'armv7': 'amd64_arm',
-                'armv8': 'amd64_arm64'}.get(arch_host)
-    elif arch_build == 'x86':
-        arch = {'x86': 'x86',
-                'x86_64': 'x86_amd64',
-                'armv7': 'x86_arm',
-                'armv8': 'x86_arm64'}.get(arch_host)
-
-    if not arch:
-        raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
-
-    return arch
-
-
-def _vcvars_vers(conanfile, compiler, vs_version):
-    if int(vs_version) <= 14:
-        return None
-
-    assert compiler == "msvc"
-    # Code similar to CMakeToolchain toolset one
-    compiler_version = str(conanfile.settings.compiler.version)
-    # The equivalent of compiler 192 is toolset 14.2
-    vcvars_ver = "14.{}".format(compiler_version[-1])
-    return vcvars_ver
-
-
 def check_min_vs(conanfile, version):
     """
-    This is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
+    This is a helper method to allow the migration of 1.X -> 2.0 and VisualStudio -> msvc settings
     without breaking recipes.
     The legacy "Visual Studio" with different toolset is not managed, not worth the complexity.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :param version: ``str`` Visual Studio or msvc version number.
     """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = None
@@ -169,6 +69,55 @@ def msvc_version_to_toolset_version(version):
                 '192': 'v142',
                 "193": 'v143'}
     return toolsets[str(version)]
+
+
+class VCVars:
+    """
+    VCVars class generator
+    """
+
+    def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
+        self._conanfile = conanfile
+
+    def generate(self, scope="build"):
+        """
+        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
+        variables to configure the command line for native 32-bit or 64-bit compilation.
+
+        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
+                      if ``build``, then it'll be used the ``conanbuild`` launcher.
+        """
+        conanfile = self._conanfile
+        os_ = conanfile.settings.get_safe("os")
+        if os_ != "Windows":
+            return
+
+        compiler = conanfile.settings.get_safe("compiler")
+        if compiler != "msvc":
+            return
+
+        vs_version = vs_ide_version(conanfile)
+        vcvarsarch = _vcvars_arch(conanfile)
+        vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
+
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+        # The vs_install_path is like
+        # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
+        # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
+        # C:\Program Files (x86)\Microsoft Visual Studio 14.0
+        vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                                winsdk_version=None, vcvars_ver=vcvars_ver,
+                                vs_install_path=vs_install_path)
+
+        content = textwrap.dedent("""\
+            @echo off
+            {}
+            """.format(vcvars))
+        from conan.tools.env.environment import create_env_script
+        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
 
 
 def vs_ide_version(conanfile):
@@ -246,6 +195,60 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
     if vcvars_ver:
         cmd.append("-vcvars_ver=%s" % vcvars_ver)
     return " ".join(cmd)
+
+
+def _vcvars_path(version, vs_install_path):
+    # TODO: This comes from conans/client/tools/win.py vcvars_command()
+    vs_path = vs_install_path or vs_installation_path(version)
+    if not vs_path or not os.path.isdir(vs_path):
+        raise ConanException("VS non-existing installation: Visual Studio %s" % version)
+
+    if int(version) > 14:
+        vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+    else:
+        vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    return vcpath
+
+
+def _vcvars_arch(conanfile):
+    """
+    Computes the vcvars command line architecture based on conanfile settings (host) and
+    settings_build.
+    """
+    settings_host = conanfile.settings
+    settings_build = conanfile.settings_build
+
+    arch_host = str(settings_host.arch)
+    arch_build = str(settings_build.arch)
+
+    arch = None
+    if arch_build == 'x86_64':
+        arch = {'x86': "amd64_x86",
+                'x86_64': 'amd64',
+                'armv7': 'amd64_arm',
+                'armv8': 'amd64_arm64'}.get(arch_host)
+    elif arch_build == 'x86':
+        arch = {'x86': 'x86',
+                'x86_64': 'x86_amd64',
+                'armv7': 'x86_arm',
+                'armv8': 'x86_arm64'}.get(arch_host)
+
+    if not arch:
+        raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
+
+    return arch
+
+
+def _vcvars_vers(conanfile, compiler, vs_version):
+    if int(vs_version) <= 14:
+        return None
+
+    assert compiler == "msvc"
+    # Code similar to CMakeToolchain toolset one
+    compiler_version = str(conanfile.settings.compiler.version)
+    # The equivalent of compiler 192 is toolset 14.2
+    vcvars_ver = "14.{}".format(compiler_version[-1])
+    return vcvars_ver
 
 
 def is_msvc(conanfile):
