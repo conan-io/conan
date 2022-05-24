@@ -766,7 +766,8 @@ def test_cmaketoolchain_sysroot():
         cmake_minimum_required(VERSION 3.15)
         set(CMAKE_CXX_COMPILER_WORKS 1)
         project(app CXX)
-        message("sysroot: ${CMAKE_SYSROOT}")
+        message("sysroot: '${CMAKE_SYSROOT}'")
+        message("osx_sysroot: '${CMAKE_OSX_SYSROOT}'")
         """)
 
     client.save({
@@ -774,17 +775,23 @@ def test_cmaketoolchain_sysroot():
         "CMakeLists.txt": cmakelist
     })
 
-    fake_sysroot = os.path.join("/usr/fakesysroot")
-    client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
+    fake_sysroot = client.current_folder
+    if platform.system() != "Darwin":
+        client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
+        assert "sysroot: '{}'".format(fake_sysroot) in client.out
+        assert "osx_sysroot: ''" in client.out
+    else:
+        client.run("create . app/1.0@ -c tools.apple:sdk_path='{}'".format(fake_sysroot))
+        assert "osx_sysroot: '{}'".format(fake_sysroot) in client.out
+        assert "sysroot: ''" in client.out
 
-    assert "sysroot: {}".format(fake_sysroot) in client.out
+    if platform.system() != "Darwin":
+        set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
 
-    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
+        client.save({
+            "conanfile.py": conanfile.format(set_sysroot_in_block),
+        })
 
-    client.save({
-        "conanfile.py": conanfile.format(set_sysroot_in_block),
-    })
+        client.run("create . app/1.0@")
 
-    client.run("create . app/1.0@")
-
-    assert "sysroot: {}".format(fake_sysroot) in client.out
+        assert "sysroot: '{}'".format(fake_sysroot) in client.out
