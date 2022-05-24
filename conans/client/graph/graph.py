@@ -116,8 +116,9 @@ class Node(object):
         # This is equivalent as the Requirement hash and eq methods
         # TODO: Make self.ref always exist, but with name=None if name not defined
         if self.ref is not None and require.ref.name == self.ref.name:
-            if require.build and require.ref.version != self.ref.version:
-                pass  # Allow bootstrapping
+            if require.build and (self.context == CONTEXT_HOST or  # switch context
+                                  require.ref.version != self.ref.version):  # or different version
+                pass
             else:
                 return None, self, self  # First is the require, as it is a loop => None
 
@@ -152,7 +153,7 @@ class Node(object):
         return source_node.check_downstream_exists(down_require)
 
     def check_loops(self, new_node):
-        if self.ref == new_node.ref:
+        if self.ref == new_node.ref and self.context == new_node.context:
             return self
         if not self.dependants:
             return

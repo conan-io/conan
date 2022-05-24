@@ -313,8 +313,6 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create pkgc --name=pkgc --version=0.1 -s build_type=Release")
 
         client.run("install pkgd -s build_type=Debug")
-        assert "pkga/0.1: Main binary package '9e186f6d94c008b544af1569d1a6368d8339efc5' missing" \
-               in client.out
         client.assert_listed_binary({"pkga/0.1":
                                     ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Cache")})
 

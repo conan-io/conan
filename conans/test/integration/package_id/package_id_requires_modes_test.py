@@ -106,7 +106,8 @@ class PackageIDTest(unittest.TestCase):
         # As we have changed hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: f25bd0cc2b8eec83e11ca16e79f4e43539cd93b9",
+        self.assertIn("ERROR: Missing binary: "
+                      "hello2/2.3.8@lasote/stable:f25bd0cc2b8eec83e11ca16e79f4e43539cd93b9",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -189,7 +190,6 @@ class PackageIDTest(unittest.TestCase):
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'hello2/2.3.8@lasote/stable' package", self.client.out)
-        self.assertIn("Package ID:", self.client.out)
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_nameless_mode(self):
@@ -251,12 +251,14 @@ class PackageIDTest(unittest.TestCase):
         package_id_missing = "c4e90f390819b782c27ad290de6727acbcbc76bd"
         self.assertIn(f"""ERROR: Missing binary: libc/0.1.0@user/testing:{package_id_missing}
 
-libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
-- Settings:%s
-- Options: an_option=off
-- Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
-- Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: {package_id_missing}""" % " ", self.client.out)
+libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package binary '{package_id_missing}' for the configuration:
+[options]
+an_option=off
+[requires]
+liba/0.1.0
+libb/0.1.0
+libbar/0.1.0
+libfoo/0.1.0""", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):

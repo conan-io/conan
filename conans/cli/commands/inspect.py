@@ -3,7 +3,6 @@ import inspect as python_inspect
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conans.cli.output import ConanOutput
-from conans.errors import ConanException
 
 
 def _inspect_json_formatter(data):
@@ -34,6 +33,13 @@ def inspect_path(conan_api, parser, subparser, *args, **kwargs):
            or python_inspect.isfunction(value) or isinstance(value, property):
             continue
         ret[name] = value
-        out.writeln("{}: {}".format(name, value))
+        if value is None:
+            continue
+        if isinstance(value, dict):
+            out.writeln(f"{name}:")
+            for k, v in value.items():
+                out.writeln(f"    {k}: {v}")
+        else:
+            out.writeln("{}: {}".format(name, value))
 
     return ret

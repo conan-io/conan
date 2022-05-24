@@ -2,7 +2,8 @@ import os
 import textwrap
 
 from conans.client.conf.detect_vs import vs_installation_path
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
+from conan.tools.scm import Version
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
@@ -108,6 +109,34 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     # The equivalent of compiler 192 is toolset 14.2
     vcvars_ver = "14.{}".format(compiler_version[-1])
     return vcvars_ver
+
+
+def check_min_vs(conanfile, version):
+    """
+    This is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
+    without breaking recipes.
+    The legacy "Visual Studio" with different toolset is not managed, not worth the complexity.
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = None
+    if compiler == "Visual Studio":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_version = {"17": "193",
+                            "16": "192",
+                            "15": "191",
+                            "14": "190",
+                            "12": "180",
+                            "11": "170"}.get(compiler_version)
+    elif compiler == "msvc":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_update = conanfile.settings.get_safe("compiler.update")
+        if compiler_version and compiler_update is not None:
+            compiler_version += ".{}".format(compiler_update)
+
+    if compiler_version and Version(compiler_version) < version:
+        msg = "This package doesn't work with VS compiler version '{}'" \
+              ", it requires at least '{}'".format(compiler_version, version)
+        raise ConanInvalidConfiguration(msg)
 
 
 def msvc_version_to_vs_ide_version(version):

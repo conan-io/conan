@@ -28,7 +28,6 @@ class RemoteManager(object):
     def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
         self._auth_manager = auth_manager
-        self._hook_manager = hook_manager
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -55,7 +54,6 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         assert ref.revision, "get_recipe without revision specified"
-        self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
@@ -81,10 +79,6 @@ class RemoteManager(object):
         # Make sure that the source dir is deleted
         rmdir(layout.source())
         touch_folder(export_folder)
-        conanfile_path = layout.conanfile()
-
-        self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
@@ -106,12 +100,6 @@ class RemoteManager(object):
         touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, pref, remote):
-        ref_layout = self._cache.ref_layout(pref.ref)
-        conanfile_path = ref_layout.conanfile()
-        self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
-                                   conanfile=conanfile)
-
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
                                                                            remote.name))
 
@@ -121,10 +109,6 @@ class RemoteManager(object):
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             self._get_package(pkg_layout, pref, remote, conanfile.output)
-
-        self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.package_id, remote=remote,
-                                   conanfile=conanfile)
 
     def _get_package(self, layout, pref, remote, scoped_output):
         t1 = time.time()
@@ -178,12 +162,6 @@ class RemoteManager(object):
 
     def remove_all_packages(self, ref, remote):
         return self._call_remote(remote, "remove_all_packages", ref)
-
-    def get_recipe_file(self, ref, path, remote):
-        return self._call_remote(remote, "get_recipe_file", ref, path)
-
-    def get_package_file(self, pref, path, remote):
-        return self._call_remote(remote, "get_package_file", pref, path)
 
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)

@@ -1,6 +1,6 @@
 import platform
 
-from conans.cli.output import ConanOutput, ScopedOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
@@ -112,7 +112,7 @@ class ConanFile:
         scope = self.display_name
         if not scope:
             scope = self.ref if self._conan_node else ""
-        return ScopedOutput(scope, ConanOutput())
+        return ConanOutput(scope=scope)
 
     @property
     def context(self):

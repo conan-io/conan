@@ -327,17 +327,17 @@ def test_single_config_decentralized(client_setup):
     assert len(level0) == 1
     pkgawin = level0[0]
     assert pkgawin["ref"] == "pkgawin/0.1#2f297d19d9ee4827caf97071de449a54"
-    assert pkgawin["packages"][0]["binary"] == "Cache"
+    assert pkgawin["packages"][0][0]["binary"] == "Cache"
     level1 = to_build[1]
     assert len(level1) == 1
     pkgb = level1[0]
     assert pkgb["ref"] == "pkgb/0.1#bb12977c3353d7633b34d55a926fe58c"
-    assert pkgb["packages"][0]["binary"] == "Cache"
+    assert pkgb["packages"][0][0]["binary"] == "Cache"
 
     for level in to_build:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
-            for package in elem["packages"]:
+            for package in elem["packages"][0]:  # Assumes no dependencies between packages
                 binary = package["binary"]
                 package_id = package["package_id"]
                 if binary != "Build":
@@ -397,15 +397,15 @@ def test_multi_config_decentralized(client_setup):
     assert len(level0) == 2
     pkgawin = level0[0]
     assert pkgawin["ref"] == "pkgawin/0.1#2f297d19d9ee4827caf97071de449a54"
-    assert pkgawin["packages"][0]["binary"] == "Cache"
+    assert pkgawin["packages"][0][0]["binary"] == "Cache"
     pkgawin = level0[1]
     assert pkgawin["ref"] == "pkganix/0.1#2f297d19d9ee4827caf97071de449a54"
-    assert pkgawin["packages"][0]["binary"] == "Cache"
+    assert pkgawin["packages"][0][0]["binary"] == "Cache"
     level1 = to_build[1]
     assert len(level1) == 1
     pkgb = level1[0]
     assert pkgb["ref"] == "pkgb/0.1#bb12977c3353d7633b34d55a926fe58c"
-    assert pkgb["packages"][0]["binary"] == "Cache"
+    assert pkgb["packages"][0][0]["binary"] == "Cache"
 
     for level in to_build:
         for elem in level:
@@ -413,7 +413,7 @@ def test_multi_config_decentralized(client_setup):
             ref_without_rev = ref.split("#")[0]
             if "@" not in ref:
                 ref = ref.replace("#", "@#")
-            for package in elem["packages"]:
+            for package in elem["packages"][0]:  # Assumes no dependencies between packages
                 binary = package["binary"]
                 package_id = package["package_id"]
                 if binary != "Build":

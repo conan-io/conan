@@ -202,31 +202,30 @@ def call_system_requirements(conanfile):
         conanfile.system_requirements()
 
 
-class BinaryInstaller(object):
+class BinaryInstaller:
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
     def __init__(self, app):
         self._app = app
         self._cache = app.cache
-        self._out = ConanOutput()
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
 
     def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
-        self._out.info("\nInstalling (downloading, building) binaries...")
+        ConanOutput().info("\nInstalling (downloading, building) binaries...")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
-        install_graph.raise_errors(self._out)
+        install_graph.raise_errors()
         install_order = install_graph.install_order()
 
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
-                for package in install_reference.packages:
+                for package in install_reference.packages.values():
                     self._handle_package(package, install_reference)
 
     def _download_bulk(self, install_order):
@@ -236,7 +235,7 @@ class BinaryInstaller(object):
         downloads = []
         for level in install_order:
             for node in level:
-                for package in node.packages:
+                for package in node.packages.values():
                     if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                         downloads.append(package)
         if not downloads:
@@ -244,7 +243,7 @@ class BinaryInstaller(object):
 
         parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
-            self._out.info("Downloading binary packages in %s parallel threads" % parallel)
+            ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
             thread_pool.map(self._download_pkg, downloads)
             thread_pool.close()
