@@ -308,4 +308,5 @@ class _TargetDataContext(object):
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)
-        self.no_soname = str(cpp_info.get_property("nosoname") or False).upper()
+        # SONAME flag only makes sense for SHARED libraries
+        self.no_soname = str((cpp_info.get_property("nosoname") if self.library_type == "SHARED" else False) or False).upper()
