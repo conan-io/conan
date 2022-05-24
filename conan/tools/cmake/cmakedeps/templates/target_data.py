@@ -56,7 +56,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 "components_names": components_names,
                 "components_cpp": components_cpp,
                 "dependency_filenames": " ".join(dependency_filenames),
-                "dependency_find_modes": dependency_find_modes}
+                "dependency_find_modes": dependency_find_modes,
+                "no_soname": str(self.no_soname).upper()}
 
     @property
     def cmake_package_type(self):
@@ -67,6 +68,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def is_host_windows(self):
         # to account for all WindowsStore, WindowsCE and Windows OS in settings
         return "Windows" in self.conanfile.settings.get_safe("os", "")
+
+    @property
+    def no_soname(self):
+        return self.conanfile.cpp_info.get_property("nosoname") or False
 
     @property
     def template(self):
@@ -113,6 +118,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
+              set({{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }} {{ no_soname }})
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
 

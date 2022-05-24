@@ -73,7 +73,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
                                       {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
                                       "{{ config_suffix }}"  # config_suffix
-                                      "{{ pkg_name }}")    # package_name
+                                      "{{ pkg_name }}"    # package_name
+                                      "{{ '${' }}{{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }}}")  # soname
 
         foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
             list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_FRAMEWORK})
