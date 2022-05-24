@@ -54,10 +54,8 @@ def test_ios():
             generators = "AutotoolsToolchain", "AutotoolsDeps"
 
             def build(self):
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
                 autotools = Autotools(self)
+                autotools.autoreconf()
                 autotools.configure()
                 autotools.make()
         """)
@@ -76,4 +74,12 @@ def test_ios():
 
     conanbuild = load_toolchain_args(client.current_folder)
     configure_args = conanbuild["configure_args"]
-    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+    make_args = conanbuild["make_args"]
+    autoreconf_args = conanbuild["autoreconf_args"]
+    assert configure_args == "'--disable-shared' '--enable-static' '--with-pic' '--prefix=/' " \
+                             "'--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' '--libdir=${prefix}/lib' " \
+                             "'--includedir=${prefix}/include' '--oldincludedir=${prefix}/include' " \
+                             "'--datarootdir=${prefix}/res' '--host=aarch64-apple-ios' " \
+                             "'--build=x86_64-apple-darwin'"
+    assert make_args == ""
+    assert autoreconf_args == "'--force' '--install'"
