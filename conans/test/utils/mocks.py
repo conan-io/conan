@@ -83,8 +83,8 @@ class MockSettings(object):
     def __init__(self, values):
         self.values = values
 
-    def get_safe(self, value):
-        return self.values.get(value, None)
+    def get_safe(self, value, default=None):
+        return self.values.get(value, default)
 
 
 class MockCppInfo(object):
