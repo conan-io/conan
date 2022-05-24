@@ -47,7 +47,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir package_bindir library_type is_host_windows deps out_libraries out_libraries_target config_suffix package_name no_soname_mode)
+       function(conan_package_library_targets libraries package_libdir package_bindir library_type
+                is_host_windows deps out_libraries out_libraries_target config_suffix package_name
+                no_soname_mode)
            set(_out_libraries "")
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
