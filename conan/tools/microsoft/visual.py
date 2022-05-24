@@ -9,9 +9,13 @@ CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
 def check_min_vs(conanfile, version):
-    """ this is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
-    withoug breaking recipes
-    The legacy "Visual Studio" with different toolset is not managed, not worth the complexity
+    """
+    This is a helper method to allow the migration of 1.X -> 2.0 and VisualStudio -> msvc settings
+    without breaking recipes.
+    The legacy "Visual Studio" with different toolset is not managed, not worth the complexity.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :param version: ``str`` Visual Studio or msvc version number.
     """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = None
@@ -36,6 +40,12 @@ def check_min_vs(conanfile, version):
 
 
 def msvc_version_to_vs_ide_version(version):
+    """
+    Gets the Visual Studio IDE version given the ``msvc`` compiler one.
+
+    :param version: ``str`` or ``int`` msvc version
+    :return: VS IDE version
+    """
     _visuals = {'170': '11',
                 '180': '12',
                 '190': '14',
@@ -46,6 +56,12 @@ def msvc_version_to_vs_ide_version(version):
 
 
 def msvc_version_to_toolset_version(version):
+    """
+    Gets the Visual Studio IDE toolset version given the ``msvc`` compiler one.
+
+    :param version: ``str`` or ``int`` msvc version
+    :return: VS IDE toolset version
+    """
     toolsets = {'170': 'v110',
                 '180': 'v120',
                 '190': 'v140',
@@ -56,12 +72,23 @@ def msvc_version_to_toolset_version(version):
 
 
 class VCVars:
+    """
+    VCVars class generator
+    """
+
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
 
     def generate(self, scope="build"):
         """
-        write a conanvcvars.bat file with the good args from settings
+        Creates a ``conanvcvars.bat`` file with the good args from settings to set environment
+        variables to configure the command line for native 32-bit or 64-bit compilation.
+
+        :param scope: ``str`` Launcher to be used to run all the variables. For instance,
+                      if ``build``, then it'll be used the ``conanbuild`` launcher.
         """
         conanfile = self._conanfile
         os_ = conanfile.settings.get_safe("os")
@@ -73,7 +100,7 @@ class VCVars:
             return
 
         vs_version = vs_ide_version(conanfile)
-        vcvarsarch = vcvars_arch(conanfile)
+        vcvarsarch = _vcvars_arch(conanfile)
         vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
 
         vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
@@ -95,7 +122,11 @@ class VCVars:
 
 def vs_ide_version(conanfile):
     """
-    Get the VS IDE version as string
+    Gets the VS IDE version as string. It'll use the ``compiler.version`` (if exists) and/or the
+    ``tools.microsoft.msbuild:vs_version`` if ``compiler`` is ``msvc``.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :return: ``str`` Visual IDE version number.
     """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
@@ -111,6 +142,12 @@ def vs_ide_version(conanfile):
 
 
 def msvc_runtime_flag(conanfile):
+    """
+    Gets the MSVC runtime flag given the ``compiler.runtime`` value from the settings.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :return: ``str`` runtime flag.
+    """
     settings = conanfile.settings
     runtime = settings.get_safe("compiler.runtime")
     if runtime is not None:
@@ -129,10 +166,20 @@ def msvc_runtime_flag(conanfile):
 
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
                    vcvars_ver=None, start_dir_cd=True, vs_install_path=None):
-    """ conan-agnostic construction of vcvars command
-    https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line
     """
-    # TODO: This comes from conans/client/tools/win.py vcvars_command()
+    Conan-agnostic construction of vcvars command
+    https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line
+
+    :param version: ``str`` Visual Studio version.
+    :param architecture: ``str`` Specifies the host and target architecture to use.
+    :param platform_type: ``str`` Allows you to specify ``store`` or ``uwp`` as the platform type.
+    :param winsdk_version: ``str`` Specifies the version of the Windows SDK to use.
+    :param vcvars_ver: ``str`` Specifies the Visual Studio compiler toolset to use.
+    :param start_dir_cd: ``bool`` If ``True``, the command will execute
+                         ``set "VSCMD_START_DIR=%CD%`` at first.
+    :param vs_install_path: ``str`` Visual Studio installation path.
+    :return: ``str`` complete _vcvarsall_ command.
+    """
     cmd = []
     if start_dir_cd:
         cmd.append('set "VSCMD_START_DIR=%CD%" &&')
@@ -163,12 +210,10 @@ def _vcvars_path(version, vs_install_path):
     return vcpath
 
 
-def vcvars_arch(conanfile):
+def _vcvars_arch(conanfile):
     """
-    computes the vcvars command line architecture based on conanfile settings (host) and
-    settings_build
-    :param conanfile:
-    :return:
+    Computes the vcvars command line architecture based on conanfile settings (host) and
+    settings_build.
     """
     settings_host = conanfile.settings
     settings_build = conanfile.settings_build
@@ -207,17 +252,21 @@ def _vcvars_vers(conanfile, compiler, vs_version):
 
 
 def is_msvc(conanfile):
-    """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
-    :param conanfile: ConanFile instance
-    :return: True, if the host compiler is related to Visual Studio, otherwise, False.
+    """
+    Validates if the current compiler is ``msvc``.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :return: ``bool`` True, if the host compiler is ``msvc``, otherwise, False.
     """
     settings = conanfile.settings
     return settings.get_safe("compiler") == "msvc"
 
 
 def is_msvc_static_runtime(conanfile):
-    """ Validate when building with Visual Studio or msvc and MT on runtime
-    :param conanfile: ConanFile instance
-    :return: True, if msvc + runtime MT. Otherwise, False
+    """
+    Validates when building with Visual Studio or msvc and MT on runtime.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :return: ``bool`` True, if ``msvc + runtime MT``. Otherwise, False.
     """
     return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
