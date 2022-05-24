@@ -17,8 +17,8 @@ class AutotoolsToolchain:
         self._conanfile = conanfile
         self._namespace = namespace
 
-        self.configure_args = self._shared_flags()
-        self.autoreconf_args = []
+        self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
+        self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
 
         # Flags
@@ -168,7 +168,7 @@ class AutotoolsToolchain:
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
 
-    def _shared_flags(self):
+    def _default_configure_shared_flags(self):
         args = []
         if self._conanfile.options.get_safe("shared", False):
             args.extend(["--enable-shared", "--disable-static"])
@@ -177,6 +177,26 @@ class AutotoolsToolchain:
                         if self._conanfile.options.get_safe("fPIC", True)
                         else "--without-pic"])
         return args
+
+    def _default_configure_install_flags(self):
+        configure_install_flags = []
+
+        def _get_argument(argument_name, cppinfo_name):
+            elements = getattr(self._conanfile.cpp.package, cppinfo_name)
+            return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
+
+        # If someone want arguments but not the defaults can pass them in args manually
+        configure_install_flags.extend(["--prefix=/",
+                                       _get_argument("bindir", "bindirs"),
+                                       _get_argument("sbindir", "bindirs"),
+                                       _get_argument("libdir", "libdirs"),
+                                       _get_argument("includedir", "includedirs"),
+                                       _get_argument("oldincludedir", "includedirs"),
+                                       _get_argument("datarootdir", "resdirs")])
+        return configure_install_flags
+
+    def _default_autoreconf_flags(self):
+        return ["--force", "--install"]
 
     def generate_args(self):
         configure_args = []

@@ -21,8 +21,6 @@ class Autotools(object):
         self._make_args = toolchain_file_content.get("make_args")
         self._autoreconf_args = toolchain_file_content.get("autoreconf_args")
 
-        self.default_configure_install_args = True
-
     def configure(self, build_script_folder=None, args=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
@@ -30,22 +28,8 @@ class Autotools(object):
         """
         script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
             if build_script_folder else self._conanfile.source_folder
+
         configure_args = []
-
-        if self.default_configure_install_args:
-            def _get_argument(argument_name, cppinfo_name):
-                elements = getattr(self._conanfile.cpp.package, cppinfo_name)
-                return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
-
-            # If someone want arguments but not the defaults can pass them in args manually
-            configure_args.extend(["--prefix=/",
-                                   _get_argument("bindir", "bindirs"),
-                                   _get_argument("sbindir", "bindirs"),
-                                   _get_argument("libdir", "libdirs"),
-                                   _get_argument("includedir", "includedirs"),
-                                   _get_argument("oldincludedir", "includedirs"),
-                                   _get_argument("datarootdir", "resdirs")])
-
         configure_args.extend(args or [])
 
         self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args))
@@ -106,7 +90,7 @@ class Autotools(object):
             self._fix_osx_shared_install_name()
 
     def autoreconf(self, args=None):
-        args = args if args is not None else ["--force", "--install"]
+        args = args or []
         command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
         with chdir(self, self._conanfile.source_folder):
             self._conanfile.run(command)

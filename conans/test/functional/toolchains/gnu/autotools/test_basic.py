@@ -342,7 +342,6 @@ def test_autotools_arguments_override():
 
             def build(self):
                 autotools = Autotools(self)
-                autotools.default_configure_install_args = False
                 autotools.autoreconf(args=['--install'])
                 autotools.configure(args=['--prefix=/', '--libdir=${prefix}/customlibfolder',
                                           '--includedir=${prefix}/customincludefolder',
@@ -374,7 +373,7 @@ def test_autotools_arguments_override():
     assert 'DESTDIR={} '.format(package_folder) not in client.out
     assert 'DESTDIR={}/somefolder '.format(package_folder) in client.out
 
-    # we set default_configure_install_args = False
+    # we did override the default install args
     for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin',
                 '--libdir=${prefix}/lib', '--includedir=${prefix}/include',
                 '--oldincludedir=${prefix}/include', '--datarootdir=${prefix}/res']:
