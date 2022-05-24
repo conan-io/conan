@@ -48,8 +48,10 @@ class AutotoolsToolchain:
         self._build = None
         self._target = None
 
-        self.apple_arch_flag = self.apple_isysroot_flag = None
+        self.apple_arch_flag = None
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+
+        self.sysroot_flag = None
 
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
@@ -64,7 +66,12 @@ class AutotoolsToolchain:
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
-                self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+                self.sysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+
+        if os_build != "Macos":
+            sysroot = self._conanfile.conf.get("tools.build:sysroot")
+            sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
+            self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
         check_using_build_profile(self._conanfile)
 
@@ -132,16 +139,16 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
 
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_arch_flag, self.apple_min_version_flag]
         fpic = "-fPIC" if self.fpic else None
         extra_flags = self._get_extra_flags()
 
         self.cxxflags.extend([self.libcxx, self.cppstd,
-                              self.arch_flag, fpic, self.msvc_runtime_flag]
+                              self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
                              + self.build_type_flags + apple_flags + extra_flags["cxxflags"])
-        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag]
+        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
                            + self.build_type_flags + apple_flags + extra_flags["cflags"])
-        self.ldflags.extend([self.arch_flag] + self.build_type_link_flags
+        self.ldflags.extend([self.arch_flag, self.sysroot_flag] + self.build_type_link_flags
                             + apple_flags + extra_flags["ldflags"])
         self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
 
