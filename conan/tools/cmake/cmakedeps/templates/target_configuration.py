@@ -116,8 +116,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
-                                                   ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}
+                     ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}> APPEND)
 
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS
@@ -145,8 +145,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES ######################################
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINK_LIBS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_variable_name, 'OBJECTS', config_suffix)}}> APPEND)
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'OBJECTS', config_suffix)}}
+                     {{tvalue(pkg_name, comp_variable_name, 'LINK_LIBS', config_suffix)}}> APPEND)
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_OPTIONS
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
