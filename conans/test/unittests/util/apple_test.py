@@ -63,7 +63,7 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphonesimulator')),
                          'iphonesimulator')
 
-    def test_apple_sdk_name_custom_settings(self):
+    def test_apple_sdk_name_build_folder_vars(self):
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'ios_fat')), 'macosx')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'ios_fat')), 'iphoneos')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'ios_fat')), 'watchos')
