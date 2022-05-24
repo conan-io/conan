@@ -14,7 +14,7 @@ PACKAGES_FOLDER = "p"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
-METADATA = "m"
+METADATA = "metadata"
 
 
 class LayoutBase:

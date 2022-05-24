@@ -5,7 +5,6 @@ import time
 
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.loader import load_python_file
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -13,7 +12,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, save)
+                               gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -253,45 +252,6 @@ class PackagePreparator:
                 CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
-class PkgSigningPlugin:
-    def __init__(self, app: ConanApp):
-        self._app = app
-        cache = app.cache
-        signer_folder = os.path.join(cache.plugins_path, "sign")
-        signer = os.path.join(signer_folder, "sign.py")
-        if os.path.isfile(signer):
-            mod, _ = load_python_file(signer)
-            self._signer = mod.sign_artifacts
-        else:
-            self._signer = None
-
-    def sign(self, upload_data):
-        for recipe in upload_data.recipes:
-            if recipe.upload:
-                self.sign_recipe(recipe)
-            for package in recipe.packages:
-                if package.upload:
-                    self.sign_package(package)
-
-    def sign_recipe(self, recipe):
-        ref = recipe.ref
-        ref_layout = self._app.cache.ref_layout(ref)
-        recipe_metadata = ref_layout.recipe_metadata()
-        signature_file = os.path.join(recipe_metadata, "signature.asc")
-        content = "\n".join(recipe.files)
-        save(signature_file, content)
-        recipe.files["signature.asc"] = signature_file
-
-    def sign_package(self, package):
-        pref = package.pref
-        pkg_layout = self._app.cache.pkg_layout(pref)
-        package_metadata = pkg_layout.package_metadata()
-        signature_file = os.path.join(package_metadata, "signature.asc")
-        content = "\n".join(package.files or [])
-        save(signature_file, content)
-        package.files["signature.asc"] = signature_file
-
-
 class UploadExecutor:
     """ does the actual file transfer to the remote. The files to be uploaded have already
     been computed and are passed in the ``upload_data`` parameter, so this executor is also
@@ -302,7 +262,6 @@ class UploadExecutor:
         self._output = ConanOutput()
 
     def upload(self, upload_data, remote):
-
         if upload_data.any_upload:
             self._output.info("Uploading artifacts")
         for recipe in upload_data.recipes:

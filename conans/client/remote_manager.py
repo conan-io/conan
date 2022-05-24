@@ -8,6 +8,7 @@ from requests.exceptions import ConnectionError
 from conan.cache.conan_reference_layout import METADATA
 from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
+from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
 from conans.model.info import load_binary_info
@@ -23,19 +24,13 @@ from conans.util.tracer import (log_package_download,
                                 log_uncompressed_file)
 
 
-class PkgSignVerifier:
-
-    def verify(self, folder, files):
-        print("Verify signature", folder)
-        print("Verify files", files)
-
-
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
     def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
         self._auth_manager = auth_manager
+        self._signer = PkgSignaturesPlugin(cache)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -76,9 +71,8 @@ class RemoteManager(object):
         log_recipe_download(ref, duration, remote.name, zipped_files)
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
-        zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(f"{METADATA}/")}
-        pkg_verifier = PkgSignVerifier()
-        pkg_verifier.verify(download_export, zipped_files)
+        zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
+        self._signer.verify(ref, zipped_files, layout.recipe_metadata())
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
@@ -131,10 +125,8 @@ class RemoteManager(object):
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
-            zipped_files = {k: v for k, v in zipped_files.items() if
-                            not k.startswith(f"{METADATA}/")}
-            pkg_verifier = PkgSignVerifier()
-            pkg_verifier.verify(download_pkg_folder, zipped_files)
+            zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
+            self._signer.verify(pref, zipped_files, layout.package_metadata())
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 
