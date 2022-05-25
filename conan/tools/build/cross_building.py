@@ -36,6 +36,6 @@ def can_run(conanfile):
     See https://github.com/conan-io/conan/issues/11035
     """
     allowed = conanfile.conf.get("tools.build.cross_building:can_run", check_type=bool)
-    if not allowed:
+    if allowed is None:
         return not cross_building(conanfile)
-    return True
+    return allowed
