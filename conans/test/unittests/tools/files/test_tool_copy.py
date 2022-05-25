@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import mock
 import os
 import platform
@@ -9,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save
+from conans.util.files import load, save, mkdir
 
 
 class ToolCopyTest(unittest.TestCase):
@@ -48,19 +46,20 @@ class ToolCopyTest(unittest.TestCase):
         gen/test.bin
         sym/ => gen
         """
+
         build_folder = temp_folder()
-        test = Path(build_folder, "test.h")
-        test.touch()
-        inc_folder = Path(build_folder, "inc")
-        inc_folder.mkdir(parents=True, exist_ok=True)
-        test2 = inc_folder.joinpath("test2.h")
-        test2.touch()
-        gen_folder = Path(build_folder, "gen")
-        gen_folder.mkdir(parents=True, exist_ok=True)
-        bin = gen_folder.joinpath("test.bin")
-        bin.touch()
-        sym_folder = Path(build_folder, "sym")
-        sym_folder.symlink_to(gen_folder, target_is_directory=True)
+        test = os.path.join(build_folder, "test.h")
+        save(test, "")
+        inc_folder = os.path.join(build_folder, "inc")
+        mkdir(inc_folder)
+        test2 = os.path.join(inc_folder, "test2.h")
+        save(test2, "")
+        gen_folder = os.path.join(build_folder, "gen")
+        mkdir(gen_folder)
+        bin = os.path.join(gen_folder, "test.bin")
+        save(bin, "")
+        sym_folder = os.path.join(build_folder, "sym")
+        os.symlink(gen_folder, sym_folder)
 
         package_folder = temp_folder()
         # Pattern with the sym/*.bin won't work, "sym" is a file (symlink to folder), not a folder
@@ -81,6 +80,7 @@ class ToolCopyTest(unittest.TestCase):
         # If the pattern matches the "sym" file, it will be copied (as a symlink)
         copy(None, "s*", build_folder, package_folder)
         assert os.path.exists(os.path.join(package_folder, "sym"))
+        assert os.path.islink(os.path.join(package_folder, "sym"))
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_relative(self):
