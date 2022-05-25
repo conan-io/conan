@@ -321,7 +321,7 @@ def test_apple_isysrootflag():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     expected = "-isysroot /path/to/sdk"
-    assert be.sysroot_flag == expected
+    assert be.apple_isysroot_flag == expected
     env = be.vars()
     assert expected in env["CXXFLAGS"]
     assert expected in env["CFLAGS"]
@@ -335,7 +335,7 @@ def test_apple_isysrootflag():
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    assert be.sysroot_flag is None
+    assert be.apple_isysroot_flag is None
 
 
 def test_sysrootflag():

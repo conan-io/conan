@@ -48,7 +48,7 @@ class AutotoolsToolchain:
         self._build = None
         self._target = None
 
-        self.apple_arch_flag = None
+        self.apple_arch_flag = self.apple_isysroot_flag = None
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
 
         self.sysroot_flag = None
@@ -66,7 +66,7 @@ class AutotoolsToolchain:
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
-                self.sysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+                self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
@@ -138,7 +138,7 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
 
-        apple_flags = [self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         fpic = "-fPIC" if self.fpic else None
         extra_flags = self._get_extra_flags()
 
