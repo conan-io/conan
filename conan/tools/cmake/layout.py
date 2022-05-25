@@ -19,13 +19,19 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         build_type = str(conanfile.settings.build_type)
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
+
+    suffix = get_build_folder_vars_suffix(conanfile)
     if multi:
         conanfile.folders.build = "build"
     else:
-        build_type = build_type.lower()
-        conanfile.folders.build = "cmake-build-{}".format(build_type)
+        conanfile.folders.build = "cmake-build-{}".format(str(build_type).lower())
 
-    conanfile.folders.generators = os.path.join("build", "generators")
+    if suffix:
+        conanfile.folders.build += "-{}".format(suffix)
+
+    conanfile.folders.generators = os.path.join("build" if not suffix else "build-{}".format(suffix),
+                                                "generators")
+
     conanfile.cpp.source.includedirs = ["include"]
 
     if multi:
@@ -34,3 +40,27 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     else:
         conanfile.cpp.build.libdirs = ["."]
         conanfile.cpp.build.bindirs = ["."]
+
+
+def get_build_folder_vars_suffix(conanfile):
+
+    build_vars = conanfile.conf.get("tools.cmake.cmake_layout.build_folder_vars",
+                                    default=[], check_type=list)
+    ret = []
+    for s in build_vars:
+        tmp = None
+        if s.startswith("settings."):
+            _, var = s.split("settings.", 1)
+            tmp = conanfile.settings.get_safe(var)
+        elif s.startswith("options."):
+            _, var = s.split("options.", 1)
+            value = conanfile.options.get_safe(var)
+            if value is not None:
+                tmp = "{}_{}".format(var, value)
+        else:
+            raise ConanException("Invalid 'tools.cmake.cmake_layout.build_folder_vars' value, it has"
+                                 " to start with 'settings.' or 'options.': {}".format(s))
+        if tmp:
+            ret.append(tmp.lower())
+
+    return "-".join(ret)

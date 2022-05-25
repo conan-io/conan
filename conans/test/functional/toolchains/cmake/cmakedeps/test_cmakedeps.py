@@ -153,11 +153,11 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = "$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
+            target_libs = "$<$<CONFIG:Release>:;CONAN_LIB::Test_lib1_RELEASE;sys1;>"
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = "$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
+            target_libs = "$<$<CONFIG:Debug>:;CONAN_LIB::Test_lib1_DEBUG;sys1d;>"
 
         assert "Target libs: %s" % target_libs in client.out
 
@@ -378,3 +378,65 @@ def test_system_dep():
         data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
+
+
+@pytest.mark.tool_cmake(version="3.19")
+def test_error_missing_build_type():
+    # https://github.com/conan-io/conan/issues/11168
+    client = TestClient()
+
+    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("create . -tf=None")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        hello/1.0
+        [generators]
+        CMakeDeps
+        CMakeToolchain
+    """)
+
+    main = textwrap.dedent("""
+        #include <hello.h>
+        int main() {hello();return 0;}
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app)
+        find_package(hello REQUIRED)
+        add_executable(app)
+        target_link_libraries(app hello::hello)
+        target_sources(app PRIVATE main.cpp)
+    """)
+
+    if platform.system() != "Windows":
+        client.save({
+            "conanfile.txt": conanfile,
+            "main.cpp": main,
+            "CMakeLists.txt": cmakelists
+        }, clean_first=True)
+
+        client.run("install .")
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'", assert_error=True)
+        assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
+
+    client.save({
+        "conanfile.txt": conanfile,
+        "main.cpp": main,
+        "CMakeLists.txt": cmakelists
+    }, clean_first=True)
+
+    client.run("install .")
+
+    generator = {
+        "Windows": '-G "Visual Studio 15 2017"',
+        "Darwin": '-G "Xcode"',
+        "Linux": '-G "Ninja Multi-Config"'
+    }.get(platform.system())
+
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake {}".format(generator))
+    client.run_command("cmake --build . --config Release")
+    run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
+    client.run_command(run_app)
+    assert "Hello World Release!" in client.out

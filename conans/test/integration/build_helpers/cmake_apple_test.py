@@ -48,7 +48,7 @@ class CMakeAppleTest(unittest.TestCase):
                            ('watchOS', 'WatchOS.platform'),
                            ('tvOS', 'AppleTVOS.platform')
                            ])
-    def test_custom_settings(self, conan_os, expected_os):
+    def test_build_folder_vars(self, conan_os, expected_os):
         settings = MockSettings({"os": conan_os,
                                  "compiler": "apple-clang",
                                  "compiler.version": "11.0",
