@@ -71,8 +71,7 @@ def windows_bash_wrapper(conanfile, command, cwd, env):
                                                  wrapped_user_cmd=wrapped_user_cmd)
     inside_command = escape_windows_cmd(inside_command)
 
-    final_command = 'cd "{cwd}" && {wrapped_shell} --login -c {inside_command}'.format(
-        cwd=cwd,
+    final_command = '{wrapped_shell} --login -c {inside_command}'.format(
         wrapped_shell=wrapped_shell,
         inside_command=inside_command)
     return final_command
