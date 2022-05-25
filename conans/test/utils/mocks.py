@@ -9,6 +9,7 @@ from six import StringIO
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.layout import Folders, Infos
@@ -85,6 +86,12 @@ class MockSettings(object):
 
     def get_safe(self, value, default=None):
         return self.values.get(value, default)
+
+    def __getattr__(self, name):
+        try:
+            return self.values[name]
+        except KeyError:
+            raise ConanException("'%s' value not defined" % name)
 
 
 class MockCppInfo(object):
