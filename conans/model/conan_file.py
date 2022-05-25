@@ -35,7 +35,7 @@ class ConanFile:
     #: License of the **target** source code and binaries, i.e. the code
     #: that is being packaged, not the ``conanfile.py`` itself.
     #: Can contain several, comma separated licenses. It is a text string, so it can
-    #: contain any text, but it is strongly recommend packagers of Open-Source projects to use
+    #: contain any text, but it is strongly recommended that recipes of Open Source projects use
     #: `SPDX <https://spdx.dev>`_ identifiers from the `SPDX license list
     #: <https://spdx.dev/licenses/>`_
     license = None
@@ -49,8 +49,8 @@ class ConanFile:
 
     #: Tags to group related packages together and describe what the code is about.
     #: Used as a search filter in conan-center. Optional attribute. It should be a tuple of strings.
-
     topics = None
+
     #: The home web page of the library being packaged.
     homepage = None
 
@@ -102,11 +102,46 @@ class ConanFile:
     #: This attribute should be defined as a python dictionary.
     default_options = None
 
+    #: This attribute declares that the recipe provides the same functionality as other recipe(s).
+    #: The attribute is usually needed if two or more libraries implement the same API to prevent
+    #: link-time and run-time conflicts (ODR violations). One typical situation is forked libraries.
+    #: Some examples are:
+    #:
+    #: - `LibreSSL <https://www.libressl.org/>`__, `BoringSSL <https://boringssl.googlesource.com/boringssl/>`__ and `OpenSSL <https://www.openssl.org/>`__
+    #: - `libav <https://en.wikipedia.org/wiki/Libav>`__ and `ffmpeg <https://ffmpeg.org/>`__
+    #: - `MariaDB client <https://downloads.mariadb.org/client-native>`__ and `MySQL client <https://dev.mysql.com/downloads/c-api/>`__
     provides = None
+
+    #: This attribute declares that the recipe is deprecated, causing a user-friendly warning
+    #: message to be emitted whenever it is used
     deprecated = None
 
+    #: Optional.
+    #: Declaring the ``package_type`` will help Conan:
+    #:
+    #:  - To choose better the default ``package_id_mode`` for each dependency, that is, how a change
+    #:    in a dependency should affect the ``package_id`` to the current package.
+    #:  - Which information from the dependencies should be propagated to the consumers, like
+    #:    headers, libraries, runtime information...
+    #:
+    #: The valid values are:
+    #:
+    #:     - **application**: The package is an application.
+    #:     - **library**: The package is a generic library. It will try to determine
+    #:       the type of library (from ``shared-library``, ``static-library``, ``header-library``)
+    #:       reading the ``self.options.shared`` (if declared) and the ``self.options.header_only``:
+    #:
+    #:          - **shared-library**: The package is a shared library.
+    #:          - **static-library**: The package is a static library.
+    #:          - **header-library**: The package is a header only library.
+    #:
+    #:     - **build-scripts**: The package only contains build scripts.
+    #:     - **python-require**: The package is a python require.
+    #:     - **unknown**: The type of the package is unknown.
+    #:
     package_type = None
-    # Run in windows bash
+
+    #: When ``True`` it enables the new run in a subsystem bash in Windows mechanism.
     win_bash = None
     tested_reference_str = None
 
@@ -145,6 +180,34 @@ class ConanFile:
     #: or the origin folder when exporting files in ``export(self)`` and ``export_sources(self)``
     #: methods.
     recipe_folder = None
+
+    #: Object storing all the information needed by the consumers
+    #: of a package: include directories, library names, library paths... Both for editable
+    #: and regular packages in the cache. It is only available at the ``layout()`` method.
+    #:
+    #:  - ``self.cpp.package``: For a regular package being used from the Conan cache. Same as
+    #:    declaring ``self.cpp_info`` at the ``package_info()`` method.
+    #:  - ``self.cpp.source``: For "editable" packages, to describe the artifacts under
+    #:    ``self.source_folder``
+    #:  - ``self.cpp.build``: For "editable" packages, to describe the artifacts under
+    #:    ``self.build_folder``.
+    #:
+    cpp = None
+
+    #: For the dependant recipes, the declared environment variables will be present during the
+    #: build process. Should be only filled in the ``package_info()`` method.
+    #: It will be initialized in the ``__init__()`` with an ``Environment()`` object.
+    buildenv_info = None
+
+    #: For the dependant recipes, the declared environment variables will be present at runtime.
+    #: Should be only filled in the ``package_info()`` method.
+    #: It will be initialized in the ``__init__()`` with an ``Environment()`` object.
+    runenv_info = None
+
+    #: Configuration variables to be passed to the dependant recipes.
+    #: Should be only filled in the ``package_info()`` method.
+    #: It will be initialized in the ``__init__()``.
+    conf_info = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name
@@ -242,6 +305,10 @@ class ConanFile:
 
     @property
     def cpp_info(self):
+        """
+        Same as using ``self.cpp.package`` in the ``layout()`` method. Use it if you need to read
+        the ``package_folder`` to locate the already located artifacts.
+        """
         return self.cpp.package
 
     @cpp_info.setter
