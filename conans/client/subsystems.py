@@ -21,6 +21,7 @@ def command_env_wrapper(conanfile, command, cwd, env="conanbuild"):
         wrapped_cmd = environment_wrap_command(env, command, cwd=cwd)
     else:
         wrapped_cmd = command
+    print("*****CMD******", wrapped_cmd)
     return wrapped_cmd
 
 
@@ -60,20 +61,16 @@ def windows_bash_wrapper(conanfile, command, cwd, env):
     if env_win:
         wrapped_shell = environment_wrap_command(env_win, shell_path, cwd=cwd)
 
-    cwd_inside = subsystem_path(subsystem, cwd)
     wrapped_user_cmd = command
     if env_shell:
         # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
         # first and there could be commands that we want to skip
         wrapped_user_cmd = environment_wrap_command(env_shell, command, cwd=cwd)
-    inside_command = 'cd "{cwd_inside}" && ' \
-                     '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,
-                                                 wrapped_user_cmd=wrapped_user_cmd)
-    inside_command = escape_windows_cmd(inside_command)
+    wrapped_user_cmd = escape_windows_cmd(wrapped_user_cmd)
 
-    final_command = '{wrapped_shell} --login -c {inside_command}'.format(
+    final_command = '{wrapped_shell} -c {inside_command}'.format(
         wrapped_shell=wrapped_shell,
-        inside_command=inside_command)
+        inside_command=wrapped_user_cmd)
     return final_command
 
 
