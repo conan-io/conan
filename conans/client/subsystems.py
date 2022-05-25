@@ -13,14 +13,12 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def command_env_wrapper(conanfile, command, cwd, env="conanbuild"):
+def command_env_wrapper(conanfile, command, cwd, env):
     from conan.tools.env.environment import environment_wrap_command
     if platform.system() == "Windows" and conanfile.win_bash:  # New, Conan 2.0
         wrapped_cmd = windows_bash_wrapper(conanfile, command, cwd, env)
-    elif env:
-        wrapped_cmd = environment_wrap_command(env, command, cwd=cwd)
     else:
-        wrapped_cmd = command
+        wrapped_cmd = environment_wrap_command(env, command, cwd=cwd)
     print("*****CMD******", wrapped_cmd)
     return wrapped_cmd
 
@@ -56,25 +54,20 @@ def windows_bash_wrapper(conanfile, command, cwd, env):
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
         env_win.append(path)
 
-    # Needed to change to that dir inside the bash shell
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
-    if env_win:
-        wrapped_shell = environment_wrap_command(env_win, shell_path, cwd=cwd)
+    wrapped_shell = environment_wrap_command(env_win, wrapped_shell, cwd=cwd)
 
-    wrapped_user_cmd = command
-    if env_shell:
-        # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
-        # first and there could be commands that we want to skip
-        wrapped_user_cmd = environment_wrap_command(env_shell, command, cwd=cwd)
-    wrapped_user_cmd = escape_windows_cmd(wrapped_user_cmd)
+    # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
+    # first and there could be commands that we want to skip
+    wrapped_user_cmd = environment_wrap_command(env_shell, command, cwd=cwd)
+    wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
-    final_command = '{wrapped_shell} -c {inside_command}'.format(
-        wrapped_shell=wrapped_shell,
-        inside_command=wrapped_user_cmd)
+    final_command = '{wrapped_shell} -c {inside_command}'.format(wrapped_shell=wrapped_shell,
+                                                                 inside_command=wrapped_user_cmd)
     return final_command
 
 
-def escape_windows_cmd(command):
+def _escape_windows_cmd(command):
     """ To use in a regular windows cmd.exe
         1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
         2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.

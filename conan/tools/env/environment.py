@@ -14,7 +14,8 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
-    assert env_filenames
+    if not env_filenames:
+        return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs, ps1s = [], [], []
 
