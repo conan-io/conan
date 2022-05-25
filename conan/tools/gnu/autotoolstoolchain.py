@@ -68,10 +68,9 @@ class AutotoolsToolchain:
                 # -isysroot makes all includes for your library relative to the build directory
                 self.sysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
-        if not is_apple_os(self._conanfile.settings.get_safe("os")):
-            sysroot = self._conanfile.conf.get("tools.build:sysroot")
-            sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
-            self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+        sysroot = self._conanfile.conf.get("tools.build:sysroot")
+        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
+        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
         check_using_build_profile(self._conanfile)
 

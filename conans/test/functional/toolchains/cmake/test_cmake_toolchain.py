@@ -776,22 +776,15 @@ def test_cmaketoolchain_sysroot():
     })
 
     fake_sysroot = client.current_folder
-    if platform.system() != "Darwin":
-        client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
-        assert "sysroot: '{}'".format(fake_sysroot) in client.out
-        assert "osx_sysroot: ''" in client.out
-    else:
-        client.run("create . app/1.0@ -c tools.apple:sdk_path='{}'".format(fake_sysroot))
-        assert "osx_sysroot: '{}'".format(fake_sysroot) in client.out
-        assert "sysroot: ''" in client.out
+    output_fake_sysroot = fake_sysroot.replace("\\", "/") if platform.system() == "Windows" else fake_sysroot
+    client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
 
-    if platform.system() != "Darwin":
-        set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
 
-        client.save({
-            "conanfile.py": conanfile.format(set_sysroot_in_block),
-        })
+    client.save({
+        "conanfile.py": conanfile.format(set_sysroot_in_block),
+    })
 
-        client.run("create . app/1.0@")
-
-        assert "sysroot: '{}'".format(fake_sysroot) in client.out
+    client.run("create . app/1.0@")
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
