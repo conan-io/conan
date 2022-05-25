@@ -13,17 +13,16 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def command_env_wrapper(conanfile, command, cwd, env):
+def command_env_wrapper(conanfile, command, env, envfiles_folder):
     from conan.tools.env.environment import environment_wrap_command
     if platform.system() == "Windows" and conanfile.win_bash:  # New, Conan 2.0
-        wrapped_cmd = windows_bash_wrapper(conanfile, command, cwd, env)
+        wrapped_cmd = _windows_bash_wrapper(conanfile, command, env, envfiles_folder)
     else:
-        wrapped_cmd = environment_wrap_command(env, command, cwd=cwd)
-    print("*****CMD******", wrapped_cmd)
+        wrapped_cmd = environment_wrap_command(env, envfiles_folder, command)
     return wrapped_cmd
 
 
-def windows_bash_wrapper(conanfile, command, cwd, env):
+def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
@@ -55,15 +54,14 @@ def windows_bash_wrapper(conanfile, command, cwd, env):
         env_win.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
-    wrapped_shell = environment_wrap_command(env_win, wrapped_shell, cwd=cwd)
+    wrapped_shell = environment_wrap_command(env_win, envfiles_folder, wrapped_shell)
 
     # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
     # first and there could be commands that we want to skip
-    wrapped_user_cmd = environment_wrap_command(env_shell, command, cwd=cwd)
+    wrapped_user_cmd = environment_wrap_command(env_shell, envfiles_folder, command)
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
-    final_command = '{wrapped_shell} -c {inside_command}'.format(wrapped_shell=wrapped_shell,
-                                                                 inside_command=wrapped_user_cmd)
+    final_command = '{} -c {}'.format(wrapped_shell, wrapped_user_cmd)
     return final_command
 
 

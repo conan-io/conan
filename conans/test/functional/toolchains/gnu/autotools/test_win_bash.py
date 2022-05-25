@@ -55,7 +55,6 @@ def test_autotools_bash_complete():
                  "main.cpp": main})
     client.run("install . -s:b os=Windows -s:h os=Windows")
     client.run("build .")
-    print(client.out)
     client.run_command("main.exe")
     check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
 

@@ -13,16 +13,14 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
+def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None):
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs, ps1s = [], [], []
 
-    cwd = cwd or os.getcwd()
-
     for f in filenames:
-        f = f if os.path.isabs(f) else os.path.join(cwd, f)
+        f = f if os.path.isabs(f) else os.path.join(env_folder, f)
         if f.lower().endswith(".sh"):
             if os.path.isfile(f):
                 f = subsystem_path(subsystem, f)

@@ -388,7 +388,8 @@ class ConanFile(object):
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
-            wrapped_cmd = command_env_wrapper(self, cmd, cwd=self.generators_folder, env=_env)
+            wrapped_cmd = command_env_wrapper(self, cmd, _env,
+                                              envfiles_folder=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
