@@ -780,11 +780,10 @@ def test_cmaketoolchain_sysroot():
     client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
 
-    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(fake_sysroot)
-
+    # set in a block instead of using conf
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(output_fake_sysroot)
     client.save({
         "conanfile.py": conanfile.format(set_sysroot_in_block),
     })
-
     client.run("create . app/1.0@")
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
