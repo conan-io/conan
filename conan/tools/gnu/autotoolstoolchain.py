@@ -170,12 +170,17 @@ class AutotoolsToolchain:
 
     def _default_configure_shared_flags(self):
         args = []
-        if self._conanfile.options.get_safe("shared", False):
-            args.extend(["--enable-shared", "--disable-static"])
-        else:
-            args.extend(["--disable-shared", "--enable-static", "--with-pic"
-                        if self._conanfile.options.get_safe("fPIC", True)
-                        else "--without-pic"])
+        # Just add these flags if there's a shared option defined (never add to exe's)
+        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
+        try:
+            if self._conanfile.options.shared:
+                args.extend(["--enable-shared", "--disable-static"])
+            else:
+                fpic = "--with-pic" if self._conanfile.options.get_safe("fPIC", True) else "--without-pic"
+                args.extend(["--disable-shared", "--enable-static", fpic])
+        except ConanException:
+            pass
+
         return args
 
     def _default_configure_install_flags(self):
