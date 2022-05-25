@@ -59,6 +59,8 @@ class ConanFile:
     #:
     #: - ``"missing"``: Conan builds it from source if there is no binary available.
     #: - ``"always"``: Conan always builds it from source.
+    #: - ``"never"``: This package cannot be built from sources, it is always created with
+    #:   ``conan export-pkg``
     #: - ``None`` (default value): This package won't be build unless the policy is specified
     #:   in the command line (e.g ``--build=foo*``)
     build_policy = None
@@ -129,16 +131,13 @@ class ConanFile:
     #:     - **application**: The package is an application.
     #:     - **library**: The package is a generic library. It will try to determine
     #:       the type of library (from ``shared-library``, ``static-library``, ``header-library``)
-    #:       reading the ``self.options.shared`` (if declared) and the ``self.options.header_only``:
-    #:
-    #:          - **shared-library**: The package is a shared library.
-    #:          - **static-library**: The package is a static library.
-    #:          - **header-library**: The package is a header only library.
-    #:
+    #:       reading the ``self.options.shared`` (if declared) and the ``self.options.header_only``
+    #:     - **shared-library**: The package is a shared library.
+    #:     - **static-library**: The package is a static library.
+    #:     - **header-library**: The package is a header only library.
     #:     - **build-scripts**: The package only contains build scripts.
     #:     - **python-require**: The package is a python require.
     #:     - **unknown**: The type of the package is unknown.
-    #:
     package_type = None
 
     #: When ``True`` it enables the new run in a subsystem bash in Windows mechanism.
@@ -196,17 +195,14 @@ class ConanFile:
 
     #: For the dependant recipes, the declared environment variables will be present during the
     #: build process. Should be only filled in the ``package_info()`` method.
-    #: It will be initialized in the ``__init__()`` with an ``Environment()`` object.
     buildenv_info = None
 
     #: For the dependant recipes, the declared environment variables will be present at runtime.
     #: Should be only filled in the ``package_info()`` method.
-    #: It will be initialized in the ``__init__()`` with an ``Environment()`` object.
     runenv_info = None
 
     #: Configuration variables to be passed to the dependant recipes.
     #: Should be only filled in the ``package_info()`` method.
-    #: It will be initialized in the ``__init__()``.
     conf_info = None
 
     def __init__(self, display_name=""):
