@@ -1,3 +1,24 @@
+"""
+Potential scenarios:
+
+- Running from a Windows native "cmd"
+  - Targeting Windows native (os.subsystem = None)
+    - No need of bash (no conf at all)
+    - Need to build in bash (tools.microsoft.bash:subsystem=xxx,
+                             tools.microsoft.bash:path=<path>,
+                             conanfile.win_bash)
+    - Need to run (tests) in bash (tools.microsoft.bash:subsystem=xxx,
+                                   tools.microsoft.bash:path=<path>,
+                                   conanfile.win_bash_run)
+  - Targeting Subsystem (os.subsystem = msys2/cygwin)
+    - Always builds and runs in bash (tools.microsoft.bash:path)
+
+- Running from a subsytem terminal (tools.microsoft.bash:subsystem=xxx,
+                                    tools.microsoft.bash:path=None) NO ERROR mode for not specifying it? =CURRENT?
+  - Targeting Windows native (os.subsystem = None)
+  - Targeting Subsystem (os.subsystem = msys2/cygwin)
+
+"""
 import os
 import platform
 import re
@@ -13,12 +34,13 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def command_env_wrapper(conanfile, command, env, envfiles_folder):
+def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
     from conan.tools.env.environment import environment_wrap_command
     if platform.system() == "Windows" and conanfile.win_bash:  # New, Conan 2.0
-        wrapped_cmd = _windows_bash_wrapper(conanfile, command, env, envfiles_folder)
+        wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
     else:
-        wrapped_cmd = environment_wrap_command(env, envfiles_folder, command)
+        wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
+    print("*********************CMD!!!!!!!!!!!!", wrapped_cmd)
     return wrapped_cmd
 
 
@@ -26,16 +48,6 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
-    env_win = []
-    env_shell = []
-    if env:
-        if env == "conanbuild":
-            env_shell = ["conanbuild.sh"]
-            env_win = ["conanbuild.bat"]
-        else:
-            # Passing env invalidates the conanfile.environment_scripts
-            env_win = [env] if not isinstance(env, list) else env
-            env_shell = []
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
@@ -43,6 +55,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
                              "'tools.microsoft.bash:path' are "
                              "needed to run commands in a Windows subsystem")
+    env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
         msys2_mode_env = Environment()
@@ -51,14 +64,15 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
-        env_win.append(path)
+        env.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
-    wrapped_shell = environment_wrap_command(env_win, envfiles_folder, wrapped_shell)
+    wrapped_shell = environment_wrap_command(env, envfiles_folder, wrapped_shell,
+                                             accept=("bat", "ps1"))
 
     # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
     # first and there could be commands that we want to skip
-    wrapped_user_cmd = environment_wrap_command(env_shell, envfiles_folder, command)
+    wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command, accept=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
     final_command = '{} -c {}'.format(wrapped_shell, wrapped_user_cmd)
@@ -77,6 +91,14 @@ def _escape_windows_cmd(command):
 
 
 def deduce_subsystem(conanfile, scope):
+    """ used by:
+    - EnvVars: to decide is using :  ; as path separator, translate paths to subsystem
+               and decide to generate a .bat or .sh
+    - Autotools: to define the full abs path to the "configure" script
+    - GnuDeps: to map all the paths from dependencies
+    - Aggregation of envfiles: to map each aggregated path to the subsystem
+    - unix_path: util for recipes
+    """
     if scope.startswith("build"):
         if hasattr(conanfile, "settings_build"):
             the_os = conanfile.settings_build.get_safe("os")

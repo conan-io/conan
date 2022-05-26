@@ -13,33 +13,35 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None):
+def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None, accept=None):
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs, ps1s = [], [], []
 
+    accept = accept or ("ps1", "bat", "sh")
+    # TODO: This implemantation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)
         if f.lower().endswith(".sh"):
-            if os.path.isfile(f):
+            if os.path.isfile(f) and "sh" in accept:
                 f = subsystem_path(subsystem, f)
                 shs.append(f)
         elif f.lower().endswith(".bat"):
-            if os.path.isfile(f):
+            if os.path.isfile(f) and "bat" in accept:
                 bats.append(f)
-        elif f.lower().endswith(".ps1"):
+        elif f.lower().endswith(".ps1") and "ps1" in accept:
             if os.path.isfile(f):
                 ps1s.append(f)
         else:  # Simple name like "conanrunenv"
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
             path_ps1 = "{}.ps1".format(f)
-            if os.path.isfile(path_bat):
+            if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
-            elif os.path.isfile(path_ps1):
+            if os.path.isfile(path_ps1) and "ps1" in accept:
                 ps1s.append(path_ps1)
-            elif os.path.isfile(path_sh):
+            if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
