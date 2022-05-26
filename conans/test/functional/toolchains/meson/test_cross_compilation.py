@@ -117,7 +117,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
 
     # only check for iOS because one of the macos build variants is usually native
     if os_ == "iOS":
-        content = t.load("conan_meson_cross.ini")
+        content = t.load(os.path.join("build", "generators", "conan_meson_cross.ini"))
         assert "needs_exe_wrapper = true" in content
 
 
@@ -189,7 +189,7 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
 
     client.run("install . --profile:build=default --profile:host=profile_host")
     client.run("build .")
-    content = client.load(os.path.join("conan_meson_cross.ini"))
+    content = client.load(os.path.join(os.path.join("build", "generators", "conan_meson_cross.ini")))
     assert "needs_exe_wrapper = true" in content
     assert "Target machine cpu family: {}".format(expected_arch if expected_arch != "i386" else "x86") in client.out
     assert "Target machine cpu: {}".format(arch) in client.out

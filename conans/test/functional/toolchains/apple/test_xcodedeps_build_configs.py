@@ -17,8 +17,8 @@ xcode_project = textwrap.dedent("""
         sources:
           - main.cpp
         configFiles:
-          Debug: conan_config.xcconfig
-          Release: conan_config.xcconfig
+          Debug: build/generators/conan_config.xcconfig
+          Release: build/generators/conan_config.xcconfig
     """)
 
 
@@ -113,7 +113,7 @@ def test_xcodedeps_dashes_names_and_arch():
                  "main.cpp": main,
                  "project.yml": xcode_project}, clean_first=True)
     client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
-    assert os.path.exists(os.path.join(client.current_folder,
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators",
                                        "conan_hello_dashes_hello_dashes_vars_release_arm64.xcconfig"))
     client.run_command("xcodegen generate")
     client.run_command("xcodebuild -project app.xcodeproj -arch arm64")

@@ -14,8 +14,8 @@ xcode_project = textwrap.dedent("""
         sources:
           - app
         configFiles:
-          Debug: conan_config.xcconfig
-          Release: conan_config.xcconfig
+          Debug: build/generators/conan_config.xcconfig
+          Release: build/generators/conan_config.xcconfig
     """)
 
 main = textwrap.dedent("""

@@ -49,7 +49,7 @@ def test_cross_x86():
                  "meson.build": meson_build,
                  "main.cpp": main_cpp})
     client.run("install .")
-    content = client.load("conan_meson_native.ini")
+    content = client.load(os.path.join("build", "generators", "conan_meson_native.ini"))
     assert "backend = 'vs'" in content
     client.run("build .")
     assert "Auto detected Visual Studio backend" in client.out

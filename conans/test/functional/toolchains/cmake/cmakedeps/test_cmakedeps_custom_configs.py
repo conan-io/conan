@@ -48,8 +48,8 @@ class CustomConfigurationTest(unittest.TestCase):
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
 
-        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
-        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/build/generators ${CMAKE_PREFIX_PATH})
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR}/build/generators ${CMAKE_MODULE_PATH})
 
         set(CMAKE_CXX_FLAGS_RELEASESHARED ${CMAKE_CXX_FLAGS_RELEASE})
         set(CMAKE_C_FLAGS_RELEASESHARED ${CMAKE_C_FLAGS_RELEASE})

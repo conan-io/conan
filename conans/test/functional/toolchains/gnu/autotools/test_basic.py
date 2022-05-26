@@ -93,9 +93,10 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(["conanbuildenv",
-                                    "conanautotoolstoolchain",
-                                    "conanautotoolsdeps"], make_program, cwd=client.current_folder)
+    cmd = environment_wrap_command(["build/generators/conanbuildenv",
+                                    "build/generators/conanautotoolstoolchain",
+                                    "build/generators/conanautotoolsdeps"],
+                                   make_program, cwd=client.current_folder)
     client.run_command(cmd)
     client.run_command("app")
     # TODO: fill compiler version when ready

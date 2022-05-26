@@ -55,7 +55,7 @@ class MesonPreprocessorDefinitionsTest(TestMesonBase):
 
         self.t.run("install .")
 
-        content = self.t.load("conan_meson_native.ini")
+        content = self.t.load(os.path.join("build", "generators", "conan_meson_native.ini"))
 
         self.assertIn("[built-in options]", content)
         self.assertIn("buildtype = 'release'", content)

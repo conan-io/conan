@@ -461,7 +461,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install --requires=mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
         # https://github.com/conan-io/conan/issues/8163
-        props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
+        props = client.load(os.path.join("build", "generators", "conan_mypkg_vars_release_x64.props"))  # default Release/x64
         folder = props[props.find("<ConanmypkgRootFolder>")+len("<ConanmypkgRootFolder>")
                        :props.find("</ConanmypkgRootFolder>")]
         self.assertTrue(os.path.isfile(os.path.join(folder, "conaninfo.txt")))
@@ -484,13 +484,13 @@ class MSBuildGeneratorTest(unittest.TestCase):
                    '-s compiler.version={vs_version}'
                    ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
-        props = client.load("conan_pkg_release_x64.props")
+        props = client.load(os.path.join("build", "generators", "conan_pkg_release_x64.props"))
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
         # This will overwrite the existing one, cause configuration and arch is the same
         client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
                    "'-s compiler.libcxx=libstdc++")
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
-        pkg_props = client.load("conan_pkg.props")
+        pkg_props = client.load(os.path.join("build", "generators", "conan_pkg.props"))
         self.assertIn('Project="conan_pkg_release_x64.props"', pkg_props)
 
     def test_no_build_type_error(self):
@@ -523,15 +523,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
                    ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
-        props = client.load("conan_pkg_myrelease_myx86_64.props")
+        props = client.load(os.path.join("build", "generators", "conan_pkg_myrelease_myx86_64.props"))
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
         client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
                    ' -s compiler.runtime=dynamic -s arch=x86 '
                    '-s build_type=Debug'.format(vs_version=self.vs_version))
-        props = client.load("conan_pkg_mydebug_myx86.props")
+        props = client.load(os.path.join("build", "generators", "conan_pkg_mydebug_myx86.props"))
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
-        props = client.load("conan_pkg.props")
+        props = client.load(os.path.join("build", "generators", "conan_pkg.props"))
         self.assertIn("conan_pkg_myrelease_myx86_64.props", props)
         self.assertIn("conan_pkg_mydebug_myx86.props", props)
 
@@ -606,6 +606,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . --name=tool --version=1.0")
 
         conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
             from conan.tools.files import load
             class HelloConan(ConanFile):
@@ -614,13 +615,13 @@ class MSBuildGeneratorTest(unittest.TestCase):
                 generators = "MSBuildDeps"
 
                 def build(self):
-                    deps = load(self, "conandeps.props")
+                    deps = load(self, os.path.join(self.generators_folder, "conandeps.props"))
                     assert "conan_tool.props" not in deps
                     self.output.info("Conan_tools.props not in deps")
             """)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
-        deps = client.load("conandeps.props")
+        deps = client.load(os.path.join("build", "generators", "conandeps.props"))
         self.assertNotIn("conan_tool.props", deps)
         client.run("create . --name=pkg --version=0.1")
         self.assertIn("Conan_tools.props not in deps", client.out)
@@ -642,7 +643,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
                     with_settings("os", "compiler", "arch", "build_type").
                     with_requires("pkg/1.0")}, clean_first=True)
         client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default")
-        pkg = client.load("conan_pkg_release_x64.props")
+        pkg = client.load(os.path.join("build", "generators", "conan_pkg_release_x64.props"))
         assert "conan_dep.props" in pkg
         assert "tool_test" not in pkg  # test requires are not there
         assert "tool_build" not in pkg

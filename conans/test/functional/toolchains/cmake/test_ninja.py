@@ -63,7 +63,8 @@ def test_locally_build_linux(build_type, shared, client):
                                                                                        shared)
     client.run("install . {}".format(settings))
     client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
-                       .format(CMakeToolchain.filename, build_type))
+                       .format(os.path.join("build", "generators", CMakeToolchain.filename),
+                               build_type))
 
     client.run_command('ninja')
     if shared:
@@ -163,7 +164,7 @@ def test_locally_build_gcc(build_type, shared, client):
     client.run("install . {} -o hello/*:shared={}".format(gcc, shared))
 
     client.run_command('cmake . -G "Ninja" '
-                       '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
+                       '-DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake '
                        '-DCMAKE_BUILD_TYPE={}'.format(build_type))
 
     libname = "mylibrary.dll" if shared else "libmylibrary.a"
@@ -218,13 +219,13 @@ def test_ninja_conf():
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("install . -pr=profile")
-    presets = load_cmake_presets(client.current_folder)
+    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
     generator = presets["configurePresets"][0]["generator"]
 
     assert generator == "Ninja"
-    vcvars = client.load("conanvcvars.bat")
+    vcvars = client.load(os.path.join("build", "generators", "conanvcvars.bat"))
     assert "2017" in vcvars
 
     # toolchain cannot define the CMAKE_GENERATOR_TOOLSET for Ninja
-    cmake = client.load("conan_toolchain.cmake")
+    cmake = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     assert "CMAKE_GENERATOR_TOOLSET" not in cmake

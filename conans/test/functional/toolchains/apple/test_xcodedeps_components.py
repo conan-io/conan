@@ -172,8 +172,8 @@ def test_xcodedeps_components():
             sources:
               - src
             configFiles:
-              Debug: conan/conan_config.xcconfig
-              Release: conan/conan_config.xcconfig
+              Debug: conan/build/generators/conan_config.xcconfig
+              Release: conan/build/generators/conan_config.xcconfig
         """)
 
     client.save({
