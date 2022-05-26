@@ -139,12 +139,12 @@ conanfile = textwrap.dedent("""
     """)
 
 static_xcconfig = textwrap.dedent("""
-    #include \"conan_config.xcconfig\"
+    #include \"build/generators/conan_config.xcconfig\"
     LD_DYLIB_INSTALL_NAME = @rpath/libhello-static.dylib
 """)
 
 dynamic_xcconfig = textwrap.dedent("""
-    #include \"conan_config.xcconfig\"
+    #include \"build/generators/conan_config.xcconfig\"
     LD_DYLIB_INSTALL_NAME = @rpath/hello-dynamic.dylib
 """)
 

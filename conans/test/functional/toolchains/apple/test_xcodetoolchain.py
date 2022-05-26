@@ -68,8 +68,8 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
             sources:
               - app
             configFiles:
-              Debug: conan_config.xcconfig
-              Release: conan_config.xcconfig
+              Debug: build/generators/conan_config.xcconfig
+              Release: build/generators/conan_config.xcconfig
         """)
 
     client.save({"conanfile.py": conanfile,
