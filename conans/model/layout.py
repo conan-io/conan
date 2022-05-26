@@ -26,7 +26,7 @@ class Folders(object):
         self.source = ""
         self.build = ""
         self.package = ""
-        self.generators = ""
+        self.generators = "build/generators"
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
         self.root = None

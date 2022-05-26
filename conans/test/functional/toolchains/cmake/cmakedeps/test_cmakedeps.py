@@ -135,8 +135,8 @@ def test_system_libs():
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
-        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
-        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/build/generators)
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR}/build/generators)
         find_package(Test)
         message("System libs release: ${test_SYSTEM_LIBS_RELEASE}")
         message("Libraries to Link release: ${test_LIBS_RELEASE}")
@@ -236,13 +236,13 @@ def test_custom_configuration(client):
     curdir = client.current_folder
     data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
     data_name_context_host = "liba-debug-x86_64-data.cmake"
-    assert os.path.exists(os.path.join(curdir, data_name_context_build))
-    assert os.path.exists(os.path.join(curdir, data_name_context_host))
+    assert os.path.exists(os.path.join(curdir, "build", "generators", data_name_context_build))
+    assert os.path.exists(os.path.join(curdir, "build", "generators", data_name_context_host))
 
     assert "set(liba_build_INCLUDE_DIRS_RELWITHDEBINFO" in \
-           open(os.path.join(curdir, data_name_context_build)).read()
+           open(os.path.join(curdir, "build", "generators", data_name_context_build)).read()
     assert "set(liba_INCLUDE_DIRS_DEBUG" in \
-           open(os.path.join(curdir, data_name_context_host)).read()
+           open(os.path.join(curdir,  "build", "generators", data_name_context_host)).read()
 
 
 @pytest.mark.tool("cmake")
@@ -344,7 +344,7 @@ def test_private_transitive():
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=.")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-    data_cmake = client.load("pkg-release-x86_64-data.cmake")
+    data_cmake = client.load(os.path.join("build", "generators", "pkg-release-x86_64-data.cmake"))
     assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
 
 

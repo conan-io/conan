@@ -1,3 +1,4 @@
+import os
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -22,7 +23,7 @@ def test_env_vars_from_build_require():
         .with_tool_requirement("hello_compiler/1.0")
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h=default -pr:b=default")
-    content = client.load("conan_meson_native.ini")
+    content = client.load(os.path.join("build", "generators", "conan_meson_native.ini"))
     assert "c = 'CC_VALUE'" in content
     assert "cpp = 'CXX_VALUE'" in content
     assert "c_ld = 'CC_LD_VALUE'" in content
@@ -43,6 +44,6 @@ def test_env_vars_from_build_require():
     # Create the consumer again, now the LD env var will be applied
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h=default -pr:b=default")
-    content = client.load("conan_meson_native.ini")
+    content = client.load(os.path.join("build", "generators", "conan_meson_native.ini"))
     assert "c_ld = 'LD_VALUE'" in content
     assert "cpp_ld = 'LD_VALUE'" in content

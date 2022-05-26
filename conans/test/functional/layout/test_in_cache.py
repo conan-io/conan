@@ -65,7 +65,7 @@ def test_create_test_package_no_layout():
                 self.requires(self.tested_reference_str)
 
             def build(self):
-                assert os.path.exists("conan_toolchain.cmake")
+                assert os.path.exists(os.path.join("build", "generators", "conan_toolchain.cmake"))
                 self.output.warning("hey! building")
                 self.output.warning(os.getcwd())
 
@@ -224,7 +224,7 @@ def test_cpp_package():
     assert "**includedirs:['foo/include']**" in out
     assert "**libdirs:['foo/libs']**" in out
     assert "**libs:['foo']**" in out
-    cmake = client.load("hello-release-x86_64-data.cmake")
+    cmake = client.load(os.path.join("build", "generators", "hello-release-x86_64-data.cmake"))
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake

@@ -27,7 +27,7 @@ class CreateTest(unittest.TestCase):
             """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . -g MSBuildDeps -s build_type=Release -s arch=x86")
-        conandeps = client.load("conandeps.props")
+        conandeps = client.load(os.path.join("build", "generators", "conandeps.props"))
         assert conandeps.find("pkgb") < conandeps.find("pkga")
 
     def test_transitive_same_name(self):

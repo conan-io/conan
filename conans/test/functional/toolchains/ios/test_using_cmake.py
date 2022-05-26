@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 import unittest
@@ -69,7 +70,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
         # Build locally
         self.t.run('install . --profile:host=ios_profile --profile:build=default')
-        self.t.run_command('cmake . -G"Xcode" -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
+        self.t.run_command('cmake . -G"Xcode" -DCMAKE_TOOLCHAIN_FILE={}'.format(os.path.join("build", "generators", CMakeToolchain.filename)))
         self.t.run_command('cmake --build . --config Release')
         self.t.run_command("lipo -info Release-iphoneos/libhello.a")
         self.assertIn("Non-fat file: Release-iphoneos/libhello.a is architecture: arm64", self.t.out)

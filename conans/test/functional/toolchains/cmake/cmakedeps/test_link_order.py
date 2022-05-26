@@ -304,7 +304,7 @@ def _create_find_package_project(client):
 def _run_and_get_lib_order(t, generator):
     if generator == "Xcode":
         t.run_command("cmake . -G Xcode -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
-                      " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+                      " -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
         t.run_command("cmake --build .")
         # Get the actual link order from the CMake call
         libs = _get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj',
@@ -312,7 +312,7 @@ def _run_and_get_lib_order(t, generator):
     else:
         t.run_command("cmake . -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                       " -DCMAKE_BUILD_TYPE=Release"
-                      " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+                      " -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
         extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows VS
         t.run_command("cmake --build . {}".format(extra_build), assert_error=True)
         # Get the actual link order from the CMake call

@@ -117,7 +117,8 @@ def test_complete(client, gtest_run_true):
 
     # Run the RUN environment
     if platform.system() != "Windows":
-        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
+        cmd = environment_wrap_command("build/generators/conanrunenv",
+                                       "mygtest.sh && .{}myrunner.sh".format(os.sep),
                                        cwd=client.current_folder)
         client.run_command(cmd, assert_error=not gtest_run_true)
         if gtest_run_true:
@@ -210,7 +211,7 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
+    cmd = environment_wrap_command("build/generators/conanbuildenv", "mycompiler.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
@@ -436,48 +437,48 @@ def test_environment_scripts_generated_envvars(require_run):
 
     client.run("install consumer_pkg --build='*'")
     if platform.system() == "Windows":
-        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
+        conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.bat")
         if require_run:
-            conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+            conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.bat")
             assert "LD_LIBRARY_PATH" not in conanbuildenv
             assert "LD_LIBRARY_PATH" not in conanrunenv
         else:
-            assert not os.path.exists("consumer_pkg/conanrunenv.bat")
+            assert not os.path.exists("consumer_pkg/build/generators/conanrunenv.bat")
     else:
         if require_run:
-            conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
-            conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+            conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.sh")
+            conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.sh")
             assert "LD_LIBRARY_PATH" in conanbuildenv
             assert "LD_LIBRARY_PATH" in conanrunenv
         else:
-            assert not os.path.exists("consumer_pkg/conanrunenv.sh")
+            assert not os.path.exists("consumer_pkg/build/generators/conanrunenv.sh")
 
     if require_run:
         # Build context LINUX - Host context LINUX
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build='*'")
-        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
-        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 
         # Build context WINDOWS - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build='*'")
-        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
-        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context LINUX - Host context WINDOWS
         client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build='*'")
-        conanbuildenv = client.load("consumer_pkg/conanbuildenv.sh")
-        conanrunenv = client.load("consumer_pkg/conanrunenv.bat")
+        conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.sh")
+        conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.bat")
         assert "LD_LIBRARY_PATH" in conanbuildenv
         assert "LD_LIBRARY_PATH" not in conanrunenv
 
         # Build context WINDOWS - Host context LINUX
         client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build='*'")
-        conanbuildenv = client.load("consumer_pkg/conanbuildenv.bat")
-        conanrunenv = client.load("consumer_pkg/conanrunenv.sh")
+        conanbuildenv = client.load("consumer_pkg/build/generators/conanbuildenv.bat")
+        conanrunenv = client.load("consumer_pkg/build/generators/conanrunenv.sh")
         assert "LD_LIBRARY_PATH" not in conanbuildenv
         assert "LD_LIBRARY_PATH" in conanrunenv
 
@@ -512,9 +513,9 @@ def test_multiple_deactivate():
     client.run("install .")
 
     if platform.system() == "Windows":
-        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        cmd = "build\\generators\\conanbuild.bat && display.bat && build\\generators\\deactivate_conanbuild.bat && display.bat"
     else:
-        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        cmd = '. ./build/generators/conanbuild.sh && ./display.sh && . ./build/generators/deactivate_conanbuild.sh && ./display.sh'
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
@@ -615,9 +616,11 @@ def test_profile_build_env_spaces():
     client.run("install . -g VirtualBuildEnv -pr=profile")
 
     if platform.system() == "Windows":
-        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        cmd = "build\\generators\\conanbuild.bat && display.bat " \
+              "&& build\\generators\\deactivate_conanbuild.bat && display.bat"
     else:
-        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        cmd = '. ./build/generators/conanbuild.sh && ./display.sh ' \
+              '&& . ./build/generators/deactivate_conanbuild.sh && ./display.sh'
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
@@ -639,16 +642,17 @@ def test_deactivate_location():
     client.run("create pkg.py --name pkg --version 1.0")
     client.run("install --requires pkg/1.0@ -g VirtualBuildEnv -of=myfolder -s build_type=Release -s arch=x86_64")
 
-    source_cmd, script_ext = ("myfolder\\", ".bat") if platform.system() == "Windows" else (". ./myfolder/", ".sh")
+    source_cmd, script_ext = ("myfolder\\build\\generators\\", ".bat") \
+        if platform.system() == "Windows" else (". ./myfolder/build/generators/", ".sh")
     cmd = "{}conanbuild{}".format(source_cmd, script_ext)
 
     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
                      cwd=client.current_folder).communicate()
 
-    assert not os.path.exists(os.path.join(client.current_folder,
+    assert not os.path.exists(os.path.join(client.current_folder, "build", "generators",
                                            "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
 
-    assert os.path.exists(os.path.join(client.current_folder, "myfolder",
+    assert os.path.exists(os.path.join(client.current_folder, "myfolder", "build", "generators",
                                        "deactivate_conanbuildenv-release-x86_64{}".format(script_ext)))
 
 

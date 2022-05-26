@@ -424,7 +424,7 @@ class AppleTest(Base):
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
 
-        toolchain_path = os.path.join(self.client.current_folder, "build",
+        toolchain_path = os.path.join(self.client.current_folder, "build", "build", "generators",
                                       "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
@@ -653,8 +653,8 @@ class TestCMakeFindPackagePreferConfig:
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist,
-                     "FindComandante.cmake": find,
-                     "ComandanteConfig.cmake": config,
+                     "build/generators/FindComandante.cmake": find,
+                     "build/generators/ComandanteConfig.cmake": config,
                      "profile_true": profile.format(True),
                      "profile_false": profile.format(False)})
 

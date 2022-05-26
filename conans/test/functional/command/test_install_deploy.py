@@ -34,13 +34,14 @@ def test_install_deploy():
     c.run("install . --deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
     c.run("remove * -f")  # Make sure the cache is clean, no deps there
     cwd = c.current_folder.replace("\\", "/")
-    deps = c.load("mydeploy/hello-release-x86_64-data.cmake")
+    deps = c.load("mydeploy/build/generators/hello-release-x86_64-data.cmake")
     assert f'set(hello_PACKAGE_FOLDER_RELEASE "{cwd}/mydeploy/hello")' in deps
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
     # I can totally build without errors with deployed
-    c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=mydeploy/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+    c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=mydeploy/build/generators/conan_toolchain.cmake "
+                  "-DCMAKE_BUILD_TYPE=Release")
     c.run_command("cmake --build . --config Release")
 
 
@@ -108,10 +109,10 @@ def test_builtin_deploy():
     assert "Release-x86_64" in release
     debug = c.load("output/host/dep/0.1/Debug/x86/include/hello.h")
     assert "Debug-x86" in debug
-    cmake_release = c.load("output/dep-release-x86_64-data.cmake")
+    cmake_release = c.load("output/build/generators/dep-release-x86_64-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in cmake_release
     assert "output/host/dep/0.1/Release/x86_64" in cmake_release
-    cmake_debug = c.load("output/dep-debug-x86-data.cmake")
+    cmake_debug = c.load("output/build/generators/dep-debug-x86-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_DEBUG "${dep_PACKAGE_FOLDER_DEBUG}/include")' in cmake_debug
     assert "output/host/dep/0.1/Debug/x86" in cmake_debug
 

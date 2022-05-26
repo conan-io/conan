@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -68,7 +69,7 @@ def test_ios():
     client.run_command("lipo -info main")
     assert "Non-fat file: main is architecture: arm64" in client.out
 
-    conanbuild = load_toolchain_args(client.current_folder)
+    conanbuild = load_toolchain_args(os.path.join(client.current_folder, "build", "generators"))
     configure_args = conanbuild["configure_args"]
     assert configure_args == "'--disable-shared' '--enable-static' '--with-pic' " \
                              "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"

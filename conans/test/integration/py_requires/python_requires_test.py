@@ -311,7 +311,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("Short paths! %s" % self.short_paths)
                     self.output.info("License! %s" % self.license)
                     self.output.info("Author! %s" % self.author)
-                    assert os.path.exists("conan_toolchain.cmake")
+                    assert os.path.exists("build/generators/conan_toolchain.cmake")
             """)
         client.save({"conanfile.py": reuse,
                      "header.h": "pkg new header contents",

@@ -182,7 +182,8 @@ def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello/*:shared={}'
                .format(build_type, shared))
     client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
-                       .format(CMakeToolchain.filename, build_type))
+                       .format(os.path.join("build", "generators", CMakeToolchain.filename),
+                               build_type))
 
     client.run_command('ninja')
     if shared:

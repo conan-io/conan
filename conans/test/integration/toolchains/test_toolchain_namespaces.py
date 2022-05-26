@@ -35,9 +35,11 @@ def test_bazel_namespace():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr test_profile")
-    assert os.path.isfile(os.path.join(client.current_folder,
+    assert os.path.isfile(os.path.join(client.current_folder, "build", "generators",
                                        "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE)))
-    content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
+    content = load_toolchain_args(generators_folder=os.path.join(client.current_folder,
+                                                                 "build", "generators"),
+                                  namespace=namespace)
     bazel_config = content.get("bazel_configs")
     bazelrc_path = content.get("bazelrc_path")
     client.run("build . -pr test_profile")
@@ -67,9 +69,11 @@ def test_autotools_namespace():
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    assert os.path.isfile(os.path.join(client.current_folder,
+    assert os.path.isfile(os.path.join(client.current_folder, "build", "generators",
                                        "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE)))
-    content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
+    content = load_toolchain_args(generators_folder=os.path.join(client.current_folder,
+                                                                 "build", "generators"),
+                                  namespace=namespace)
     at_configure_args = content.get("configure_args")
     at_make_args = content.get("make_args")
     client.run("build .")
@@ -123,9 +127,11 @@ def test_multiple_toolchains_one_recipe():
     }
     checks = []
     for namespace in namespaces:
-        assert os.path.isfile(os.path.join(client.current_folder,
+        assert os.path.isfile(os.path.join(client.current_folder, "build", "generators",
                                            "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE)))
-        content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
+        content = load_toolchain_args(generators_folder=os.path.join(client.current_folder,
+                                                                     "build", "generators"),
+                                      namespace=namespace)
         for arg in check_args.get(namespace):
             checks.append(content.get(arg))
     client.run("build . -pr test_profile")

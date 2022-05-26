@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 import unittest
@@ -23,9 +24,9 @@ class TestTxtCommandLine(unittest.TestCase):
     def _check(self, client):
         self.assertIn("conanfile.txt: Generator 'CMakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.txt: Generator 'MesonToolchain' calling 'generate()'", client.out)
-        toolchain = client.load("conan_toolchain.cmake")
+        toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
         self.assertIn("Conan automatically generated toolchain file", toolchain)
-        toolchain = client.load("conan_meson_native.ini")
+        toolchain = client.load(os.path.join("build", "generators", "conan_meson_native.ini"))
         self.assertIn("[project options]", toolchain)
 
     def test_command_line(self):

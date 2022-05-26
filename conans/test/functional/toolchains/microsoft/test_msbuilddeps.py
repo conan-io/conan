@@ -686,8 +686,8 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("install . --profile profile")
-    depa = client.load("conan_pkga_release_x64.props")
-    depb = client.load("conan_pkgb_release_x64.props")
+    depa = client.load(os.path.join("build", "generators", "conan_pkga_release_x64.props"))
+    depb = client.load(os.path.join("build", "generators", "conan_pkgb_release_x64.props"))
 
     if exclude_a:
         inc = "$(ConanpkgaIncludeDirectories)"

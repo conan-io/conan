@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -12,5 +13,5 @@ def test_premakedeps():
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
 
-    contents = client.load("conandeps.premake.lua")
+    contents = client.load(os.path.join("build", "generators", "conandeps.premake.lua"))
     assert 'function conan_basic_setup()' in contents

@@ -43,7 +43,7 @@ def test_pkg_config_dirs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "mylib.pc")
+    pc_path = os.path.join(client.current_folder, "build", "generators", "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     assert 'Name: mylib' in pc_content
@@ -88,7 +88,7 @@ def test_empty_dirs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "mylib.pc")
+    pc_path = os.path.join(client.current_folder, "build", "generators", "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected = textwrap.dedent("""
@@ -122,7 +122,7 @@ def test_system_libs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("mylib.pc")
+    pc_content = client.load(os.path.join("build", "generators", "mylib.pc"))
     assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
@@ -147,7 +147,7 @@ def test_multiple_include():
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg.pc"))
     assert "includedir1=${prefix}/inc1" in pc_content
     assert "includedir2=${prefix}/inc2" in pc_content
     assert "includedir3=${prefix}/inc3/foo" in pc_content
@@ -186,7 +186,7 @@ def test_custom_content():
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg.pc"))
     assert "libdir1=${prefix}/lib" in pc_content
     assert "datadir=${prefix}/share" in pc_content
     assert "schemasdir=${datadir}/mylib/schemas" in pc_content
@@ -210,7 +210,7 @@ def test_custom_content_and_version_components():
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
-    pc_content = client.load("pkg-mycomponent.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg-mycomponent.pc"))
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content
 
@@ -285,18 +285,18 @@ def test_pkg_with_public_deps_and_component_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
 
-    pc_content = client2.load("third.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "third.pc"))
     # Originally posted: https://github.com/conan-io/conan/issues/9939
     assert "Requires: second other" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "second.pc"))
     assert "Requires: second-mycomponent second-myfirstcomp" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second-mycomponent.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "second-mycomponent.pc"))
     assert "Requires: myfirstlib-cmp1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second-myfirstcomp.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "second-myfirstcomp.pc"))
     assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
-    pc_content = client2.load("myfirstlib.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "myfirstlib.pc"))
     assert "Requires: myfirstlib-cmp1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("other.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "other.pc"))
     assert "" == get_requires_from_content(pc_content)
 
 
@@ -359,13 +359,13 @@ def test_pkg_with_public_deps_and_component_requires_2():
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
-    pc_content = client2.load("pkg.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "pkg.pc"))
     assert "Requires: component1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("fancy_name.pc")
+    pc_content = client2.load(os.path.join("build", "generators", "fancy_name.pc"))
     assert "Requires: component1 fancy_name-cmp2 component3" == get_requires_from_content(pc_content)
-    assert client2.load("component1.pc")
-    assert client2.load("fancy_name-cmp2.pc")
-    pc_content = client2.load("component3.pc")
+    assert client2.load(os.path.join("build", "generators", "component1.pc"))
+    assert client2.load(os.path.join("build", "generators", "fancy_name-cmp2.pc"))
+    pc_content = client2.load(os.path.join("build", "generators", "component3.pc"))
     assert "Requires: component1" == get_requires_from_content(pc_content)
 
 
@@ -420,11 +420,11 @@ def test_pkg_config_name_full_aliases():
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
 
-    pc_content = client.load("compo1.pc")
+    pc_content = client.load(os.path.join("build", "generators", "compo1.pc"))
     assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
-    pc_content = client.load("compo1_alias.pc")
+    pc_content = client.load(os.path.join("build", "generators", "compo1_alias.pc"))
     content = textwrap.dedent("""\
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
@@ -433,11 +433,11 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("pkg_other_name.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg_other_name.pc"))
     assert "Description: Conan package: pkg_other_name" in pc_content
     assert "Requires: compo1" in pc_content
 
-    pc_content = client.load("pkg_alias1.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg_alias1.pc"))
     content = textwrap.dedent("""\
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
@@ -446,7 +446,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("pkg_alias2.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkg_alias2.pc"))
     content = textwrap.dedent("""\
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
@@ -455,7 +455,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("second-mycomponent.pc")
+    pc_content = client.load(os.path.join("build", "generators", "second-mycomponent.pc"))
     assert "Requires: compo1" == get_requires_from_content(pc_content)
 
 
@@ -537,7 +537,8 @@ def test_duplicated_names_warnings():
            "another name/alias declared in pkga/1.0 package" in output
     assert "WARN: [pkgb/1.0] The PC file name libpkg.pc already exists and it matches with " \
            "another name/alias declared in pkga/1.0 package" in output
-    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
+    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder,
+                                                                    "build", "generators", '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
     assert pc_files == ['alias1.pc', 'component1.pc', 'libcmp.pc', 'libpkg-cmp3.pc',
@@ -587,15 +588,16 @@ def test_components_and_package_pc_creation_order():
         """)
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
-    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
+    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder,
+                                                                    "build", "generators", '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
     assert pc_files == ['OpenCL.pc', 'OtherCL.pc', 'pkgb.pc']
-    pc_content = client.load("OpenCL.pc")
+    pc_content = client.load(os.path.join("build", "generators", "OpenCL.pc"))
     assert "Name: OpenCL" in pc_content
     assert "Description: Conan component: OpenCL" in pc_content
     assert "Requires:" not in pc_content
-    pc_content = client.load("pkgb.pc")
+    pc_content = client.load(os.path.join("build", "generators", "pkgb.pc"))
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
 
 
@@ -616,6 +618,6 @@ def test_pkg_configdeps_definitions_escape():
     client.run("export . --name=hello --version=1.0")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g PkgConfigDeps")
-    client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
+    client.run_command("PKG_CONFIG_PATH=$(pwd)/build/generators pkg-config --cflags hello")
     assert r'flag2=\"my flag2\" flag1=\"my flag1\" '\
            r'-DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out

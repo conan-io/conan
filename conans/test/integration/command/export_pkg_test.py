@@ -315,7 +315,7 @@ class TestConan(ConanFile):
         self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("hello1/0.1@lasote/stable: Already installed!", client.out)
 
-        cmakeinfo = client.load("hello1-release-data.cmake")
+        cmakeinfo = client.load(os.path.join("build", "generators", "hello1-release-data.cmake"))
         self.assertIn("set(hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
     @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")

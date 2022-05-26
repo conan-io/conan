@@ -183,7 +183,8 @@ def test_xcodedeps_components():
     client.run("install --requires=chat/1.0@ -g XcodeDeps --output-folder=conan")
     client.run("install --requires=chat/1.0@ -g XcodeDeps --output-folder=conan "
                "-s build_type=Debug --build=missing")
-    chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
+    chat_xcconfig = client.load(os.path.join("conan", "build", "generators",
+                                             "conan_chat_chat.xcconfig"))
     assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig

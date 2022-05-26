@@ -49,16 +49,17 @@ def expected_files(current_folder, configuration, architecture, sdk_version):
     name = _get_filename(configuration, architecture, sdk_version)
     deps = ["hello", "goodbye"]
     files.extend(
-        [os.path.join(current_folder, "conan_{dep}_{dep}{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
+        [os.path.join(current_folder, "build", "generators", "conan_{dep}_{dep}{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
     files.extend(
-        [os.path.join(current_folder, "conan_{dep}_{dep}_vars{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
-    files.append(os.path.join(current_folder, "conandeps.xcconfig"))
+        [os.path.join(current_folder,  "build", "generators", "conan_{dep}_{dep}_vars{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
+    files.append(os.path.join(current_folder, "build", "generators", "conandeps.xcconfig"))
     return files
 
 
 def check_contents(client, deps, configuration, architecture, sdk_version):
     for dep_name in deps:
-        dep_xconfig = client.load("conan_{dep}_{dep}.xcconfig".format(dep=dep_name))
+        dep_xconfig = client.load(os.path.join("build", "generators",
+                                               "conan_{dep}_{dep}.xcconfig".format(dep=dep_name)))
         conf_name = "conan_{}_{}{}.xcconfig".format(dep_name, dep_name,
                                                  _get_filename(configuration, architecture, sdk_version))
 
@@ -69,13 +70,13 @@ def check_contents(client, deps, configuration, architecture, sdk_version):
 
         vars_name = "conan_{}_{}_vars{}.xcconfig".format(dep_name, dep_name,
                                                       _get_filename(configuration, architecture, sdk_version))
-        conan_vars = client.load(vars_name)
+        conan_vars = client.load(os.path.join("build", "generators", vars_name))
         for var in _expected_vars_xconfig:
             line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
                               sdk="macosx", sdk_version=sdk_version)
             assert line in conan_vars
 
-        conan_conf = client.load(conf_name)
+        conan_conf = client.load(os.path.join("build", "generators", conf_name))
         for var in _expected_conf_xconfig:
             assert var.format(vars_name=vars_name, name=dep_name) in conan_conf
 
@@ -102,11 +103,11 @@ def test_generator_files():
         for config_file in expected_files(client.current_folder, build_type, "x86_64", "12.1"):
             assert os.path.isfile(config_file)
 
-        conandeps = client.load("conandeps.xcconfig")
+        conandeps = client.load(os.path.join("build", "generators", "conandeps.xcconfig"))
         assert '#include "conan_hello.xcconfig"' in conandeps
         assert '#include "conan_goodbye.xcconfig"' in conandeps
 
-        conan_config = client.load("conan_config.xcconfig")
+        conan_config = client.load(os.path.join("build", "generators", "conan_config.xcconfig"))
         assert '#include "conandeps.xcconfig"' in conan_config
 
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")

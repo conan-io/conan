@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -122,7 +123,7 @@ def test_declared_generators_get_conf():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -pr:b=default")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     assert 'include("mytoolchain.cmake")' in toolchain
 
     consumer = textwrap.dedent("""
@@ -138,7 +139,7 @@ def test_declared_generators_get_conf():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -pr:b=default")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     assert 'include("mytoolchain.cmake")' in toolchain
 
 

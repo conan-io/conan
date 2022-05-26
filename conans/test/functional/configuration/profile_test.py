@@ -716,7 +716,7 @@ def test_consumer_specific_settings():
         assert "I'm dep and my build type is Release" in client.out
         # Verify the cmake toolchain takes Debug
         assert "I'm dep and my shared is False" in client.out
-        presets = json.loads(client.load("CMakePresets.json"))
+        presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
         assert presets["configurePresets"][0]["cacheVariables"]['CMAKE_BUILD_TYPE'] == "Debug"
 
 

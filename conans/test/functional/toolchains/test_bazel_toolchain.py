@@ -1,4 +1,5 @@
 import textwrap
+import os
 
 from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.genconanfile import GenConanfile
@@ -14,7 +15,7 @@ def test_toolchain_empty_config():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
 
-    config = load_toolchain_args(client.current_folder)
+    config = load_toolchain_args(os.path.join(client.current_folder, "build", "generators"))
     assert not config
 
 
@@ -37,6 +38,6 @@ def test_toolchain_loads_config_from_profile():
     })
     client.run("install . -pr=test_profile")
 
-    config = load_toolchain_args(client.current_folder)
+    config = load_toolchain_args(os.path.join(client.current_folder, "build", "generators"))
     assert config['bazel_configs'] == "test_config,test_config2"
     assert config['bazelrc_path'] == "/path/to/bazelrc"

@@ -53,7 +53,7 @@ def test_cmake_toolchain_user_toolchain():
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load("build/generators/conan_toolchain.cmake")
     assert 'include("mytoolchain.cmake")' in toolchain
 
 
@@ -65,8 +65,9 @@ def test_cmake_toolchain_custom_toolchain():
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
-    presets = load_cmake_presets(client.current_folder)
+    assert not os.path.exists(os.path.join(client.current_folder, "build", "generators",
+                                           "conan_toolchain.cmake"))
+    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
     assert "mytoolchain.cmake" in presets["configurePresets"][0]["toolchainFile"]
     assert "binaryDir" in presets["configurePresets"][0]
 
@@ -160,7 +161,7 @@ def test_cmake_toolchain_without_build_type():
 
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load("build/generators/conan_toolchain.cmake")
     assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
@@ -243,7 +244,7 @@ def test_cmaketoolchain_no_warnings():
 
     client.run("create dep")
     client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./build/generators/conan_toolchain.cmake "
                        "-Werror=dev --warn-uninitialized")
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully

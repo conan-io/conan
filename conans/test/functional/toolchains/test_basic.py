@@ -25,7 +25,7 @@ class BasicTest(unittest.TestCase):
         client.run("install .")
 
         self.assertIn("conanfile.py: Calling generate()", client.out)
-        toolchain = client.load("conan_toolchain.cmake")
+        toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
         self.assertIn("Conan automatically generated toolchain file", toolchain)
 
     def test_declarative(self):
@@ -42,9 +42,9 @@ class BasicTest(unittest.TestCase):
         self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'CMakeDeps' calling 'generate()'", client.out)
-        toolchain = client.load("conan_toolchain.cmake")
+        toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
         self.assertIn("Conan automatically generated toolchain file", toolchain)
-        toolchain = client.load("conan_meson_native.ini")
+        toolchain = client.load(os.path.join("build", "generators", "conan_meson_native.ini"))
         self.assertIn("[project options]", toolchain)
 
     @pytest.mark.tool("visual_studio")
@@ -103,7 +103,7 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("build .", assert_error=True)  # No CMakeLists.txt
-        toolchain_path = os.path.join(client.current_folder,
+        toolchain_path = os.path.join(client.current_folder, "build", "generators",
                                       "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)

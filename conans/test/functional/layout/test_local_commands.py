@@ -83,7 +83,8 @@ def test_no_layout_generators_folder():
     client.run("install . -of=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
+    cmake_toolchain_generator_path = os.path.join(old_install_folder, "build", "generators",
+                                                  "conan_toolchain.cmake")
 
     # In the install_folder
     assert os.path.exists(cmake_toolchain_generator_path)

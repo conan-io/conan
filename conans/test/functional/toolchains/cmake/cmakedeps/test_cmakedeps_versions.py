@@ -96,6 +96,6 @@ def test_no_version_file(hello_client):
 
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install .")
-    os.unlink(os.path.join(client.current_folder, "hello-config-version.cmake"))
+    os.unlink(os.path.join(client.current_folder, "build", "generators", "hello-config-version.cmake"))
     exit_code = client.run("build .", assert_error=True)
     assert 0 != exit_code

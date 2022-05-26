@@ -73,13 +73,15 @@ def test_zlib_not_included(client):
                 clean_first=True)
     client.run("install . -pr:h=default -pr:b=default")
     # The compilation works, so it finds the doxygen without transitive failures
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
 
     # Assert there is no zlib target
     assert "Target declared 'zlib::zlib'" not in client.out
 
     # Of course we find the doxygen-config.cmake
-    assert os.path.exists(os.path.join(client.current_folder, "doxygen-config.cmake"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "generators",
+                                       "doxygen-config.cmake"))
 
     # The -config files for zlib are not there
-    assert not os.path.exists(os.path.join(client.current_folder, "zlib-config.cmake"))
+    assert not os.path.exists(os.path.join(client.current_folder, "build", "generators",
+                                           "zlib-config.cmake"))

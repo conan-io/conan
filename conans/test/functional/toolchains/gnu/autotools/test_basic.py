@@ -237,7 +237,7 @@ def test_autotools_with_pkgconfigdeps():
     client.save({"conanfile.txt": consumer_conanfile}, clean_first=True)
     client.run("install .")
 
-    client.run_command(". ./conanautotoolstoolchain.sh && "
+    client.run_command(". ./build/generators/conanautotoolstoolchain.sh && "
                        "pkg-config --cflags hello && "
                        "pkg-config --libs-only-l hello && "
                        "pkg-config --libs-only-L --libs-only-other hello")

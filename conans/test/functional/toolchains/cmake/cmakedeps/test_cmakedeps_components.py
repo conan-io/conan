@@ -1,3 +1,4 @@
+import os
 import textwrap
 import unittest
 
@@ -60,7 +61,7 @@ class PropagateSpecificComponents(unittest.TestCase):
         t = TestClient(cache_folder=self.cache_folder)
         t.save({'conanfile.py': self.app})
         t.run("install .  -g CMakeDeps")
-        config = t.load("middle-Target-release.cmake")
+        config = t.load(os.path.join("build", "generators", "middle-Target-release.cmake"))
         self.assertIn('top::cmp1', config)
         self.assertNotIn("top::top", config)
 
@@ -68,10 +69,10 @@ class PropagateSpecificComponents(unittest.TestCase):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install --requires=middle/version@ -g CMakeDeps')
 
-        content = t.load('middle-release-x86_64-data.cmake')
+        content = t.load(os.path.join("build", "generators", 'middle-release-x86_64-data.cmake'))
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
-        content = t.load('middle-Target-release.cmake')
+        content = t.load(os.path.join("build", "generators", 'middle-Target-release.cmake'))
         self.assertNotIn("top::top", content)
         self.assertNotIn("top::cmp2", content)
         self.assertIn("top::cmp1", content)

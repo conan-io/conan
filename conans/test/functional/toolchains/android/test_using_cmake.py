@@ -62,9 +62,12 @@ def test_use_cmake_toolchain(client):
         https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
     """
     # Build in the cache
-    client.run('create . --name=library --version=version --profile:host=profile_host --profile:build=default')
+    client.run('create . --name=library --version=version --profile:host=profile_host'
+               ' --profile:build=default')
 
     # Build locally
-    client.run('install . --name=library --version=version --profile:host=profile_host --profile:build=default')
-    client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
+    client.run('install . --name=library --version=version --profile:host=profile_host'
+               ' --profile:build=default')
+    path = os.path.join("build", "generators", CMakeToolchain.filename)
+    client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(path))
     client.run_command('cmake --build .')
