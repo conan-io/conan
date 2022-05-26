@@ -92,17 +92,37 @@ def app_compat(conanfile):
 """
 
 
+def get_default_compatibility():
+    return default_compat
+
+
+def get_default_app_compat():
+    return default_app_compat
+
+
+def get_default_cppstd_compat():
+    return default_cppstd_compat
+
+
 class BinaryCompatibility:
 
     def __init__(self, cache):
-        compatible_folder = os.path.join(cache.plugins_path, "compatibility")
-        compatible_file = os.path.join(compatible_folder, "compatibility.py")
-        if not os.path.isfile(compatible_file):
-            save(compatible_file, default_compat)
-            save(os.path.join(compatible_folder, "app_compat.py"), default_app_compat)
-            save(os.path.join(compatible_folder, "cppstd_compat.py"), default_cppstd_compat)
-        mod, _ = load_python_file(compatible_file)
+        compatibility_file, app_compat_file, cppstd_compat_file = \
+            self.get_binary_compatibility_file_paths(cache)
+        if not os.path.isfile(compatibility_file):
+            save(compatibility_file, get_default_compatibility())
+            save(app_compat_file, get_default_app_compat())
+            save(cppstd_compat_file, get_default_cppstd_compat())
+        mod, _ = load_python_file(compatibility_file)
         self._compatibility = mod.compatibility
+
+    @staticmethod
+    def get_binary_compatibility_file_paths(cache):
+        compatible_folder = os.path.join(cache.plugins_path, "compatibility")
+        compatibility_file = os.path.join(compatible_folder, "compatibility.py")
+        app_compat_file = os.path.join(compatible_folder, "app_compat.py")
+        cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
+        return compatibility_file, app_compat_file, cppstd_compat_file
 
     def compatibles(self, conanfile):
         compat_infos = []
