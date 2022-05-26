@@ -24,6 +24,9 @@ def test_xcodedeps_components():
     We create an application called ChatApp that uses XcodeDeps for chat/1.0 dependency
     And check that we are not requiring more than the needed components,
     nothing from network::server for example
+
+    Then create an application with direct dependency network/1.0 and select just one component
+    test that you don't add more than that component
     """
     client = TestClient(path_with_spaces=False)
 
@@ -202,3 +205,65 @@ def test_xcodedeps_components():
     assert "tcp/1.0: Hello World Release!" in client.out
     assert "client/1.0: Hello World Release!" in client.out
     assert "chat/1.0: Hello World Release!" in client.out
+
+    # Create an application that depends directly on a package with components and check
+    # that we only add the selected components
+    xcode_project = textwrap.dedent("""
+        name: netapp
+        targets:
+          app:
+            type: tool
+            platform: macOS
+            sources:
+              - src
+            configFiles:
+              Debug: conan_config.xcconfig
+              Release: conan_config.xcconfig
+        """)
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        from conan.tools.apple import XcodeBuild, XcodeDeps
+        from conan.tools.files import save
+
+        class MyNetApplicationConan(ConanFile):
+            name = "netapp"
+            version = "1.0"
+
+            requires = "network/1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeToolchain", "XcodeDeps"
+
+            exports_sources = "netapp.xcodeproj/*", "src/*"
+
+            def generate(self):
+                deps = XcodeDeps(self)
+                deps.use_components = ["network::client"]
+                deps.generate()
+
+            def build(self):
+                xcode = XcodeBuild(self)
+                xcode.build("netapp.xcodeproj", target="app")
+                self.run("build/Release/app")
+        """)
+
+    client.save({
+        "src/main.cpp": '#include "client.h"\nint main(){client();return 0;}',
+        "project.yml": xcode_project,
+        "conanfile.py": conanfile,
+        "conan_config.xcconfig": ""
+    }, clean_first=True)
+
+    client.run_command("xcodegen generate")
+
+    client.run("create .")
+    assert "client/1.0: Hello World Release!" in client.out
+
+    client.run("install .")
+    conan_network = client.load(os.path.join("conan_network.xcconfig"))
+
+    assert '#include "conan_network_client.xcconfig"' in conan_network
+    assert '#include "conan_network_core.xcconfig"' not in conan_network
+    assert '#include "conan_network_server.xcconfig"' not in conan_network
+
