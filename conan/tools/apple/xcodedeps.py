@@ -129,8 +129,23 @@ class XcodeDeps(object):
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
-        self.use_components = None
+        self._use_components = None
         check_using_build_profile(self._conanfile)
+
+    @property
+    def use_components(self):
+        return self._use_components
+
+    @use_components.setter
+    def use_components(self, components):
+        # we can only specify to use components from direct dependencies
+        valid_component_pkg_names = [dep.ref.name for dep in self._conanfile.dependencies.direct_host.values()]
+        for comp in components:
+            if comp.split("::")[0] not in valid_component_pkg_names:
+                raise ConanException("Component '{}' is not a direct dependency for this package. "
+                                     "You can only specify components for direct dependencies "
+                                     "with XcodeDeps.use_components".format(comp))
+        self._use_components = components
 
     def generate(self):
         if self.configuration is None:
