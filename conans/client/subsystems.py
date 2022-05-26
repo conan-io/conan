@@ -40,7 +40,6 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
         wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
     else:
         wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
-    print("*********************CMD!!!!!!!!!!!!", wrapped_cmd)
     return wrapped_cmd
 
 
