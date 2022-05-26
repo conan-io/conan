@@ -113,6 +113,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
+              set({{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }} {{ global_cpp.no_soname }})
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
 
@@ -137,6 +138,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
               set({{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ cpp.sharedlinkflags_list }})
               set({{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ cpp.exelinkflags_list }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_NO_SONAME_MODE{{ config_suffix }} {{ cpp.no_soname }})
+
               set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
@@ -305,3 +308,5 @@ class _TargetDataContext(object):
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)
+        # SONAME flag only makes sense for SHARED libraries
+        self.no_soname = str((cpp_info.get_property("nosoname") if self.library_type == "SHARED" else False) or False).upper()
