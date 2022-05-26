@@ -276,10 +276,10 @@ class XcodeDeps(object):
                     for req in comp_cpp_info.requires:
                         req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
                         component_deps.append((req_pkg, req_cmp))
+                    component_content = self.get_content_for_component(dep_name, comp_name, comp_cpp_info, component_deps)
+                    result.update(component_content)
                     if self._add_component(dep_name, comp_name):
-                        component_content = self.get_content_for_component(dep_name, comp_name, comp_cpp_info, component_deps)
                         include_components_names.append((dep_name, comp_name))
-                        result.update(component_content)
             else:
                 public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
                                dep.dependencies.direct_host.items() if r.visible]
