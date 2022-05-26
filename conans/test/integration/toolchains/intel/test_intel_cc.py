@@ -46,7 +46,7 @@ def get_intel_cc_generator_file(os_, installation_path, filename):
 def test_intel_cc_generator_windows():
     os_ = "Windows"
     installation_path = "C:\\Program Files (x86)\\Intel\\oneAPI"
-    conanintelsetvars = get_intel_cc_generator_file(os_, installation_path, "conanintelsetvars.bat")
+    conanintelsetvars = get_intel_cc_generator_file(os_, installation_path, "build\\generators\\conanintelsetvars.bat")
     expected = textwrap.dedent("""\
         @echo off
         call "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat" intel64
@@ -58,6 +58,6 @@ def test_intel_cc_generator_windows():
 def test_intel_cc_generator_linux():
     os_ = "Linux"
     installation_path = "/opt/intel/oneapi"
-    conanintelsetvars = get_intel_cc_generator_file(os_, installation_path, "conanintelsetvars.sh")
+    conanintelsetvars = get_intel_cc_generator_file(os_, installation_path, "build/generators/conanintelsetvars.sh")
     expected = '. "/opt/intel/oneapi/setvars.sh" intel64'
     assert conanintelsetvars == expected
