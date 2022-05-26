@@ -1,5 +1,4 @@
 import os
-import re
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException, ConanMigrationError
@@ -17,7 +16,6 @@ class Migrator(object):
 
         self.current_version = current_version
         self.file_version_path = os.path.join(self.conf_path, CONAN_VERSION)
-        self.file_comment_pattern = re.compile(f".*{CONAN_GENERATED_COMMENT}.*")
 
     def migrate(self):
         try:
@@ -44,13 +42,25 @@ class Migrator(object):
             old_version = None
         return old_version
 
-    def can_be_overwritten(self, file_path):
+    @staticmethod
+    def can_be_overwritten(file_path):
+        """
+        Check if the given file path contains the Conan comment, so it could be overwritten.
+
+        :param file_path: ``str`` file path
+        :return: ``bool`` ``True``  whether file can be overwritten, otherwise, ``False``
+        """
         with open(file_path) as f:
-            for line in f.readlines():
-                if self.file_comment_pattern.match(line):
-                    return True
+            # Forcing it to have the comment in the first line
+            if CONAN_GENERATED_COMMENT in f.readline():
+                return True
             else:
                 return False
 
     def _apply_migrations(self, old_version):
+        """
+        Apply any migration script.
+
+        :param old_version: ``str`` previous Conan version.
+        """
         pass

@@ -32,10 +32,8 @@ class ClientMigrator(Migrator):
                         f" comment: '{CONAN_GENERATED_COMMENT}'. Ignoring it")
             return
         else:
-            out.warning("Migration: Updating settings.yml")
             new_settings = get_default_settings_yml()
             if new_settings == load(settings_path):
-                out.info("Migration: settings.yml is already up to date")
                 return
             else:
                 save(cache.settings_path, new_settings)
