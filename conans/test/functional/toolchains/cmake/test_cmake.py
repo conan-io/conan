@@ -472,7 +472,6 @@ class AppleTest(Base):
 @pytest.mark.parametrize("version, vs_version",
                          [("190", "15"),
                           ("191", "15")])
-@pytest.mark.tool("visual_studio", "14")
 @pytest.mark.tool("visual_studio", "15")
 def test_msvc_vs_versiontoolset(version, vs_version):
     settings = {"compiler": "msvc",

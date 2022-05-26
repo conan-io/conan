@@ -586,11 +586,12 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_hello3.props",
-                                                                          "conandeps.props"),
+                 "MyProject/MyProject.vcxproj":
+                     myproject_vcxproj.replace("conan_hello3.props",
+                                               "build/generators/conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
                  "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
-                                                              "conandeps.props"),
+                                                              "build/generators/conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 
@@ -782,7 +783,7 @@ def check_build_vs_project_with_a(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
-    props = os.path.join(client.current_folder, "conandeps.props")
+    props = os.path.join(client.current_folder, "build", "generators", "conandeps.props")
     old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
@@ -837,7 +838,7 @@ def check_build_vs_project_with_test_requires(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
-    props = os.path.join(client.current_folder, "conandeps.props")
+    props = os.path.join(client.current_folder, "build", "generators", "conandeps.props")
     old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
@@ -860,7 +861,7 @@ def test_private_transitive():
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-    deps_props = client.load("consumer/conandeps.props")
+    deps_props = client.load("consumer/build/generators/conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
 
@@ -983,7 +984,7 @@ def test_build_requires():
                    " -s arch=x86_64 -s build_type=Release")
         client.assert_listed_binary({"dep/0.1": ("62e589af96a19807968167026d906e63ed4de1f5",
                                                  "Cache")}, build=True)
-        deps_props = client.load("conandeps.props")
+        deps_props = client.load(os.path.join("build", "generators", "conandeps.props"))
         assert "conan_dep_build.props" in deps_props
         assert "Invoking 64bit dep_1 build tool" in client.out
 

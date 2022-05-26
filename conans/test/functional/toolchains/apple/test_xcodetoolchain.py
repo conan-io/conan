@@ -76,7 +76,7 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
                  "test_package/conanfile.py": test,
                  "app/main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
                  "project.yml": xcode_project,
-                 "conan_config.xcconfig": ""}, clean_first=True)
+                 "build/generators/conan_config.xcconfig": ""}, clean_first=True)
 
     client.run_command("xcodegen generate")
 

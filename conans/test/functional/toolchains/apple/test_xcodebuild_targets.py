@@ -164,7 +164,7 @@ def test_shared_static_targets():
                  "test_package/conanfile.py": test,
                  "test_package/src/example.cpp": test_src,
                  "test_package/CMakeLists.txt": cmakelists,
-                 "conan_config.xcconfig": "",
+                 "build/generators/conan_config.xcconfig": "",
                  "static.xcconfig": static_xcconfig,
                  "dynamic.xcconfig": dynamic_xcconfig})
 
