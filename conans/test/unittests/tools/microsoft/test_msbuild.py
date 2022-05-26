@@ -99,7 +99,7 @@ def test_msbuild_standard():
     conanfile.settings.arch = "x86_64"
 
     msbuild = MSBuildToolchain(conanfile)
-    props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
+    props_file = os.path.join(test_folder, "build", "generators", 'conantoolchain_release_x64.props')
     msbuild.generate()
     assert '<LanguageStandard>stdcpp20</LanguageStandard>' in load(props_file)
 
@@ -127,7 +127,7 @@ def test_resource_compile():
 
     msbuild = MSBuildToolchain(conanfile)
     msbuild.preprocessor_definitions["MYTEST"] = "MYVALUE"
-    props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
+    props_file = os.path.join(test_folder, "build", "generators", 'conantoolchain_release_x64.props')
     msbuild.generate()
     expected = """
         <ResourceCompile>
@@ -169,7 +169,7 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     conanfile.settings.arch = "x86_64"
 
     msbuild = MSBuildToolchain(conanfile)
-    props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
+    props_file = os.path.join(test_folder, "build", "generators", 'conantoolchain_release_x64.props')
     msbuild.generate()
     assert '<PlatformToolset>%s</PlatformToolset>' % expected_toolset in load(props_file)
 
@@ -230,7 +230,8 @@ def test_msbuildtoolchain_changing_flags_via_attributes():
     msbuild.cflags.append("/flag2")
     msbuild.ldflags.append("/link1")
     msbuild.generate()
-    toolchain = load(os.path.join(test_folder, "conantoolchain_release_x64.props"))
+    toolchain = load(os.path.join(test_folder, "build", "generators",
+                                  "conantoolchain_release_x64.props"))
 
     expected_cl_compile = """
     <ClCompile>

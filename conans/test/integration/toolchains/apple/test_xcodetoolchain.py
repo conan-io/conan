@@ -1,3 +1,4 @@
+import os
 import platform
 
 import pytest
@@ -38,9 +39,10 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_ve
     filename = _get_filename(configuration, arch, sdk_version)
     condition = _condition(configuration, arch, sdk_version)
 
-    toolchain_all = client.load("conantoolchain.xcconfig")
-    toolchain_vars = client.load("conantoolchain{}.xcconfig".format(filename))
-    conan_config = client.load("conan_config.xcconfig")
+    toolchain_all = client.load(os.path.join("build", "generators", "conantoolchain.xcconfig"))
+    toolchain_vars = client.load(os.path.join("build", "generators",
+                                              "conantoolchain{}.xcconfig".format(filename)))
+    conan_config = client.load(os.path.join("build", "generators", "conan_config.xcconfig"))
 
     assert '#include "conantoolchain.xcconfig"' in conan_config
     assert '#include "conantoolchain{}.xcconfig"'.format(filename) in toolchain_all
@@ -62,10 +64,11 @@ def test_toolchain_flags():
           "-c 'tools.build:sharedlinkflags=[\"flag3\"]' " \
           "-c 'tools.build:exelinkflags=[\"flag4\"]'"
     client.run(cmd)
-    conan_global_flags = client.load("conan_global_flags.xcconfig")
+    conan_global_flags = client.load(os.path.join("build", "generators",
+                                                  "conan_global_flags.xcconfig"))
     assert "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MYDEFINITION" in conan_global_flags
     assert "OTHER_CFLAGS = $(inherited) flag2" in conan_global_flags
     assert "OTHER_CPLUSPLUSFLAGS = $(inherited) flag1" in conan_global_flags
     assert "OTHER_LDFLAGS = $(inherited) flag3 flag4" in conan_global_flags
-    conan_global_file = client.load("conan_config.xcconfig")
+    conan_global_file = client.load(os.path.join("build", "generators", "conan_config.xcconfig"))
     assert '#include "conan_global_flags.xcconfig"' in conan_global_file

@@ -34,7 +34,7 @@ def test_cross_build():
                 "rpi": rpi_profile,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=rpi")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
@@ -68,7 +68,7 @@ def test_cross_build_user_toolchain():
                 "rpi": rpi_profile,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=rpi")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "CMAKE_SYSTEM_NAME " not in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
@@ -92,7 +92,7 @@ def test_no_cross_build():
     client.save({"conanfile.py": conanfile,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=windows")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "CMAKE_SYSTEM_NAME " not in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
@@ -123,7 +123,7 @@ def test_cross_arch():
                 "linux64": build_profile,
                  "linuxarm": profile_arm})
     client.run("install . --profile:build=linux64 --profile:host=linuxarm")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
@@ -154,7 +154,7 @@ def test_no_cross_build_arch():
                 "linux64": build_profile,
                  "linux32": profile_32})
     client.run("install . --profile:build=linux64 --profile:host=linux32")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "CMAKE_SYSTEM_NAME" not in toolchain
     assert "CMAKE_SYSTEM_PROCESSOR " not in toolchain
@@ -189,7 +189,7 @@ def test_cross_build_conf():
                 "rpi": rpi_profile,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=rpi")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     assert "set(CMAKE_SYSTEM_NAME Custom)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 42)" in toolchain
@@ -225,7 +225,7 @@ def test_find_builddirs():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
-    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
+    with open(os.path.join(client.current_folder, "build", "generators", "conan_toolchain.cmake")) as f:
         contents = f.read()
         assert "/path/to/builddir" in contents
 
@@ -251,7 +251,7 @@ def test_cmaketoolchain_cmake_system_processor_cross_apple():
     """)
     client.save({"profile_ios": profile_ios})
     client.run("install hello.py -pr:h=./profile_ios -pr:b=default -g CMakeToolchain")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     assert "set(CMAKE_SYSTEM_NAME iOS)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 15.0)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
@@ -282,7 +282,7 @@ def test_apple_vars_overwrite_user_conf():
                "-c tools.cmake.cmaketoolchain:system_version=15.1 "
                "-c tools.cmake.cmaketoolchain:system_processor=x86_64 ")
 
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
 
     # should set the conf values but system/version are overwritten by the apple block
     assert "CMAKE_SYSTEM_NAME tvOS" in toolchain
@@ -318,7 +318,7 @@ def test_extra_flags_via_conf():
     client.save({"conanfile.py": conanfile,
                 "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     assert 'string(APPEND CONAN_CXX_FLAGS " --flag1 --flag2")' in toolchain
     assert 'string(APPEND CONAN_C_FLAGS " --flag3 --flag4")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
@@ -368,13 +368,13 @@ def test_cmake_presets_multiconfig():
 
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Release --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["buildPresets"]) == 1
     assert presets["buildPresets"][0]["configuration"] == "Release"
 
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Debug --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["buildPresets"]) == 2
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -383,7 +383,7 @@ def test_cmake_presets_multiconfig():
                "-s build_type=RelWithDebInfo --profile:h=profile")
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=MinSizeRel --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["buildPresets"]) == 4
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -420,7 +420,7 @@ def test_cmake_presets_singleconfig():
 
     client.run("install --requires=mylib/1.0@ "
                "-g CMakeToolchain -s build_type=Release --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["configurePresets"]) == 1
     assert presets["configurePresets"][0]["name"] == "Release"
 
@@ -430,7 +430,7 @@ def test_cmake_presets_singleconfig():
     # Now two configurePreset, but named correctly
     client.run("install --requires=mylib/1.0@ "
                "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["configurePresets"]) == 2
     assert presets["configurePresets"][1]["name"] == "Debug"
 
@@ -440,5 +440,5 @@ def test_cmake_presets_singleconfig():
     # Repeat configuration, it shouldn't add a new one
     client.run("install --requires=mylib/1.0@ "
                "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
-    presets = json.loads(client.load("CMakePresets.json"))
+    presets = json.loads(client.load(os.path.join("build", "generators", "CMakePresets.json")))
     assert len(presets["configurePresets"]) == 2

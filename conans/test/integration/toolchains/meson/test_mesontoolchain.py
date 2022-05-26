@@ -1,3 +1,4 @@
+import os
 import sys
 import textwrap
 
@@ -55,7 +56,7 @@ def test_apple_meson_keep_user_custom_flags():
             "host_prof": cross})
 
     t.run("install . -pr:h host_prof -pr:b build_prof")
-    content = t.load(MesonToolchain.cross_filename)
+    content = t.load(os.path.join("build", "generators", MesonToolchain.cross_filename))
     assert "c_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
     assert "c_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
     assert "cpp_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
@@ -90,7 +91,7 @@ def test_extra_flags_via_conf():
             "profile": profile})
 
     t.run("install . -pr:h=profile -pr:b=profile")
-    content = t.load(MesonToolchain.native_filename)
+    content = t.load(os.path.join("build", "generators", MesonToolchain.native_filename))
     assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2']" in content
     assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
     assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
@@ -114,7 +115,7 @@ def test_correct_quotes():
             "profile": profile})
 
     t.run("install . -pr:h=profile -pr:b=profile")
-    content = t.load(MesonToolchain.native_filename)
+    content = t.load(os.path.join("build", "generators", MesonToolchain.native_filename))
     assert "cpp_std = 'c++17'" in content
     assert "backend = 'ninja'" in content
     assert "buildtype = 'release'" in content

@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -24,4 +25,4 @@ def test_custom_block():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("install .")
-    assert "Hello World!!!" in c.load("conan_toolchain.cmake")
+    assert "Hello World!!!" in c.load(os.path.join("build", "generators", "conan_toolchain.cmake"))

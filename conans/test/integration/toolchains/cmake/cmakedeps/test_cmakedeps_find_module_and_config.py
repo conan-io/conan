@@ -36,10 +36,10 @@ def test_reuse_with_modules_and_config(cmake_find_mode):
           "-s compiler.libcxx=libstdc++11")
 
     def exists_config():
-        return os.path.exists(os.path.join(t.current_folder, "install", "mydep-config.cmake"))
+        return os.path.exists(os.path.join(t.current_folder, "install", "build", "generators", "mydep-config.cmake"))
 
     def exists_module():
-        return os.path.exists(os.path.join(t.current_folder, "install", "Findmydep.cmake"))
+        return os.path.exists(os.path.join(t.current_folder, "install", "build", "generators", "Findmydep.cmake"))
 
     if cmake_find_mode == FIND_MODE_CONFIG or cmake_find_mode is None:
         # None is default "config"

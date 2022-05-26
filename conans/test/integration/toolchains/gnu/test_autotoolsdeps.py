@@ -1,3 +1,4 @@
+import os
 import platform
 import re
 import textwrap
@@ -26,7 +27,7 @@ def test_link_lib_correct_order():
     pid_c = client.created_package_reference("libc/0.1")
     folder_c = client.get_latest_pkg_layout(pid_c).package()
     client.run("install consumer.py -g AutotoolsDeps")
-    deps = client.load("conanautotoolsdeps.sh")
+    deps = client.load(os.path.join("build", "generators", "conanautotoolsdeps.sh"))
     # check the libs are added in the correct order with this regex
     assert re.search("export LDFLAGS.*{}.*{}.*{}".format(folder_c, folder_b, folder_a), deps)
 

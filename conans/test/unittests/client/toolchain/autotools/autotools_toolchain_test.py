@@ -1,5 +1,5 @@
 from os import chdir
-
+import os
 import pytest
 
 from conan.tools.files.files import load_toolchain_args
@@ -23,7 +23,7 @@ def test_modify_environment():
     # We can pass the env to the generate once we adjusted or injected anything
     be.generate(env)
 
-    with open("conanautotoolstoolchain.sh") as f:
+    with open(os.path.join("build", "generators", "conanautotoolstoolchain.sh")) as f:
         content = f.read()
         assert "foo" in content
 

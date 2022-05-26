@@ -33,7 +33,8 @@ def test_extra_flags_via_conf():
     client.save({"conanfile.py": conanfile,
                 "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
+    toolchain = client.load(os.path.join("build", "generators",
+                                         "conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh')))
     if os_ == "Windows":
         assert 'set "CPPFLAGS=%CPPFLAGS% -DNDEBUG -DDEF1 -DDEF2"' in toolchain
         assert 'set "CXXFLAGS=%CXXFLAGS% -O3 -s --flag1 --flag2"' in toolchain
@@ -63,5 +64,6 @@ def test_autotools_custom_environment():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Linux -s:h os=Linux")
-    content = load(os.path.join(client.current_folder,  "conanautotoolstoolchain.sh"))
+    content = load(os.path.join(client.current_folder, "build", "generators",
+                                "conanautotoolstoolchain.sh"))
     assert 'export FOO="BAR"' in content
