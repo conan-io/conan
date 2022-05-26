@@ -48,7 +48,7 @@ class Migrator(object):
         Check if the given file path contains the Conan comment, so it could be overwritten.
 
         :param file_path: ``str`` file path
-        :return: ``bool`` ``True``  whether file can be overwritten, otherwise, ``False``
+        :return: ``bool`` ``True``  whether the file can be overwritten, otherwise, ``False``
         """
         with open(file_path) as f:
             # Forcing it to have the comment in the first line
