@@ -233,7 +233,7 @@ def test_xcodedeps_components():
 
             requires = "network/1.0"
             settings = "os", "compiler", "build_type", "arch"
-            generators = "XcodeToolchain", "XcodeDeps"
+            generators = "XcodeToolchain"
 
             exports_sources = "netapp.xcodeproj/*", "src/*"
 
@@ -269,7 +269,6 @@ def test_xcodedeps_components():
 
     client.save({"conanfile.py": conanfile.format(use_components='["network::client", "tcp::tcp"]')})
     client.run("create .", assert_error=True)
-    print("jsjjdajsdsa")
     assert "Component 'tcp::tcp' is not a direct dependency for this package. " \
            "You can only specify components for direct dependencies " \
            "with XcodeDeps.use_components" in client.out
