@@ -116,7 +116,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_hello3.props" />
+    <Import Project="..\build\generators\conan_hello3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -287,7 +287,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_hello1.props" />
+    <Import Project="..\build\generators\conan_hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -588,10 +588,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj":
                      myproject_vcxproj.replace("conan_hello3.props",
-                                               "build/generators/conandeps.props"),
+                                               "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
                  "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
-                                                              "build/generators/conandeps.props"),
+                                                              "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 
@@ -865,7 +865,7 @@ def test_private_transitive():
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
 
-    pkg_data_props = client.load("consumer/conan_pkg_release_x64.props")
+    pkg_data_props = client.load("consumer/build/generators/conan_pkg_release_x64.props")
     assert "conan_dep.props" not in pkg_data_props
 
 
@@ -927,7 +927,7 @@ def test_build_requires():
           <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 
           <ImportGroup Label="PropertySheets">
-            <Import Project="..\conandeps.props" />
+            <Import Project="..\build\generators\conandeps.props" />
           </ImportGroup>
 
           <PropertyGroup Label="UserMacros" />
@@ -1014,7 +1014,7 @@ def test_build_requires_transitives():
     c.run("create dep")
     c.run("create tool")
     c.run("install consumer -g MSBuildDeps -of=.")
-    tool = c.load("conan_tool_build_release_x64.props")
+    tool = c.load(os.path.join("build", "generators", "conan_tool_build_release_x64.props"))
     assert "conan_dep" not in tool
-    tool_vars = c.load("conan_tool_build_vars_release_x64.props")
+    tool_vars = c.load(os.path.join("build", "generators", "conan_tool_build_vars_release_x64.props"))
     assert "<Conantool_buildDependencies></Conantool_buildDependencies>" in tool_vars
