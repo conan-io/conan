@@ -52,7 +52,7 @@ class TestTxtCommandLineMSBuild(unittest.TestCase):
 
     def _check(self, client):
         self.assertIn("conanfile.txt: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
-        toolchain = client.load("conantoolchain.props")
+        toolchain = client.load(os.path.join("build", "generators", "conantoolchain.props"))
         self.assertIn("<?xml version", toolchain)
 
     def test_command_line(self):

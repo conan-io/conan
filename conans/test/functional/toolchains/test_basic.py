@@ -61,7 +61,7 @@ class BasicTest(unittest.TestCase):
         client.run("install .")
 
         self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
-        toolchain = client.load("conantoolchain.props")
+        toolchain = client.load(os.path.join("build", "generators", "conantoolchain.props"))
         self.assertIn("<?xml version", toolchain)
 
     def test_error_missing_settings(self):
@@ -131,6 +131,6 @@ class BasicTest(unittest.TestCase):
         client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=191'
                    ' -s compiler.runtime=dynamic')
 
-        conan_toolchain_props = client.load("conantoolchain.props")
+        conan_toolchain_props = client.load(os.path.join("build", "generators", "conantoolchain.props"))
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
         self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)

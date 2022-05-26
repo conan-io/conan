@@ -66,11 +66,13 @@ def test_transitive_multi_windows(client):
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
         assert "find_dependency(${_DEPENDENCY} REQUIRED ${${_DEPENDENCY}_FIND_MODE})" \
-               in client.load("libb-config.cmake")
-        assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load("libb-release-x86_64-data.cmake")
+               in client.load(os.path.join("build", "generators", "libb-config.cmake"))
+        assert 'set(liba_FIND_MODE "NO_MODULE")' in \
+               client.load(os.path.join("build", "generators", "libb-release-x86_64-data.cmake"))
 
         if platform.system() == "Windows":
-            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=\\build\\generators\\'
+                               'conan_toolchain.cmake')
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
@@ -85,11 +87,12 @@ def test_transitive_multi_windows(client):
             assert "MYVARlibb: Release" in client.out
         else:
             # The CMakePresets IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
-            replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakePresets.json"),
+            replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "build",
+                                                          "generators", "CMakePresets.json"),
                             "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
+                                   '-DCMAKE_TOOLCHAIN_FILE=build\\generators\\conan_toolchain.cmake'.format(bt))
                 client.run_command('cmake --build . --clean-first')
 
                 client.run_command('./example')

@@ -19,6 +19,7 @@ from conans.util.files import save, load
                          [("msvc", "192", None, "dynamic"),
                           ("msvc", "192", "6", "static"),
                           ("msvc", "192", "8", "static")])
+@pytest.mark.tool("visual_studio", "16")
 def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
@@ -37,7 +38,7 @@ def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
 
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
-    toolchain = client.load("conan_toolchain.cmake")
+    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
     if update is not None:  # Fullversion
         value = "version=14.{}{}".format(version[-1], update)
     else:

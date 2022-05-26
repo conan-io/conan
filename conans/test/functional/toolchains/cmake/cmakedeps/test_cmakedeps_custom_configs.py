@@ -87,9 +87,11 @@ class CustomConfigurationTest(unittest.TestCase):
         with self.client.chdir('build'):
             self.client.run("install .. %s -o hello/*:shared=True -of=." % settings)
             self.client.run("install .. %s -o hello/*:shared=False -of=." % settings)
-            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
+            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder, "build",
+                                                        "generators",
                                                         "hello-Target-releaseshared.cmake")))
-            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
+            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder, "build",
+                                                        "generators",
                                                         "hello-Target-release.cmake")))
 
             self.client.run_command('cmake .. -G "Visual Studio 15 Win64" --loglevel=DEBUG')
@@ -186,11 +188,13 @@ class CustomSettingsTest(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s -of=." % (settings_h, settings_b))
-            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
+            self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder, "build",
+                                                        "generators",
                                                         "hello-Target-myrelease.cmake")))
 
             self.client.run_command('cmake .. -G "Visual Studio 15" '
-                                    '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+                                    '-DCMAKE_TOOLCHAIN_FILE=\\build\\generators\\'
+                                    'conan_toolchain.cmake')
             self.client.run_command('cmake --build . --config MyRelease')
             self.client.run_command(r"MyRelease\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)
