@@ -90,7 +90,7 @@ def test_shared_requires_static():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build .")
-    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    command = environment_wrap_command("build\\generators\\conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -132,7 +132,7 @@ def test_transitive_binary_skipped():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build . ")
-    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    command = environment_wrap_command("build\\generators\\conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 

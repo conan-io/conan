@@ -195,6 +195,7 @@ class Base(unittest.TestCase):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.tool("visual_studio", "15")
 class WinTest(Base):
     @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", None, True),
                            ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
@@ -471,6 +472,8 @@ class AppleTest(Base):
 @pytest.mark.parametrize("version, vs_version",
                          [("190", "15"),
                           ("191", "15")])
+@pytest.mark.tool("visual_studio", "14")
+@pytest.mark.tool("visual_studio", "15")
 def test_msvc_vs_versiontoolset(version, vs_version):
     settings = {"compiler": "msvc",
                 "compiler.version": version,

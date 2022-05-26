@@ -8,6 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.tool("cmake")
 def test_editable_msbuild():
     c = TestClient()
     with c.chdir("dep"):

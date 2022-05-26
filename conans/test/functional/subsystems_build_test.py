@@ -290,6 +290,7 @@ class TestSubsystemsCMakeBuild:
         client.run_command("cmake --build .")
         client.run_command("app")
 
+    @pytest.mark.tool("cmake")
     @pytest.mark.tool("msys2")
     def test_msys(self):
         """
@@ -308,6 +309,7 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("mingw64")
+    @pytest.mark.tool("cmake")
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -324,6 +326,7 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("mingw32")
+    @pytest.mark.tool("cmake")
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)

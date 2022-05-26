@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -10,8 +11,9 @@ from conans.test.utils.tools import TestClient
 @parameterized.expand([("msvc", "190", "dynamic"),
                        ("msvc", "191", "static")]
                       )
-@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.tool("visual_studio", "14")
+@pytest.mark.tool("visual_studio", "15")
 def test_toolchain_win(compiler, version, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
@@ -35,7 +37,7 @@ def test_toolchain_win(compiler, version, runtime):
             """)
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
-    props = client.load("conantoolchain_release_x64.props")
+    props = client.load(os.path.join("build", "generators", "conantoolchain_release_x64.props"))
     assert "<LanguageStandard>stdcpp14</LanguageStandard>" in props
     if version == "190":
         assert "<PlatformToolset>v140</PlatformToolset>" in props
