@@ -788,3 +788,43 @@ def test_cmaketoolchain_sysroot():
     })
     client.run("create . app/1.0@")
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_presets_with_conanfile_txt():
+    c = TestClient()
+    # DEVELOP 2: c.run("new cmake_exe -d name=foo -d version=1.0")
+    c.run("new foo/1.0 --template cmake_exe")
+    os.unlink(os.path.join(c.current_folder, "conanfile.py"))
+    c.save({"conanfile.txt": textwrap.dedent("""
+
+    [generators]
+    CMakeToolchain
+
+    [layout]
+    cmake_layout
+
+    """)})
+
+    c.run("install .")
+    c.run("install . -s build_type=Debug")
+    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
+    presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
+    assert os.path.exists(presets_path)
+    c.run_command("cmake --preset Debug")
+    c.run_command("cmake --build --preset Debug")
+    if platform.system() != "Windows":
+        c.run_command("./cmake-build-debug/foo")
+    else:
+        c.run_command("./build/Debug/foo")
+
+    assert "Hello World Debug!" in c.out
+
+    c.run_command("cmake --preset Release")
+    c.run_command("cmake --build --preset Release")
+    if platform.system() != "Windows":
+        c.run_command("./cmake-build-release/foo")
+    else:
+        c.run_command("./build/Release/foo")
+
+    assert "Hello World Release!" in c.out
