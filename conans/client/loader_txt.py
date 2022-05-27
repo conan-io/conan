@@ -19,7 +19,7 @@ class ConanFileTextLoader(object):
         if len(tmp) > 1:
             raise ConanException("Only one layout can be declared in the [layout] section of "
                                  "the conanfile.txt")
-        return tmp[0]
+        return tmp[0] if tmp else None
 
     @property
     def requirements(self):
