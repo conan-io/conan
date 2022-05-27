@@ -120,3 +120,8 @@ build_type: [null, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 def get_default_settings_yml():
     return default_settings_yml
+
+
+def migrate_settings_file(cache, updater):
+    settings_path = cache.settings_path
+    updater(settings_path, get_default_settings_yml())
