@@ -811,20 +811,24 @@ def test_cmake_presets_with_conanfile_txt():
     assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
     presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
     assert os.path.exists(presets_path)
-    c.run_command("cmake --preset Debug")
-    c.run_command("cmake --build --preset Debug")
+
     if platform.system() != "Windows":
+        c.run_command("cmake --preset Debug")
+        c.run_command("cmake --build --preset Debug")
         c.run_command("./cmake-build-debug/foo")
     else:
-        c.run_command("./build/Debug/foo")
+        c.run_command("cmake --preset default")
+        c.run_command("cmake --build --preset Debug")
+        c.run_command("build\\Debug\\foo")
 
     assert "Hello World Debug!" in c.out
 
-    c.run_command("cmake --preset Release")
-    c.run_command("cmake --build --preset Release")
     if platform.system() != "Windows":
+        c.run_command("cmake --preset Release")
+        c.run_command("cmake --build --preset Release")
         c.run_command("./cmake-build-release/foo")
     else:
-        c.run_command("./build/Release/foo")
+        c.run_command("cmake --build --preset Release")
+        c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
