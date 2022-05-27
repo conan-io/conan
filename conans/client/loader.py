@@ -315,10 +315,13 @@ class ConanFileLoader(object):
             if not layout_method:
                 raise ConanException("Unknown predefined layout '{}' declared in "
                                      "conanfile.txt".format(parser.layout))
-            conanfile.layout = types.MethodType(layout_method, conanfile)
+
+            def layout(self):
+                layout_method(self)
+
+            conanfile.layout = types.MethodType(layout, conanfile)
 
         conanfile.generators = parser.generators
-
         try:
             options = OptionsValues.loads(parser.options)
         except Exception:
