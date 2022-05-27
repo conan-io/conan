@@ -1,4 +1,5 @@
 import os
+import sys
 import unittest
 from datetime import timedelta
 from time import sleep
@@ -56,9 +57,10 @@ class FileUploadDownloadServiceTest(unittest.TestCase):
         self.assertEqual(readed_content, self.content)
 
         # Expire token
-        sleep(2)
-        self.assertRaises(NotFoundException, self.service.get_file_path,
-                          self.relative_file_path, token)
+        if sys.version_info.major == 3:
+            sleep(2)
+            self.assertRaises(NotFoundException, self.service.get_file_path,
+                              self.relative_file_path, token)
 
     def test_file_upload(self):
         token = self.updown_auth_manager.get_token_for(self.relative_file_path,
