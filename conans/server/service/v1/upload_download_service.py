@@ -1,6 +1,6 @@
 import os
 
-import jwt
+from conans.server.conanjwt import ExpiredSignatureError, DecodeError
 
 from conans.errors import NotFoundException, RequestErrorException
 from conans.util.log import logger
@@ -23,7 +23,7 @@ class FileUploadDownloadService(object):
             logger.debug("Get file: user=%s path=%s" % (user, filepath))
             file_path = os.path.normpath(os.path.join(self.base_store_folder, encoded_path))
             return file_path
-        except (jwt.ExpiredSignatureError, jwt.DecodeError, AttributeError):
+        except (ExpiredSignatureError, DecodeError, AttributeError):
             raise NotFoundException("File not found")
 
     def put_file(self, file_saver, abs_filepath, token, upload_size):
@@ -46,7 +46,7 @@ class FileUploadDownloadService(object):
                 os.remove(abs_filepath)
             file_saver.save(os.path.dirname(abs_filepath))
 
-        except (jwt.ExpiredSignatureError, jwt.DecodeError, AttributeError):
+        except (ExpiredSignatureError, DecodeError, AttributeError):
             raise NotFoundException("File not found")
 
     def _valid_path(self, filepath, encoded_path):
@@ -59,5 +59,3 @@ class FileUploadDownloadService(object):
             return True
         else:
             return False
-
-

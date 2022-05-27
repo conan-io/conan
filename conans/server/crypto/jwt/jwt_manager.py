@@ -1,7 +1,7 @@
 from datetime import datetime
 from calendar import timegm
 
-import jwt
+from conans.server.conanjwt import encode, decode
 
 
 class JWTManager(object):
@@ -23,10 +23,10 @@ class JWTManager(object):
         if self.expire_time:
             profile_fields["exp"] = timegm((datetime.utcnow() + self.expire_time).timetuple())
 
-        return jwt.encode(profile_fields, self.secret, algorithm="HS256")
+        return encode(profile_fields, self.secret, algorithm="HS256")
 
     def get_profile(self, token):
         """Gets the user from credentials object. None if no credentials.
         Can raise jwt.ExpiredSignature and jwt.DecodeError"""
-        profile = jwt.decode(token, self.secret, algorithms=["HS256"])
+        profile = decode(token, self.secret, algorithms=["HS256"])
         return profile
