@@ -50,12 +50,8 @@ class Migrator(object):
         :param file_path: ``str`` file path
         :return: ``bool`` ``True``  whether the file can be overwritten, otherwise, ``False``
         """
-        with open(file_path) as f:
-            # Forcing it to have the comment in the first line
-            if CONAN_GENERATED_COMMENT in f.readline():
-                return True
-            else:
-                return False
+        # The first line of the file should contain the comment
+        return CONAN_GENERATED_COMMENT in open(file_path).readline()
 
     def _apply_migrations(self, old_version):
         """
