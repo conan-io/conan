@@ -3,18 +3,20 @@ Potential scenarios:
 
 - Running from a Windows native "cmd"
   - Targeting Windows native (os.subsystem = None)
-    - No need of bash (no conf at all)
+    - No need of bash (no conf at all)                                      BAT, PS1
     - Need to build in bash (tools.microsoft.bash:subsystem=xxx,
                              tools.microsoft.bash:path=<path>,
-                             conanfile.win_bash)
-    - Need to run (tests) in bash (tools.microsoft.bash:subsystem=xxx,
+                             conanfile.win_bash)                            SH (build)
+    - Need to run (tests) in bash (tools.microsoft.bash:subsystem=xxx,      SH (run)
                                    tools.microsoft.bash:path=<path>,
-                                   conanfile.win_bash_run)
+                                   conanfile.win_bash_run) # NOT USEFUL, self.run() NO scope
   - Targeting Subsystem (os.subsystem = msys2/cygwin)
     - Always builds and runs in bash (tools.microsoft.bash:path)
+  - Targeting other OS/platform (cross-building)
 
 - Running from a subsytem terminal (tools.microsoft.bash:subsystem=xxx,
-                                    tools.microsoft.bash:path=None) NO ERROR mode for not specifying it? =CURRENT?
+                                    tools.microsoft.bash:path=None
+                                    tools.microsoft.bash:active=True) NO ERROR mode
   - Targeting Windows native (os.subsystem = None)
   - Targeting Subsystem (os.subsystem = msys2/cygwin)
 
@@ -36,24 +38,26 @@ SFU = 'sfu'  # Windows Services for UNIX
 
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
     from conan.tools.env.environment import environment_wrap_command
-    if platform.system() == "Windows" and conanfile.win_bash:  # New, Conan 2.0
-        wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
+    target_subsystem = conanfile.settings.get_safe("os.subsystem")
+    bash_path = conanfile.conf.get("tools.microsoft.bash:path")
+
+    if platform.system() == "Windows" and bash_path and (conanfile.win_bash or target_subsystem):
+        conf_subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+        subsystem = target_subsystem or conf_subsystem
+        if not subsystem:  # TODO: Improve UX error messages
+            raise ConanException("No 'tools.microsoft.bash:subsystem' defined")
+        wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder,
+                                            bash_path, subsystem)
     else:
         wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
     return wrapped_cmd
 
 
-def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
+def _windows_bash_wrapper(conanfile, command, env, envfiles_folder, bash_path, subsystem):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
 
-    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    shell_path = conanfile.conf.get("tools.microsoft.bash:path")
-    if not subsystem or not shell_path:
-        raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
-                             "'tools.microsoft.bash:path' are "
-                             "needed to run commands in a Windows subsystem")
     env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
@@ -65,7 +69,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
         env.append(path)
 
-    wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
+    wrapped_shell = '"%s"' % bash_path if " " in bash_path else bash_path
     wrapped_shell = environment_wrap_command(env, envfiles_folder, wrapped_shell,
                                              accept=("bat", "ps1"))
 
@@ -98,16 +102,14 @@ def deduce_subsystem(conanfile, scope):
     - Aggregation of envfiles: to map each aggregated path to the subsystem
     - unix_path: util for recipes
     """
-    if scope.startswith("build"):
-        if hasattr(conanfile, "settings_build"):
-            the_os = conanfile.settings_build.get_safe("os")
-            subsystem = conanfile.settings_build.get_safe("os.subsystem")
-        else:
-            the_os = platform.system()  # FIXME: Temporary fallback until 2.0
-            subsystem = None
-    else:
-        the_os = conanfile.settings.get_safe("os")
-        subsystem = conanfile.settings.get_safe("os.subsystem")
+
+    the_os = conanfile.settings.get_safe("os")
+    subsystem = conanfile.settings.get_safe("os.subsystem")
+    if the_os == "Windows" and subsystem:
+        return subsystem
+
+    bash_path = conanfile.conf.get("tools.microsoft.bash:path")
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
 
     if not str(the_os).startswith("Windows"):
         return None
