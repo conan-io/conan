@@ -795,9 +795,6 @@ def test_cmaketoolchain_sysroot():
 def test_cmake_presets_with_conanfile_txt():
     c = TestClient()
 
-    c.run_command("cmake --version")
-    print(c.out)
-
     # FIXME: DEVELOP 2: c.run("new cmake_exe -d name=foo -d version=1.0")
     c.run("new foo/1.0 --template cmake_exe")
     os.unlink(os.path.join(c.current_folder, "conanfile.py"))
