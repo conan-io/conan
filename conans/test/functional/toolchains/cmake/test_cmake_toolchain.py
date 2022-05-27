@@ -790,10 +790,11 @@ def test_cmaketoolchain_sysroot():
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
 
 
-@pytest.mark.tool("cmake", "3.23")
+# FIXME: DEVELOP2: @pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool_cmake(version="3.23")
 def test_cmake_presets_with_conanfile_txt():
     c = TestClient()
-    # DEVELOP 2: c.run("new cmake_exe -d name=foo -d version=1.0")
+    # FIXME: DEVELOP 2: c.run("new cmake_exe -d name=foo -d version=1.0")
     c.run("new foo/1.0 --template cmake_exe")
     os.unlink(os.path.join(c.current_folder, "conanfile.py"))
     c.save({"conanfile.txt": textwrap.dedent("""
