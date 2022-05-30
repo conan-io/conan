@@ -67,11 +67,12 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
     wrapped_shell = environment_wrap_command(env, envfiles_folder, wrapped_shell,
-                                             accept=("bat", "ps1"))
+                                             accepted_extensions=("bat", "ps1"))
 
     # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
     # first and there could be commands that we want to skip
-    wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command, accept=("sh", ))
+    wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command,
+                                                accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
     final_command = '{} -c {}'.format(wrapped_shell, wrapped_user_cmd)
@@ -91,7 +92,7 @@ def _escape_windows_cmd(command):
 
 def deduce_subsystem(conanfile, scope):
     """ used by:
-    - EnvVars: to decide is using :  ; as path separator, translate paths to subsystem
+    - EnvVars: to decide if using :  ; as path separator, translate paths to subsystem
                and decide to generate a .bat or .sh
     - Autotools: to define the full abs path to the "configure" script
     - GnuDeps: to map all the paths from dependencies
