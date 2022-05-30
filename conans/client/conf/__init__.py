@@ -122,6 +122,8 @@ def get_default_settings_yml():
     return default_settings_yml
 
 
-def migrate_settings_file(cache, updater):
+def migrate_settings_file(cache):
+    from conans.client.migrations import update_file
+
     settings_path = cache.settings_path
-    updater(settings_path, get_default_settings_yml())
+    update_file(settings_path, get_default_settings_yml())

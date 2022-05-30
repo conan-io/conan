@@ -97,11 +97,13 @@ def get_binary_compatibility_file_paths(cache):
     return compatibility_file, app_compat_file, cppstd_compat_file
 
 
-def migrate_compatibility_files(cache, updater):
+def migrate_compatibility_files(cache):
+    from conans.client.migrations import update_file
+
     compatibility_file, app_compat_file, cppstd_compat_file = get_binary_compatibility_file_paths(cache)
-    updater(compatibility_file, _default_compat)
-    updater(app_compat_file, _default_app_compat)
-    updater(cppstd_compat_file, _default_cppstd_compat)
+    update_file(compatibility_file, _default_compat)
+    update_file(app_compat_file, _default_app_compat)
+    update_file(cppstd_compat_file, _default_cppstd_compat)
 
 
 class BinaryCompatibility:
