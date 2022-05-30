@@ -168,6 +168,10 @@ class BazelDeps(object):
                 full_path = os.path.join(libdir, f)
                 if not os.path.isfile(full_path):  # Make sure that directories are excluded
                     continue
+                # Users may not name their libraries in a conventional way. For example, directly
+                # use the basename of the lib file as lib name.
+                if f == lib:
+                    return full_path
                 name, ext = os.path.splitext(f)
                 if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                     if ext != ".lib" and name.startswith("lib"):

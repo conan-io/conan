@@ -13,13 +13,14 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None, accept=None):
+def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
+                             accepted_extensions=None):
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs, ps1s = [], [], []
 
-    accept = accept or ("ps1", "bat", "sh")
+    accept = accepted_extensions or ("ps1", "bat", "sh")
     # TODO: This implemantation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)

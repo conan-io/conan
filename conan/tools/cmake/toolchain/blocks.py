@@ -651,6 +651,10 @@ class TryCompileBlock(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if cmake_sysroot %}
+        set(CMAKE_SYSROOT {{ cmake_sysroot }})
+        {% endif %}
+
         {% if cmake_system_name %}
         # Cross building
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
@@ -824,6 +828,10 @@ class GenericSystemBlock(Block):
 
         system_name, system_version, system_processor = self._get_cross_build()
 
+        # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
+        cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
+        cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+
         return {"compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
@@ -831,7 +839,8 @@ class GenericSystemBlock(Block):
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
-                "cmake_system_processor": system_processor}
+                "cmake_system_processor": system_processor,
+                "cmake_sysroot": cmake_sysroot}
 
 
 class OutputDirsBlock(Block):
