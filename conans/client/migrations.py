@@ -45,7 +45,7 @@ class ClientMigrator(Migrator):
         # Time for migrations!
         # Update settings.yml
         from conans.client.conf import migrate_settings_file
-        migrate_settings_file(cache, update_file)
+        migrate_settings_file(cache)
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
         from conans.client.graph.compatibility import migrate_compatibility_files
-        migrate_compatibility_files(cache, update_file)
+        migrate_compatibility_files(cache)
