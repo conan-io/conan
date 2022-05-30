@@ -1,10 +1,11 @@
 import fnmatch
 import os
+import platform
 import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -240,10 +241,17 @@ class EnvVars:
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
+        if scope == "build":
+            if hasattr(self._conanfile, "settings_build"):
+                self._windows = conanfile.settings_build.get_safe("os") == "Windows"
+            else:
+                self._windows = platform.system() == "Windows"
+        else:
+            self._windows = conanfile.settings.get_safe("os") == "Windows"
 
     @property
     def _pathsep(self):
-        return ":" if self._subsystem != WINDOWS else ";"
+        return ":" if self._subsystem or not self._windows else ";"
 
     def __getitem__(self, name):
         return self._values[name].get_value(self._subsystem, self._pathsep)
@@ -390,7 +398,7 @@ class EnvVars:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
-            is_bat = self._subsystem == WINDOWS
+            is_bat = self._windows
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
             if is_ps1:
                 filename = filename + ".ps1"

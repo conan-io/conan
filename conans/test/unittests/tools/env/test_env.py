@@ -7,7 +7,6 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.subsystems import WINDOWS
 from conans.client.tools import chdir, environment_append
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -188,7 +187,7 @@ def env():
     env.define("MyVar2", "MyNewValue2")
 
     env = env.vars(ConanFileMock())
-    env._subsystem = WINDOWS
+    env._subsystem = None
 
     return env
 

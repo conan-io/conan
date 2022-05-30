@@ -14,10 +14,9 @@ Potential scenarios:
     - Always builds and runs in bash (tools.microsoft.bash:path)
   - Targeting other OS/platform (cross-building)
 
-- Running from a subsytem terminal (tools.microsoft.bash:subsystem=xxx,
-                                    tools.microsoft.bash:path=None
+- Running from a subsytem terminal (tools.microsoft.bash:path=None
                                     tools.microsoft.bash:active=True) NO ERROR mode
-  - Targeting Windows native (os.subsystem = None)
+  - Targeting Windows native (os.subsystem = None) tools.microsoft.bash:subsystem=xxx,
   - Targeting Subsystem (os.subsystem = msys2/cygwin)
 
 """
@@ -28,7 +27,6 @@ import subprocess
 
 from conans.errors import ConanException
 
-WINDOWS = "windows"
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
@@ -36,21 +34,54 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
+def _subsystem_logic(conanfile, scope=None):
+    # TODO: scope arg not used yet
+    active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
+    bash_path = conanfile.conf.get("tools.microsoft.bash:path")
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    target_subsystem = conanfile.settings.get_safe("os.subsystem")
+
+    # preliminary checks
+    if subsystem and target_subsystem:
+        raise ConanException("Both tools.microsoft.bash:subsystem and os.subsystem defined")
+
+    # First, if already running inside a bash prompt, no need to wrap in a bash command
+    if active:
+        if bash_path:
+            raise ConanException("tools.microsoft.bash:path is defined, it shouldn't be if you "
+                                 "are already running inside bash (tools.microsoft.bash:active "
+                                 "defined)")
+        # Do not bash-wrap, bash path not necessary, but generate files in that subsystem
+        return False, None, target_subsystem or subsystem
+
+    # Then, if the current platform is not Windows, do not wrap bash
+    should_wrap = platform.system() == "Windows"
+
+    # If we are targeting a subsystem runtime, then it will always run in that bash
+    if target_subsystem:
+        if not bash_path:
+            raise ConanException("tools.microsoft.bash:path is not defined, it must be defined "
+                                 "if targeting a subsystem (os.subsystem)")
+        return should_wrap, bash_path, target_subsystem
+
+    if conanfile.win_bash:
+        if not bash_path:
+            raise ConanException("tools.microsoft.bash:path is not defined")
+        if not subsystem:
+            raise ConanException("tools.microsoft.bash:subsystem is not defined")
+        return should_wrap, bash_path, subsystem
+    return False, None, None
+
+
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
     from conan.tools.env.environment import environment_wrap_command
-    target_subsystem = conanfile.settings.get_safe("os.subsystem")
-    bash_path = conanfile.conf.get("tools.microsoft.bash:path")
 
-    if platform.system() == "Windows" and bash_path and (conanfile.win_bash or target_subsystem):
-        conf_subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-        subsystem = target_subsystem or conf_subsystem
-        if not subsystem:  # TODO: Improve UX error messages
-            raise ConanException("No 'tools.microsoft.bash:subsystem' defined")
-        wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder,
-                                            bash_path, subsystem)
+    wrap, bash_path, subsystem = _subsystem_logic(conanfile)
+    if wrap:
+        return _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder, bash_path,
+                                     subsystem)
     else:
-        wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
-    return wrapped_cmd
+        return environment_wrap_command(envfiles, envfiles_folder, command)
 
 
 def _windows_bash_wrapper(conanfile, command, env, envfiles_folder, bash_path, subsystem):
@@ -103,29 +134,8 @@ def deduce_subsystem(conanfile, scope):
     - Aggregation of envfiles: to map each aggregated path to the subsystem
     - unix_path: util for recipes
     """
-
-    the_os = conanfile.settings.get_safe("os")
-    subsystem = conanfile.settings.get_safe("os.subsystem")
-    if the_os == "Windows" and subsystem:
-        return subsystem
-
-    bash_path = conanfile.conf.get("tools.microsoft.bash:path")
-    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-
-    if not str(the_os).startswith("Windows"):
-        return None
-
-    if subsystem is None and not scope.startswith("build"):  # "run" scope do not follow win_bash
-        return WINDOWS
-
-    if subsystem is None:  # Not defined by settings, so native windows
-        if not conanfile.win_bash:
-            return WINDOWS
-
-        subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-        if not subsystem:
-            raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
-                                 "needed to run commands in a Windows subsystem")
+    # FIXME: Scope not used yet (everything assumed "build" or affected by win_bash
+    _, _, subsystem = _subsystem_logic(conanfile, scope)
     return subsystem
 
 
@@ -133,7 +143,7 @@ def subsystem_path(subsystem, path):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!
     """
-    if subsystem is None or subsystem == WINDOWS:
+    if subsystem is None:
         return path
 
     if os.path.exists(path):
