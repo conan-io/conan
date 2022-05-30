@@ -103,15 +103,15 @@ def test_cpp_info_aggregation():
                 self.output.warn(env["CXXFLAGS"])
 
                 # The topological order puts dep2 before dep1
-                assert env["CXXFLAGS"] == 'dep2_a_cxx_flag dep1_a_cxx_flag --sysroot=/path/to/folder/dep2'
-                assert env["CFLAGS"] == 'dep2_a_c_flag dep1_a_c_flag --sysroot=/path/to/folder/dep2'
+                assert env["CXXFLAGS"] == 'dep2_a_cxx_flag dep1_a_cxx_flag'
+                assert env["CFLAGS"] == 'dep2_a_c_flag dep1_a_c_flag'
                 assert env["LIBS"] == "-ldep2_onelib -ldep2_twolib -ldep1_onelib -ldep1_twolib "\
                                       "-ldep2_onesystemlib -ldep2_twosystemlib "\
                                       "-ldep1_onesystemlib -ldep1_twosystemlib"
 
                 assert env["LDFLAGS"].startswith('dep1_shared_link_flag dep2_exe_link_flag dep1_exe_link_flag -framework dep2_oneframework -framework dep2_twoframework ' \
                                      '-framework dep1_oneframework -framework dep1_twoframework ')
-                assert '--sysroot=/path/to/folder/dep2 OtherSuperStuff' in env["LDFLAGS"]
+                assert 'OtherSuperStuff' in env["LDFLAGS"]
     """)
 
     t.save({"conanfile.py": consumer})

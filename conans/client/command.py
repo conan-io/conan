@@ -7,8 +7,6 @@ import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from six.moves import input as user_input
-
 from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -2167,31 +2165,11 @@ class Command(object):
         version = sys.version_info
         if version.major == 2:
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                " stopped supporting it officially. We strongly recommend"
-                                " you to use Python >= 3.5. Conan will completely stop"
-                                " working with Python 2 in the following releases", width)
+            msg = textwrap.fill("Python 2 support has been removed 30/05/2022 (1.49) because of "
+                                "security vulnerabilities. Please use Python >=3.6.", width)
             self._out.writeln(msg, front=Color.BRIGHT_RED)
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
-                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
-                # deprecated and some libraries we use as dependencies have stopped supporting it.
-                # Conan might fail to run and we are no longer fixing errors related to Python 2.
-                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
-                                                width))
-            else:
-                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
-                                    " CI without this interactive input, please contact us"
-                                    " at info@conan.io", width)
-                self._out.writeln(msg, front=Color.BRIGHT_RED)
-                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
-                self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
-                                              drop_whitespace=False), front=Color.BRIGHT_RED)
-                ret = user_input().lower()
-                if ret not in ["yes", "ye", "y"]:
-                    self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
-                    sys.exit(0)
+            sys.exit(0)
         elif version.minor == 4:
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
             self._out.writeln(textwrap.fill("Python 3.4 support has been dropped. It is strongly "

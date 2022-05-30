@@ -2,7 +2,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path
+    apple_sdk_path, is_apple_os
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
@@ -16,7 +16,8 @@ class AutotoolsToolchain:
         self._conanfile = conanfile
         self._namespace = namespace
 
-        self.configure_args = []
+        self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
+        self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
 
         # Flags
@@ -50,6 +51,8 @@ class AutotoolsToolchain:
         self.apple_arch_flag = self.apple_isysroot_flag = None
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
 
+        self.sysroot_flag = None
+
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
@@ -64,6 +67,10 @@ class AutotoolsToolchain:
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
+
+        sysroot = self._conanfile.conf.get("tools.build:sysroot")
+        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
+        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
         check_using_build_profile(self._conanfile)
 
@@ -136,11 +143,11 @@ class AutotoolsToolchain:
         extra_flags = self._get_extra_flags()
 
         self.cxxflags.extend([self.libcxx, self.cppstd,
-                              self.arch_flag, fpic, self.msvc_runtime_flag]
+                              self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
                              + self.build_type_flags + apple_flags + extra_flags["cxxflags"])
-        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag]
+        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
                            + self.build_type_flags + apple_flags + extra_flags["cflags"])
-        self.ldflags.extend([self.arch_flag] + self.build_type_link_flags
+        self.ldflags.extend([self.arch_flag, self.sysroot_flag] + self.build_type_link_flags
                             + apple_flags + extra_flags["ldflags"])
         self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
 
@@ -166,19 +173,42 @@ class AutotoolsToolchain:
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
 
-    def _shared_static_args(self):
+    def _default_configure_shared_flags(self):
         args = []
-        if self._conanfile.options.get_safe("shared", False):
-            args.extend(["--enable-shared", "--disable-static"])
-        else:
-            args.extend(["--disable-shared", "--enable-static", "--with-pic"
-                        if self._conanfile.options.get_safe("fPIC", True)
-                        else "--without-pic"])
+        # Just add these flags if there's a shared option defined (never add to exe's)
+        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
+        try:
+            if self._conanfile.options.shared:
+                args.extend(["--enable-shared", "--disable-static"])
+            else:
+                args.extend(["--disable-shared", "--enable-static"])
+        except ConanException:
+            pass
+
         return args
+
+    def _default_configure_install_flags(self):
+        configure_install_flags = []
+
+        def _get_argument(argument_name, cppinfo_name):
+            elements = getattr(self._conanfile.cpp.package, cppinfo_name)
+            return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
+
+        # If someone want arguments but not the defaults can pass them in args manually
+        configure_install_flags.extend(["--prefix=/",
+                                       _get_argument("bindir", "bindirs"),
+                                       _get_argument("sbindir", "bindirs"),
+                                       _get_argument("libdir", "libdirs"),
+                                       _get_argument("includedir", "includedirs"),
+                                       _get_argument("oldincludedir", "includedirs"),
+                                       _get_argument("datarootdir", "resdirs")])
+        return configure_install_flags
+
+    def _default_autoreconf_flags(self):
+        return ["--force", "--install"]
 
     def generate_args(self):
         configure_args = []
-        configure_args.extend(self._shared_static_args())
         configure_args.extend(self.configure_args)
         user_args_str = args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
@@ -186,6 +216,7 @@ class AutotoolsToolchain:
                 configure_args.append('--{}={}'.format(flag, var))
 
         args = {"configure_args": args_to_string(configure_args),
-                "make_args":  args_to_string(self.make_args)}
+                "make_args":  args_to_string(self.make_args),
+                "autoreconf_args": args_to_string(self.autoreconf_args)}
 
         save_toolchain_args(args, namespace=self._namespace)

@@ -21,7 +21,6 @@ class GnuDepsFlags(object):
         self.libs = self._format_libraries(cpp_info.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
         self.framework_paths = self._format_frameworks(cpp_info.frameworkdirs, is_path=True)
-        self.sysroot = self._sysroot_flag(cpp_info.sysroot)
 
         # Direct flags
         self.cxxflags = cpp_info.cxxflags or []
@@ -57,13 +56,6 @@ class GnuDepsFlags(object):
             return ["-F %s" % self._adjust_path(framework_path) for framework_path in frameworks]
         else:
             return ["-framework %s" % framework for framework in frameworks]
-
-    def _sysroot_flag(self, sysroot):
-        # FIXME: Missing support for subsystems
-        if not is_msvc(self._conanfile) and sysroot:
-            sysroot = self._adjust_path(sysroot)
-            return '--sysroot=%s' % sysroot
-        return ""
 
     def _format_include_paths(self, include_paths):
         if not include_paths:

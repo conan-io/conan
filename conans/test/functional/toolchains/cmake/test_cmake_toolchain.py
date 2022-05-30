@@ -738,3 +738,53 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("build-static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmaketoolchain_sysroot():
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+        class AppConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                {}
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        project(app CXX)
+        message("sysroot: '${CMAKE_SYSROOT}'")
+        message("osx_sysroot: '${CMAKE_OSX_SYSROOT}'")
+        """)
+
+    client.save({
+        "conanfile.py": conanfile.format(""),
+        "CMakeLists.txt": cmakelist
+    })
+
+    fake_sysroot = client.current_folder
+    output_fake_sysroot = fake_sysroot.replace("\\", "/") if platform.system() == "Windows" else fake_sysroot
+    client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
+
+    # set in a block instead of using conf
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(output_fake_sysroot)
+    client.save({
+        "conanfile.py": conanfile.format(set_sysroot_in_block),
+    })
+    client.run("create . app/1.0@")
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
