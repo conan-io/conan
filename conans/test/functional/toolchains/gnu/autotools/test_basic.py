@@ -294,7 +294,7 @@ def test_autotools_option_checking():
     client.run("create . -tf=None")
 
     # check that the shared flags are not added to the exe's configure, making it fail
-    client.run("test test_package --name=mylib --version=1.0")
+    client.run("test test_package mylib/1.0@")
     assert "configure: error: unrecognized options: --disable-shared, --enable-static, --with-pic" \
            not in client.out
 
@@ -386,5 +386,5 @@ def test_autotools_arguments_override():
     assert "--verbose" in client.out
     assert "--keep-going" in client.out
 
-    client.run("test test_package --name=mylib --version=1.0")
+    client.run("test test_package mylib/1.0@")
     assert "mylib/1.0: Hello World Release!" in client.out
