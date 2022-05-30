@@ -1,9 +1,7 @@
 import os
-import sys
 import textwrap
 import unittest
 
-import pytest
 from requests.models import Response
 
 from conans.client import tools
@@ -175,7 +173,6 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("There are no packages matching the 'pkg' pattern", client.out)
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Tokens only in py3")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""

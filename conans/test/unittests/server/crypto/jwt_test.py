@@ -1,17 +1,14 @@
-import sys
 import time
 import unittest
 from datetime import timedelta
 
-import pytest
-
-from conans.server.conanjwt import DecodeError, ExpiredSignatureError
+import jwt
+from jwt import DecodeError
 
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_manager import JWTManager
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Tokens only in py3")
 class JwtTest(unittest.TestCase):
 
     def setUp(self):
@@ -34,7 +31,7 @@ class JwtTest(unittest.TestCase):
 
         # Now wait 2 seconds and check if its valid now
         time.sleep(2)
-        self.assertRaises(ExpiredSignatureError, manager.get_profile, token)
+        self.assertRaises(jwt.ExpiredSignatureError, manager.get_profile, token)
 
     def test_jwt_credentials_manager(self):
         manager = JWTCredentialsManager(self.secret, self.expire_time)

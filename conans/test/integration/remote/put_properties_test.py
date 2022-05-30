@@ -1,9 +1,7 @@
 import os
 import re
-import sys
 import unittest
 
-import pytest
 from six.moves.urllib.parse import unquote
 
 from conans import MATRIX_PARAMS
@@ -21,7 +19,6 @@ class PutPropertiesTest(unittest.TestCase):
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
 
-    @pytest.mark.skipif(sys.version_info.major == 2, reason="Tokens only in py3")
     def test_put_properties(self):
         test_server = TestServer()
         servers = {"default": test_server}
