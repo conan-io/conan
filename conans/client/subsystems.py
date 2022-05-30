@@ -15,7 +15,7 @@ Potential scenarios:
   - Targeting other OS/platform (cross-building)
 
 - Running from a subsytem terminal (tools.microsoft.bash:path=None
-                                    tools.microsoft.bash:active=True) NO ERROR mode
+                                    tools.microsoft.bash:active=True OR build.os.subsystem=msys2)
   - Targeting Windows native (os.subsystem = None) tools.microsoft.bash:subsystem=xxx,
   - Targeting Subsystem (os.subsystem = msys2/cygwin)
 
@@ -34,15 +34,27 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def _subsystem_logic(conanfile, scope=None):
-    # TODO: scope arg not used yet
+def _subsystem_logic(conanfile, scope):
+    if not conanfile.conf:  # This happens in the ``export()`` method, because no profile
+        return False, None, None
+
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     bash_path = conanfile.conf.get("tools.microsoft.bash:path")
-    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    target_subsystem = conanfile.settings.get_safe("os.subsystem") if conanfile.settings else None
+    conf_subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+
+    if "build" in scope:
+        if hasattr(conanfile, "settings_build"):
+            subsystem = conanfile.settings_build.get_safe("os.subsystem")
+            os_ = conanfile.settings_build.get_safe("os")
+        else:  # legacy 1.X
+            os_ = platform.system()
+            subsystem = None
+    else:
+        subsystem = conanfile.settings.get_safe("os.subsystem") if conanfile.settings else None
+        os_ = conanfile.settings.get_safe("os") if conanfile.settings else None
 
     # preliminary checks
-    if subsystem and target_subsystem:
+    if conf_subsystem and subsystem:
         raise ConanException("Both tools.microsoft.bash:subsystem and os.subsystem defined")
 
     # First, if already running inside a bash prompt, no need to wrap in a bash command
@@ -52,29 +64,29 @@ def _subsystem_logic(conanfile, scope=None):
                                  "are already running inside bash (tools.microsoft.bash:active "
                                  "defined)")
         # Do not bash-wrap, bash path not necessary, but generate files in that subsystem
-        return False, None, target_subsystem or subsystem
+        return False, None, subsystem or conf_subsystem
 
     # Then, if the current platform is not Windows, do not wrap bash
-    should_wrap = platform.system() == "Windows"
+    should_wrap = os_ == "Windows" and (subsystem or conf_subsystem)
 
     # If we are targeting a subsystem runtime, then it will always run in that bash
-    if target_subsystem:
-        return should_wrap, bash_path, target_subsystem
+    if subsystem:
+        return should_wrap, bash_path, subsystem
 
     if conanfile.win_bash:
-        if not subsystem:
-            raise ConanException("tools.microsoft.bash:subsystem is not defined")
         return should_wrap, bash_path, subsystem
     return False, None, None
 
 
-def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
+def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope):
     from conan.tools.env.environment import environment_wrap_command
 
-    wrap, bash_path, subsystem = _subsystem_logic(conanfile)
+    wrap, bash_path, subsystem = _subsystem_logic(conanfile, scope)
     if wrap:
         if not bash_path:
             raise ConanException("tools.microsoft.bash:path is not defined")
+        if not subsystem:
+            raise ConanException("tools.microsoft.bash:subsystem is not defined")
         return _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder, bash_path,
                                      subsystem)
     else:

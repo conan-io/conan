@@ -29,7 +29,6 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create . foo/1.0@")
-    save(client.cache.new_config_path, "tools.microsoft.bash:subsystem=cygwin")
     return client
 
 
@@ -44,7 +43,7 @@ def test_virtualenv_deactivated(client, win_bash):
     """.format("" if win_bash is None else "win_bash = False"
                if win_bash is False else "win_bash = True")
     client.save({"conanfile.py": conanfile})
-    client.run("install . -s:b os=Windows -s:h os=Windows")
+    client.run("install . -s:b os=Windows -s:h os=Windows -c tools.microsoft.bash:subsystem=cygwin")
 
     if win_bash:
         # Assert there is no "bat" files generated because the environment can and will be run inside
