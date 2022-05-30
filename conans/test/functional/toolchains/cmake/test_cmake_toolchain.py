@@ -741,7 +741,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert "MSVC_LANG2017" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmaketoolchain_sysroot():
     client = TestClient(path_with_spaces=False)
 
@@ -779,7 +779,7 @@ def test_cmaketoolchain_sysroot():
 
     fake_sysroot = client.current_folder
     output_fake_sysroot = fake_sysroot.replace("\\", "/") if platform.system() == "Windows" else fake_sysroot
-    client.run("create . app/1.0@ -c tools.build:sysroot='{}'".format(fake_sysroot))
+    client.run("create . --name=app --version=1.0 -c tools.build:sysroot='{}'".format(fake_sysroot))
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
 
     # set in a block instead of using conf
@@ -787,5 +787,5 @@ def test_cmaketoolchain_sysroot():
     client.save({
         "conanfile.py": conanfile.format(set_sysroot_in_block),
     })
-    client.run("create . app/1.0@")
+    client.run("create . --name=app --version=1.0")
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out

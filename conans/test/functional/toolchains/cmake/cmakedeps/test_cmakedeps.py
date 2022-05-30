@@ -384,12 +384,12 @@ def test_system_dep():
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
 
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", version="3.19")
 def test_error_missing_build_type():
     # https://github.com/conan-io/conan/issues/11168
     client = TestClient()
 
-    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=1.0")
     client.run("create . -tf=None")
 
     conanfile = textwrap.dedent("""
