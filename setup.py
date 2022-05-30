@@ -52,7 +52,7 @@ def generate_long_description_file():
 
 setup(
     name='conan',
-    python_requires='>=3.7',
+    python_requires='>=3.6',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
