@@ -426,7 +426,7 @@ class MarkdownGenerator(Generator):
             cmake_deps_template = CMakeDepsFileTemplate(cmake_deps,
                                                         requirement,
                                                         self.conanfile,
-                                                        find_module_mode=False)
+                                                        generating_module=False)
 
             cmake_component_alias = {
                 component_name: cmake_deps_template.get_component_alias(requirement, component_name)
