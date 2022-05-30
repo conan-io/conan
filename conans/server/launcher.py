@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+import sys
 
 from conans import SERVER_CAPABILITIES, REVISIONS
 from conans.paths import conan_expand_user
@@ -16,6 +17,8 @@ from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 class ServerLauncher(object):
     def __init__(self, force_migration=False, server_dir=None):
+        if sys.version_info.major == 2:
+            raise Exception("The conan_server needs Python>=3 for running")
         self.force_migration = force_migration
         if server_dir:
             user_folder = server_folder = server_dir
