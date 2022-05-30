@@ -1,3 +1,4 @@
+import platform
 from os import chdir
 
 import pytest
@@ -350,6 +351,24 @@ def test_apple_isysrootflag():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     assert be.apple_isysroot_flag is None
+
+
+def test_sysrootflag():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"build_type": "Debug",
+         "os": {"Darwin": "Macos"}.get(platform.system(), platform.system()),
+         "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    be = AutotoolsToolchain(conanfile)
+    expected = "--sysroot /path/to/sysroot"
+    assert be.sysroot_flag == expected
+    env = be.vars()
+    assert expected in env["CXXFLAGS"]
+    assert expected in env["CFLAGS"]
+    assert expected in env["LDFLAGS"]
 
 
 def test_custom_defines():

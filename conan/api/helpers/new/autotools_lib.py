@@ -7,7 +7,6 @@ import os
 from conan import ConanFile
 from conan.tools.gnu import AutotoolsToolchain, Autotools
 from conan.tools.layout import basic_layout
-from conan.tools.files import chdir
 
 
 class {{package_name}}Conan(ConanFile):
@@ -81,7 +80,6 @@ from conan import ConanFile
 from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 from conan.tools.layout import basic_layout
 from conan.tools.build import cross_building
-from conan.tools.files import chdir
 
 
 class {{package_name}}TestConan(ConanFile):

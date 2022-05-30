@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save
+from conans.util.files import load, save, mkdir
 
 
 class ToolCopyTest(unittest.TestCase):
@@ -37,62 +37,50 @@ class ToolCopyTest(unittest.TestCase):
         self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
-    def test_basic_with_linked_dir(self):
-        folder1 = temp_folder()
-        sub1 = os.path.join(folder1, "subdir1")
-        sub2 = os.path.join(folder1, "subdir2")
-        os.makedirs(sub1)
-        os.symlink("subdir1", sub2)
-        save(os.path.join(sub1, "file1.txt"), "hello1")
-        save(os.path.join(sub1, "file2.c"), "Hello2")
-        save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
-        folder2 = temp_folder()
-        copy(None, "*.txt", folder1, os.path.join(folder2, "texts"))
-        self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1")
-        self.assertEqual("hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
-        self.assertEqual("Hello1 sub", load(os.path.join(folder2,
-                                                         "texts/subdir1/sub1/file1.txt")))
-        self.assertEqual("hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
-        self.assertEqual(['file1.txt', 'sub1'].sort(),
-                         os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
+    def test_symlinks_folder_behavior(self):
+        """
+        https://github.com/conan-io/conan/issues/11150
 
-        folder2 = temp_folder()
-        copy(None, "*.txt", os.path.join(folder1, "subdir1"), os.path.join(folder2, "texts"))
-        self.assertEqual("hello1", load(os.path.join(folder2, "texts/file1.txt")))
-        self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
-        self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
+        test.h
+        inc/test2.h
+        gen/test.bin
+        sym/ => gen
+        """
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
-    def test_linked_folder_missing_error(self):
-        folder1 = temp_folder()
-        sub1 = os.path.join(folder1, "subdir1")
-        sub2 = os.path.join(folder1, "subdir2")
-        os.makedirs(sub1)
-        os.symlink("subdir1", sub2)  # @UndefinedVariable
-        save(os.path.join(sub1, "file1.txt"), "hello1")
-        save(os.path.join(sub1, "file2.c"), "Hello2")
-        save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
+        build_folder = temp_folder()
+        test = os.path.join(build_folder, "test.h")
+        save(test, "")
+        inc_folder = os.path.join(build_folder, "inc")
+        mkdir(inc_folder)
+        test2 = os.path.join(inc_folder, "test2.h")
+        save(test2, "")
+        gen_folder = os.path.join(build_folder, "gen")
+        mkdir(gen_folder)
+        bin = os.path.join(gen_folder, "test.bin")
+        save(bin, "")
+        sym_folder = os.path.join(build_folder, "sym")
+        os.symlink(gen_folder, sym_folder)
 
-        folder2 = temp_folder()
-        copy(None, "*.cpp", folder1, folder2)
-        # If we don't specify anything, the "subdir2" (symlinked folder) will be there even if it
-        # points to an empty folder
-        self.assertEqual(os.listdir(folder2), ["subdir2"])
-        sub2_abs = os.path.join(folder2, "subdir2")
-        assert os.path.islink(sub2_abs)
-        assert os.readlink(sub2_abs) == "subdir1"
+        package_folder = temp_folder()
+        # Pattern with the sym/*.bin won't work, "sym" is a file (symlink to folder), not a folder
+        copy(None, "sym/*.bin", build_folder, package_folder)
+        assert not os.path.exists(os.path.join(package_folder, "sym"))
 
-        # If we specify anything, the "subdir2" (symlinked folder) will be there even if it
-        # points to an empty folder
-        os.remove(sub2_abs)
-        copy(None, "*.cpp", folder1, folder2, copy_symlink_folders=False)
-        self.assertEqual(os.listdir(folder2), [])
+        # Pattern searches in the "inc/" subfolder, "sym/" shouldn't be copied
+        copy(None, "inc/*.h", build_folder, package_folder)
+        assert not os.path.exists(os.path.join(package_folder, "sym")), \
+            "The sym file shouldn't exist in package_folder"
 
-        copy(None, "*.txt", folder1, folder2)
-        self.assertEqual(sorted(os.listdir(folder2)), sorted(["subdir1", "subdir2"]))
-        self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")), "subdir1")
-        self.assertEqual("hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
-        self.assertEqual("hello1", load(os.path.join(folder2, "subdir2/file1.txt")))
+        # Even if there is a test.bin "inside" the "sym/" (gen/), the "sym" file shouldn't be copied
+        # because it is a file, the pattern has to match the file
+        copy(None, "*.bin", build_folder, package_folder)
+        assert not os.path.exists(os.path.join(package_folder, "sym")), \
+            "The sym file shouldn't exist in package_folder"
+
+        # If the pattern matches the "sym" file, it will be copied (as a symlink)
+        copy(None, "s*", build_folder, package_folder)
+        assert os.path.exists(os.path.join(package_folder, "sym"))
+        assert os.path.islink(os.path.join(package_folder, "sym"))
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_relative(self):
@@ -146,9 +134,16 @@ class ToolCopyTest(unittest.TestCase):
         save(src_dir_file, "file")
         os.symlink(src_dir, src_dir_link)
 
-        copied = copy(None, "*", src, dst)
+        copied = copy(None, "dir/*", src, dst)
 
+        # The pattern "dir/*" doesn't match to the symlink file "dir_link" so it is not copied
         self.assertEqual(copied, [dst_dir_file])
+        self.assertFalse(os.path.exists(dst_dir_link))
+
+        # This pattern "dir*" match both the symlink "dir_link" and the folder "dir/"
+        copied = copy(None, "dir*", src, dst)
+
+        self.assertEqual(copied, [dst_dir_file, dst_dir_link])
         self.assertEqual(os.listdir(dst), os.listdir(src))
         self.assertTrue(os.path.islink(dst_dir_link))
 
