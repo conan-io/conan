@@ -1,7 +1,7 @@
 import jinja2
 from jinja2 import Template
 
-from conan.tools.cmake.utils import get_file_name
+from conan.tools.cmake.utils import get_cmake_package_name
 from conans.errors import ConanException
 
 
@@ -23,7 +23,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile, forced_module_mode=self.find_module_mode) + self.suffix
+        return get_cmake_package_name(self.conanfile, module_mode=self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):

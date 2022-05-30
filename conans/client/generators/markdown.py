@@ -8,7 +8,7 @@ from jinja2 import Environment
 from conan.tools.cmake.cmakedeps.cmakedeps import CMakeDeps
 from conan.tools.cmake.cmakedeps.templates import (
     CMakeDepsFileTemplate,
-    get_file_name as cmake_get_file_name)
+    get_cmake_package_name as cmake_get_file_name)
 from conan.tools.gnu.pkgconfigdeps.pc_info_loader import (
     _get_component_name as pkgconfig_get_component_name,
     _get_name_with_namespace as pkgconfig_get_name_with_namespace,
