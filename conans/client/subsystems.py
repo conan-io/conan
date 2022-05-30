@@ -39,7 +39,7 @@ def _subsystem_logic(conanfile, scope=None):
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     bash_path = conanfile.conf.get("tools.microsoft.bash:path")
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    target_subsystem = conanfile.settings.get_safe("os.subsystem")
+    target_subsystem = conanfile.settings.get_safe("os.subsystem") if conanfile.settings else None
 
     # preliminary checks
     if subsystem and target_subsystem:
@@ -59,14 +59,9 @@ def _subsystem_logic(conanfile, scope=None):
 
     # If we are targeting a subsystem runtime, then it will always run in that bash
     if target_subsystem:
-        if not bash_path:
-            raise ConanException("tools.microsoft.bash:path is not defined, it must be defined "
-                                 "if targeting a subsystem (os.subsystem)")
         return should_wrap, bash_path, target_subsystem
 
     if conanfile.win_bash:
-        if not bash_path:
-            raise ConanException("tools.microsoft.bash:path is not defined")
         if not subsystem:
             raise ConanException("tools.microsoft.bash:subsystem is not defined")
         return should_wrap, bash_path, subsystem
@@ -78,6 +73,8 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
 
     wrap, bash_path, subsystem = _subsystem_logic(conanfile)
     if wrap:
+        if not bash_path:
+            raise ConanException("tools.microsoft.bash:path is not defined")
         return _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder, bash_path,
                                      subsystem)
     else:

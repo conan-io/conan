@@ -398,7 +398,7 @@ class EnvVars:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
-            is_bat = self._windows
+            is_bat = self._windows and not self._subsystem
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
             if is_ps1:
                 filename = filename + ".ps1"
