@@ -112,9 +112,6 @@ class Autotools(object):
         This is just an "alias" of ``self.make(target="install")``
 
         """
-        # FIXME: we have to run configure twice because the local flow won't work otherwise
-        #  because there's no package_folder until the package step
-        self.configure()
         args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
         self.make(target="install", args=args)
         if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
