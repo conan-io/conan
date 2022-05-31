@@ -115,10 +115,11 @@ def test_reuse_with_modules_and_config(client):
 
 find_modes = [
     ("both", "both", ""),
+    ("both", "both", "MODULE"),
     ("config", "config", ""),
     ("module", "module", ""),
-    ("both", None, ""),
-    ("both", None, "MODULE")
+    (None, "both", ""),
+    (None, "both", "MODULE")
 ]
 
 
@@ -139,6 +140,7 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
                 if "{mode}" != "None":
                     self.cpp_info.set_property("cmake_find_mode", "{mode}")
                 self.cpp_info.set_property("cmake_file_name", "{filename}")
+                self.cpp_info.set_property("cmake_module_file_name", "{module_filename}")
                 self.cpp_info.defines.append("DEFINE_{filename}")
             """)
 
@@ -168,9 +170,9 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
         message("MYPKGB_DEFINITIONS: ${{MYPKGB_DEFINITIONS}}")
         """)
 
-    client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB',
-                                             mode=find_mode_PKGA),
-                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', mode=find_mode_PKGB),
+    client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', module_filename='MYPKGB',
+                                             mode=find_mode_PKGB),
+                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_PKGA),
                  "consumer.py": consumer,
                  "CMakeLists.txt": cmakelist.format(find_mode=find_mode_consumer)})
     client.run("create pkga.py pkga/1.0@")
@@ -184,5 +186,6 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
     assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
+
     if find_mode_PKGA == "module":
-        assert 'Found MYPKGA: 1.0 (found version "1.0")' in client.out
+        assert 'Found unicorns: 1.0 (found version "1.0")' in client.out
