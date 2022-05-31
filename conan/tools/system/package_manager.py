@@ -77,8 +77,7 @@ class _SystemPackageManagerTool(object):
         errors = []
         for packages in packages_substitutes:
             try:
-                self.install(packages, update, check, **kwargs)
-                break
+                return self.install(packages, update, check, **kwargs)
             except ConanException as e:
                 errors.append(e)
 
