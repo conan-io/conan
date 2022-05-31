@@ -1,6 +1,5 @@
 import os
 
-from conans.cli.output import ConanOutput
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
 
@@ -25,13 +24,16 @@ class HookManager:
         if hooks is None:
             return
         for name, method in hooks:
-            scoped_output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self._output)
+            # TODO: This display_name is ugly, improve it
+            display_name = conanfile.display_name
             try:
+                conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
+                                                                   method_name)
                 method(conanfile)
-                scoped_output = ConanOutput(scope="[HOOK - %s] %s()" % (name, method_name))
-                method(output=scoped_output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
+            finally:
+                conanfile.display_name = display_name
 
     def _load_hooks(self):
         hooks = {}
