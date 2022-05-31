@@ -38,11 +38,17 @@ def test_apt_install_substitutes():
             settings = "arch", "os"
             def system_requirements(self):
                 apt = Apt(self)
-                apt.install_substitutes(["non-existing1", "non-existing2"],
-                                        ["non-existing3", "non-existing4"])
+                apt.install_substitutes(["non-existing1", "non-e653-existing2"],
+                                        ["non-existing3", "non-e653-existing4"], update=True)
         """)})
-    client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
-    print(client.out)
+    client.run("create . test/1.0@ -c tools.system.package_manager:mode=install "
+               "-c tools.system.package_manager:sudo=True", assert_error=True)
+    assert "dpkg-query: no packages found matching non-existing1:amd64" in client.out
+    assert "dpkg-query: no packages found matching non-existing2:amd64" in client.out
+    assert "dpkg-query: no packages found matching non-existing3:amd64" in client.out
+    assert "dpkg-query: no packages found matching non-existing4:amd64" in client.out
+    assert "ERROR: while executing system_requirements(): " \
+           "None of the installs for the package substitutes succeeded." in client.out
 
 
 @pytest.mark.tool_apt_get
