@@ -49,8 +49,7 @@ conanfile_lib = textwrap.dedent("""
         def package(self):
             autotools = Autotools(self)
             autotools.install()
-            if self.settings.get_safe("os") == "Macos" and self.options.get_safe("shared", False):
-                fix_apple_shared_install_name(self)
+            fix_apple_shared_install_name(self)
 
         def package_info(self):
             self.cpp_info.libs = ["{name}"]

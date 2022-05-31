@@ -533,9 +533,10 @@ def fix_apple_shared_install_name(conanfile):
                                                                                      lib_name))
         conanfile.run(command)
 
-    libdirs = getattr(conanfile.cpp.package, "libdirs")
-    for libdir in libdirs:
-        full_folder = os.path.join(conanfile.package_folder, libdir)
-        shared_libs = _osx_collect_dylibs(full_folder)
-        for shared_lib in shared_libs:
-            _fix_install_name(shared_lib, full_folder)
+    if conanfile.settings.get_safe("os") == "Macos" and conanfile.options.get_safe("shared", False):
+        libdirs = getattr(conanfile.cpp.package, "libdirs")
+        for libdir in libdirs:
+            full_folder = os.path.join(conanfile.package_folder, libdir)
+            shared_libs = _osx_collect_dylibs(full_folder)
+            for shared_lib in shared_libs:
+                _fix_install_name(shared_lib, full_folder)
