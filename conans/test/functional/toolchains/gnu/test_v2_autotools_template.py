@@ -59,9 +59,14 @@ def test_autotools_exe_template():
 
     # Create works
     client.run("create .")
+    # check that for exe's we don't add any static/shared flag
+    for flag in ["--enable-static", "--disable-static", "--disable-shared", "--with-pic"]:
+        assert flag not in client.out
     assert "greet/0.1: Hello World Release!" in client.out
 
     client.run("create . -s build_type=Debug")
+    for flag in ["--enable-static", "--disable-static", "--disable-shared", "--with-pic"]:
+        assert flag not in client.out
     assert "greet/0.1: Hello World Debug!" in client.out
 
 

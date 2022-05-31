@@ -49,6 +49,40 @@ def test_bazeldeps_dependency_buildfiles():
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
 
 
+def test_bazeldeps_get_lib_file_path_by_basename():
+    conanfile = ConanFile(Mock())
+
+    cpp_info = CppInfo()
+    cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
+    cpp_info.system_libs = ["system_lib1"]
+    cpp_info.libs = ["liblib1.a"]
+    cpp_info.libdirs = ["lib"]
+
+    conanfile_dep = ConanFile(Mock())
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
+    package_folder = temp_folder()
+    save(os.path.join(package_folder, "lib", "liblib1.a"), "")
+    conanfile_dep.folders.set_base_package(package_folder)
+
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
+    with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
+        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
+        bazeldeps = BazelDeps(conanfile)
+
+        for dependency in bazeldeps._conanfile.dependencies.host.values():
+            dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
+            assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
+            assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
+            if platform.system() == "Windows":
+                assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
+            else:
+                assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+
+
 def test_bazeldeps_dependency_transitive():
     # Create main ConanFile
     conanfile = ConanFile(Mock())

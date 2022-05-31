@@ -5,6 +5,11 @@ from conans.errors import ConanException
 
 
 def vs_layout(conanfile):
+    """
+    Initialize a layout for a typical Visual Studio project.
+
+    :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    """
     conanfile.folders.test_output = ""
     if not conanfile.settings.get_safe("build_type"):
         raise ConanException("The 'vs_layout' requires the 'build_type' setting")

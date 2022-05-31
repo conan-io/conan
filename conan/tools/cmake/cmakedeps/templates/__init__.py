@@ -39,7 +39,10 @@ class CMakeDepsFileTemplate(object):
             return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
 
     def render(self):
-        context = self.context
+        try:
+            context = self.context
+        except Exception as e:
+            raise ConanException("error generating context for '{}': {}".format(self.conanfile, e))
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True,

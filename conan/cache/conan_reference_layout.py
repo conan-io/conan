@@ -65,8 +65,13 @@ class RecipeLayout(LayoutBase):
     def conandata(self):
         return os.path.join(self.export(), DATA_YML)
 
-    def recipe_manifest(self):
-        return FileTreeManifest.load(self.export())
+    def recipe_manifests(self):
+        # Used for comparison and integrity check
+        export_folder = self.export()
+        readed_manifest = FileTreeManifest.load(export_folder)
+        exports_source_folder = self.export_sources()
+        expected_manifest = FileTreeManifest.create(export_folder, exports_source_folder)
+        return readed_manifest, expected_manifest
 
     def sources_remove(self):
         src_folder = self.source()

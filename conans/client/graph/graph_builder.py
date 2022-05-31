@@ -269,6 +269,7 @@ class DepsGraphBuilder(object):
         if node.propagate_downstream(require, new_node):
             raise GraphError.runtime(node, new_node)
 
+        # This is necessary to prevent infinite loops even when visibility is False
         ancestor = node.check_loops(new_node)
         if ancestor is not None:
             raise GraphError.loop(new_node, require, ancestor)

@@ -17,7 +17,6 @@ class HookManager:
         self._hooks_folder = hooks_folder
         self.hooks = {}
         self._load_hooks()  # A bit dirty, but avoid breaking tests
-        self._output = ConanOutput()
 
     def execute(self, method_name, conanfile):
         assert method_name in valid_hook_methods, \
@@ -29,6 +28,8 @@ class HookManager:
             scoped_output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self._output)
             try:
                 method(conanfile)
+                scoped_output = ConanOutput(scope="[HOOK - %s] %s()" % (name, method_name))
+                method(output=scoped_output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 

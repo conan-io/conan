@@ -125,4 +125,3 @@ class Folders(object):
 
     def set_base_export_sources(self, folder):
         self._base_export_sources = folder
-

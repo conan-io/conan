@@ -12,6 +12,9 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 class MSBuildDeps(object):
+    """
+    MSBuildDeps class generator
+    """
 
     _vars_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -102,16 +105,27 @@ class MSBuildDeps(object):
         """)
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
+        #: Defines the build type. By default, ``settings.build_type``.
         self.configuration = conanfile.settings.build_type
+        #: Dict-like that defines the platform name, e.g., ``Win32`` if ``settings.arch == "x86"``.
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
-        # ca_exclude section
         # TODO: Accept single strings, not lists
+        #: List of packages names patterns to add Visual Studio ``CAExcludePath`` property
+        #: to each match as part of its ``conan_[DEP]_[CONFIG].props``. By default, value given by
+        #: ``tools.microsoft.msbuilddeps:exclude_code_analysis`` configuration.
         self.exclude_code_analysis = self._conanfile.conf.get("tools.microsoft.msbuilddeps:exclude_code_analysis",
                                                               check_type=list)
 
     def generate(self):
+        """
+        Generates ``conan_<pkg>_<config>_vars.props``, ``conan_<pkg>_<config>.props``,
+        and ``conan_<pkg>.props`` files into the ``conanfile.generators_folder``.
+        """
         # TODO: Apply config from command line, something like
         # configuration = self.conanfile.config.generators["msbuild"].configuration
         # if configuration is not None:
