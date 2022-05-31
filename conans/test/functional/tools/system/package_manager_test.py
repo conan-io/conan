@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 def test_apt_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Apt
         class MyPkg(ConanFile):
             settings = "arch", "os"
@@ -32,7 +32,7 @@ def test_apt_check():
 def test_apt_install_substitutes():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Apt
         class MyPkg(ConanFile):
             settings = "arch", "os"
@@ -61,7 +61,7 @@ def test_apt_install_substitutes():
 def test_build_require():
     client = TestClient()
     client.save({"tool_require.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Apt
         class MyPkg(ConanFile):
             settings = "arch", "os"
@@ -72,7 +72,7 @@ def test_build_require():
         """)})
     client.run("export tool_require.py tool_require/1.0@")
     client.save({"consumer.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class consumer(ConanFile):
             settings = "arch", "os"
             tool_requires = "tool_require/1.0"
@@ -88,7 +88,7 @@ def test_build_require():
 def test_brew_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Brew
         class MyPkg(ConanFile):
             settings = "arch"
@@ -107,7 +107,7 @@ def test_brew_check():
 def test_brew_install_check_mode():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Brew
         class MyPkg(ConanFile):
             settings = "arch"
@@ -126,7 +126,7 @@ def test_brew_install_check_mode():
 def test_brew_install_install_mode():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.system.package_manager import Brew
         class MyPkg(ConanFile):
             settings = "arch"
