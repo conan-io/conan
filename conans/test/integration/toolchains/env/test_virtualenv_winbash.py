@@ -1,8 +1,6 @@
 import os
 import platform
-import textwrap
 
-import mock
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
