@@ -282,6 +282,9 @@ def pytest_runtest_setup(item):
         if mark.name.startswith("tool_"):
             raise Exception("Invalid decorator @pytest.mark.{}".format(mark.name))
 
+    kwargs = [mark.kwargs for mark in item.iter_markers(name="tool")]
+    if any(kwargs):
+        raise Exception("Invalid decorator @pytest.mark Do not use kwargs: {}".format(kwargs))
     tools_params = [mark.args for mark in item.iter_markers(name="tool")]
     for tool_params in tools_params:
         if len(tool_params) == 1:

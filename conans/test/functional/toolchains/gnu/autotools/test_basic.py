@@ -352,7 +352,7 @@ def test_autotools_arguments_override():
                 self.cpp_info.libdirs = ["somefolder/customlibfolder"]
                 self.cpp_info.includedirs = ["somefolder/customincludefolder"]
         """)
-    client.run("config set log.print_run_commands=1")
+    #client.run("config set log.print_run_commands=1")
     client.save({"conanfile.py": conanfile})
     client.run("create . -tf=None")
 
@@ -363,11 +363,9 @@ def test_autotools_arguments_override():
     package_id = client.created_package_id("mylib/1.0")
     ref = RecipeReference.loads("mylib/1.0")
     pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
 
     # we override the default DESTDIR in the install
-    assert 'DESTDIR={} '.format(package_folder) not in client.out
-    assert 'DESTDIR={}/somefolder '.format(package_folder) in client.out
+    assert re.search("^.*make install .*DESTDIR=(.*)/somefolder.*$", str(client.out), re.MULTILINE)
 
     # we did override the default install args
     for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin',
