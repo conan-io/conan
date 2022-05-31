@@ -37,9 +37,14 @@ def test_apt_install_substitutes():
         class MyPkg(ConanFile):
             settings = "arch", "os"
             def system_requirements(self):
+                # FIXME this is needed because the ci-functional apt-get update fails
+                try:
+                    self.run("apt-get update")
+                except Exception:
+                    pass
                 apt = Apt(self)
-                apt.install_substitutes(["non-existing1", "non-e653-existing2"],
-                                        ["non-existing3", "non-e653-existing4"], update=True)
+                apt.install_substitutes(["non-existing1", "non-existing2"],
+                                        ["non-existing3", "non-existing4"])
         """)})
     client.run("create . test/1.0@ -c tools.system.package_manager:mode=install "
                "-c tools.system.package_manager:sudo=True", assert_error=True)
