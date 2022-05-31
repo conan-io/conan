@@ -13,6 +13,7 @@ from fnmatch import fnmatch
 import six
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
+from conan.tools.apple.apple import is_apple_os
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
@@ -533,7 +534,7 @@ def fix_apple_shared_install_name(conanfile):
                                                                                      lib_name))
         conanfile.run(command)
 
-    if conanfile.settings.get_safe("os") == "Macos" and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile.settings.get_safe("os")) and conanfile.options.get_safe("shared", False):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
