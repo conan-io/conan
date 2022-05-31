@@ -541,7 +541,7 @@ class UploadTest(unittest.TestCase):
         rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         # Upload same with client2
-        client2.create(ref)
+        client2.create(ref, args="--build=*")
         client2.run("upload lib/1.0@conan/testing -r default")
         self.assertIn(f"lib/1.0@conan/testing#{rrev} already in "
                       "server, skipping upload", client2.out)
@@ -676,9 +676,11 @@ def populate_client():
             conanfile += "\n"*i  # Create 2 rrev
             for j in range(2):  # Create 2 prev
                 with environment_update({'var_test': str(j)}):
-                    pref = client.create(ref, args="-s build_type=Debug", conanfile=conanfile)
+                    pref = client.create(ref, args="-s build_type=Debug --build=*",
+                                         conanfile=conanfile)
                     ret[pref.ref].append(pref)
-                    pref = client.create(ref, args="-s build_type=Release", conanfile=conanfile)
+                    pref = client.create(ref, args="-s build_type=Release --build=*",
+                                         conanfile=conanfile)
                     ret[pref.ref].append(pref)
     return client, ret
 

@@ -37,7 +37,8 @@ def test_update_binaries():
     value = get_value_from_output(client2.out)
 
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing --build=pkg/*")
+    # Because of random, this should be NEW prev
     client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.run("install --requires=pkg/0.1@lasote/testing")

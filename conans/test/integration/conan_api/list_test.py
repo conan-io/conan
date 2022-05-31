@@ -52,9 +52,9 @@ def test_get_package_revisions():
     # FIXME: The upload only takes the latest package revision, so do the upload after creating it
     pref1 = client.create(ref, gen)
     client.upload_all(pref1.ref, "default")
-    pref2 = client.create(ref, gen)
+    pref2 = client.create(ref, gen, args="--build=*")
     client.upload_all(pref1.ref, "default")
-    pref3 = client.create(ref, gen)
+    pref3 = client.create(ref, gen, args="--build=*")
     client.upload_all(pref1.ref, "default")
 
     _pref = copy.copy(pref1)

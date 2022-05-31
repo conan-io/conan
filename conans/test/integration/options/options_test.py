@@ -45,7 +45,8 @@ class OptionsTest(unittest.TestCase):
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True"
+                   " --build=pkg/*")
         self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
         self.assertIn("pkg/0.1@user/testing (test package): Calling build()", client.out)
 

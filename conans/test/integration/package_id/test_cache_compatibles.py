@@ -194,7 +194,7 @@ class TestDefaultCompat:
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd=17 "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} --build=*")
         package_id2 = c.created_package_id("app/1.0")
         assert package_id1 == package_id2  # It does not depend on 'compiler.cppstd'
 

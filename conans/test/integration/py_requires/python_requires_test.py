@@ -461,7 +461,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Now, the same, but with "clean_first=True", should keep working
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing --build=pkg/*")
         self.assertIn("pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 

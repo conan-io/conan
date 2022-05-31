@@ -96,7 +96,8 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 -s os=Linux")
         self.assertIn("pkg/0.1: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
-        client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 -s os=Windows --build=pkg/*",
+                   assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Invalid")})

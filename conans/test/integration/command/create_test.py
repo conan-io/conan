@@ -30,18 +30,6 @@ class CreateTest(unittest.TestCase):
         conandeps = client.load("conandeps.props")
         assert conandeps.find("pkgb") < conandeps.find("pkga")
 
-    def test_transitive_same_name(self):
-        # https://github.com/conan-io/conan/issues/1366
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile("hellobar", "0.1")})
-        client.run("create . --user=lasote --channel=testing")
-        self.assertIn("hellobar/0.1@lasote/testing: Forced build from source", client.out)
-
-        conanfile = GenConanfile("hello", "0.1").with_require("hellobar/0.1@lasote/testing")
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --user=lasote --channel=stable")
-        self.assertNotIn("hellobar/0.1@lasote/testing: Forced build from source", client.out)
-
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
@@ -308,7 +296,7 @@ class MyPkg(ConanFile):
         client.run('create . --user=user --channel=channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
-        client.run('create . --user=user --channel=channel')
+        client.run('create . --user=user --channel=channel --build=*')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
     def test_requires_without_user_channel(self):

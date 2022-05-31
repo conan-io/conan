@@ -33,14 +33,14 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
                                                        "Build")})
 
         self.client.run("export . --name=tool --version=1.1.2")
-        self.client2.run("create . --name=pkg --version=0.1")
+        self.client2.run("create . --name=pkg --version=0.1 --build=pkg/*")
         self.assertIn("tool/1.1.2", self.client2.out)
         self.client2.assert_listed_binary({"pkg/0.1": (pkg_id,
                                                        "Build")})
 
         # With a minor change, it fires a rebuild
         self.client.run("export . --name=tool --version=1.2.0")
-        self.client2.run("create . --name=pkg --version=0.1")
+        self.client2.run("create . --name=pkg --version=0.1 --build=pkg/*")
         self.assertIn("tool/1.2.0", self.client2.out)
         self.client2.assert_listed_binary({"pkg/0.1": ("5eb1e7ea93fdd67fe3c3b166d240844648ba2b7a",
                                                        "Build")})

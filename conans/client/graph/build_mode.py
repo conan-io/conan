@@ -1,11 +1,9 @@
-import fnmatch
-
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 
-class BuildMode(object):
+class BuildMode:
     """ build_mode => ["*"] if user wrote "--build"
                    => ["hello*", "bye*"] if user wrote "--build hello --build bye"
                    => ["hello/0.1@foo/bar"] if user wrote "--build hello/0.1@foo/bar"
@@ -19,6 +17,7 @@ class BuildMode(object):
         self.cascade = False
         self.editable = False
         self.patterns = []
+        self.build_missing_patterns = []
         self._unused_patterns = []
         self._excluded_patterns = []
         self.all = False
@@ -39,19 +38,27 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    # Remove the @ at the end, to match for "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
-                    clean_pattern = param[:-1] if param.endswith("@") else param
-                    clean_pattern = clean_pattern.replace("@#", "#")
-                    if clean_pattern and clean_pattern[0] == "!":
-                        self._excluded_patterns.append(clean_pattern[1:])
+                    if param.startswith("missing(") and param.endswith(")"):
+                        clean_pattern = param[len("missing("):-1]
+                        clean_pattern = clean_pattern[:-1] if param.endswith("@") else clean_pattern
+                        clean_pattern = clean_pattern.replace("@#", "#")
+                        self.build_missing_patterns.append(clean_pattern)
                     else:
-                        self.patterns.append(clean_pattern)
+                        # Remove the @ at the end, to match for
+                        # "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
+                        clean_pattern = param[:-1] if param.endswith("@") else param
+                        clean_pattern = clean_pattern.replace("@#", "#")
+                        if clean_pattern and clean_pattern[0] == "!":
+                            self._excluded_patterns.append(clean_pattern[1:])
+                        else:
+                            self.patterns.append(clean_pattern)
 
             if self.never and (self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns) + self._excluded_patterns
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
+        # TODO: ref can be obtained from conan_file
 
         for pattern in self._excluded_patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):
@@ -97,7 +104,14 @@ class BuildMode(object):
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='missing'")
             return True
+        if self.should_build_missing(conan_file):
+            return True
         return False
+
+    def should_build_missing(self, conanfile):
+        for pattern in self.build_missing_patterns:
+            if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                return True
 
     def report_matches(self):
         for pattern in self._unused_patterns:
