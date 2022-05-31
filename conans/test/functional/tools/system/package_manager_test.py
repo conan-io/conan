@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.tool_apt_get
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_apt_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
@@ -30,7 +29,24 @@ def test_apt_check():
 
 @pytest.mark.tool_apt_get
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
+def test_apt_install_substitutes():
+    client = TestClient()
+    client.save({"conanfile.py": textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.system.package_manager import Apt
+        class MyPkg(ConanFile):
+            settings = "arch", "os"
+            def system_requirements(self):
+                apt = Apt(self)
+                apt.install_substitutes(["non-existing1", "non-existing2"],
+                                        ["non-existing3", "non-existing4"])
+        """)})
+    client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
+    print(client.out)
+
+
+@pytest.mark.tool_apt_get
+@pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
 def test_build_require():
     client = TestClient()
     client.save({"tool_require.py": textwrap.dedent("""
@@ -58,7 +74,6 @@ def test_build_require():
 
 @pytest.mark.tool_brew
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_brew_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
