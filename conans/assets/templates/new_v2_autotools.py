@@ -8,6 +8,7 @@ conanfile_lib = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools
     from conan.tools.layout import basic_layout
+    from conan.tools.files import fix_apple_shared_install_name
 
 
     class {package_name}Conan(ConanFile):
@@ -48,6 +49,8 @@ conanfile_lib = textwrap.dedent("""
         def package(self):
             autotools = Autotools(self)
             autotools.install()
+            if self.settings.get_safe("os") == "Macos" and self.options.get_safe("shared", False):
+                fix_apple_shared_install_name(self)
 
         def package_info(self):
             self.cpp_info.libs = ["{name}"]

@@ -16,6 +16,7 @@ from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
+from conans.util.runners import check_output_runner
 
 if six.PY3:  # Remove this IF in develop2
     from shutil import which
@@ -520,3 +521,21 @@ def swap_child_folder(parent_folder, child_folder):
     child = os.path.join(parent_folder, child_folder)
     for f in os.listdir(child):
         shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))
+
+
+def fix_apple_shared_install_name(conanfile):
+    def _osx_collect_dylibs(lib_folder):
+        return [f for f in os.listdir(lib_folder) if f.endswith(".dylib")
+                and not os.path.islink(os.path.join(lib_folder, f))]
+
+    def _fix_install_name(lib_name, lib_folder):
+        command = "install_name_tool -id @rpath/{} {}".format(lib_name, os.path.join(lib_folder,
+                                                                                     lib_name))
+        conanfile.run(command)
+
+    libdirs = getattr(conanfile.cpp.package, "libdirs")
+    for libdir in libdirs:
+        full_folder = os.path.join(conanfile.package_folder, libdir)
+        shared_libs = _osx_collect_dylibs(full_folder)
+        for shared_lib in shared_libs:
+            _fix_install_name(shared_lib, full_folder)
