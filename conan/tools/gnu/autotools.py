@@ -35,7 +35,8 @@ class Autotools(object):
 
     def configure(self, build_script_folder=None, args=None):
         """
-        Call the configure script
+        Call the configure script.
+
         :param args: Extra arguments for configure
         :param build_script_folder: Subfolder where the `configure` script is located. If not specified
                                     conanfile.source_folder is used.
