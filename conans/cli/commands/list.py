@@ -6,7 +6,7 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAN
 from conans.cli.commands import json_formatter
 from conans.cli.common import get_remote_selection
 from conans.cli.output import Color, ConanOutput
-from conans.errors import ConanException, InvalidNameException
+from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -136,6 +136,8 @@ def list_recipes(conan_api, parser, subparser, *args):
         name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
+        except NotFoundException:
+            results[name] = {"error": f'There are not recipes matching {args.query}'}
         except Exception as e:
             results[name] = {"error": str(e)}
 
@@ -163,6 +165,8 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
+        except NotFoundException:
+            results[name] = {"error": f"'{ref}' does not exist"}
         except Exception as e:
             results[name] = {"error": str(e)}
 
@@ -197,6 +201,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         name = getattr(remote, "name", "Local Cache")
         try:
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
+        except NotFoundException:
+            results[name] = {"error": f"'{pref}' does not exist"}
         except Exception as e:
             results[name] = {"error": str(e)}
 
@@ -246,6 +252,9 @@ def list_packages(conan_api, parser, subparser, *args):
             try:
                 ref.revision = None
                 ref = conan_api.list.latest_recipe_revision(ref, remote)
+            except NotFoundException:
+                results[name] = {"error": f"'{ref}' does not exist"}
+                continue
             except Exception as e:
                 results[name] = {"error": str(e)}
                 continue
@@ -255,6 +264,8 @@ def list_packages(conan_api, parser, subparser, *args):
         try:
             # TODO: This should error in the cache if the revision doesn't exist
             results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
+        except NotFoundException:
+            results[name] = {"error": f"'{ref}' does not exist"}
         except Exception as e:
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
