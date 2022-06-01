@@ -524,7 +524,7 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -534,7 +534,7 @@ def test_cmake_presets_missing_option():
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -544,7 +544,7 @@ def test_cmake_presets_missing_setting():
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler", "settings.compiler.version", ' \
                       '   "settings.compiler.cppstd"]\''
 
@@ -626,7 +626,7 @@ def test_cmake_presets_multiple_settings_single_config():
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_lib")
-    conf_layout = '-c tools.cmake.cmake_layout.build_folder_vars=\'["settings.compiler", ' \
+    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler", ' \
                   '"options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
@@ -666,7 +666,7 @@ def test_cmake_presets_options_single_config():
 def test_cmake_presets_multiple_settings_multi_config():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_exe")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
