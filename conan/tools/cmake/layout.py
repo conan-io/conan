@@ -44,7 +44,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
 
 def get_build_folder_vars_suffix(conanfile):
 
-    build_vars = conanfile.conf.get("tools.cmake.cmake_layout.build_folder_vars",
+    build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
                                     default=[], check_type=list)
     ret = []
     for s in build_vars:
@@ -58,7 +58,7 @@ def get_build_folder_vars_suffix(conanfile):
             if value is not None:
                 tmp = "{}_{}".format(var, value)
         else:
-            raise ConanException("Invalid 'tools.cmake.cmake_layout.build_folder_vars' value, it has"
+            raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
                                  " to start with 'settings.' or 'options.': {}".format(s))
         if tmp:
             ret.append(tmp.lower())
