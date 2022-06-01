@@ -54,40 +54,9 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def _fix_osx_shared_install_name(self):
-
-        def _osx_collect_dylibs(lib_folder):
-            return [f for f in os.listdir(lib_folder) if f.endswith(".dylib")
-                    and not os.path.islink(os.path.join(lib_folder, f))]
-
-        def _fix_install_name(lib_name, lib_folder):
-            command = "install_name_tool -id @rpath/{} {}".format(lib_name, os.path.join(lib_folder,
-                                                                                         lib_name))
-            self._conanfile.run(command)
-
-        def _is_modified_install_name(lib_name, full_folder, libdir):
-            """
-            Check that the user did not change the default install_name using the install_name
-            linker flag in that case we do not touch this field
-            """
-            command = "otool -D {}".format(os.path.join(full_folder, lib_name))
-            install_path = check_output_runner(command).strip().split(":")[1].strip()
-            default_path = str(os.path.join("/", libdir, shared_lib))
-            return False if default_path == install_path else True
-
-        libdirs = getattr(self._conanfile.cpp.package, "libdirs")
-        for libdir in libdirs:
-            full_folder = os.path.join(self._conanfile.package_folder, libdir)
-            shared_libs = _osx_collect_dylibs(full_folder)
-            for shared_lib in shared_libs:
-                if not _is_modified_install_name(shared_lib, full_folder, libdir):
-                    _fix_install_name(shared_lib, full_folder)
-
     def install(self, args=None):
         args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
         self.make(target="install", args=args)
-        if self._conanfile.settings.get_safe("os") == "Macos" and self._conanfile.options.get_safe("shared", False):
-            self._fix_osx_shared_install_name()
 
     def autoreconf(self, args=None):
         args = args or []
