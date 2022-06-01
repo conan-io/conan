@@ -201,7 +201,7 @@ def test_autotools_fix_shared_libs():
         from conan import ConanFile
         from conan.tools.gnu import AutotoolsToolchain, Autotools
         from conan.tools.layout import basic_layout
-        from conan.tools.files import fix_apple_shared_install_name
+        from conan.tools.apple import fix_apple_shared_install_name
 
 
         class HelloConan(ConanFile):

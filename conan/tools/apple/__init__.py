@@ -5,6 +5,7 @@
 # from conan.tools.apple.apple import apple_sdk_name
 # from conan.tools.apple.apple import apple_deployment_target_flag
 # from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import fix_apple_shared_install_name
 from conan.tools.apple.xcodedeps import XcodeDeps
 from conan.tools.apple.xcodebuild import XcodeBuild
 from conan.tools.apple.xcodetoolchain import XcodeToolchain
