@@ -27,7 +27,7 @@ def test_shared_cmake_toolchain():
     client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", "app", cwd=client.current_folder)
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out

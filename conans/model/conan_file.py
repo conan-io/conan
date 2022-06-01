@@ -1,6 +1,7 @@
-import platform
+import os
 
 from conans.cli.output import ConanOutput
+from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
@@ -412,15 +413,9 @@ class ConanFile:
             shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command)
-        if platform.system() == "Windows":
-            if self.win_bash:  # New, Conan 2.0
-                from conans.client.subsystems import run_in_windows_bash
-                return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
-        if env:
-            from conan.tools.env.environment import environment_wrap_command
-            wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
-        else:
-            wrapped_cmd = command
+        env = [env] if env and isinstance(env, str) else []
+        envfiles_folder = self.generators_folder or os.getcwd()
+        wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run
         ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
