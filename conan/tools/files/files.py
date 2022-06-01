@@ -13,9 +13,11 @@ from fnmatch import fnmatch
 import six
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
+from conan.tools.apple.apple import is_apple_os
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
+from conans.util.runners import check_output_runner
 
 if six.PY3:  # Remove this IF in develop2
     from shutil import which
