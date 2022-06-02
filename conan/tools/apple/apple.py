@@ -70,6 +70,11 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
 
 
 def fix_apple_shared_install_name(conanfile):
+    """
+    Search for all the *dylib* files in the conanfile's *package_folder* and fix
+    both the ``LC_ID_DYLIB`` and ``LC_LOAD_DYLIB`` fields on those files using the
+    *install_name_tool* utility available in macOS to set ``@rpath``.
+    """
 
     def _get_install_name(path_to_dylib):
         command = "otool -D {}".format(path_to_dylib)
