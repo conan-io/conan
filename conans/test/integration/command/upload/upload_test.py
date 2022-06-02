@@ -74,7 +74,8 @@ class UploadTest(unittest.TestCase):
 
         if platform.system() == "Linux":
             client.run("remove '*' -f")
-            client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
+            client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"),
+                          args="--build=*")
             os.system('chmod +x "{}"'.format(package_file_path))
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
             client.run("upload * --confirm -r default")
@@ -616,7 +617,7 @@ class UploadTest(unittest.TestCase):
                             inputs=["user", "password"])
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
-        client.run("create . --user=user --channel=testing")
+        client.run("create . --user=user --channel=testing --build=*")
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing -r default")
         assert "Uploading hello0/1.2.1@user/testing" in client.out
