@@ -65,6 +65,24 @@ class _SystemPackageManagerTool(object):
             return method(*args, **kwargs)
 
     def install_substitutes(self, *args, **kwargs):
+        """
+        Will try to call the install() method with  several lists of packages passed as a
+        variable number of parameters. This is useful if, for example, the names of the
+        packages are different from one distro or distro version to another. For example,
+        ``libxcb`` for ``Apt`` is named ``libxcb-util-dev`` in Ubuntu >= 15.0 and ``libxcb-util0-dev``
+        for other versions. You can call to:
+           .. code-block:: python
+
+            # will install the first list of packages that succeeds in the installation
+            Apt.install_substitutes(["libxcb-util-dev"], ["libxcb-util0-dev"])
+
+
+
+        :param packages_alternatives: try to install the list of packages passed as a parameter.
+        :param update: try to update the package manager database before checking and installing.
+        :param check: check if the packages are already installed before installing them.
+        :return: the return code of the executed package manager command.
+        """
         return self.run(self._install_substitutes, *args, **kwargs)
 
     def install(self, *args, **kwargs):
