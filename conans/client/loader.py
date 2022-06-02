@@ -2,10 +2,14 @@ from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
 import sys
+import types
 import uuid
 
 import yaml
 
+from conan.tools.cmake import cmake_layout
+from conan.tools.google import bazel_layout
+from conan.tools.microsoft import vs_layout
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
@@ -191,8 +195,20 @@ class ConanFileLoader:
             # TODO: Improve this interface
             conanfile.requires.tool_require(build_reference)
 
-        conanfile.generators = parser.generators
+        if parser.layout:
+            layout_method = {"cmake_layout": cmake_layout,
+                             "vs_layout": vs_layout,
+                             "bazel_layout": bazel_layout}.get(parser.layout)
+            if not layout_method:
+                raise ConanException("Unknown predefined layout '{}' declared in "
+                                     "conanfile.txt".format(parser.layout))
 
+            def layout(_self):
+                layout_method(_self)
+
+            conanfile.layout = types.MethodType(layout, conanfile)
+
+        conanfile.generators = parser.generators
         try:
             conanfile.options = Options.loads(parser.options)
         except Exception:

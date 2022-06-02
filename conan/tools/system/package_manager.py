@@ -61,6 +61,9 @@ class _SystemPackageManagerTool(object):
         if self._active_tool == self.__class__.tool_name:
             return method(*args, **kwargs)
 
+    def install_substitutes(self, *args, **kwargs):
+        return self.run(self._install_substitutes, *args, **kwargs)
+
     def install(self, *args, **kwargs):
         return self.run(self._install, *args, **kwargs)
 
@@ -69,6 +72,18 @@ class _SystemPackageManagerTool(object):
 
     def check(self, *args, **kwargs):
         return self.run(self._check, *args, **kwargs)
+
+    def _install_substitutes(self, *packages_substitutes, update=False, check=True, **kwargs):
+        errors = []
+        for packages in packages_substitutes:
+            try:
+                return self.install(packages, update, check, **kwargs)
+            except ConanException as e:
+                errors.append(e)
+
+        for error in errors:
+            self._conanfile.output.warning(str(error))
+        raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, **kwargs):
         if update:

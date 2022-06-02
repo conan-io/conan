@@ -7,6 +7,7 @@ import os
 from conan import ConanFile
 from conan.tools.gnu import AutotoolsToolchain, Autotools
 from conan.tools.layout import basic_layout
+from conan.tools.apple import fix_apple_shared_install_name
 
 
 class {{package_name}}Conan(ConanFile):
@@ -47,6 +48,7 @@ class {{package_name}}Conan(ConanFile):
     def package(self):
         autotools = Autotools(self)
         autotools.install()
+        fix_apple_shared_install_name(self)
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]

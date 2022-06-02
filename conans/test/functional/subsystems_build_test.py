@@ -134,6 +134,7 @@ class TestSubsystemsBuild:
         include(default)
         [conf]
         tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
         """)
         client.save({"conanfile.py": conanfile,
                      "Makefile": makefile,
