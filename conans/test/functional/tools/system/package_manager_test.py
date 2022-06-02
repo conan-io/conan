@@ -66,7 +66,7 @@ def test_apt_install_substitutes():
     assert "1 newly installed" in client.out
 
 
-@pytest.mark.tool_apt_get
+@pytest.mark.tool("apt_get")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
 def test_build_require():
     client = TestClient()
