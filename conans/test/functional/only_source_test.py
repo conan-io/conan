@@ -45,12 +45,8 @@ class OnlySourceTest(unittest.TestCase):
         client.run("install --requires=hello1/1.1@lasote/stable --build hello1*")
 
         # Now Hello2 should be built and not fail
-        client.run("create . --user=lasote --channel=stable")
+        client.run("create . --user=lasote --channel=stable --build=hello2*")
         self.assertNotIn("Can't find a 'hello2/2.2@lasote/stable' package", client.out)
-        self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
-
-        # Now package is generated but should be built again
-        client.run("create . --user=lasote --channel=stable")
         self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
     def test_build_policies_update(self):
