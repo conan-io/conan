@@ -289,9 +289,9 @@ def test_autotools_fix_shared_libs():
         "conanfile.py": conanfile,
     })
 
-    client.run("create . -o hello:shared=True -tf=None")
+    client.run("create . -o hello/*:shared=True -tf=None")
 
-    ref = RecipeReference.loads("pkg/0.1")
+    ref = RecipeReference.loads("hello/0.1")
     pref = client.get_latest_package_reference(ref)
     package_folder = client.get_latest_pkg_layout(pref).package()
 
@@ -308,5 +308,5 @@ def test_autotools_fix_shared_libs():
     assert "@rpath/libhello.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
     assert "@rpath/libbye.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
 
-    client.run("test test_package hello/0.1@ -o hello:shared=True")
+    client.run("test test_package hello/0.1@ -o hello/*:shared=True")
     assert "Bye, bye!" in client.out
