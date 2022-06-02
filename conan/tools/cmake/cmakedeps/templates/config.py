@@ -14,7 +14,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        if self.find_module_mode:
+        if self.generating_module:
             return "Find{}.cmake".format(self.file_name)
         else:
             if self.file_name == self.file_name.lower():
@@ -24,9 +24,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        targets_include = "" if not self.find_module_mode else "module-"
+        targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
-        return {"is_module": self.find_module_mode,
+        return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
@@ -45,20 +45,11 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
-        {% if is_module %}
-        include(FindPackageHandleStandardArgs)
-        set({{ file_name }}_FOUND 1)
-        set({{ file_name }}_VERSION "{{ version }}")
-
-        find_package_handle_standard_args({{ file_name }}
-                                          REQUIRED_VARS {{ file_name }}_VERSION
-                                          VERSION_VAR {{ file_name }}_VERSION)
-        mark_as_advanced({{ file_name }}_FOUND {{ file_name }}_VERSION)
-        {% endif %}
-
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
+
+        check_build_type_defined()
 
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
             # Check that we have not already called a find_package with the transitive dependency
@@ -91,5 +82,16 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 endif()
             endforeach()
         endif()
+        {% endif %}
+
+        {% if is_module %}
+        include(FindPackageHandleStandardArgs)
+        set({{ file_name }}_FOUND 1)
+        set({{ file_name }}_VERSION "{{ version }}")
+
+        find_package_handle_standard_args({{ file_name }}
+                                          REQUIRED_VARS {{ file_name }}_VERSION
+                                          VERSION_VAR {{ file_name }}_VERSION)
+        mark_as_advanced({{ file_name }}_FOUND {{ file_name }}_VERSION)
         {% endif %}
         """)

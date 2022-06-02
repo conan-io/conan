@@ -47,7 +47,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir package_bindir library_type is_host_windows deps out_libraries out_libraries_target config_suffix package_name)
+       function(conan_package_library_targets libraries package_libdir package_bindir library_type
+                is_host_windows deps out_libraries out_libraries_target config_suffix package_name
+                no_soname_mode)
            set(_out_libraries "")
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
@@ -75,7 +77,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                          else()
                             add_library(${_LIB_NAME} SHARED IMPORTED)
-                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_SHARED_FOUND_LIBRARY})
+                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_SHARED_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_IMPLIB ${CONAN_FOUND_LIBRARY})
                             conan_message(DEBUG "Found DLL and STATIC at ${CONAN_SHARED_FOUND_LIBRARY}, ${CONAN_FOUND_LIBRARY}")
                          endif()
@@ -83,7 +85,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                          # library_type can be STATIC, still UNKNOWN (if no package type available in the recipe) or SHARED (but no windows)
                          add_library(${_LIB_NAME} ${library_type} IMPORTED)
                          conan_message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
-                         set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                         set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
                        endif()
                        list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    else()
@@ -106,4 +108,14 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
        endfunction()
+
+       macro(check_build_type_defined)
+           # Check that the -DCMAKE_BUILD_TYPE argument is always present
+           get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+           if(NOT isMultiConfig AND NOT CMAKE_BUILD_TYPE)
+               message(FATAL_ERROR "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake "
+                                   "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
+           endif()
+       endmacro()
+
         """)

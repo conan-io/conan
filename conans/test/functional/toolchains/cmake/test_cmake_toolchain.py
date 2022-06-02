@@ -243,8 +243,9 @@ def test_cmaketoolchain_no_warnings():
 
     client.run("create dep")
     client.run("install .")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
-                       "-Werror=dev --warn-uninitialized")
+    build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake {}"
+                       "-Werror=dev --warn-uninitialized".format(build_type))
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully
 
@@ -524,7 +525,7 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -534,7 +535,7 @@ def test_cmake_presets_missing_option():
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -544,7 +545,7 @@ def test_cmake_presets_missing_setting():
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler", "settings.compiler.version", ' \
                       '   "settings.compiler.cppstd"]\''
 
@@ -626,7 +627,7 @@ def test_cmake_presets_multiple_settings_single_config():
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    conf_layout = '-c tools.cmake.cmake_layout.build_folder_vars=\'["settings.compiler", ' \
+    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler", ' \
                   '"options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
@@ -666,7 +667,7 @@ def test_cmake_presets_options_single_config():
 def test_cmake_presets_multiple_settings_multi_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
@@ -738,3 +739,97 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("build-static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_cmaketoolchain_sysroot():
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+        class AppConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                {}
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        project(app CXX)
+        message("sysroot: '${CMAKE_SYSROOT}'")
+        message("osx_sysroot: '${CMAKE_OSX_SYSROOT}'")
+        """)
+
+    client.save({
+        "conanfile.py": conanfile.format(""),
+        "CMakeLists.txt": cmakelist
+    })
+
+    fake_sysroot = client.current_folder
+    output_fake_sysroot = fake_sysroot.replace("\\", "/") if platform.system() == "Windows" else fake_sysroot
+    client.run("create . --name=app --version=1.0 -c tools.build:sysroot='{}'".format(fake_sysroot))
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
+
+    # set in a block instead of using conf
+    set_sysroot_in_block = 'tc.blocks["generic_system"].values["cmake_sysroot"] = "{}"'.format(output_fake_sysroot)
+    client.save({
+        "conanfile.py": conanfile.format(set_sysroot_in_block),
+    })
+    client.run("create . --name=app --version=1.0")
+    assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_presets_with_conanfile_txt():
+    c = TestClient()
+
+    c.run("new cmake_exe -d name=foo -d version=1.0")
+    os.unlink(os.path.join(c.current_folder, "conanfile.py"))
+    c.save({"conanfile.txt": textwrap.dedent("""
+
+    [generators]
+    CMakeToolchain
+
+    [layout]
+    cmake_layout
+
+    """)})
+
+    c.run("install .")
+    c.run("install . -s build_type=Debug")
+    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
+    presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
+    assert os.path.exists(presets_path)
+
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset Debug")
+        c.run_command("cmake --build --preset Debug")
+        c.run_command("./cmake-build-debug/foo")
+    else:
+        c.run_command("cmake --preset default")
+        c.run_command("cmake --build --preset Debug")
+        c.run_command("build\\Debug\\foo")
+
+    assert "Hello World Debug!" in c.out
+
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset Release")
+        c.run_command("cmake --build --preset Release")
+        c.run_command("./cmake-build-release/foo")
+    else:
+        c.run_command("cmake --build --preset Release")
+        c.run_command("build\\Release\\foo")
+
+    assert "Hello World Release!" in c.out
