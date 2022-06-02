@@ -245,3 +245,144 @@ def test_autotools_with_pkgconfigdeps():
     assert re.search("I.*/p/include", str(client.out))
     assert "-lhello" in client.out
     assert re.search("L.*/p/lib", str(client.out))
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool("autotools")
+def test_autotools_option_checking():
+    # https://github.com/conan-io/conan/issues/11265
+    client = TestClient(path_with_spaces=False)
+    client.run("new autotools_lib -d name=mylib -d version=1.0")
+    conanfile = textwrap.dedent("""
+        import os
+
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain, Autotools
+        from conan.tools.layout import basic_layout
+        from conan.tools.build import cross_building
+
+
+        class MylibTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "AutotoolsDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def generate(self):
+                at_toolchain = AutotoolsToolchain(self)
+                # we override the default shared/static flags here
+                at_toolchain.configure_args = ['--enable-option-checking=fatal']
+                at_toolchain.generate()
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.autoreconf()
+                autotools.configure()
+                autotools.make()
+
+            def layout(self):
+                basic_layout(self)
+
+            def test(self):
+                if not cross_building(self):
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "main")
+                    self.run(cmd, env="conanrun")
+            """)
+
+    client.save({"test_package/conanfile.py": conanfile})
+    client.run("create . -tf=None")
+
+    # check that the shared flags are not added to the exe's configure, making it fail
+    client.run("test test_package mylib/1.0@")
+    assert "configure: error: unrecognized options: --disable-shared, --enable-static, --with-pic" \
+           not in client.out
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.tool("autotools")
+def test_autotools_arguments_override():
+    client = TestClient(path_with_spaces=False)
+    client.run("new autotools_lib -d name=mylib -d version=1.0")
+    conanfile = textwrap.dedent("""
+        import os
+
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain, Autotools
+        from conan.tools.layout import basic_layout
+
+
+        class MyLibConan(ConanFile):
+            name = "mylib"
+            version = "1.0"
+
+            # Binary configuration
+            settings = "os", "compiler", "build_type", "arch"
+
+            exports_sources = "configure.ac", "Makefile.am", "src/*"
+
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    del self.options.fPIC
+
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                at_toolchain = AutotoolsToolchain(self)
+                at_toolchain.configure_args = ['--disable-shared']
+                at_toolchain.make_args = ['--warn-undefined-variables']
+                at_toolchain.autoreconf_args = ['--verbose']
+                at_toolchain.generate()
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.autoreconf(args=['--install'])
+                autotools.configure(args=['--prefix=/', '--libdir=${prefix}/customlibfolder',
+                                          '--includedir=${prefix}/customincludefolder',
+                                          '--pdfdir=${prefix}/res'])
+                autotools.make(args=['--keep-going'])
+
+            def package(self):
+                autotools = Autotools(self)
+                autotools.install(args=['DESTDIR={}/somefolder'.format(self.package_folder)])
+
+            def package_info(self):
+                self.cpp_info.libs = ["mylib"]
+                self.cpp_info.libdirs = ["somefolder/customlibfolder"]
+                self.cpp_info.includedirs = ["somefolder/customincludefolder"]
+        """)
+    #client.run("config set log.print_run_commands=1")
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -tf=None")
+
+    # autoreconf args --force that is default should not be there
+    assert "--force" not in client.out
+    assert "--install" in client.out
+
+    package_id = client.created_package_id("mylib/1.0")
+    ref = RecipeReference.loads("mylib/1.0")
+    pref = client.get_latest_package_reference(ref, package_id)
+
+    # we override the default DESTDIR in the install
+    assert re.search("^.*make install .*DESTDIR=(.*)/somefolder.*$", str(client.out), re.MULTILINE)
+
+    # we did override the default install args
+    for arg in ['--bindir=${prefix}/bin', '--sbindir=${prefix}/bin',
+                '--libdir=${prefix}/lib', '--includedir=${prefix}/include',
+                '--oldincludedir=${prefix}/include', '--datarootdir=${prefix}/res']:
+        assert arg not in client.out
+
+    # and use our custom arguments
+    for arg in ['--prefix=/', '--libdir=${prefix}/customlibfolder',
+                '--includedir=${prefix}/customincludefolder', '--pdfdir=${prefix}/res']:
+        assert arg in client.out
+
+    # check the other arguments we set are there
+    assert "--disable-shared" in client.out
+    assert "--warn-undefined-variables" in client.out
+    assert "--verbose" in client.out
+    assert "--keep-going" in client.out
+
+    client.run("test test_package mylib/1.0@")
+    assert "mylib/1.0: Hello World Release!" in client.out

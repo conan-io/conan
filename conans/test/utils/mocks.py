@@ -2,11 +2,14 @@ import os
 from collections import namedtuple
 from io import StringIO
 
+
 from conan import ConanFile
 from conans.cli.conan_app import ConanFileHelpers
-from conans.model.conf import ConfDefinition, Conf
+from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
+from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 
 
 class LocalDBMock(object):
@@ -51,8 +54,14 @@ class MockSettings(object):
     def __init__(self, values):
         self.values = values
 
-    def get_safe(self, value):
-        return self.values.get(value, None)
+    def get_safe(self, value, default=None):
+        return self.values.get(value, default)
+
+    def __getattr__(self, name):
+        try:
+            return self.values[name]
+        except KeyError:
+            raise ConanException("'%s' value not defined" % name)
 
 
 class MockCppInfo(object):
@@ -119,6 +128,7 @@ class ConanFileMock(ConanFile):
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
         self._conan_helpers = ConanFileHelpers(None, None)
+        self.cpp = Infos()
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
@@ -133,6 +143,7 @@ class ConanFileMock(ConanFile):
         result = self._commands
         self._commands = []
         return result
+
 
 MockOptions = MockSettings
 
