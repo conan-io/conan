@@ -37,7 +37,7 @@ class Autotools(object):
         """
         Call the configure script.
 
-        :param args: Extra arguments for configure
+        :param args: List of arguments to use for the ``configure`` call.
         :param build_script_folder: Subfolder where the `configure` script is located. If not specified
                                     conanfile.source_folder is used.
         """
@@ -65,6 +65,8 @@ class Autotools(object):
         :param target: (Optional, Defaulted to ``None``): Choose which target to build. This allows
                        building of e.g., docs, shared libraries or install for some AutoTools
                        projects
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+        ``make`` call.
         """
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
@@ -111,6 +113,9 @@ class Autotools(object):
         """
         This is just an "alias" of ``self.make(target="install")``
 
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+        ``make`` call. By default an argument ``DESTDIR=self.package_folder`` is added to the
+        call if the passed value is ``None``.
         """
         # FIXME: we have to run configure twice because the local flow won't work otherwise
         #  because there's no package_folder until the package step
@@ -121,6 +126,12 @@ class Autotools(object):
             self._fix_osx_shared_install_name()
 
     def autoreconf(self, args=None):
+        """
+        Call ``autoreconf``
+
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+        ``autoreconf`` call.
+        """
         args = args or []
         command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
         with chdir(self, self._conanfile.source_folder):
