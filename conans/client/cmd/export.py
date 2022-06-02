@@ -29,8 +29,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 
-    hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref)
+    hook_manager.execute("pre_export", conanfile=conanfile)
 
     scoped_output.highlight("Exporting package recipe")
 
@@ -44,8 +43,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Execute post-export hook before computing the digest
-    hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
-                         conanfile_path=recipe_layout.conanfile())
+    hook_manager.execute("post_export", conanfile=conanfile)
 
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)

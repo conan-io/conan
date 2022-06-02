@@ -45,7 +45,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
     conanfile.output.info("Sources downloaded from '{}'".format(sources_remote.name))
 
 
-def config_source(export_source_folder, conanfile, conanfile_path, reference, hook_manager):
+def config_source(export_source_folder, conanfile, hook_manager):
     """ Implements the sources configuration when a package is going to be built in the
     local cache:
     - remove old sources if dirty or build_policy=always
@@ -81,16 +81,15 @@ def config_source(export_source_folder, conanfile, conanfile_path, reference, ho
             # Now move the export-sources to the right location
             merge_directories(export_source_folder, conanfile.folders.base_source)
 
-            run_source_method(conanfile, hook_manager, conanfile_path=conanfile_path,
-                              reference=reference)
+            run_source_method(conanfile, hook_manager)
 
 
-def run_source_method(conanfile, hook_manager, **hook_kwargs):
+def run_source_method(conanfile, hook_manager):
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
-        hook_manager.execute("pre_source", conanfile=conanfile, **hook_kwargs)
+        hook_manager.execute("pre_source", conanfile=conanfile)
         conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
         with conanfile_exception_formatter(conanfile, "source"):
             with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
                 conanfile.source()
-        hook_manager.execute("post_source", conanfile=conanfile, **hook_kwargs)
+        hook_manager.execute("post_source", conanfile=conanfile)
