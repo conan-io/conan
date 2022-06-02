@@ -525,7 +525,7 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -535,7 +535,7 @@ def test_cmake_presets_missing_option():
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.missing"]\''
     client.run("install . {}".format(settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
@@ -545,7 +545,7 @@ def test_cmake_presets_missing_setting():
 def test_cmake_presets_multiple_settings_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler", "settings.compiler.version", ' \
                       '   "settings.compiler.cppstd"]\''
 
@@ -627,7 +627,7 @@ def test_cmake_presets_multiple_settings_single_config():
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    conf_layout = '-c tools.cmake.cmake_layout.build_folder_vars=\'["settings.compiler", ' \
+    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler", ' \
                   '"options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
@@ -667,7 +667,7 @@ def test_cmake_presets_options_single_config():
 def test_cmake_presets_multiple_settings_multi_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout.build_folder_vars=' \
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
@@ -789,3 +789,45 @@ def test_cmaketoolchain_sysroot():
     })
     client.run("create . --name=app --version=1.0")
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_presets_with_conanfile_txt():
+    c = TestClient()
+
+    c.run("new cmake_exe -d name=foo -d version=1.0")
+    os.unlink(os.path.join(c.current_folder, "conanfile.py"))
+    c.save({"conanfile.txt": textwrap.dedent("""
+        [generators]
+        CMakeToolchain
+
+        [layout]
+        cmake_layout
+        """)})
+
+    c.run("install .")
+    c.run("install . -s build_type=Debug")
+    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
+    presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
+    assert os.path.exists(presets_path)
+
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset Debug")
+        c.run_command("cmake --build --preset Debug")
+        c.run_command("./cmake-build-debug/foo")
+    else:
+        c.run_command("cmake --preset default")
+        c.run_command("cmake --build --preset Debug")
+        c.run_command("build\\Debug\\foo")
+
+    assert "Hello World Debug!" in c.out
+
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset Release")
+        c.run_command("cmake --build --preset Release")
+        c.run_command("./cmake-build-release/foo")
+    else:
+        c.run_command("cmake --build --preset Release")
+        c.run_command("build\\Release\\foo")
+
+    assert "Hello World Release!" in c.out

@@ -12,6 +12,7 @@ from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
+from conans.test.utils.mocks import MockOptions
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -159,6 +160,59 @@ def test_bazeldeps_interface_buildfiles():
         content = bazeldeps._get_dependency_buildfile_content(dependency)
         dependency_content = re.sub(r"\s", "", content)
         assert(dependency_content == 'load("@rules_cc//cc:defs.bzl","cc_import","cc_library")cc_library(name="depname",hdrs=glob(["include/**"]),includes=["include"],visibility=["//visibility:public"],)')
+
+
+def test_bazeldeps_shared_library_interface_buildfiles():
+    conanfile = ConanFile(Mock())
+    cpp_info = CppInfo()
+    cpp_info.libs = ["lib1"]
+    cpp_info.libdirs = ["lib"]
+    cpp_info.bindirs = ["bin"]
+    cpp_info.includedirs = ["include"]
+
+    options = MockOptions({"shared": True})
+    conanfile_dep = ConanFile(Mock())
+    conanfile_dep.options = options
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.ref = RecipeReference.loads("depname/1.0")
+    conanfile_dep._conan_node.transitive_deps = {}
+
+    package_folder = temp_folder()
+    save(os.path.join(package_folder, "lib", "lib1.lib"), "")
+    save(os.path.join(package_folder, "bin", "lib1.dll"), "")
+    cpp_info.set_relative_base_folder(package_folder)
+    conanfile_dep.folders.set_base_package(package_folder)
+
+    req = Requirement(RecipeReference.loads("depname/1.0"))
+    conanfile._conan_dependencies = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
+
+    bazeldeps = BazelDeps(conanfile)
+
+    dependency = next(iter(bazeldeps._conanfile.dependencies.host.values()))
+    dependency_content = re.sub(r"\s",
+                                "",
+                                bazeldeps._get_dependency_buildfile_content(dependency))
+    expected_content = """
+load("@rules_cc//cc:defs.bzl","cc_import","cc_library")
+
+cc_import(
+    name = "lib1_precompiled",
+    interface_library = "lib/lib1.lib",
+    shared_library = "bin/lib1.dll",
+)
+
+cc_library(
+    name = "depname",
+    hdrs=glob(["include/**"]),
+    includes=["include"],
+    visibility=["//visibility:public"],
+    deps = [
+        ":lib1_precompiled",
+    ],
+)
+"""
+    assert(dependency_content == re.sub(r"\s", "", expected_content))
 
 
 def test_bazeldeps_main_buildfile():

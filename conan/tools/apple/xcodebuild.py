@@ -32,6 +32,15 @@ class XcodeBuild(object):
         return "SDKROOT={}".format(sdk) if sdk else ""
 
     def build(self, xcodeproj, target=None):
+        """
+        Call to ``xcodebuild`` to build a Xcode project.
+
+        :param xcodeproj: the *xcodeproj* file to build.
+        :param target: the target to build, in case this argument is passed to the ``build()``
+                       method it will add the ``-target`` argument to the build system call. If not passed, it
+                       will build all the targets passing the ``-alltargets`` argument instead.
+        :return: the return code for the launched ``xcodebuild`` command.
+        """
         target = "-target {}".format(target) if target else "-alltargets"
         cmd = "xcodebuild -project {} -configuration {} -arch {} " \
               "{} {} {}".format(xcodeproj, self._build_type, self._arch, self._sdkroot,

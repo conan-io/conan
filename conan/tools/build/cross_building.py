@@ -31,9 +31,15 @@ def cross_building(conanfile=None, skip_x64_x86=False):
 
 def can_run(conanfile):
     """
-    Validates if the current build platform can run a file which is not for same arch
-    See https://github.com/conan-io/conan/issues/11035
+    Validates whether is possible to run a non-native app on the same architecture.
+    It’s an useful feature for the case your architecture can run more than one target.
+    For instance, Mac M1 machines can run both `armv8` and `x86_64`.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return: ``bool`` value from ``tools.build.cross_building:can_run`` if exists, otherwise,
+             it returns ``False`` if we are cross-building, else, ``True``.
     """
+    # Issue related: https://github.com/conan-io/conan/issues/11035
     allowed = conanfile.conf.get("tools.build.cross_building:can_run", check_type=bool)
     if allowed is None:
         return not cross_building(conanfile)

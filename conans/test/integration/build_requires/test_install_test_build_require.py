@@ -151,7 +151,7 @@ def test_build_require_conanfile_text(client):
     client.save({"conanfile.txt": "[tool_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -g VirtualBuildEnv")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuild", client.current_folder, f"mycmake{ext}")
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
@@ -161,7 +161,7 @@ def test_build_require_conanfile_text(client):
 def test_build_require_command_line_build_context(client):
     client.run("install --tool-requires=mycmake/1.0@ -g VirtualBuildEnv -pr:b=default")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuild", client.current_folder, f"mycmake{ext}")
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out

@@ -4,6 +4,7 @@ import textwrap
 import unittest
 
 import pytest
+from mock.mock import Mock
 from parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
@@ -146,6 +147,34 @@ OpenCV/2.4.10@phil/stable1111111111111111111111111111111111111111111111111111111
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):
             loader.load_conanfile_txt(file_path)
+
+    def test_layout_not_predefined(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    missing
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, None)
+            loader.load_conanfile_txt(file_path)
+        assert "Unknown predefined layout 'missing'" in str(exc.value)
+
+    def test_layout_multiple(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    cmake_layout
+                    vs_layout
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, None)
+            loader.load_conanfile_txt(file_path)
+        assert "Only one layout can be declared in the [layout] section of the conanfile.txt" \
+               in str(exc.value)
 
 
 class ImportModuleLoaderTest(unittest.TestCase):
