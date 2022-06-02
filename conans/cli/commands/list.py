@@ -166,6 +166,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         try:
             results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
         except NotFoundException:
+            # TODO: Remove this try-except whenever Artifactory is returning proper messages
             results[name] = {"error": f"'{ref}' was not found"}
         except Exception as e:
             results[name] = {"error": str(e)}
@@ -202,6 +203,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         try:
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
         except NotFoundException:
+            # TODO: Remove this try-except whenever Artifactory is returning proper messages
             results[name] = {"error": f"'{pref}' was not found"}
         except Exception as e:
             results[name] = {"error": str(e)}
@@ -253,6 +255,7 @@ def list_packages(conan_api, parser, subparser, *args):
                 ref.revision = None
                 ref = conan_api.list.latest_recipe_revision(ref, remote)
             except NotFoundException:
+                # TODO: Remove this try-except whenever Artifactory is returning proper messages
                 results[name] = {"error": f"'{ref}' was not found"}
                 continue
             except Exception as e:
@@ -265,6 +268,7 @@ def list_packages(conan_api, parser, subparser, *args):
             # TODO: This should error in the cache if the revision doesn't exist
             results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
         except NotFoundException:
+            # TODO: Remove this try-except whenever Artifactory is returning proper messages
             results[name] = {"error": f"'{ref}' was not found"}
         except Exception as e:
             results[name] = {"error": str(e)}
