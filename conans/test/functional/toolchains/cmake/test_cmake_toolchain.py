@@ -798,14 +798,12 @@ def test_cmake_presets_with_conanfile_txt():
     c.run("new cmake_exe -d name=foo -d version=1.0")
     os.unlink(os.path.join(c.current_folder, "conanfile.py"))
     c.save({"conanfile.txt": textwrap.dedent("""
+        [generators]
+        CMakeToolchain
 
-    [generators]
-    CMakeToolchain
-
-    [layout]
-    cmake_layout
-
-    """)})
+        [layout]
+        cmake_layout
+        """)})
 
     c.run("install .")
     c.run("install . -s build_type=Debug")

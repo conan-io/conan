@@ -7,7 +7,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -174,7 +174,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
 
 
 @pytest.mark.skipif(platform.system() not in ["Darwin"], reason="Only affects apple platforms")
-@pytest.mark.tool_autotools()
+@pytest.mark.tool("autotools")
 def test_autotools_fix_shared_libs():
     """
     From comments in: https://github.com/conan-io/conan/pull/11365
@@ -198,7 +198,7 @@ def test_autotools_fix_shared_libs():
     and recreate this whole situation to check that we are correctly fixing the dylibs
     """
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=autotools_lib")
+    client.run("new autotools_lib -d name=hello -d version=0.1")
 
     conanfile = textwrap.dedent("""
         import os
@@ -291,9 +291,9 @@ def test_autotools_fix_shared_libs():
 
     client.run("create . -o hello:shared=True -tf=None")
 
-    package_id = client.created_package_id("hello/0.1")
-    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
-    package_folder = client.cache.package_layout(pref.ref).package(pref)
+    ref = RecipeReference.loads("pkg/0.1")
+    pref = client.get_latest_package_reference(ref)
+    package_folder = client.get_latest_pkg_layout(pref).package()
 
     # install name fixed
     client.run_command("otool -D {}".format(os.path.join(package_folder, "lib", "libhello.0.dylib")))

@@ -293,6 +293,12 @@ class GraphBinariesAnalyzer(object):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc
                     self._evaluate_package_id(node)
+                if node.path is not None and node.path.endswith(".txt"):
+                    # To support the ``[layout]`` in conanfile.txt
+                    # TODO: Refactorize this a bit, the call to ``layout()``
+                    if hasattr(node.conanfile, "layout"):
+                        with conanfile_exception_formatter(node.conanfile, "layout"):
+                            node.conanfile.layout()
                 continue
             self._evaluate_package_id(node)
             if lockfile:

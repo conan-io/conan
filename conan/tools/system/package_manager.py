@@ -82,7 +82,7 @@ class _SystemPackageManagerTool(object):
                 errors.append(e)
 
         for error in errors:
-            self._conanfile.output.warn(str(error))
+            self._conanfile.output.warning(str(error))
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, **kwargs):
