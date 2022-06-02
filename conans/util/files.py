@@ -76,15 +76,6 @@ def chdir(newdir):
         os.chdir(old_path)
 
 
-def decode_text(text, encoding="auto"):
-    bom_length = 0
-    if encoding == "auto":
-        encoding, bom_length = _detect_encoding(text)
-        if encoding is None:
-            return text.decode("utf-8", "ignore")  # Ignore not compatible characters
-    return text[bom_length:].decode(encoding)
-
-
 def touch(fname, times=None):
     os.utime(fname, times)
 
@@ -195,11 +186,11 @@ def save_files(path, files, only_if_modified=False, encoding="utf-8"):
         save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
 
 
-def load(path, binary=False, encoding="auto"):
+def load(path, binary=False, encoding="utf-8"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        return tmp if binary else decode_text(tmp, encoding)
+        return tmp if binary else tmp.decode(encoding=encoding)
 
 
 def get_abs_path(folder, origin):
@@ -310,7 +301,7 @@ def exception_message_safe(exc):
     try:
         return str(exc)
     except Exception:
-        return decode_text(repr(exc))
+        return repr(exc)
 
 
 def merge_directories(src, dst, excluded=None):
