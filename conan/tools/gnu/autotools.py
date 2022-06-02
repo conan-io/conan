@@ -66,7 +66,7 @@ class Autotools(object):
                        building of e.g., docs, shared libraries or install for some AutoTools
                        projects
         :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
-        ``make`` call.
+                     ``make`` call.
         """
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw() else "make")
@@ -114,8 +114,8 @@ class Autotools(object):
         This is just an "alias" of ``self.make(target="install")``
 
         :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
-        ``make`` call. By default an argument ``DESTDIR=self.package_folder`` is added to the
-        call if the passed value is ``None``.
+                     ``make`` call. By default an argument ``DESTDIR=self.package_folder`` is added to the
+                     call if the passed value is ``None``.
         """
         # FIXME: we have to run configure twice because the local flow won't work otherwise
         #  because there's no package_folder until the package step
@@ -130,7 +130,7 @@ class Autotools(object):
         Call ``autoreconf``
 
         :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
-        ``autoreconf`` call.
+                     ``autoreconf`` call.
         """
         args = args or []
         command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
