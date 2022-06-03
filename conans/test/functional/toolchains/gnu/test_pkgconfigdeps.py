@@ -1,6 +1,7 @@
 import glob
 import os
 import platform
+import shutil
 import textwrap
 
 import pytest
@@ -621,5 +622,38 @@ def test_pkg_configdeps_definitions_escape():
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g PkgConfigDeps")
     client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
-    assert r'flag2=\"my flag2\" flag1=\"my flag1\" -DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out
+    assert r'flag2=\"my flag2\" flag1=\"my flag1\" ' \
+           r'-DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out
 
+
+def test_pkgconfigdeps_with_build_and_test_requires():
+    """
+    PkgConfigDeps has to create any build and test requires declared on the recipe.
+
+    Related issue: https://github.com/conan-io/conan/issues/11376
+    """
+    client = TestClient()
+    app_folder = os.path.join(client.current_folder, "app")
+    test_folder = os.path.join(client.current_folder, "test")
+    os.makedirs(app_folder)
+    os.makedirs(test_folder)
+    with client.chdir(app_folder):
+        client.run("new app/1.0 -m cmake_lib")
+        # client.run("new cmake_lib -d name=app -d version=1.0")
+        client.run("create .")
+    with client.chdir(test_folder):
+        client.run("new test/1.0 -m cmake_lib")
+        # client.run("new cmake_lib -d name=test -d version=1.0")
+        client.run("create .")
+    # Create library having build and test requires
+    conanfile = textwrap.dedent(r'''
+        from conans import ConanFile
+        class HelloLib(ConanFile):
+            def build_requirements(self):
+                self.build_requires('app/1.0')
+                self.test_requires('test/1.0')
+        ''')
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -g PkgConfigDeps")
+    assert "Description: Conan package: test" in client.load("test.pc")
+    assert "Description: Conan package: app" in client.load("app.pc")
