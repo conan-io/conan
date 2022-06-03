@@ -2,6 +2,8 @@ import glob
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -596,6 +598,7 @@ def test_components_and_package_pc_creation_order():
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
 
 
+@pytest.mark.tool("cmake")
 def test_pkgconfigdeps_with_test_requires():
     """
     PkgConfigDeps has to create any test requires declared on the recipe.
