@@ -674,39 +674,39 @@ def test_cmake_presets_multiple_settings_multi_config():
     settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=dynamic " \
                "-s compiler.cppstd=14"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic-14", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic-14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "default-dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "Release-dynamic-14"
-    assert presets["buildPresets"][0]["configurePreset"] == "default-dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "dynamic-14-default"
+    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14-default"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-dynamic-14", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic-14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "default-dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "Release-dynamic-14"
-    assert presets["buildPresets"][1]["name"] == "Debug-dynamic-14"
-    assert presets["buildPresets"][0]["configurePreset"] == "default-dynamic-14"
-    assert presets["buildPresets"][1]["configurePreset"] == "default-dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "dynamic-14-default"
+    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
+    assert presets["buildPresets"][1]["name"] == "dynamic-14-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14-default"
+    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14-default"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
     settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
                "-s compiler.cppstd=17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build-static-17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "static-17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the msvc dynamic/14 the [1] is the static/17
@@ -714,12 +714,12 @@ def test_cmake_presets_multiple_settings_multi_config():
     presets = json.loads(load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "default-static-17"
-    assert presets["buildPresets"][0]["name"] == "Release-static-17"
-    assert presets["buildPresets"][0]["configurePreset"] == "default-static-17"
+    assert presets["configurePresets"][0]["name"] == "static-17-default"
+    assert presets["buildPresets"][0]["name"] == "static-17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "static-17-default"
 
     # We can build with cmake manually
-    client.run_command("cmake . --preset default-dynamic-14")
+    client.run_command("cmake . --preset dynamic-14-default")
 
     client.run_command("cmake --build --preset dynamic-14-release")
     client.run_command("build\\dynamic-14\\Release\\hello")
