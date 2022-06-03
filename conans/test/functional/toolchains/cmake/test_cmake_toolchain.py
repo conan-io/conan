@@ -362,7 +362,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install . -pr=./profile -if=install")
     client.run("build . -if=install")
-    exe = "build/release/example" if platform.system() != "Windows" else r"build\Release\example.exe"
+    exe = "build/Release/example" if platform.system() != "Windows" else r"build\Release\example.exe"
     client.run_command(exe)
     assert 'escape=partially "escaped"' in client.out
     assert 'spaces=me you' in client.out
@@ -605,19 +605,19 @@ def test_cmake_presets_multiple_settings_single_config():
     if platform.system() == "Darwin":
         client.run_command("cmake . --preset apple-clang-12.0-gnu17-release")
         client.run_command("cmake --build --preset apple-clang-12.0-gnu17-release")
-        client.run_command("./build/apple-clang-12.0-gnu17/release/hello")
+        client.run_command("./build/apple-clang-12.0-gnu17/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2017" in client.out
 
         client.run_command("cmake . --preset apple-clang-12.0-gnu17-debug")
         client.run_command("cmake --build --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("./build/apple-clang-12.0-gnu17/debug/hello")
+        client.run_command("./build/apple-clang-12.0-gnu17/Debug/hello")
         assert "Hello World Debug!" in client.out
         assert "__cplusplus2017" in client.out
 
         client.run_command("cmake . --preset apple-clang-13-gnu20-release")
         client.run_command("cmake --build --preset apple-clang-13-gnu20-release")
-        client.run_command("./build/apple-clang-13-gnu20/release/hello")
+        client.run_command("./build/apple-clang-13-gnu20/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out
 
