@@ -205,7 +205,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
         except NotFoundException:
             # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"Recipe not found: '{pref}'. [Remote: {remote.name}]"}
+            results[name] = {"error": f"Recipe or package not found: '{pref}'. [Remote: {remote.name}]"}
         except Exception as e:
             results[name] = {"error": str(e)}
 
