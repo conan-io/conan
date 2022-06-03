@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from requests.models import Response
 
 from conans.errors import AuthenticationException
@@ -174,6 +175,7 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("There are no matching recipe references", client.out)
 
 
+@pytest.mark.tool("cmake")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
