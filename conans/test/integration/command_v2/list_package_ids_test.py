@@ -108,9 +108,9 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         Local Cache:
           There are no packages
         remote1:
-          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote1]
+          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote1]
         remote2:
-          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote2]
+          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote2]
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
