@@ -1,6 +1,5 @@
 import os
 import platform
-import textwrap
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
@@ -14,7 +13,7 @@ from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
-from conans.util.files import load, mkdir, save
+from conans.util.files import mkdir, save, load_user_encoded
 
 
 def _unquote(text):
@@ -147,7 +146,10 @@ def _check_correct_cppstd(settings):
         """
 
         profile_path = self.get_profile_path(profile_name, cwd)
-        text = load(profile_path)
+        try:
+            text = load_user_encoded(profile_path)
+        except Exception as e:
+            raise ConanException(f"Cannot load profile:\n{e}")
 
         # All profiles will be now rendered with jinja2 as first pass
         base_path = os.path.dirname(profile_path)

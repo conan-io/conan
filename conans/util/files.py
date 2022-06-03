@@ -193,6 +193,37 @@ def load(path, binary=False, encoding="utf-8"):
         return tmp if binary else tmp.decode(encoding=encoding)
 
 
+def load_user_encoded(path):
+    """ Exclusive for user side read-only files:
+     - conanfile.txt
+     - profile files
+     """
+    with open(path, 'rb') as handle:
+        text = handle.read()
+
+    import codecs
+    encodings = {codecs.BOM_UTF8: "utf_8_sig",
+                 codecs.BOM_UTF32_BE: "utf_32_be",
+                 codecs.BOM_UTF32_LE: "utf_32_le",
+                 codecs.BOM_UTF16_BE: "utf_16_be",
+                 codecs.BOM_UTF16_LE: "utf_16_le",
+                 b'\x2b\x2f\x76\x38': "utf_7",
+                 b'\x2b\x2f\x76\x39': "utf_7",
+                 b'\x2b\x2f\x76\x2b': "utf_7",
+                 b'\x2b\x2f\x76\x2f': "utf_7",
+                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
+    for bom, encoding in encodings.items():
+        if text.startswith(bom):
+            return text[len(bom):].decode(encoding)
+
+    for decoder in ["utf-8", "Windows-1252"]:
+        try:
+            return text.decode(decoder)
+        except UnicodeDecodeError as e:
+            continue
+    raise Exception(f"Unknown encoding of file: {path}\nIt is recommended to use utf-8 encoding")
+
+
 def get_abs_path(folder, origin):
     if folder:
         if os.path.isabs(folder):
