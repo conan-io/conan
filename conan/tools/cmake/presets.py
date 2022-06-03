@@ -26,7 +26,7 @@ def _build_preset_name(conanfile):
             return "{}-{}".format(custom_conf, build_type.lower())
         else:
             return custom_conf
-    return build_type.lower() or "default"
+    return build_type.lower() if build_type else "default"
 
 
 def _configure_preset_name(conanfile, multiconfig):

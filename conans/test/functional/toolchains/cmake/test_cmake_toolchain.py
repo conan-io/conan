@@ -379,7 +379,7 @@ def test_cmake_toolchain_definitions_complex_strings():
 
     client.run("install . -pr=./profile -if=install -s build_type=Debug")
     client.run("build . -if=install -s build_type=Debug")
-    exe = "cmake-build-debug/example" if platform.system() != "Windows" else r"build\Debug\example.exe"
+    exe = "build/Debug/example" if platform.system() != "Windows" else r"build\Debug\example.exe"
     client.run_command(exe)
     assert 'escape_debug=debug partially "escaped"' in client.out
     assert 'spaces_debug=debug me you' in client.out
