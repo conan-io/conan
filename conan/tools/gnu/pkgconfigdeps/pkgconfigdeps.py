@@ -15,8 +15,12 @@ class PkgConfigDeps(object):
         :return: A dict with file names as keys and contents as values
         """
         pc_files = {}
+        # Get all the dependencies
         host_req = self._conanfile.dependencies.host
-        for _, dep in host_req.items():
+        test_req = self._conanfile.dependencies.test
+        for _, dep in list(host_req.items()) + list(test_req.items()):
+            # Require is not used at the moment, but its information could be used,
+            # and will be used in Conan 2.0
             dep_name = str(dep)
             for pc_name, pc_content in get_pc_files_and_content(self._conanfile, dep).items():
                 if pc_name in pc_files:

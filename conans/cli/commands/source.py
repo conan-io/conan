@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conans.cli.command import conan_command, COMMAND_GROUPS
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import add_reference_args
 from conans.cli.conan_app import ConanApp
@@ -52,4 +52,4 @@ def source(conan_api, parser, *args):
     conanfile.folders.set_base_build(None)
     conanfile.folders.set_base_package(None)
 
-    run_source_method(conanfile, app.hook_manager, coanfile_path=path)
+    run_source_method(conanfile, app.hook_manager)
