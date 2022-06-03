@@ -184,7 +184,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         remote1:
           {pref.repr_notime()}.*
         remote2:
-          ERROR: Recipe not found:*""")
+          ERROR: Recipe or package not found:*""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
