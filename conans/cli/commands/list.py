@@ -137,6 +137,7 @@ def list_recipes(conan_api, parser, subparser, *args):
         try:
             results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
         except NotFoundException:
+            # TODO: Remove this try-except whenever Artifactory is returning proper messages
             results[name] = {"error": f'There are not recipes matching {args.query}'}
         except Exception as e:
             results[name] = {"error": str(e)}
