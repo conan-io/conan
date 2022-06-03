@@ -101,7 +101,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         Local Cache:
           There are no matching package references
         remote1:
-          ERROR: Recipe not found: 'whatever/0.1:3fb49604f9c2f729b85ba3115852006824e72cab'. [Remote: remote1]
+          ERROR: Recipe or package not found: 'whatever/0.1:3fb49604f9c2f729b85ba3115852006824e72cab'. [Remote: remote1]
         remote2:
           ERROR: Recipe not found: 'whatever/0.1:3fb49604f9c2f729b85ba3115852006824e72cab'. [Remote: remote2]
         """)
