@@ -167,7 +167,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
         except NotFoundException:
             # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"'{ref}' was not found"}
+            results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
         except Exception as e:
             results[name] = {"error": str(e)}
 
@@ -204,7 +204,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
         except NotFoundException:
             # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"'{pref}' was not found"}
+            results[name] = {"error": f"Recipe not found: '{pref}'. [Remote: {remote.name}]"}
         except Exception as e:
             results[name] = {"error": str(e)}
 
@@ -256,7 +256,7 @@ def list_packages(conan_api, parser, subparser, *args):
                 ref = conan_api.list.latest_recipe_revision(ref, remote)
             except NotFoundException:
                 # TODO: Remove this try-except whenever Artifactory is returning proper messages
-                results[name] = {"error": f"'{ref}' was not found"}
+                results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
                 continue
             except Exception as e:
                 results[name] = {"error": str(e)}
@@ -269,7 +269,7 @@ def list_packages(conan_api, parser, subparser, *args):
             results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
         except NotFoundException:
             # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"'{ref}' was not found"}
+            results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
         except Exception as e:
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
