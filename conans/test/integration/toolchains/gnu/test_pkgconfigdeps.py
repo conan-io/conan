@@ -18,7 +18,7 @@ def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             name = "MyLib"
@@ -68,7 +68,7 @@ def test_empty_dirs():
     # Adding in package_info all the empty directories
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             name = "MyLib"
@@ -100,7 +100,7 @@ def test_empty_dirs():
 
 def test_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -127,7 +127,7 @@ def test_system_libs():
 def test_multiple_include():
     # https://github.com/conan-io/conan/issues/7056
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -158,7 +158,7 @@ def test_multiple_include():
 def test_custom_content():
     # https://github.com/conan-io/conan/issues/7661
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
         import textwrap
@@ -194,7 +194,7 @@ def test_custom_content():
 
 def test_custom_content_and_version_components():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
         import textwrap
@@ -243,7 +243,7 @@ def test_pkg_with_public_deps_and_component_requires():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -257,7 +257,7 @@ def test_pkg_with_public_deps_and_component_requires():
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "first/0.1"
@@ -323,7 +323,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -339,7 +339,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
     client.run("create . other/1.0@")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "other/1.0"
@@ -384,7 +384,7 @@ def test_pkg_config_name_full_aliases():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -399,7 +399,7 @@ def test_pkg_config_name_full_aliases():
     client.run("create . first/0.3@")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "first/0.3"
@@ -474,7 +474,7 @@ def test_duplicated_names_warnings():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
 
@@ -490,7 +490,7 @@ def test_duplicated_names_warnings():
     client.run("create . pkgb/1.0@")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "pkgb/1.0"
@@ -554,7 +554,7 @@ def test_components_and_package_pc_creation_order():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
 
@@ -567,7 +567,7 @@ def test_components_and_package_pc_creation_order():
     client.run("create . opencl/1.0@")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
             requires = "opencl/1.0"
@@ -617,7 +617,7 @@ def test_pkgconfigdeps_with_test_requires():
         client.run("create .")
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''
-        from conans import ConanFile
+        from conan import ConanFile
         class HelloLib(ConanFile):
             def build_requirements(self):
                 self.test_requires('app/1.0')
