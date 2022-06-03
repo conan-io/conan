@@ -596,31 +596,3 @@ def test_components_and_package_pc_creation_order():
     assert "Requires:" not in pc_content
     pc_content = client.load("pkgb.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
-
-
-@pytest.mark.tool("cmake")
-def test_pkgconfigdeps_with_test_requires():
-    """
-    PkgConfigDeps has to create any test requires declared on the recipe.
-
-    Related issue: https://github.com/conan-io/conan/issues/11376
-    """
-    client = TestClient()
-    with client.chdir("app"):
-        client.run("new cmake_lib -d name=app -d version=1.0")
-        client.run("create . -tf None")
-    with client.chdir("test"):
-        client.run("new cmake_lib -d name=test -d version=1.0")
-        client.run("create . -tf None")
-    # Create library having build and test requires
-    conanfile = textwrap.dedent(r'''
-        from conan import ConanFile
-        class HelloLib(ConanFile):
-            def build_requirements(self):
-                self.test_requires('app/1.0')
-                self.test_requires('test/1.0')
-        ''')
-    client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("install . -g PkgConfigDeps")
-    assert "Description: Conan package: test" in client.load("test.pc")
-    assert "Description: Conan package: app" in client.load("app.pc")
