@@ -8,6 +8,7 @@ from six import string_types
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
+from conans.client.subsystems import command_env_wrapper
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
@@ -387,14 +388,9 @@ class ConanFile(object):
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
-                elif self.win_bash:  # New, Conan 2.0
-                    from conans.client.subsystems import run_in_windows_bash
-                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            from conan.tools.env.environment import environment_wrap_command
-            if env:
-                wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
-            else:
-                wrapped_cmd = cmd
+            envfiles_folder = self.generators_folder or os.getcwd()
+            _env = [_env] if _env and isinstance(_env, str) else []
+            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:

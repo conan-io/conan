@@ -4,7 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_file_name, get_find_mode
+from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
 """
 
 foo-release-x86_64-data.cmake
@@ -16,7 +16,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "" if not self.find_module_mode else "module-"
+        data_fname = "" if not self.generating_module else "module-"
         data_fname += "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
@@ -170,9 +170,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
-                    ret.append(get_file_name(req))
+                    ret.append(get_cmake_package_name(req))
         elif direct_host:
-            ret = [get_file_name(r) for r in direct_host.values()]
+            ret = [get_cmake_package_name(r, self.generating_module) for r in direct_host.values()]
 
         return ret
 
@@ -182,9 +182,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
-            dep_file_name = get_file_name(dep)
+            dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)
-            default_value = "NO_MODULE" if not self.find_module_mode else "MODULE"
+            default_value = "NO_MODULE" if not self.generating_module else "MODULE"
             values = {
                 FIND_MODE_NONE: "",
                 FIND_MODE_CONFIG: "NO_MODULE",

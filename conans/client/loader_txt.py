@@ -8,8 +8,18 @@ class ConanFileTextLoader(object):
     def __init__(self, input_text):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
-                                                         "imports", "build_requires", "tool_requires"],
+                                                         "imports", "build_requires",
+                                                         "tool_requires", "layout"],
                                            parse_lines=True)
+
+    @property
+    def layout(self):
+        """returns the declared layout"""
+        tmp = [r.strip() for r in self._config_parser.layout.splitlines()]
+        if len(tmp) > 1:
+            raise ConanException("Only one layout can be declared in the [layout] section of "
+                                 "the conanfile.txt")
+        return tmp[0] if tmp else None
 
     @property
     def requirements(self):
