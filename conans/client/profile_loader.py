@@ -87,7 +87,7 @@ def _check_correct_cppstd(settings):
         compiler = settings.get("compiler")
         if compiler == "gcc":
             mver = {"20": "8",
-                    "17": "7",
+                    "17": "5",
                     "14": "4.8",
                     "11": "4.3"}.get(cppstd)
         elif compiler == "clang":
