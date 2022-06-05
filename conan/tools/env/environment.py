@@ -359,8 +359,7 @@ class EnvVars:
            echo "echo Restoring environment" >> "{deactivate_file}"
            for v in {vars}
            do
-               if [-v v]
-               then
+               if [ ${{v+x}} ]; then
                    value=$(printenv $v)
                    echo export "$v='$value'" >> "{deactivate_file}"
                else
