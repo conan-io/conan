@@ -282,7 +282,8 @@ class PythonRequiresInfo:
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
     # TODO: Generalize
-    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires", "conf"],
+    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires", "conf",
+                                 "python_requires", "build_requires"],
                           raise_unexpected_field=False)
 
     def _loads_settings(settings_text):
@@ -297,17 +298,23 @@ def load_binary_info(text):
     settings = _loads_settings(parser.settings)
     settings_target = _loads_settings(parser.settings_target)
     options = Options.loads(parser.options)
-    # TODO: We need to generalize this reading.
-    requires = parser.requires.splitlines() if parser.requires else []
-    requires = [r for r in requires if r]
-    # TODO: Temporary reading of conf as raw lines
-    conf = parser.conf.splitlines() if parser.conf else []
+
+    def parse_list(lines):
+        ret = lines.splitlines() if lines else []
+        return [r for r in ret if r]
+
+    requires = parse_list(parser.requires)
+    conf = parse_list(parser.conf)
+    python_requires = parse_list(parser.python_requires)
+    build_requires = parse_list(parser.build_requires)
 
     conan_info_json = {"settings": dict(settings),
                        "options": dict(options.serialize())["options"],
                        "requires": requires,
                        "settings_target": dict(settings_target),
-                       "conf": conf
+                       "conf": conf,
+                       "python_requires": python_requires,
+                       "build_requires": build_requires,
                        }
     return conan_info_json
 
