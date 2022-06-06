@@ -27,8 +27,7 @@ def test_lock_packages(requires):
     assert NO_SETTINGS_PACKAGE_ID in lock
 
     with environment_update({"MYVAR": "MYVALUE2"}):
-        # Need to add --build=pkg/* so it is rebuilt
-        client.run("create pkg --name=pkg --version=0.1 --build=pkg/*")
+        client.run("create pkg --name=pkg --version=0.1")
     prev2 = client.created_package_revision("pkg/0.1")
     assert prev2 != prev
 

@@ -406,14 +406,13 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
     client.run("create . --name=hello_host --version=0.1 {}".format(settings))
-    client.run("create . --name=hello_build --version=0.1 --build-require ")
+    client.run("create . --name=hello_build --version=0.1 --build-require")
 
-    pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile,
-                              args=settings + " --build=*")
+    pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
     host_folder = client.get_latest_pkg_layout(pref_host).base_folder
     host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
     pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
-                               conanfile, args="--build-require --build=*")
+                               conanfile, args="--build-require")
     build_folder = client.get_latest_pkg_layout(pref_build).base_folder
     build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
 

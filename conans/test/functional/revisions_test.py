@@ -40,7 +40,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("remove {}#*:{} -f -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
         with environment_update({"MY_VAR": "2"}):
-            pref2 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
         the_time = the_time + 10.0
         with patch.object(RevisionList, '_now', return_value=the_time):
@@ -185,7 +185,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             client.upload_all(self.ref)
 
         with environment_update({"MY_VAR": "2"}):
-            pref2 = client2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref2 = client2.create(self.ref, conanfile=conanfile)
 
         with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
             client2.upload_all(self.ref)
@@ -309,12 +309,12 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
 
         # If I remove the ref with valid RREV, the packages are removed
-        pref1 = client.create(self.ref, args="--build=*")
+        pref1 = client.create(self.ref)
         client.run("remove {} -f".format(repr(pref1.ref)))
         self.assertFalse(client.package_exists(pref1))
 
         # If I remove the ref without RREV but specifying PREV it raises
-        pref1 = client.create(self.ref, args="--build=*")
+        pref1 = client.create(self.ref)
         tmp = copy.copy(pref1.ref)
         tmp.revision = None
         command = "remove {}:{}#{} -f".format(repr(tmp), pref1.package_id, pref1.revision)
@@ -323,14 +323,14 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertIn("Specify a recipe revision", client.out)
 
         # A wrong PREV doesn't remove the PREV
-        pref1 = client.create(self.ref, args="--build=*")
+        pref1 = client.create(self.ref)
         command = "remove {}:{}#fakeprev -f".format(repr(pref1.ref), pref1.package_id)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Binary package not found", client.out)
 
         # Everything correct, removes the unique local package revision
-        pref1 = client.create(self.ref, args="--build=*")
+        pref1 = client.create(self.ref)
         command = "remove {}:{}#{} -f".format(repr(pref1.ref), pref1.package_id, pref1.revision)
         client.run(command)
         self.assertFalse(client.package_exists(pref1))
@@ -421,7 +421,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
             self.c_v2.upload_all(pref2.ref)
 
         with environment_update({"MY_VAR": "2"}):
-            pref2b = self.c_v2.create(self.ref, conanfile=rev2_conanfile, args="--build=*")
+            pref2b = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
             self.c_v2.upload_all(pref2b.ref)
 
         # Check created revisions
@@ -793,7 +793,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         client.upload_all(self.ref)
 
         with environment_update({"MY_VAR": "2"}):
-            pref2 = client.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref2 = client.create(self.ref, conanfile=conanfile)
 
         self.assertNotEqual(pref.revision, pref2.revision)
 
@@ -819,7 +819,7 @@ class SCMRevisions(unittest.TestCase):
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile, args="--build=*")
+        client.create(ref, conanfile=conanfile)
         self.assertEqual(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
@@ -895,12 +895,12 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref1.revision)
         with environment_update({"MY_VAR": "2"}):
-            pref2 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref2.revision)
         with environment_update({"MY_VAR": "3"}):
-            pref3 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref3.revision)
@@ -961,10 +961,10 @@ class ServerRevisionsIndexes(unittest.TestCase):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         with environment_update({"MY_VAR": "2"}):
-            pref2 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         with environment_update({"MY_VAR": "3"}):
-            pref3 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
         # Delete the package revisions (all of them have the same ref#rev and id)
@@ -974,7 +974,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run(command.format(pref1.revision))
 
         with environment_update({"MY_VAR": "4"}):
-            pref4 = self.c_v2.create(self.ref, conanfile=conanfile, args="--build=*")
+            pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.run("upload {} -r default -c".format(pref4.repr_notime()))
 
         pref = copy.copy(pref1)
@@ -990,7 +990,7 @@ def test_touching_other_server():
                            ("remote2", None)])  # None server will crash if touched
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
-    c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows --build=*")
+    c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")
     c.run("upload * -c -r=remote1")
     c.run("remove * -f")
 

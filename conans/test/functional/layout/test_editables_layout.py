@@ -98,7 +98,7 @@ def test_cpp_info_editable():
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . --name=lib --version=1.0 --build=*")
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
 
@@ -237,7 +237,7 @@ def test_cpp_info_components_editable():
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . --name=lib --version=1.0 --build=*")
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
 

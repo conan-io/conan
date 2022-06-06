@@ -296,7 +296,7 @@ class MyPkg(ConanFile):
         client.run('create . --user=user --channel=channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
-        client.run('create . --user=user --channel=channel --build=*')
+        client.run('create . --user=user --channel=channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
     def test_requires_without_user_channel(self):
@@ -376,3 +376,22 @@ def test_lockfile_input_not_specified():
     client.run("lock create . --lockfile-out locks/conan.lock")
     client.run("create . --lockfile-out locks/conan.lock")
     assert "Generated lockfile:" in client.out
+
+
+def test_create_build_missing():
+    """ test the --build=missing:pattern syntax
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0")})
+    c.run("create dep -s os=Windows")
+    c.run("create pkg -s os=Windows")
+    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Build")})
+    # Now avoid rebuilding
+    c.run("create pkg -s os=Windows --build=missing:pkg")
+    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Cache")})
+    assert "Calling build()" not in c.out
+    # but dependency without binary will fail
+    c.run("create pkg -s os=Linux --build=missing:pkg", assert_error=True)
+    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Cache")})
+    assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out

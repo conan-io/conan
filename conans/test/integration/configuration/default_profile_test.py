@@ -174,7 +174,6 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        client.run("remove name* -f")
         with environment_update({'CONAN_DEFAULT_PROFILE': default_profile_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)
@@ -186,7 +185,6 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        client.run("remove name* -f")
         with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)
@@ -194,7 +192,6 @@ class MyConanfile(ConanFile):
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
-        client.run("remove name* -f")
         with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel",
                        assert_error=True)

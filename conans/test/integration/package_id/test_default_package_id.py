@@ -38,11 +38,11 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     c.run("create consumer -o dep/*:myopt=True")
     pid1 = c.created_package_id("consumer/0.1")
     c.run("create consumer -o dep/*:myopt=False")
+    pid2 = c.created_package_id("consumer/0.1")
     if different_id:
-        pid2 = c.created_package_id("consumer/0.1")
         assert pid1 != pid2
     else:
-        c.assert_listed_binary({"consumer/0.1": (pid1, "Cache")})
+        assert pid1 == pid2
 
 
 @pytest.mark.parametrize("typedep, versiondep, typeconsumer, different_id",
@@ -73,8 +73,8 @@ def test_default_package_id_versions(typedep, versiondep, typeconsumer, differen
 
     c.run(f"create dep --version={versiondep}")
     c.run("create consumer")
+    pid2 = c.created_package_id("consumer/0.1")
     if different_id:
-        pid2 = c.created_package_id("consumer/0.1")
         assert pid1 != pid2
     else:
-        c.assert_listed_binary({"consumer/0.1": (pid1, "Cache")})
+        assert pid1 == pid2

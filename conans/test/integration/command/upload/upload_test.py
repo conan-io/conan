@@ -74,8 +74,7 @@ class UploadTest(unittest.TestCase):
 
         if platform.system() == "Linux":
             client.run("remove '*' -f")
-            client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"),
-                          args="--build=*")
+            client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
             os.system('chmod +x "{}"'.format(package_file_path))
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
             client.run("upload * --confirm -r default")
@@ -542,7 +541,7 @@ class UploadTest(unittest.TestCase):
         rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         # Upload same with client2
-        client2.create(ref, args="--build=*")
+        client2.create(ref)
         client2.run("upload lib/1.0@conan/testing -r default")
         self.assertIn(f"lib/1.0@conan/testing#{rrev} already in "
                       "server, skipping upload", client2.out)
@@ -617,7 +616,7 @@ class UploadTest(unittest.TestCase):
                             inputs=["user", "password"])
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
-        client.run("create . --user=user --channel=testing --build=*")
+        client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing -r default")
         assert "Uploading hello0/1.2.1@user/testing" in client.out
@@ -677,11 +676,9 @@ def populate_client():
             conanfile += "\n"*i  # Create 2 rrev
             for j in range(2):  # Create 2 prev
                 with environment_update({'var_test': str(j)}):
-                    pref = client.create(ref, args="-s build_type=Debug --build=*",
-                                         conanfile=conanfile)
+                    pref = client.create(ref, args="-s build_type=Debug", conanfile=conanfile)
                     ret[pref.ref].append(pref)
-                    pref = client.create(ref, args="-s build_type=Release --build=*",
-                                         conanfile=conanfile)
+                    pref = client.create(ref, args="-s build_type=Release", conanfile=conanfile)
                     ret[pref.ref].append(pref)
     return client, ret
 

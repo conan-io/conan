@@ -209,8 +209,7 @@ def populated_client():
     # Two package revisions for bar/1.1 (Release)
     for _i in range(2):
         with environment_update({'foo_test': str(_i)}):
-            # Force the rebuild of "bar", because now otherwise it is --build=missing(bar)
-            client.run("create . --name=bar --version=1.1 -s build_type=Release --build=bar/*")
+            client.run("create . --name=bar --version=1.1 -s build_type=Release")
     client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
     prefs = _get_revisions_packages(client, bar_rrev2_release, False)
