@@ -20,8 +20,6 @@ def update_file(file_path, new_content):
     file_name = os.path.basename(file_path)
 
     if not os.path.exists(file_path):
-        out.warning(f"Migration: This conan installation does not have {file_name} yet")
-        out.warning(f"Nothing to migrate here, {file_name} will be generated automatically")
         return
 
     content = load(file_path)

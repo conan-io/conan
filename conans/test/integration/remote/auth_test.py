@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from requests.models import Response
 
 from conans.errors import AuthenticationException
