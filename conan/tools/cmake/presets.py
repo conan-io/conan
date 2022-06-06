@@ -32,10 +32,15 @@ def _build_preset_name(conanfile):
 def _configure_preset_name(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     custom_conf = get_build_folder_custom_vars(conanfile)
-    suffix = "default" if multiconfig or not build_type else str(build_type).lower()
+
+    if multiconfig or not build_type:
+        return "default" if not custom_conf else custom_conf
+
     if custom_conf:
-        return "{}-{}".format(custom_conf, suffix)
-    return suffix
+        return "{}-{}".format(custom_conf, str(build_type).lower())
+    else:
+        return str(build_type).lower()
+
 
 
 def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):

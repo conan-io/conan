@@ -681,9 +681,9 @@ def test_cmake_presets_multiple_settings_multi_config():
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "dynamic-14-default"
+    assert presets["configurePresets"][0]["name"] == "dynamic-14"
     assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14-default"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
@@ -695,11 +695,11 @@ def test_cmake_presets_multiple_settings_multi_config():
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "dynamic-14-default"
+    assert presets["configurePresets"][0]["name"] == "dynamic-14"
     assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
     assert presets["buildPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14-default"
-    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14-default"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
+    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -714,12 +714,12 @@ def test_cmake_presets_multiple_settings_multi_config():
     presets = json.loads(load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "static-17-default"
+    assert presets["configurePresets"][0]["name"] == "static-17"
     assert presets["buildPresets"][0]["name"] == "static-17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "static-17-default"
+    assert presets["buildPresets"][0]["configurePreset"] == "static-17"
 
     # We can build with cmake manually
-    client.run_command("cmake . --preset dynamic-14-default")
+    client.run_command("cmake . --preset dynamic-14")
 
     client.run_command("cmake --build --preset dynamic-14-release")
     client.run_command("build\\dynamic-14\\Release\\hello")
@@ -731,7 +731,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert "Hello World Debug!" in client.out
     assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake . --preset static-17-default")
+    client.run_command("cmake . --preset static-17")
 
     client.run_command("cmake --build --preset static-17-release")
     client.run_command("build\\static-17\\Release\\hello")
