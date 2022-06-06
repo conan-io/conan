@@ -7,7 +7,6 @@ from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import decode_text
 
 
 class JWTAuth(AuthBase):
@@ -37,11 +36,12 @@ def get_exception_from_error(error_code):
             return None
 
 
-def handle_return_deserializer(deserializer=None):
+def handle_return_deserializer():
     """Decorator for rest api methods.
     Map exceptions and http return codes and deserialize if needed.
 
-    deserializer: Function for deserialize values"""
+    at this moment only used by check_credentials() endpoint
+    """
 
     def handle_return(method):
         def inner(*argc, **argv):
@@ -50,7 +50,7 @@ def handle_return_deserializer(deserializer=None):
                 ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
                 text = ret.text if ret.status_code != 404 else "404 Not found"
                 raise get_exception_from_error(ret.status_code)(text)
-            return deserializer(ret.content) if deserializer else decode_text(ret.content)
+            return ret.content.decode()
 
         return inner
 
@@ -91,7 +91,7 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
 
         self._check_error_response(ret)
-        return decode_text(ret.content)
+        return ret.content.decode()
 
     def authenticate_oauth(self, user, password):
         """Sends user + password to get:
@@ -189,7 +189,7 @@ class RestCommonMethods(object):
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response_to_str(response))
 
-        content = decode_text(response.content)
+        content = response.content.decode()
         content_type = response.headers.get("Content-Type")
         if content_type != 'application/json' and content_type != 'application/json; charset=utf-8':
             raise ConanException("%s\n\nResponse from remote is not json, but '%s'"

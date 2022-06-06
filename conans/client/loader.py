@@ -17,7 +17,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
-from conans.util.files import load, chdir
+from conans.util.files import load, chdir, load_user_encoded
 
 
 class ConanFileLoader:
@@ -175,7 +175,10 @@ class ConanFileLoader:
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
-        contents = load(conan_txt_path)
+        try:
+            contents = load_user_encoded(conan_txt_path)
+        except Exception as e:
+            raise ConanException(f"Cannot load conanfile.txt:\n{e}")
         path, basename = os.path.split(conan_txt_path)
         display_name = basename
         conanfile = self._parse_conan_txt(contents, path, display_name)
