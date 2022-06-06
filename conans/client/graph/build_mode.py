@@ -38,8 +38,8 @@ class BuildMode:
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    if param.startswith("missing(") and param.endswith(")"):
-                        clean_pattern = param[len("missing("):-1]
+                    if param.startswith("missing:"):
+                        clean_pattern = param[len("missing:"):]
                         clean_pattern = clean_pattern[:-1] if param.endswith("@") else clean_pattern
                         clean_pattern = clean_pattern.replace("@#", "#")
                         self.build_missing_patterns.append(clean_pattern)
