@@ -48,5 +48,4 @@ def test_invalid_cppstd(compiler, version, cppstd, correct):
           "-s compiler={} -s compiler.version={} "
           "-s compiler.cppstd={}".format(compiler, version, cppstd), assert_error=not correct)
     if not correct:
-        assert "ERROR: The provided compiler.cppstd is not supported with " \
-               "the specified compiler" in c.out
+        assert "ERROR: The provided compiler.cppstd" in c.out
