@@ -228,7 +228,12 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
         self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
-        self.client.run_command('git push origin master')
+        try:
+            self.client.run_command('git config init.defaultbranch')
+            branch = self.client.out
+        except Exception:
+            branch = 'master'
+        self.client.run_command('git push origin {}'.format(branch))
         self.client.run("export . user/channel")
 
         # delete old source, but it doesn't matter because the sources are in the cache
