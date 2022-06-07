@@ -237,9 +237,11 @@ def test_xcodedeps_components():
 
             exports_sources = "netapp.xcodeproj/*", "src/*"
 
+            def layout(self):
+                 self.cpp.package.requires = {direct_components}
+
             def generate(self):
                 deps = XcodeDeps(self)
-                deps.use_components = {use_components}
                 deps.generate()
 
             def build(self):
@@ -251,7 +253,7 @@ def test_xcodedeps_components():
     client.save({
         "src/main.cpp": '#include "client.h"\nint main(){client();return 0;}',
         "project.yml": xcode_project,
-        "conanfile.py": conanfile.format(use_components='["network::client"]'),
+        "conanfile.py": conanfile.format(direct_components='["network::client"]'),
         "conan_config.xcconfig": ""
     }, clean_first=True)
 
@@ -267,7 +269,7 @@ def test_xcodedeps_components():
     assert '#include "conan_network_core.xcconfig"' not in conan_network
     assert '#include "conan_network_server.xcconfig"' not in conan_network
 
-    client.save({"conanfile.py": conanfile.format(use_components='["network::client", "tcp::tcp"]')})
+    client.save({"conanfile.py": conanfile.format(direct_components='["network::client", "tcp::tcp"]')})
     client.run("create .", assert_error=True)
     assert "Component 'tcp::tcp' is not a direct dependency for this package. " \
            "You can only specify components for direct dependencies " \
