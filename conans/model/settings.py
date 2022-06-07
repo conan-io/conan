@@ -172,7 +172,8 @@ class Settings(object):
                       for k, v in definition.items()}
 
     def serialize(self):
-        return {k: v.value for k, v in self._data.items()}
+        # Returning all the information available, including the sub-settings
+        return {k: v for k, v in self.items()}
 
     def get_safe(self, name, default=None):
         """
