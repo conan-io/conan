@@ -162,3 +162,45 @@ def test_relative_folder_repo():
     c.run_command("git rev-list -n 1 --full-history HEAD -- lib_a")
     commit_real_libA = str(c.out).splitlines()[0]
     assert commit_real_libA == commit_libA
+
+def test_submodule_repo():
+    c = TestClient()
+    conanfile = MockConanfile({})
+    c.save({"conanfile.py": ""})
+    c.run_command("git init .")
+    c.run_command('git config user.name myname')
+    c.run_command('git config user.email myname@mycompany.com')
+    c.run_command("git add .")
+    c.run_command('git commit -m "Initial commit"')
+    c.run_command('git clone . source_subfolder')
+    c.run_command('git submodule add ../ source_subfolder')
+    c.run_command('git commit -m "submodule commit"')
+    c.save({"root_change": ""})
+    c.run_command("git add .")
+    c.run_command('git commit -m "root change"')
+
+    with chdir(c.current_folder):
+        # default case
+        git = Git(conanfile)
+        commit_root = git.get_commit()
+
+        # Relative paths
+        git = Git(conanfile, folder="source_subfolder")
+        commit_relA = git.get_commit()
+
+        git = Git(conanfile, folder="./source_subfolder")
+        commit_relB = git.get_commit()
+
+        # Full path
+        git = Git(conanfile, folder=os.path.join(c.current_folder, "source_subfolder"))
+        commit_full = git.get_commit()
+
+    assert commit_relA == commit_relB
+    assert commit_relA == commit_full
+    assert commit_root != commit_full
+
+    # This is the commit which modified the tree in the containing repo
+    # not the commit which the submodule is at
+    c.run_command("git rev-list HEAD -n 1 --full-history -- source_subfolder")
+    commit_submodule = str(c.out).splitlines()[0]
+    assert commit_submodule != commit_full
