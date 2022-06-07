@@ -12,7 +12,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save, load
+from conans.util.files import save, load, rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -620,6 +620,56 @@ def test_cmake_presets_multiple_settings_single_config():
         client.run_command("./build/apple-clang-13-gnu20/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out
+
+
+@pytest.mark.parametrize("multiconfig", [True, False])
+def test_cmake_presets_duplicated_install(multiconfig):
+    # https://github.com/conan-io/conan/issues/11409
+    """Only failed when using a multiconfig generator"""
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings = '-s compiler=gcc -s compiler.version=5 -s compiler.libcxx=libstdc++11 ' \
+               '-c tools.cmake.cmake_layout:build_folder_vars=' \
+               '\'["settings.compiler", "settings.compiler.version"]\' '
+    if multiconfig:
+        settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
+    client.run("install . {}".format(settings))
+    client.run("install . {}".format(settings))
+    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                "CMakePresets.json")
+    assert os.path.exists(presets_path)
+    contents = json.loads(load(presets_path))
+    assert len(contents["buildPresets"]) == 1
+
+
+def test_remove_missing_presets():
+    # https://github.com/conan-io/conan/issues/11413
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings = '-s compiler=gcc -s compiler.version=5 -s compiler.libcxx=libstdc++11 ' \
+               '-c tools.cmake.cmake_layout:build_folder_vars=' \
+               '\'["settings.compiler", "settings.compiler.version"]\' '
+    client.run("install . {}".format(settings))
+    client.run("install . {} -s compiler.version=6".format(settings))
+
+    presets_path_5 = os.path.join(client.current_folder, "build", "gcc-5")
+    assert os.path.exists(presets_path_5)
+
+    presets_path_6 = os.path.join(client.current_folder, "build", "gcc-6")
+    assert os.path.exists(presets_path_6)
+
+    rmdir(presets_path_5)
+
+    # If we generate another configuration, the missing one (removed) for gcc-5 is not included
+    client.run("install . {} -s compiler.version=11".format(settings))
+
+    user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
+    assert os.path.exists(user_presets_path)
+
+    contents = json.loads(load(user_presets_path))
+    assert len(contents["include"]) == 2
+    assert "gcc-6" in contents["include"][0]
+    assert "gcc-11" in contents["include"][1]
 
 
 @pytest.mark.tool_cmake(version="3.23")
