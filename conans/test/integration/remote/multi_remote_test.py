@@ -74,7 +74,7 @@ class MultiRemotesTest(unittest.TestCase):
         # Update hello0 with client_a and reupload
         self._create(client_a, "hello0", "0.0", modifier="\n")
         client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
-        self.assertIn("Uploading hello0/0.0@lasote/stable", client_a.out)
+        self.assertIn("Uploading recipe 'hello0/0.0@lasote/stable", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("graph info --requires=hello0/0.0@lasote/stable --check-updates")

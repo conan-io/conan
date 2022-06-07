@@ -101,10 +101,10 @@ class UploadUpstreamChecker:
             recipe.force = False
         else:
             if force:
-                self._output.info("{} already in server, forcing upload".format(ref.repr_notime()))
+                self._output.info("Recipe '{}' already in server, forcing upload".format(ref.repr_notime()))
                 recipe.force = True
             else:
-                self._output.info("{} already in server, skipping upload".format(ref.repr_notime()))
+                self._output.info("Recipe '{}' already in server, skipping upload".format(ref.repr_notime()))
                 recipe.upload = False
                 recipe.force = False
 
@@ -123,10 +123,10 @@ class UploadUpstreamChecker:
             package.force = False
         else:
             if force:
-                self._output.info("{} already in server, forcing upload".format(pref.repr_notime()))
+                self._output.info("Package '{}' already in server, forcing upload".format(pref.repr_notime()))
                 package.force = True
             else:
-                self._output.info("{} already in server, skipping upload".format(pref.repr_notime()))
+                self._output.info("Package '{}' already in server, skipping upload".format(pref.repr_notime()))
                 package.upload = False
                 package.force = False
 
@@ -286,7 +286,7 @@ class UploadExecutor:
         return files, deleted
 
     def upload_recipe(self, recipe, remote):
-        self._output.info(f"Uploading {recipe.ref}")
+        self._output.info(f"Uploading recipe '{recipe.ref.repr_notime()}'")
         t1 = time.time()
         ref = recipe.ref
         cache_files = recipe.files
@@ -301,7 +301,7 @@ class UploadExecutor:
         return ref
 
     def upload_package(self, package, remote):
-        self._output.info(f"Uploading {package.pref.repr_reduced()}")
+        self._output.info(f"Uploading package '{package.pref.repr_notime()}'")
         pref = package.pref
         cache_files = package.files
         assert (pref.revision is not None), "Cannot upload a package without PREV"

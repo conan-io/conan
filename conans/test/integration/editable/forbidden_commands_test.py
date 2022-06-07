@@ -35,7 +35,7 @@ class TestOtherCommands:
         assert "lib/0.1" in t.out  # One binary is listed
 
         t.run('upload lib/0.1 -r default')
-        assert "Uploading lib/0.1" in t.out
+        assert "Uploading recipe 'lib/0.1" in t.out
 
         t.run("remove * -f")
         # Nothing in the cache
