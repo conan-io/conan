@@ -13,7 +13,6 @@ from conans.errors import ConanException, NotFoundException, PackageNotFoundExce
 from conans.model.package_ref import PkgReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
-from conans.util.files import decode_text
 
 
 class RestV2Methods(RestCommonMethods):

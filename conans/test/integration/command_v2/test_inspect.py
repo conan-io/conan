@@ -12,8 +12,10 @@ def test_basic_inspect():
     lines = t.out.splitlines()
     assert lines == ["default_options:",
                      "    shared: False",
+
                      'generators: []',
                      'name: foo',
+                     'no_copy_source: False',
                      "options:",
                      "    shared: [True, False]",
                      'revision_mode: hash',
@@ -33,6 +35,7 @@ def test_options_description():
     t.run("inspect path foo/conanfile.py")
     assert "shared: Some long explanation about shared option" in t.out
     assert "fpic: Yet another long explanation of fpic" in t.out
+
 
 
 def test_missing_conanfile():

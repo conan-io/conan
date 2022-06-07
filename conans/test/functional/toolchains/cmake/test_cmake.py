@@ -15,7 +15,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.tool("cmake", version="3.15")
+@pytest.mark.tool("cmake", "3.15")
 @pytest.mark.tool("mingw64")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_simple_cmake_mingw():

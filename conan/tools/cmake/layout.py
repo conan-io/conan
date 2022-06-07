@@ -27,17 +27,17 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    suffix = get_build_folder_vars_suffix(conanfile)
+    build_folder = "build"
+    custom_conf = get_build_folder_custom_vars(conanfile)
+    if custom_conf:
+        build_folder = "{}/{}".format(build_folder, custom_conf)
+
     if multi:
-        conanfile.folders.build = "build"
+        conanfile.folders.build = build_folder
     else:
-        conanfile.folders.build = "cmake-build-{}".format(str(build_type).lower())
+        conanfile.folders.build = "{}/{}".format(build_folder, build_type)
 
-    if suffix:
-        conanfile.folders.build += "-{}".format(suffix)
-
-    conanfile.folders.generators = os.path.join("build" if not suffix else "build-{}".format(suffix),
-                                                "generators")
+    conanfile.folders.generators = "{}/{}".format(build_folder, "generators")
 
     conanfile.cpp.source.includedirs = ["include"]
 
@@ -49,9 +49,9 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_build_folder_vars_suffix(conanfile):
+def get_build_folder_custom_vars(conanfile):
 
-    build_vars = conanfile.conf.get("tools.cmake.cmake_layout.build_folder_vars",
+    build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
                                     default=[], check_type=list)
     ret = []
     for s in build_vars:
@@ -65,7 +65,7 @@ def get_build_folder_vars_suffix(conanfile):
             if value is not None:
                 tmp = "{}_{}".format(var, value)
         else:
-            raise ConanException("Invalid 'tools.cmake.cmake_layout.build_folder_vars' value, it has"
+            raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
                                  " to start with 'settings.' or 'options.': {}".format(s))
         if tmp:
             ret.append(tmp.lower())

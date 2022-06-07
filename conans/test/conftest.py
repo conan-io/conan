@@ -77,7 +77,8 @@ tools_locations = {
         "3.23": {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
-                     'Linux': '/usr/share/cmake-3.23.1/bin'}
+                     # Not available in Linux
+                     'Linux': None}
         }
     },
     'ninja': {
@@ -228,6 +229,16 @@ def _get_tool(name, version):
                 _cached_tools[name][version] = False
                 return False
             tool_path = tool_version.get("path", {}).get(tool_platform)
+            # To allow to skip for a platform, we can put the path to None
+            # "cmake": { "3.23": {
+            #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+            #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+            #                        'Linux': None}}
+            #          }
+            if tool_path is None:
+                _cached_tools[name][version] = False
+                return False
+
         else:
             if version is not None:  # if the version is specified, it should be in the conf
                 _cached_tools[name][version] = True
@@ -282,6 +293,9 @@ def pytest_runtest_setup(item):
         if mark.name.startswith("tool_"):
             raise Exception("Invalid decorator @pytest.mark.{}".format(mark.name))
 
+    kwargs = [mark.kwargs for mark in item.iter_markers(name="tool")]
+    if any(kwargs):
+        raise Exception("Invalid decorator @pytest.mark Do not use kwargs: {}".format(kwargs))
     tools_params = [mark.args for mark in item.iter_markers(name="tool")]
     for tool_params in tools_params:
         if len(tool_params) == 1:

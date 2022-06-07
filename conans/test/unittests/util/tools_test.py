@@ -43,7 +43,7 @@ class ReplaceInFileTest(unittest.TestCase):
     def test_replace_in_file(self):
         replace_in_file(ConanFileMock(), self.win_file, "nis", "nus", encoding="Windows-1252")
 
-        content = load(self.win_file)
+        content = load(self.win_file, encoding="Windows-1252")
         self.assertNotIn("nis", content)
         self.assertIn("nus", content)
 

@@ -86,6 +86,48 @@ class TestParams(TestListPackageIdsBase):
                           "reference in the form name/version[@user/channel][#RECIPE_REVISION]"
         assert expected_output in self.client.out
 
+    def test_list_python_requires(self):
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("export . --name=tool --version=1.1.1")
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class Pkg(ConanFile):
+                       python_requires ="tool/[*]"
+                   """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . --name foo --version 1.0")
+        self.client.run('list packages foo/1.0#latest')
+
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          foo/1.0#b2ab5ffa95e8c5c19a5d1198be33103a:170e82ef3a6bf0bbcda5033467ab9d7805b11d0b
+            python_requires:
+              tool/1.1.Z
+        """)
+        assert self.client.out == expected_output
+
+    def test_list_build_requires(self):
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("create . --name=tool --version=1.1.1")
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class Pkg(ConanFile):
+                       def requirements(self):
+                           # We set the package_id_mode so it is part of the package_id
+                           self.tool_requires("tool/1.1.1", package_id_mode="minor_mode")
+                   """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . --name foo --version 1.0")
+        self.client.run('list packages foo/1.0#latest')
+
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          foo/1.0#75821be6dc510628d538fffb2f00a51f:d01be73a295dca843e5e198334f86ae7038423d7
+            build_requires:
+              tool/1.1.Z
+        """)
+        assert self.client.out == expected_output
+
 
 class TestListPackagesFromRemotes(TestListPackageIdsBase):
     def test_by_default_search_only_in_cache(self):
@@ -108,9 +150,9 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         Local Cache:
           There are no packages
         remote1:
-          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote1]
+          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote1]
         remote2:
-          ERROR: Recipe not found: 'whatever/0.1@_/_#fca0383e6a43348f7989f11ab8f0a92d'. [Remote: remote2]
+          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote2]
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')

@@ -40,9 +40,10 @@ def load_version():
 
 def generate_long_description_file():
     this_directory = path.abspath(path.dirname(__file__))
-    with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
+    with open(path.join(this_directory, 'README.rst')) as f:
         long_description = f.read()
     return long_description
+
 
 project_requirements = get_requires("conans/requirements.txt")
 dev_requirements = get_requires("conans/requirements_dev.txt")
@@ -52,6 +53,7 @@ exclude = excluded_test_packages + excluded_server_packages
 
 setup(
     name='conan',
+    python_requires='>=3.6',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
