@@ -15,21 +15,26 @@ def test_pkg_sign():
     signer = textwrap.dedent(r"""
         import os
 
-        def sign(ref, files, folder):
+        def sign(ref, folder):
             print("Signing ref: ", ref)
-            print("Signing files: ", files)
-            signature = os.path.join(folder, "signature.asc")
+            print("Signing folder: ", folder)
+            files = []
+            for f in sorted(os.listdir(folder)):
+                if os.path.isfile(os.path.join(folder, f)):
+                    files.append(f)
+            signature = os.path.join(folder, "metadata", "sign", "signature.asc")
             open(signature, "w").write("\n".join(files))
-            return ["signature.asc"]
 
-        def verify(ref, files, folder):
+        def verify(ref, folder):
             print("Verifying ref: ", ref)
-            print("Verifying files: ", files)
-            signature = os.path.join(folder, "signature.asc")
+            print("Verifying folder: ", folder)
+            signature = os.path.join(folder, "metadata", "sign", "signature.asc")
             contents = open(signature).read()
             print("verifying contents", contents)
-            for f in files:
-                assert f in contents
+            for f in sorted(os.listdir(folder)):
+                print("VERIFYING ", f)
+                if os.path.isfile(os.path.join(folder, f)):
+                    assert f in contents
         """)
     save(os.path.join(c.cache.plugins_path, "sign", "sign.py"), signer)
     c.run("create .")
@@ -38,6 +43,5 @@ def test_pkg_sign():
     assert "Signing ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     c.run("remove * -f")
     c.run("install --requires=pkg/0.1")
-    print(c.out)
     assert "Verifying ref:  pkg/0.1" in c.out
     assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out

@@ -72,7 +72,7 @@ class RemoteManager(object):
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
-        self._signer.verify(ref, zipped_files, layout.recipe_metadata())
+        self._signer.verify(ref, download_export)
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
@@ -126,7 +126,7 @@ class RemoteManager(object):
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
-            self._signer.verify(pref, zipped_files, layout.package_metadata())
+            self._signer.verify(pref, download_pkg_folder)
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 

@@ -22,20 +22,21 @@ class PkgSignaturesPlugin:
             return
 
         def _sign(ref, files, folder):
-            mkdir(folder)
-            signatures = self._sign(ref, list(files.values()), folder=folder)
-            for signature in signatures:
-                files[f"{METADATA}/{signature}"] = f"{folder}/{signature}"
+            metadata_sign = os.path.join(folder, METADATA, "sign")
+            mkdir(metadata_sign)
+            self._sign(ref, folder=folder)
+            for f in os.listdir(metadata_sign):
+                files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
         for recipe in upload_data.recipes:
             if recipe.upload:
-                _sign(recipe.ref, recipe.files, self._cache.ref_layout(recipe.ref).recipe_metadata())
+                _sign(recipe.ref, recipe.files, self._cache.ref_layout(recipe.ref).download_export())
             for package in recipe.packages:
                 if package.upload:
                     _sign(package.pref, package.files,
-                          self._cache.pkg_layout(package.pref).package_metadata())
+                          self._cache.pkg_layout(package.pref).download_package())
 
-    def verify(self, ref, files, folder):
+    def verify(self, ref, folder):
         if self._verify is None:
             return
-        self._verify(ref, files, folder)
+        self._verify(ref, folder)
