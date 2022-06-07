@@ -359,8 +359,9 @@ class EnvVars:
            echo "echo Restoring environment" >> "{deactivate_file}"
            for v in {vars}
            do
-               value=$(printenv $v)
-               if [ -n "$value" ]
+               is_defined="true"
+               value=$(printenv $v) || is_defined="" || true
+               if [ -n "$value" ] || [ -n "$is_defined" ]
                then
                    echo export "$v='$value'" >> "{deactivate_file}"
                else
