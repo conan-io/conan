@@ -1,5 +1,6 @@
 import getpass
 import os
+import platform
 import sys
 
 from conans.errors import ConanException
@@ -26,13 +27,20 @@ def color_enabled(stream):
 
 def init_colorama(stream):
     import colorama
-
     if not color_enabled(stream):
         if os.getenv("NO_COLOR") != "1":
             colorama.init(strip=True)
         return False
     else:
-        colorama.init(convert=False, strip=False)
+        # convert=False => Not convert ANSI color bytes to win32 color bytes
+        # strip=True => Remove ANSI color bytes from code
+        # wrap=False => Do not mock sys.stderr not sys.stdout, because crashes subprocess.popen
+        import colorama
+        if colorama.ansitowin32.winterm:
+            colorama.init(strip=True, convert=False)
+        else:
+            # wrap=False
+            colorama.init(wrap=False)
         return True
 
 
