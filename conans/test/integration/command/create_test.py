@@ -383,15 +383,29 @@ def test_create_build_missing():
     """
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
-            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0")})
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")
+                                                          .with_requires("dep/1.0")})
     c.run("create dep -s os=Windows")
-    c.run("create pkg -s os=Windows")
-    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Build")})
-    # Now avoid rebuilding
-    c.run("create pkg -s os=Windows --build=missing:pkg")
-    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Cache")})
+
+    # Wrong pattern will not build it
+    c.run("create pkg -s os=Windows --build=missing:kk", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
+    # Pattern missing * will not build it
+    c.run("create pkg -s os=Windows --build=missing:pkg", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
+    # Correct pattern pkg* will build it
+    c.run("create pkg -s os=Windows --build=missing:pkg*")
+    c.assert_listed_binary({"pkg/1.0": ("90887fdbe22295dfbe41afe0a45f960c6a72b650", "Build")})
+
+    # Now anything that is not an explicit --build=pkg* will avoid rebuilding
+    c.run("create pkg -s os=Windows --build=missing:kk")
+    c.assert_listed_binary({"pkg/1.0": ("90887fdbe22295dfbe41afe0a45f960c6a72b650", "Cache")})
     assert "Calling build()" not in c.out
-    # but dependency without binary will fail
-    c.run("create pkg -s os=Linux --build=missing:pkg", assert_error=True)
-    c.assert_listed_binary({"pkg/1.0": ("abfcc78fa8242cabcd1e3d92896aa24808c789a3", "Cache")})
+
+    # but dependency without binary will fail, even if right pkg* pattern
+    c.run("create pkg -s os=Linux --build=missing:pkg*", assert_error=True)
+    c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
+    c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
