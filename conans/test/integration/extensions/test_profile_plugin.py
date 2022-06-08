@@ -49,18 +49,3 @@ def test_invalid_cppstd(compiler, version, cppstd, correct):
           "-s compiler.cppstd={}".format(compiler, version, cppstd), assert_error=not correct)
     if not correct:
         assert "ERROR: The provided compiler.cppstd" in c.out
-
-
-def test_plugin_profile_error_vs():
-    c = TestClient()
-    c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-    c.run("create . -s compiler=msvc -s compiler.version=15 -s compiler.cppstd=14",
-          assert_error=True)
-    assert "ERROR: The provided compiler.cppstd=14 requires at least " \
-           "msvc>=190 but version 15 provided" in c.out
-    c.run("create . -s compiler=msvc -s compiler.version=170 -s compiler.cppstd=14",
-          assert_error=True)
-    assert "ERROR: The provided compiler.cppstd=14 requires at least " \
-           "msvc>=190 but version 170 provided" in c.out
-    c.run("create . -s compiler=msvc -s compiler.version=190 -s compiler.cppstd=14")
-    assert "Installing packages" in c.out

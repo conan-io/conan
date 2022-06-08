@@ -596,8 +596,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
                               .with_require("protobuf/0.2"))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1")
-                                      .with_requirement("protobuf/0.2", build=True, override=True,
-                                                        headers=False, libs=False))
+                                      .with_tool_requirement("protobuf/0.2", override=True))
 
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))

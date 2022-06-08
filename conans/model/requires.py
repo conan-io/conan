@@ -197,7 +197,8 @@ class Requirement:
         propagating includes or libs or run info or both are visible or the reference is the same,
         we consider the requires equal, so they can conflict"""
         return (self.ref.name == other.ref.name and self.build == other.build and
-                ((self.headers and other.headers) or
+                (self.override or
+                 (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
                  (self.visible and other.visible) or
@@ -356,10 +357,11 @@ class ToolRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                    options=options)
+                                    options=options, override=override)
 
 
 class TestRequirements:
@@ -469,7 +471,7 @@ class Requirements:
         self._requires[req] = req
 
     def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                     run=True, options=None):
+                     run=True, options=None, override=None):
         """
          Represent a build tool like "cmake".
 
@@ -483,7 +485,7 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
