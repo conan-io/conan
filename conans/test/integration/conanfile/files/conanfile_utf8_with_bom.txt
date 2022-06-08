@@ -1,0 +1,4 @@
+﻿[requires]
+
+[generators]
+CMakeToolchain

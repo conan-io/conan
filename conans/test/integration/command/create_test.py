@@ -30,18 +30,6 @@ class CreateTest(unittest.TestCase):
         conandeps = client.load("conandeps.props")
         assert conandeps.find("pkgb") < conandeps.find("pkga")
 
-    def test_transitive_same_name(self):
-        # https://github.com/conan-io/conan/issues/1366
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile("hellobar", "0.1")})
-        client.run("create . --user=lasote --channel=testing")
-        self.assertIn("hellobar/0.1@lasote/testing: Forced build from source", client.out)
-
-        conanfile = GenConanfile("hello", "0.1").with_require("hellobar/0.1@lasote/testing")
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --user=lasote --channel=stable")
-        self.assertNotIn("hellobar/0.1@lasote/testing: Forced build from source", client.out)
-
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
@@ -388,3 +376,36 @@ def test_lockfile_input_not_specified():
     client.run("lock create . --lockfile-out locks/conan.lock")
     client.run("create . --lockfile-out locks/conan.lock")
     assert "Generated lockfile:" in client.out
+
+
+def test_create_build_missing():
+    """ test the --build=missing:pattern syntax
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")
+                                                          .with_requires("dep/1.0")})
+    c.run("create dep -s os=Windows")
+
+    # Wrong pattern will not build it
+    c.run("create pkg -s os=Windows --build=missing:kk", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
+    # Pattern missing * will not build it
+    c.run("create pkg -s os=Windows --build=missing:pkg", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
+    # Correct pattern pkg* will build it
+    c.run("create pkg -s os=Windows --build=missing:pkg*")
+    c.assert_listed_binary({"pkg/1.0": ("90887fdbe22295dfbe41afe0a45f960c6a72b650", "Build")})
+
+    # Now anything that is not an explicit --build=pkg* will avoid rebuilding
+    c.run("create pkg -s os=Windows --build=missing:kk")
+    c.assert_listed_binary({"pkg/1.0": ("90887fdbe22295dfbe41afe0a45f960c6a72b650", "Cache")})
+    assert "Calling build()" not in c.out
+
+    # but dependency without binary will fail, even if right pkg* pattern
+    c.run("create pkg -s os=Linux --build=missing:pkg*", assert_error=True)
+    c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
+    c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
+    assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out

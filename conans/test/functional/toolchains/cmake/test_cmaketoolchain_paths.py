@@ -29,7 +29,8 @@ find_root_path_modes_cross_build = _FindRootPathModes(
 
 
 def _cmake_command_toolchain(find_root_path_modes):
-    cmake_command = "cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake"
+    build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
+    cmake_command = "cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake {}".format(build_type)
     if find_root_path_modes.package:
         cmake_command += " -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE={}".format(find_root_path_modes.package)
     if find_root_path_modes.library:

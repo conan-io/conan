@@ -23,7 +23,7 @@ class DownloadAPI:
             output.info(f"Skip {ref.repr_notime()} download, already in cache")
             return False
 
-        output.info(f"Downloading {ref.repr_notime()}")
+        output.info(f"Downloading recipe '{ref.repr_notime()}'")
         app.remote_manager.get_recipe(ref, remote)
 
         layout = app.cache.ref_layout(ref)
@@ -31,7 +31,7 @@ class DownloadAPI:
         conanfile = app.loader.load_basic(conan_file_path, display=ref)
 
         # Download the sources too, don't be lazy
-        output.info(f"Downloading {str(ref)} sources")
+        output.info(f"Downloading '{str(ref)}' sources")
         retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, [remote])
         return True
 
@@ -51,6 +51,6 @@ class DownloadAPI:
         layout = app.cache.ref_layout(pref.ref)
         conan_file_path = layout.conanfile()
         conanfile = app.loader.load_basic(conan_file_path, display=pref.ref)
-        output.info(f"Downloading {pref.repr_notime()}")
+        output.info(f"Downloading package '{pref.repr_notime()}'")
         app.remote_manager.get_package(conanfile, pref, remote)
         return True

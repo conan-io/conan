@@ -175,6 +175,12 @@ class Settings(object):
         return {k: v.value for k, v in self._data.items()}
 
     def get_safe(self, name, default=None):
+        """
+        Get the setting value avoiding
+        :param name:
+        :param default:
+        :return:
+        """
         try:
             tmp = self
             for prop in name.split("."):

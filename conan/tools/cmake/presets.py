@@ -2,6 +2,7 @@ import json
 import os
 import platform
 
+from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -9,27 +10,48 @@ from conans.util.files import save, load
 
 def _add_build_preset(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    configure_preset_name = _configure_preset_name(build_type, multiconfig)
-    ret = {"name": build_type,
+    configure_preset_name = _configure_preset_name(conanfile, multiconfig)
+    ret = {"name": _build_preset_name(conanfile),
            "configurePreset": configure_preset_name}
     if multiconfig:
         ret["configuration"] = build_type
     return ret
 
 
-def _configure_preset_name(build_type, multiconfig):
-    return "default" if not build_type or multiconfig else build_type
+def _build_preset_name(conanfile):
+    build_type = conanfile.settings.get_safe("build_type")
+    custom_conf = get_build_folder_custom_vars(conanfile)
+    if custom_conf:
+        if build_type:
+            return "{}-{}".format(custom_conf, build_type.lower())
+        else:
+            return custom_conf
+    return build_type.lower() if build_type else "default"
+
+
+def _configure_preset_name(conanfile, multiconfig):
+    build_type = conanfile.settings.get_safe("build_type")
+    custom_conf = get_build_folder_custom_vars(conanfile)
+
+    if multiconfig or not build_type:
+        return "default" if not custom_conf else custom_conf
+
+    if custom_conf:
+        return "{}-{}".format(custom_conf, str(build_type).lower())
+    else:
+        return str(build_type).lower()
+
 
 
 def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    name = _configure_preset_name(build_type, multiconfig)
-    if not multiconfig:
+    name = _configure_preset_name(conanfile, multiconfig)
+    if not multiconfig and build_type:
         cache_variables["CMAKE_BUILD_TYPE"] = build_type
     ret = {
             "name": name,
-            "displayName": "{} Config".format(name.capitalize()),
-            "description": "{} configure using '{}' generator".format(name.capitalize(), generator),
+            "displayName": "'{}' config".format(name),
+            "description": "'{}' configure using '{}' generator".format(name, generator),
             "generator": generator,
             "cacheVariables": cache_variables,
             "toolchainFile": toolchain_file,
@@ -68,21 +90,20 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
-    build_type = conanfile.settings.get_safe("build_type")
 
     if os.path.exists(preset_path):
         # We append the new configuration making sure that we don't overwrite it
         data = json.loads(load(preset_path))
         if multiconfig:
-            build_presets = data["buildPresets"]
-            already_exist = any([b["configuration"] for b in build_presets if b == build_type])
+            new_build_preset_name = _build_preset_name(conanfile)
+            already_exist = any([b["name"] for b in data["buildPresets"]
+                                 if b["name"] == new_build_preset_name])
             if not already_exist:
                 data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
         else:
-            configure_presets = data["configurePresets"]
-            already_exist = any([c["name"]
-                                 for c in configure_presets
-                                 if c["name"] == _configure_preset_name(build_type, multiconfig)])
+            new_configure_preset_name = _configure_preset_name(conanfile, multiconfig)
+            already_exist = any([c["name"] for c in data["configurePresets"]
+                                 if c["name"] == new_configure_preset_name])
             if not already_exist:
                 conf_preset = _add_configure_preset(conanfile, generator, cache_variables,
                                                     toolchain_file, multiconfig)
@@ -100,8 +121,15 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
                 data = {"version": 4, "include": [preset_path]}
-                data = json.dumps(data, indent=4)
-                save(user_presets_path, data)
+            else:
+                data = json.loads(load(user_presets_path))
+                # Clear the folders that have been deleted
+                data["include"] = [i for i in data["include"] if os.path.exists(i)]
+                if preset_path not in data["include"]:
+                    data["include"].append(preset_path)
+
+            data = json.dumps(data, indent=4)
+            save(user_presets_path, data)
 
 
 def load_cmake_presets(folder):
@@ -109,20 +137,21 @@ def load_cmake_presets(folder):
     return json.loads(tmp)
 
 
-def get_configure_preset(cmake_presets, build_type):
-
-    # Do we find a preset for the current build type?
+def get_configure_preset(cmake_presets, conanfile):
+    expected_name = _configure_preset_name(conanfile, multiconfig=False)
+    # Do we find a preset for the current configuration?
     for preset in cmake_presets["configurePresets"]:
-        if preset["name"] == build_type:
+        if preset["name"] == expected_name:
             return preset
 
+    expected_name = _configure_preset_name(conanfile, multiconfig=True)
     # In case of multi-config generator or None build_type
     for preset in cmake_presets["configurePresets"]:
-        if preset["name"] == "default":
+        if preset["name"] == expected_name:
             return preset
 
     # FIXME: Might be an issue if someone perform several conan install that involves different
     #        CMake generators (multi and single config). Would be impossible to determine which
     #        is the correct configurePreset because the generator IS in the configure preset.
 
-    raise ConanException("Not available configurePreset for the build_type {}".format(build_type))
+    raise ConanException("Not available configurePreset, expected name is {}".format(expected_name))

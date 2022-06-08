@@ -3,7 +3,7 @@ import shutil
 
 from conan.tools.files import copy
 from conan.tools.files.copy_pattern import report_files_copied
-from conans.cli.output import ScopedOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
@@ -29,8 +29,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 
-    hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref)
+    hook_manager.execute("pre_export", conanfile=conanfile)
 
     scoped_output.highlight("Exporting package recipe")
 
@@ -44,8 +43,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Execute post-export hook before computing the digest
-    hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
-                         conanfile_path=recipe_layout.conanfile())
+    hook_manager.execute("post_export", conanfile=conanfile)
 
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)
@@ -135,8 +133,7 @@ def export_source(conanfile, destination_source_folder):
                     dst=destination_source_folder, excludes=excluded_sources)
         copied.extend(_tmp)
 
-    output = conanfile.output
-    package_output = ScopedOutput("%s exports_sources" % output.scope, output)
+    package_output = ConanOutput(scope="%s exports_sources" % conanfile.output.scope)
     report_files_copied(copied, package_output)
     conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources")
@@ -149,8 +146,7 @@ def export_recipe(conanfile, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports,)
 
-    scoped_output = conanfile.output
-    package_output = ScopedOutput("%s exports" % scoped_output.scope, scoped_output)
+    package_output = ConanOutput(scope="%s exports" % conanfile.output.scope)
 
     if os.path.exists(os.path.join(conanfile.recipe_folder, DATA_YML)):
         package_output.info("File '{}' found. Exporting it...".format(DATA_YML))

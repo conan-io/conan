@@ -109,16 +109,15 @@ def test_complete(client, gtest_run_true):
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     if platform.system() == "Windows":
-        cmd = environment_wrap_command("conanbuildenv", "mycmake.bat",
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanbuildenv", client.current_folder, "mycmake.bat")
         client.run_command(cmd)
         assert "MYCMAKE=Windows!!" in client.out
         assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
     if platform.system() != "Windows":
-        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mygtest.sh && .{}myrunner.sh".format(os.sep))
         client.run_command(cmd, assert_error=not gtest_run_true)
         if gtest_run_true:
             assert "MYGTEST=Linux!!" in client.out
@@ -210,8 +209,8 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
-                                   cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuildenv", client.current_folder,
+                                   "mycompiler.{}".format(ext))
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
     assert "MYPATH=" in client.out
@@ -379,6 +378,7 @@ def test_diamond_repeated():
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))
                 self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
+                env.generate()
        """)
     client = TestClient()
     client.save({"pkga/conanfile.py": pkga,
@@ -397,6 +397,10 @@ def test_diamond_repeated():
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+    # No settings always sh
+    conanrun = client.load("conanrunenv.sh")
+    assert "PATH" not in conanrun
 
 
 @pytest.mark.parametrize("require_run", [True, False])
@@ -568,8 +572,8 @@ def test_massive_paths(num_deps):
     assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
     assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
     for i in range(num_deps):
-        cmd = environment_wrap_command("conanrunenv", "mycompiler{}.bat".format(i),
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mycompiler{}.bat".format(i))
         if num_deps > 50:  # to be safe if we change the "num_deps" number
             client.run_command(cmd, assert_error=True)
             assert "is not recognized as an internal" in client.out
@@ -583,8 +587,8 @@ def test_massive_paths(num_deps):
     assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
     assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
     for i in range(num_deps):
-        cmd = environment_wrap_command("conanrunenv", "mycompiler{}.bat".format(i),
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mycompiler{}.bat".format(i))
         if num_deps > 50:  # to be safe if we change the "num_deps" number
             client.run_command(cmd, assert_error=True)
             # This also fails, but without an error message (in my terminal, it kills the terminal!)

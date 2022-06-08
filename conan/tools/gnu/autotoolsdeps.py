@@ -66,12 +66,6 @@ class AutotoolsDeps:
             cflags = flags.cflags
             cxxflags = flags.cxxflags
 
-            srf = flags.sysroot
-            if srf:
-                cflags.append(srf)
-                cxxflags.append(srf)
-                ldflags.append(srf)
-
             env = Environment()
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", libs)
