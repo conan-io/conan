@@ -266,7 +266,9 @@ class XcodeDeps(object):
         # Generate the config files for each component with name conan_pkgname_compname.xcconfig
         # If a package has no components the name is conan_pkgname_pkgname.xcconfig
         # Then all components are included in the conan_pkgname.xcconfig file
-        for dep in self._conanfile.dependencies.host.values():
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
+        for dep in list(host_req.values()) + list(test_req.values()):
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []

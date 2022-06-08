@@ -4,7 +4,7 @@ import fasteners
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
+from conans.util.files import md5sum, path_exists, relative_dirs, rmdir
 
 
 class ServerDiskAdapter(object):
@@ -33,7 +33,7 @@ class ServerDiskAdapter(object):
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature)
             ret[filepath] = url
 
         return ret
@@ -51,7 +51,7 @@ class ServerDiskAdapter(object):
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user, filesize)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature)
             ret[filepath] = url
 
         return ret

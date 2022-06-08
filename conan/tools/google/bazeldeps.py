@@ -66,6 +66,14 @@ class BazelDeps(object):
             )
             {% endfor %}
 
+            {% for libname, (lib_path, dll_path) in shared_with_interface_libs.items() %}
+            cc_import(
+                name = "{{ libname }}_precompiled",
+                interface_library = "{{ lib_path }}",
+                shared_library = "{{ dll_path }}",
+            )
+            {% endfor %}
+
             cc_library(
                 name = "{{ name }}",
                 {% if headers %}
@@ -81,9 +89,12 @@ class BazelDeps(object):
                 linkopts = [{{ linkopts }}],
                 {% endif %}
                 visibility = ["//visibility:public"],
-                {% if libs %}
+                {% if libs or shared_with_interface_libs %}
                 deps = [
                 {% for lib in libs %}
+                ":{{ lib }}_precompiled",
+                {% endfor %}
+                {% for lib in shared_with_interface_libs %}
                 ":{{ lib }}_precompiled",
                 {% endfor %}
                 {% for dep in dependencies %}
@@ -137,16 +148,26 @@ class BazelDeps(object):
         for req, dep in dependency.dependencies.items():
             dependencies.append(dep.ref.name)
 
-        libs = {}
-        for lib in cpp_info.libs:
-            real_path = self._get_lib_file_paths(cpp_info.libdirs, lib)
-            if real_path:
-                libs[lib] = _relativize_path(real_path, package_folder)
-
         shared_library = dependency.options.get_safe("shared") if dependency.options else False
+
+        libs = {}
+        shared_with_interface_libs = {}
+        for lib in cpp_info.libs:
+            lib_path, dll_path = self._get_lib_file_paths(shared_library,
+                                                          cpp_info.libdirs,
+                                                          cpp_info.bindirs,
+                                                          lib)
+            if lib_path and dll_path:
+                shared_with_interface_libs[lib] = (
+                    _relativize_path(lib_path, package_folder),
+                    _relativize_path(dll_path, package_folder))
+            elif lib_path:
+                libs[lib] = _relativize_path(lib_path, package_folder)
+
         context = {
             "name": dependency.ref.name,
             "libs": libs,
+            "shared_with_interface_libs": shared_with_interface_libs,
             "libdir": lib_dir,
             "headers": headers,
             "includes": includes,
@@ -158,24 +179,58 @@ class BazelDeps(object):
         content = Template(template).render(**context)
         return content
 
-    def _get_lib_file_paths(self, libdirs, lib):
+    def _get_dll_file_paths(self, bindirs, expected_file):
+        """Find a given dll file in bin directories. If found return the full
+        path, otherwise return None.
+        """
+        for each_bin in bindirs:
+            if not os.path.exists(each_bin):
+                self._conanfile.output.warning("The bin folder doesn't exist: {}".format(each_bin))
+                continue
+            files = os.listdir(each_bin)
+            for f in files:
+                full_path = os.path.join(each_bin, f)
+                if not os.path.isfile(full_path):
+                    continue
+                if f == expected_file:
+                    return full_path
+        return None
+
+    def _get_lib_file_paths(self, shared, libdirs, bindirs, lib):
         for libdir in libdirs:
             if not os.path.exists(libdir):
                 self._conanfile.output.warning("The library folder doesn't exist: {}".format(libdir))
                 continue
             files = os.listdir(libdir)
+            lib_basename = None
+            lib_path = None
             for f in files:
                 full_path = os.path.join(libdir, f)
                 if not os.path.isfile(full_path):  # Make sure that directories are excluded
                     continue
+                # Users may not name their libraries in a conventional way. For example, directly
+                # use the basename of the lib file as lib name.
+                if f == lib:
+                    lib_basename = f
+                    lib_path = full_path
+                    break
                 name, ext = os.path.splitext(f)
                 if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                     if ext != ".lib" and name.startswith("lib"):
                         name = name[3:]
                 if lib == name:
-                    return full_path
+                    lib_basename = f
+                    lib_path = full_path
+                    break
+            if lib_path is not None:
+                dll_path = None
+                name, ext = os.path.splitext(lib_basename)
+                if shared and ext == ".lib":
+                    dll_path = self._get_dll_file_paths(bindirs, name+".dll")
+                return lib_path, dll_path
         self._conanfile.output.warning("The library {} cannot be found in the "
                                        "dependency".format(lib))
+        return None, None
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
         if dependency.package_folder is None:

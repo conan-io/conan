@@ -8,7 +8,7 @@ conanfile_lib = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.gnu import AutotoolsToolchain, Autotools
     from conan.tools.layout import basic_layout
-    from conan.tools.files import chdir
+    from conan.tools.apple import fix_apple_shared_install_name
 
 
     class {package_name}Conan(ConanFile):
@@ -49,6 +49,7 @@ conanfile_lib = textwrap.dedent("""
         def package(self):
             autotools = Autotools(self)
             autotools.install()
+            fix_apple_shared_install_name(self)
 
         def package_info(self):
             self.cpp_info.libs = ["{name}"]
@@ -79,10 +80,9 @@ test_conanfile = textwrap.dedent("""
     import os
 
     from conan import ConanFile
-    from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
+    from conan.tools.gnu import Autotools
     from conan.tools.layout import basic_layout
     from conan.tools.build import cross_building
-    from conan.tools.files import chdir
 
 
     class {package_name}TestConan(ConanFile):

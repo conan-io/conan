@@ -253,6 +253,34 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
                                    "Options should be specified as 'pkg:option=value'"):
             loader.load_conanfile_txt(file_path, create_profile())
 
+    def test_layout_not_predefined(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    missing
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, Mock(), None)
+            loader.load_conanfile_txt(file_path, create_profile())
+        assert "Unknown predefined layout 'missing'" in str(exc.value)
+
+    def test_layout_multiple(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    cmake_layout
+                    vs_layout
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, Mock(), None)
+            loader.load_conanfile_txt(file_path, create_profile())
+        assert "Only one layout can be declared in the [layout] section of the conanfile.txt" \
+               in str(exc.value)
+
 
 class ImportModuleLoaderTest(unittest.TestCase):
     @staticmethod

@@ -1,8 +1,7 @@
-PyJWT>=1.4.0, <2.0.0
 requests>=2.25, <3.0.0
 urllib3>=1.26.6, <1.27
 colorama>=0.3.3, <0.5.0
-PyYAML>=3.11, <6.0
+PyYAML>=3.11, <=6.0
 patch-ng>=1.17.4, <1.18
 fasteners>=0.14.1
 six>=1.10.0,<=1.16.0

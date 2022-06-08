@@ -3,10 +3,14 @@ import imp
 import inspect
 import os
 import sys
+import types
 import uuid
 
 import yaml
 
+from conan.tools.cmake import cmake_layout
+from conan.tools.google import bazel_layout
+from conan.tools.microsoft import vs_layout
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -304,9 +308,20 @@ class ConanFileLoader(object):
             if not hasattr(conanfile, "build_requires"):
                 conanfile.build_requires = []
             conanfile.build_requires.append(build_reference)
+        if parser.layout:
+            layout_method = {"cmake_layout": cmake_layout,
+                             "vs_layout": vs_layout,
+                             "bazel_layout": bazel_layout}.get(parser.layout)
+            if not layout_method:
+                raise ConanException("Unknown predefined layout '{}' declared in "
+                                     "conanfile.txt".format(parser.layout))
+
+            def layout(self):
+                layout_method(self)
+
+            conanfile.layout = types.MethodType(layout, conanfile)
 
         conanfile.generators = parser.generators
-
         try:
             options = OptionsValues.loads(parser.options)
         except Exception:

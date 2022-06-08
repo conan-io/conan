@@ -172,7 +172,7 @@ def test_cmake_layout_external_sources():
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
-    contents = load(os.path.join(client.current_folder, "cmake-build-release", "build.txt"))
+    contents = load(os.path.join(client.current_folder, "build", "Release", "build.txt"))
     assert contents == "fooexported_contents"
     client.run("export-pkg . foo/1.0@ --force")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
