@@ -33,7 +33,6 @@ class HelloConan(ConanFile):
         ref = RecipeReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed
         pref = client.create(ref, conanfile=conanfile)
-        client.create(ref, conanfile=conanfile)
         # Upload, it will create the tgz
         client.upload_all(ref)
 
