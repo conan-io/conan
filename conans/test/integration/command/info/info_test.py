@@ -33,6 +33,11 @@ class TestBasicCliOutput:
         assert "compiler: gcc" in client.out
         assert "compiler.version: 11" in client.out
         assert "prev: None" in client.out
+        # Create the package
+        client.run("create .")
+        prev = client.created_package_revision("pkg/0.2")
+        client.run("graph info .")
+        assert f"prev: {prev}" in client.out
 
 
 class TestConanfilePath:
