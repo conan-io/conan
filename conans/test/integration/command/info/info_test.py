@@ -15,7 +15,7 @@ class TestBasicCliOutput:
             class MyTest(ConanFile):
                 name = "pkg"
                 version = "0.2"
-                settings = "build_type"
+                settings = "build_type", "compiler"
                 author = "John Doe"
                 license = "MIT"
                 url = "https://foo.bar.baz"
@@ -25,11 +25,21 @@ class TestBasicCliOutput:
                 deprecated = "other-pkg"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . -s build_type=Debug")
+        client.run("graph info . -s build_type=Debug -s compiler=gcc -s compiler.version=11")
         assert "build_type: Debug" in client.out
-        assert "context: host"
-        assert "license: MIT"
-        assert "homepage: https://foo.bar.site"
+        assert "context: host" in client.out
+        assert "license: MIT" in client.out
+        assert "homepage: https://foo.bar.site" in client.out
+        assert "compiler: gcc" in client.out
+        assert "compiler.version: 11" in client.out
+
+    def test_info_prev(self):
+        client = TestClient()
+        client.run("new cmake_lib -d name=hello -d version=1.0")
+        client.run("create .")
+        prev = client.created_package_revision("hello/1.0")
+        output = client.run("graph info .")
+        assert f"prev: {prev}" in output
 
 
 class TestConanfilePath:
