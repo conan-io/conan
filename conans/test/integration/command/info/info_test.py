@@ -32,14 +32,7 @@ class TestBasicCliOutput:
         assert "homepage: https://foo.bar.site" in client.out
         assert "compiler: gcc" in client.out
         assert "compiler.version: 11" in client.out
-
-    def test_info_prev(self):
-        client = TestClient()
-        client.run("new cmake_lib -d name=hello -d version=1.0")
-        client.run("create .")
-        prev = client.created_package_revision("hello/1.0")
-        output = client.run("graph info .")
-        assert f"prev: {prev}" in output
+        assert "prev: None" in client.out
 
 
 class TestConanfilePath:
