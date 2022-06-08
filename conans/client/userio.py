@@ -28,20 +28,16 @@ def color_enabled(stream):
 def init_colorama(stream):
     import colorama
     if not color_enabled(stream):
-        if os.getenv("NO_COLOR") != "1":
-            colorama.init(strip=True)
-        return False
-    else:
-        # convert=False => Not convert ANSI color bytes to win32 color bytes
-        # strip=True => Remove ANSI color bytes from code
-        # wrap=False => Do not mock sys.stderr not sys.stdout, because crashes subprocess.popen
-        import colorama
-        if colorama.ansitowin32.winterm:
-            colorama.init(strip=True, convert=False)
+        if os.getenv("NO_COLOR") == "1":
+            # Do not initialize colorama
+            pass
         else:
-            # wrap=False
-            colorama.init(wrap=False)
-        return True
+            # Convert False means not convert ANSI color chars into Windows color chars
+            # strip means remove the ANSI color chars, so the result is, skip all color chars from
+            # the output
+            colorama.init(strip=True, convert=False)
+    else:
+        colorama.init()
 
 
 class UserInput(object):
