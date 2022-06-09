@@ -180,6 +180,8 @@ def test_install_multiple_tool_requires_cli():
 
 
 def test_bootstrap_other_architecture():
+    """ this is the case of libraries as ICU, that needs itself for cross-compiling
+    """
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -201,10 +203,15 @@ def test_bootstrap_other_architecture():
     c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")})
     assert "Build requirements" not in c.out
 
-    # TODO: The --build=tool that builds always both needs solution
-    c.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+    # This is smart and knows how to build only the missing one "host" but not "build"
+    c.run("create . -s:b os=Windows -s:h os=Linux --build=missing:tool*")
     c.assert_listed_binary({"tool/1.0": (linux_pkg_id, "Build")})
     c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Cache")}, build=True)
+
+    # This will rebuild all
+    c.run("create . -s:b os=Windows -s:h os=Linux")
+    c.assert_listed_binary({"tool/1.0": (linux_pkg_id, "Build")})
+    c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")}, build=True)
 
     c.run("graph build-order --requires=tool/1.0 -s:b os=Windows -s:h os=Linux --build=* "
           "--format=json", redirect_stdout="o.json")
@@ -215,5 +222,3 @@ def test_bootstrap_other_architecture():
     assert package1["depends"] == []
     assert package2["package_id"] == linux_pkg_id
     assert package2["depends"] == [win_pkg_id]
-
-
