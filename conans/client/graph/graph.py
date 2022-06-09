@@ -78,19 +78,27 @@ class Node(object):
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, src_node=None):
-        # print("  Propagating downstream ", self, "<-", require)
+        print("\n  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
         existing = self.transitive_deps.get(require)
+        print("      Existing transitive_deps", existing)
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 return True
-            require.aggregate(existing.require)
+            prv = repr(require)
+            print("      PREV AGGR", repr(require))
+            if not existing.require.override:
+                require.aggregate(existing.require)
+            require.force
+            print("      AFTER AGR", repr(require))
+            print("      DIFF ", repr(require) != prv)
 
         # TODO: Might need to move to an update() for performance
+        print("      Updating the requirement")
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
 
@@ -114,6 +122,7 @@ class Node(object):
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
         # This is equivalent as the Requirement hash and eq methods
+        print("\nChck downstream exists", self, "<-", require)
         # TODO: Make self.ref always exist, but with name=None if name not defined
         if self.ref is not None and require.ref.name == self.ref.name:
             if require.build and (self.context == CONTEXT_HOST or  # switch context
@@ -124,10 +133,12 @@ class Node(object):
 
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(require)
+        print("     Exists prev", prev)
         # print("    Transitive deps", self.transitive_deps)
         # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
         if prev and (prev.require is not require or prev.node is not None):
+            print("     Returning PREVI!!!!")
             return prev.require, prev.node, self
 
         # Check if need to propagate downstream
