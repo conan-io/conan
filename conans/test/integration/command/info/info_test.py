@@ -15,7 +15,7 @@ class TestBasicCliOutput:
             class MyTest(ConanFile):
                 name = "pkg"
                 version = "0.2"
-                settings = "build_type"
+                settings = "build_type", "compiler"
                 author = "John Doe"
                 license = "MIT"
                 url = "https://foo.bar.baz"
@@ -25,11 +25,30 @@ class TestBasicCliOutput:
                 deprecated = "other-pkg"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . -s build_type=Debug")
+        client.run("graph info . -s build_type=Debug -s compiler=gcc -s compiler.version=11")
         assert "build_type: Debug" in client.out
-        assert "context: host"
-        assert "license: MIT"
-        assert "homepage: https://foo.bar.site"
+        assert "context: host" in client.out
+        assert "license: MIT" in client.out
+        assert "homepage: https://foo.bar.site" in client.out
+        assert "compiler: gcc" in client.out
+        assert "compiler.version: 11" in client.out
+        assert "prev: None" in client.out
+        # Create the package
+        client.run("create .")
+        pref = client.get_latest_package_reference("pkg/0.2")
+        client.run("graph info .")
+        # It's a consumer so we can not get the prev because it's not even a package yet
+        assert "prev: None" in client.out
+        # Now, let's create another consumer requiring the previous package
+        client.save({"conanfile.txt": "[requires]\npkg/0.2"}, clean_first=True)
+        client.run("graph info .")
+        assert textwrap.dedent(f"""
+            {repr(pref.ref)}:
+              ref: {repr(pref.ref)}
+              id: 1
+              recipe: Cache
+              package_id: {pref.package_id}
+              prev: {pref.revision}""") in client.out
 
 
 class TestConanfilePath:
