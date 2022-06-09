@@ -20,15 +20,16 @@ def update_file(file_path, new_content):
     file_name = os.path.basename(file_path)
 
     if not os.path.exists(file_path):
-        return
-
-    content = load(file_path)
-    if CONAN_GENERATED_COMMENT not in content.split("\n", 1)[0]:
-        out.warning(f"Migration: {file_path} does not contain the Conan"
-                    f" comment: '{CONAN_GENERATED_COMMENT}'. Ignoring it")
-    elif content != new_content:
         save(file_path, new_content)
-        out.success(f"Migration: Successfully updated {file_name}")
+        out.success(f"Initialized file: '{file_path}'")
+    else:
+        content = load(file_path)
+
+        first_line = content.lstrip().split("\n", 1)[0]
+
+        if CONAN_GENERATED_COMMENT in first_line and content != new_content:
+            save(file_path, new_content)
+            out.success(f"Migration: Successfully updated {file_name}")
 
 
 class ClientMigrator(Migrator):
@@ -47,3 +48,6 @@ class ClientMigrator(Migrator):
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
         from conans.client.graph.compatibility import migrate_compatibility_files
         migrate_compatibility_files(cache)
+        # Update profile plugin
+        from conans.client.profile_loader import migrate_profile_plugin
+        migrate_profile_plugin(cache)
