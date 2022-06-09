@@ -17,10 +17,14 @@ from conans.util.files import chdir, mkdir
 
 def json_create(info):
     deps_graph, profile_build, profile_host = info
+    graph_info = {}
+    for n in deps_graph.serialize()["nodes"]:
+        graph_info[n['ref']] = n
+
     result = {
         "profile_build": profile_build.serialize(),
         "profile_host": profile_host.serialize(),
-        "deps_graph": deps_graph.serialize(),
+        "graph": graph_info,
     }
     return json.dumps(result, indent=4)
 

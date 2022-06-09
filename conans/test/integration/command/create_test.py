@@ -325,7 +325,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")})
         client.run("create .")
         client.save({"conanfile.py": GenConanfile().with_name("bye").with_version("0.1")
-                                                   .with_require("hello/0.1")})
+                    .with_require("hello/0.1")})
         client.run("create .")
 
         ref = RecipeReference.loads("bye/0.1")
@@ -384,7 +384,7 @@ def test_create_build_missing():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")
-                                                          .with_requires("dep/1.0")})
+           .with_requires("dep/1.0")})
     c.run("create dep -s os=Windows")
 
     # Wrong pattern will not build it
@@ -409,3 +409,110 @@ def test_create_build_missing():
     c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
+
+def test_create_format_json():
+    """
+    Tests the ``conan create . -f json`` result
+
+    The result should be something like:
+
+    {
+        'graph': {
+            'conanfile': {...},  # Consumer
+            'hello/0.1#18d5440ae45afc4c36139a160ac071c7': {...},
+            'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d': {'...},
+        }
+        'profile_build': {'build_env': '',
+                       'conf': {},
+                       'options': {'options': {}},
+                       'package_settings': {},
+                       'settings': {'arch': 'x86_64',
+                                    'build_type': 'Release',
+                                    'compiler': 'apple-clang',
+                                    'compiler.libcxx': 'libc++',
+                                    'compiler.version': '12.0',
+                                    'os': 'Macos'},
+                       'tool_requires': {}},
+        'profile_host': {'build_env': 'VAR1=myvalue1\n',
+                      'conf': {'user.myconf:value': '"my value"'},
+                      'options': {'options': {}},
+                      'package_settings': {},
+                      'settings': {'arch': 'x86_64',
+                                   'build_type': 'Release',
+                                   'compiler': 'apple-clang',
+                                   'compiler.libcxx': 'libc++',
+                                   'compiler.version': '12.0',
+                                   'os': 'Macos'},
+                      'tool_requires': {}}
+    }
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+            settings = "build_type", "compiler"
+            author = "John Doe"
+            license = "MIT"
+            url = "https://foo.bar.baz"
+            homepage = "https://foo.bar.site"
+            topics = "foo", "bar", "qux"
+            provides = "libjpeg", "libjpg"
+            deprecated = "other-pkg"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    profile = textwrap.dedent("""\
+    include(default)
+    [conf]
+    user.myconf:value="my value"
+    [buildenv]
+    VAR1=myvalue1
+    """)
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                .with_require("pkg/0.2"),
+                 "myprofile": profile}, clean_first=True)
+    client.run("create . -f json -pr myprofile")
+    info = json.loads(client.stdout)
+
+    profile_build = {'build_env': '',
+                     'conf': {},
+                     'options': {'options': {}},
+                     'package_settings': {},
+                     'settings': {'arch': 'x86_64',
+                                  'build_type': 'Release',
+                                  'compiler': 'apple-clang',
+                                  'compiler.libcxx': 'libc++',
+                                  'compiler.version': '12.0',
+                                  'os': 'Macos'},
+                     'tool_requires': {}}
+    assert profile_build == info["profile_build"]
+
+    profile_host = {'build_env': 'VAR1=myvalue1\n',
+                    'conf': {'user.myconf:value': '"my value"'},
+                    'options': {'options': {}},
+                    'package_settings': {},
+                    'settings': {'arch': 'x86_64',
+                                 'build_type': 'Release',
+                                 'compiler': 'apple-clang',
+                                 'compiler.libcxx': 'libc++',
+                                 'compiler.version': '12.0',
+                                 'os': 'Macos'},
+                    'tool_requires': {}}
+    assert profile_host == info["profile_host"]
+    graph_info = info["graph"]
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d'
+    assert graph_info["conanfile"]["package_id"] is None
+    assert graph_info["conanfile"]["prev"] is None
+    assert graph_info["conanfile"]["requires"] == {'1': hello_pkg_ref}
+    assert graph_info[hello_pkg_ref]["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
+    assert graph_info[hello_pkg_ref]["prev"] == "d95380a07c35273509dfc36b26f6cec1"
+    assert graph_info[hello_pkg_ref]["requires"] == {'2': pkg_pkg_ref}
+    assert graph_info[pkg_pkg_ref]["package_id"] == "89641a7a57409e4613571da8c5441e97deb5106f"
+    assert graph_info[pkg_pkg_ref]["prev"] == "5713d2545a339b6d8ff538d63a1ff5b1"
+    assert graph_info[pkg_pkg_ref]["author"] == 'John Doe'
+    assert graph_info[pkg_pkg_ref]["requires"] == {}
