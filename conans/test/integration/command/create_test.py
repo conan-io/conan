@@ -468,7 +468,9 @@ def test_create_format_json():
     profile = textwrap.dedent("""\
     include(default)
     [conf]
-    user.myconf:value="my value"
+    user.first:value="my value"
+    user.second:value=["my value"]
+    user.second:value+=["other value"]
     [buildenv]
     VAR1=myvalue1
     """)
@@ -477,7 +479,6 @@ def test_create_format_json():
                  "myprofile": profile}, clean_first=True)
     client.run("create . -f json -pr myprofile")
     info = json.loads(client.stdout)
-
     profile_build = {'build_env': '',
                      'conf': {},
                      'options': {'options': {}},
@@ -492,7 +493,8 @@ def test_create_format_json():
     assert profile_build == info["profile_build"]
 
     profile_host = {'build_env': 'VAR1=myvalue1\n',
-                    'conf': {'user.myconf:value': '"my value"'},
+                    'conf': {'user.second:value': ['my value', 'other value'],
+                             'user.first:value': '"my value"'},
                     'options': {'options': {}},
                     'package_settings': {},
                     'settings': {'arch': 'x86_64',
