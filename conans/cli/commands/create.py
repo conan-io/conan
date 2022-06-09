@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 
@@ -14,7 +15,17 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+def json_create(info):
+    deps_graph, profile_build, profile_host = info
+    result = {
+        "profile_build": profile_build.serialize(),
+        "profile_host": profile_host.serialize(),
+        "deps_graph": deps_graph.serialize(),
+    }
+    return json.dumps(result, indent=4)
+
+
+@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
 def create(conan_api, parser, *args):
     """
     Create a package
@@ -101,6 +112,8 @@ def create(conan_api, parser, *args):
     if test_conanfile_path:
         _check_tested_reference_matches(deps_graph, ref, out)
         test_package(conan_api, deps_graph, test_conanfile_path)
+
+    return deps_graph, profile_build, profile_host
 
 
 def _check_tested_reference_matches(deps_graph, tested_ref, out):

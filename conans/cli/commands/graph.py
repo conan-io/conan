@@ -11,7 +11,6 @@ from conans.cli.formatters.graph import format_graph_html, format_graph_json, fo
 from conans.cli.output import ConanOutput
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
-from conans.model.graph_lock import Lockfile
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
