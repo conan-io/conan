@@ -53,7 +53,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     save(version_txt_file_path2, "1.0.0")
     # Trigger the migrations
     t2.run("list recipes '*'")
-    assert f"Migration: Successfully updated {plugin_path}" not in t2.out
+    assert f"Migration: Successfully updated" not in t2.out
     contents = load(profile_plugin_path2)
     # Our Changes are kept!
     assert "This file is from ACME corp, " in contents
