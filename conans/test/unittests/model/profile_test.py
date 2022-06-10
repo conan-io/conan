@@ -1,7 +1,9 @@
+import json
+import textwrap
 import unittest
 from collections import OrderedDict
 
-
+from conan.tools.env.environment import ProfileEnvironment
 from conans.model.profile import Profile
 
 
@@ -117,3 +119,20 @@ def test_update_build_requires():
 
     profile.compose_profile(profile4)
     assert profile.tool_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]
+
+
+def test_profile_serialize():
+    profile = Profile()
+    profile.options.loads("zlib*:aoption=1\nzlib*:otheroption=1")
+    profile.buildenv = ProfileEnvironment.loads("VAR1=1\nVAR2=2")
+    profile.conf.update("user.myfield:value", "MyVal")
+    profile.settings["arch"] = "x86_64"
+    profile.settings["compiler"] = "Visual Studio"
+    profile.settings["compiler.version"] = "12"
+    profile.tool_requires["*"] = ["zlib/1.2.8"]
+    profile.update_package_settings({"MyPackage": [("os", "Windows")]})
+    expected_json = '{"settings": {"arch": "x86_64", "compiler": "Visual Studio", "compiler.version": "12"}, ' \
+                    '"package_settings": {"MyPackage": {"os": "Windows"}}, ' \
+                    '"options": {}, "tool_requires": {"*": ["zlib/1.2.8"]}, ' \
+                    '"conf": {"user.myfield:value": "MyVal"}, "build_env": "VAR1=1\\nVAR2=2\\n"}'
+    assert expected_json == json.dumps(profile.serialize())
