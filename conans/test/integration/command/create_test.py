@@ -448,6 +448,30 @@ def test_create_format_json():
     }
     """
     client = TestClient()
+    profile_build = textwrap.dedent("""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    [conf]
+    user.first:value="my value"
+    user.second:value=["my value"]
+    user.second:value+=["other value"]
+    [buildenv]
+    VAR1=myvalue1
+    """)
+    profile_host = textwrap.dedent("""\
+    [settings]
+    arch=x86
+    build_type=Debug
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    """)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
 
@@ -462,59 +486,63 @@ def test_create_format_json():
             topics = "foo", "bar", "qux"
             provides = "libjpeg", "libjpg"
             deprecated = "other-pkg"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
         """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create .")
-    profile = textwrap.dedent("""\
-    include(default)
-    [conf]
-    user.first:value="my value"
-    user.second:value=["my value"]
-    user.second:value+=["other value"]
-    [buildenv]
-    VAR1=myvalue1
-    """)
+    client.save({"conanfile.py": conanfile,
+                 "host": profile_host, "build": profile_build})
+    client.run("create . -pr:h host -pr:b build")
     client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
-                .with_require("pkg/0.2"),
-                 "myprofile": profile}, clean_first=True)
-    client.run("create . -f json -pr myprofile")
+                                               .with_require("pkg/0.2"),
+                 "host": profile_host, "build": profile_build}, clean_first=True)
+    client.run("create . -f json -pr:h host -pr:b build")
     info = json.loads(client.stdout)
-    profile_build = {'build_env': '',
-                     'conf': {},
-                     'options': {'options': {}},
+    profile_build = {'build_env': 'VAR1=myvalue1\n',
+                     'conf': {'user.second:value': ['my value', 'other value'],
+                              'user.first:value': '"my value"'},
+                     'options': {},
                      'package_settings': {},
                      'settings': {'arch': 'x86_64',
                                   'build_type': 'Release',
-                                  'compiler': 'apple-clang',
-                                  'compiler.libcxx': 'libc++',
-                                  'compiler.version': '12.0',
-                                  'os': 'Macos'},
+                                  'compiler': 'gcc',
+                                  'compiler.libcxx': 'libstdc++',
+                                  'compiler.version': '12',
+                                  'os': 'Linux'},
                      'tool_requires': {}}
     assert profile_build == info["profile_build"]
 
-    profile_host = {'build_env': 'VAR1=myvalue1\n',
-                    'conf': {'user.second:value': ['my value', 'other value'],
-                             'user.first:value': '"my value"'},
-                    'options': {'options': {}},
+    profile_host = {'build_env': '',
+                    'conf': {},
+                    'options': {},
                     'package_settings': {},
-                    'settings': {'arch': 'x86_64',
-                                 'build_type': 'Release',
-                                 'compiler': 'apple-clang',
-                                 'compiler.libcxx': 'libc++',
-                                 'compiler.version': '12.0',
-                                 'os': 'Macos'},
+                    'settings': {'arch': 'x86',
+                                 'build_type': 'Debug',
+                                 'compiler': 'gcc',
+                                 'compiler.libcxx': 'libstdc++',
+                                 'compiler.version': '12',
+                                 'os': 'Linux'},
                     'tool_requires': {}}
     assert profile_host == info["profile_host"]
     graph_info = info["graph"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
-    pkg_pkg_ref = 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d'
+    pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
+    assert graph_info["conanfile"]["recipe"] == "Virtual"
     assert graph_info["conanfile"]["package_id"] is None
     assert graph_info["conanfile"]["prev"] is None
+    assert graph_info["conanfile"]["options"] == {}
+    assert graph_info["conanfile"]["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
+                                                   'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
+                                                   'os': 'Linux'}
     assert graph_info["conanfile"]["requires"] == {'1': hello_pkg_ref}
     assert graph_info[hello_pkg_ref]["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
     assert graph_info[hello_pkg_ref]["prev"] == "d95380a07c35273509dfc36b26f6cec1"
+    assert graph_info[hello_pkg_ref]["settings"] == {}
+    assert graph_info[hello_pkg_ref]["options"] == {}
     assert graph_info[hello_pkg_ref]["requires"] == {'2': pkg_pkg_ref}
-    assert graph_info[pkg_pkg_ref]["package_id"] == "89641a7a57409e4613571da8c5441e97deb5106f"
-    assert graph_info[pkg_pkg_ref]["prev"] == "5713d2545a339b6d8ff538d63a1ff5b1"
+    assert graph_info[pkg_pkg_ref]["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
+    assert graph_info[pkg_pkg_ref]["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
     assert graph_info[pkg_pkg_ref]["author"] == 'John Doe'
+    assert graph_info[pkg_pkg_ref]["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
+                                                   'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
+    assert graph_info[pkg_pkg_ref]["options"] == {'fPIC': 'True', 'shared': 'False'}
     assert graph_info[pkg_pkg_ref]["requires"] == {}
