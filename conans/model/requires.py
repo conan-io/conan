@@ -197,7 +197,7 @@ class Requirement:
         propagating includes or libs or run info or both are visible or the reference is the same,
         we consider the requires equal, so they can conflict"""
         return (self.ref.name == other.ref.name and self.build == other.build and
-                (self.override or
+                (self.override or  # an override with same name and context, always match
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
@@ -207,14 +207,22 @@ class Requirement:
     def aggregate(self, other):
         """ when closing loop and finding the same dependency on a node, the information needs
         to be aggregated
+        :param other: is the existing Require that the current node has, which information has to be
+        appended to "self", which is the requires that is being propagated to the current node
+        from upstream
         """
         assert self.build == other.build
+        if other.override:
+            # If the other aggregated is an override, it shouldn't add information
+            # it already did override upstream, and the actual information used in this node is
+            # the propagated one.
+            self.force = True
+            return
         self.headers |= other.headers
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
-        # The force trait is also defined from an override
-        self.force |= other.force or other.override
+        self.force |= other.force
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):

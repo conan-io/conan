@@ -41,7 +41,6 @@ class TestConflictDiamondTest:
         for v in ("1.0", "1.0.1", "1.0.2"):
             c.save({"game/conanfile.py": _game_conanfile(v)})
             c.run("install game")
-            print(c.out)
             c.assert_listed_require({f"math/{v}": "Cache"})
 
         # Check that order of requirements doesn't affect
