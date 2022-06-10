@@ -24,7 +24,7 @@ class PkgSignaturesPlugin:
         def _sign(ref, files, folder):
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
-            self._sign(ref, folder=folder)
+            self._sign(ref, artifacts_folder=folder, signature_folder=metadata_sign)
             for f in os.listdir(metadata_sign):
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
@@ -39,4 +39,5 @@ class PkgSignaturesPlugin:
     def verify(self, ref, folder):
         if self._verify is None:
             return
-        self._verify(ref, folder)
+        metadata_sign = os.path.join(folder, METADATA, "sign")
+        self._verify(ref, artifacts_folder=folder, signature_folder=metadata_sign)
