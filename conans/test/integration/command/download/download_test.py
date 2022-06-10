@@ -207,11 +207,11 @@ class Pkg(ConanFile):
         client.run("remove * -f")
 
         client.run("download pkg/1.0#latest:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Downloading pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+        self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)
 
         # All
         client.run("remove * -f")
         client.run("download pkg/1.0#*:* -r default")
-        self.assertIn("Downloading pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+        self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)

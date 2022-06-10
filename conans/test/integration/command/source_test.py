@@ -166,7 +166,7 @@ class ConanLib(ConanFile):
         client.run("remove * -f")
         client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
-        assert f"hello/0.1#{rrev} already in server, skipping upload" in client.out
+        assert f"'hello/0.1#{rrev}' already in server, skipping upload" in client.out
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Sources downloaded from 'server0'", client.out)
 

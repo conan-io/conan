@@ -95,18 +95,15 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
         # We append the new configuration making sure that we don't overwrite it
         data = json.loads(load(preset_path))
         if multiconfig:
-            build_presets = data["buildPresets"]
-            build_preset_name = _build_preset_name(conanfile)
-            already_exist = any([b["configuration"]
-                                 for b in build_presets if b == build_preset_name])
+            new_build_preset_name = _build_preset_name(conanfile)
+            already_exist = any([b["name"] for b in data["buildPresets"]
+                                 if b["name"] == new_build_preset_name])
             if not already_exist:
                 data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
         else:
-            configure_presets = data["configurePresets"]
-            configure_preset_name = _configure_preset_name(conanfile, multiconfig)
-            already_exist = any([c["name"]
-                                 for c in configure_presets
-                                 if c["name"] == configure_preset_name])
+            new_configure_preset_name = _configure_preset_name(conanfile, multiconfig)
+            already_exist = any([c["name"] for c in data["configurePresets"]
+                                 if c["name"] == new_configure_preset_name])
             if not already_exist:
                 conf_preset = _add_configure_preset(conanfile, generator, cache_variables,
                                                     toolchain_file, multiconfig)
@@ -126,6 +123,8 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
                 data = {"version": 4, "include": [preset_path]}
             else:
                 data = json.loads(load(user_presets_path))
+                # Clear the folders that have been deleted
+                data["include"] = [i for i in data["include"] if os.path.exists(i)]
                 if preset_path not in data["include"]:
                     data["include"].append(preset_path)
 

@@ -42,6 +42,8 @@ class ConanOutput:
     def __init__(self, scope=""):
         self.stream = sys.stderr
         self._scope = scope
+        # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
+        #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = color_enabled(self.stream)
 
     @property

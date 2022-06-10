@@ -120,14 +120,14 @@ class RestV2Methods(RestCommonMethods):
         # Direct upload the recipe
         urls = {fn: self.router.recipe_file(ref, fn)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, display_name=str(ref))
+        self._upload_files(files_to_upload, urls)
 
     def _upload_package(self, pref, files_to_upload):
         urls = {fn: self.router.package_file(pref, fn)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, display_name=pref.repr_reduced())
+        self._upload_files(files_to_upload, urls)
 
-    def _upload_files(self, files, urls, display_name=None):
+    def _upload_files(self, files, urls):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
@@ -136,15 +136,14 @@ class RestV2Methods(RestCommonMethods):
         output = ConanOutput()
         for filename in sorted(files):
             if output and not output.is_terminal:
-                msg = "Uploading: %s" % filename if not display_name else (
-                    "Uploading %s -> %s" % (filename, display_name))
+                msg ="-> %s" % filename
                 output.info(msg)
             resource_url = urls[filename]
             try:
                 headers = {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy,
-                                headers=headers, display_name=display_name)
+                                headers=headers)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
