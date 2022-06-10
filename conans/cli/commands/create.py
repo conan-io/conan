@@ -20,13 +20,7 @@ def json_create(info):
     graph_info = {}
     for n in deps_graph.serialize()["nodes"]:
         graph_info[n['ref']] = n
-
-    result = {
-        "profile_build": profile_build.serialize(),
-        "profile_host": profile_host.serialize(),
-        "graph": graph_info,
-    }
-    return json.dumps(result, indent=4)
+    return json.dumps({"graph": graph_info}, indent=4)
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})

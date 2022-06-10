@@ -497,32 +497,6 @@ def test_create_format_json():
                  "host": profile_host, "build": profile_build}, clean_first=True)
     client.run("create . -f json -pr:h host -pr:b build")
     info = json.loads(client.stdout)
-    profile_build = {'build_env': 'VAR1=myvalue1\n',
-                     'conf': {'user.second:value': ['my value', 'other value'],
-                              'user.first:value': '"my value"'},
-                     'options': {},
-                     'package_settings': {},
-                     'settings': {'arch': 'x86_64',
-                                  'build_type': 'Release',
-                                  'compiler': 'gcc',
-                                  'compiler.libcxx': 'libstdc++',
-                                  'compiler.version': '12',
-                                  'os': 'Linux'},
-                     'tool_requires': {}}
-    assert profile_build == info["profile_build"]
-
-    profile_host = {'build_env': '',
-                    'conf': {},
-                    'options': {},
-                    'package_settings': {},
-                    'settings': {'arch': 'x86',
-                                 'build_type': 'Debug',
-                                 'compiler': 'gcc',
-                                 'compiler.libcxx': 'libstdc++',
-                                 'compiler.version': '12',
-                                 'os': 'Linux'},
-                    'tool_requires': {}}
-    assert profile_host == info["profile_host"]
     graph_info = info["graph"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
