@@ -1,3 +1,5 @@
+import textwrap
+
 from conans.test.utils.tools import GenConanfile, TestClient
 
 
@@ -49,3 +51,31 @@ def test_basic_default_modes_application():
     new_package_id = "efe870a1b1b4fe60e55aa6e2d17436665404370f"
     assert new_package_id != package_id
     c.assert_listed_binary({"engine/1.0": (new_package_id, "Build")})
+
+
+class TestDepDefinedMode:
+    def test_dep_defined(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                package_type = "static-library"
+                embed_mode = "major_mode"
+                non_embed_mode = "major_mode"
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
+                                                              .with_shared_option(False)})
+        c.run("create dep --version=0.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("66a9e6a31e63f77952fd72744d0d5da07970f42e", "Build")})
+        c.run("create pkg -o pkg/*:shared=True")
+        c.assert_listed_binary({"pkg/0.1": ("5a5828e18eef6a86813b01d4f5a83ea7d87d1139", "Build")})
+
+        # using dep 0.2, still same, because dependency chose "major_mode"
+        c.run("create dep --version=0.2")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("66a9e6a31e63f77952fd72744d0d5da07970f42e", "Build")})
+        c.run("create pkg -o pkg/*:shared=True")
+        c.assert_listed_binary({"pkg/0.1": ("5a5828e18eef6a86813b01d4f5a83ea7d87d1139", "Build")})

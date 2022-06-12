@@ -27,7 +27,7 @@ def compute_package_id(node, new_config):
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
+        require.deduce_package_id_mode(conanfile.package_type, dep_node,
                                        non_embed_mode, embed_mode, build_mode, unknown_mode)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
