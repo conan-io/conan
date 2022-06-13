@@ -33,7 +33,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         rhs = add_millennium(extract_cpp_version(rhs))
         return lhs < rhs
 
-    current_cppstd = conanfile.info.settings.get_safe("compiler.cppstd")
+    current_cppstd = conanfile.settings.get_safe("compiler.cppstd")
     if current_cppstd is None:
         raise ConanInvalidConfiguration("The compiler.cppstd is not defined for this configuration")
 
