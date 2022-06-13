@@ -1,7 +1,6 @@
 import hashlib
 import os
 import shutil
-import uuid
 
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
@@ -53,8 +52,9 @@ class DataCache:
         return sha_bytes[0:16]
 
     @staticmethod
-    def _get_tmp_path():
-        h = DataCache._short_hash_path(str(uuid.uuid4()))
+    def _get_tmp_path(ref):
+        # The reference will not have revision, but it will be always constant
+        h = DataCache._short_hash_path(ref.repr_notime())
         return os.path.join("tmp", h)
 
     @staticmethod
@@ -66,7 +66,7 @@ class DataCache:
         # computed yet, until it is. The entry is not added to DB, just a temp folder is created
         assert ref.revision is None, "Recipe revision should be None"
         assert ref.timestamp is None
-        reference_path = self._get_tmp_path()
+        reference_path = self._get_tmp_path(ref)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -76,7 +76,7 @@ class DataCache:
         assert pref.package_id, "Package id must be known to get or create the package layout"
         assert pref.revision is None, "Package revision should be None"
         assert pref.timestamp is None
-        package_path = self._get_tmp_path()
+        package_path = self._get_tmp_path(pref)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
