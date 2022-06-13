@@ -630,11 +630,18 @@ def test_create_format_json_and_deps_cpp_info():
                                                .with_require("pkg/0.2")}, clean_first=True)
     client.run("create . -f json")
     info = json.loads(client.stdout)
-    graph_info = info["graph"]
+    nodes = info["graph"]["nodes"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
-    hello_cpp_info = graph_info[hello_pkg_ref]['cpp_info']
     pkg_pkg_ref = 'pkg/0.2#1a451cd35196f8a3264a7775283a5ed2'
-    pkg_cpp_info = graph_info[pkg_pkg_ref]['cpp_info']
+    hello_cpp_info = pkg_cpp_info = None
+    for n in nodes:
+        ref = n["ref"]
+        if ref == hello_pkg_ref:
+            hello_cpp_info = n['cpp_info']
+        elif ref == pkg_pkg_ref:
+            pkg_cpp_info = n['cpp_info']
+
+    assert hello_cpp_info and pkg_cpp_info
     # hello/0.1 cpp_info
     assert hello_cpp_info['root']["libs"] is None
     assert len(hello_cpp_info['root']["bindirs"]) == 1
