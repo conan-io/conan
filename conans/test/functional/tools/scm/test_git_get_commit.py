@@ -3,9 +3,9 @@ import os
 import pytest
 
 from conan.tools.scm import Git
-from conans.tools import chdir
 from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import chdir
 
 
 @pytest.mark.tool("git")
@@ -103,6 +103,8 @@ def test_multi_folder_repo():
     commit_real = str(c.out).splitlines()[0]
     assert new_commit_root == commit_real
 
+
+@pytest.mark.tool("git")
 def test_relative_folder_repo():
     c = TestClient()
     conanfile = MockConanfile({})
@@ -121,6 +123,7 @@ def test_relative_folder_repo():
     c.save({"root_change": ""})
     c.run_command("git add .")
     c.run_command('git commit -m "root change"')
+    print(c.current_folder)
 
     # Relative paths for folders, from the current_folder
     with chdir(c.current_folder):
@@ -167,6 +170,8 @@ def test_relative_folder_repo():
     commit_real_libA = str(c.out).splitlines()[0]
     assert commit_real_libA == commit_libA
 
+
+@pytest.mark.tool("git")
 def test_submodule_repo():
     c = TestClient()
     conanfile = MockConanfile({})
