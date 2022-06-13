@@ -419,32 +419,21 @@ def test_create_format_json():
 
     {
         'graph': {
-            'conanfile': {...},  # Consumer
-            'hello/0.1#18d5440ae45afc4c36139a160ac071c7': {...},
-            'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d': {'...},
+            'nodes': [
+                {'ref': '',  # consumer
+                 'recipe': 'Virtual',
+                 ....
+                },
+                {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
+                 'requires': {'2': 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'},
+                 ....
+                },
+                {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
+                 ....
+                }
+            ],
+            'root': {'0': 'None'}
         }
-        'profile_build': {'build_env': '',
-                       'conf': {},
-                       'options': {'options': {}},
-                       'package_settings': {},
-                       'settings': {'arch': 'x86_64',
-                                    'build_type': 'Release',
-                                    'compiler': 'apple-clang',
-                                    'compiler.libcxx': 'libc++',
-                                    'compiler.version': '12.0',
-                                    'os': 'Macos'},
-                       'tool_requires': {}},
-        'profile_host': {'build_env': 'VAR1=myvalue1\n',
-                      'conf': {'user.myconf:value': '"my value"'},
-                      'options': {'options': {}},
-                      'package_settings': {},
-                      'settings': {'arch': 'x86_64',
-                                   'build_type': 'Release',
-                                   'compiler': 'apple-clang',
-                                   'compiler.libcxx': 'libc++',
-                                   'compiler.version': '12.0',
-                                   'os': 'Macos'},
-                      'tool_requires': {}}
     }
     """
     client = TestClient()
@@ -493,30 +482,47 @@ def test_create_format_json():
                  "host": profile_host, "build": profile_build})
     client.run("create . -pr:h host -pr:b build")
     client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
-                                               .with_require("pkg/0.2"),
+                .with_require("pkg/0.2"),
                  "host": profile_host, "build": profile_build}, clean_first=True)
     client.run("create . -f json -pr:h host -pr:b build")
     info = json.loads(client.stdout)
-    graph_info = info["graph"]
+    nodes = info["graph"]['nodes']
+    consumer_ref = 'conanfile'
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
-    assert graph_info["conanfile"]["recipe"] == "Virtual"
-    assert graph_info["conanfile"]["package_id"] is None
-    assert graph_info["conanfile"]["prev"] is None
-    assert graph_info["conanfile"]["options"] == {}
-    assert graph_info["conanfile"]["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
-                                                   'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
-                                                   'os': 'Linux'}
-    assert graph_info["conanfile"]["requires"] == {'1': hello_pkg_ref}
-    assert graph_info[hello_pkg_ref]["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
-    assert graph_info[hello_pkg_ref]["prev"] == "d95380a07c35273509dfc36b26f6cec1"
-    assert graph_info[hello_pkg_ref]["settings"] == {}
-    assert graph_info[hello_pkg_ref]["options"] == {}
-    assert graph_info[hello_pkg_ref]["requires"] == {'2': pkg_pkg_ref}
-    assert graph_info[pkg_pkg_ref]["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
-    assert graph_info[pkg_pkg_ref]["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
-    assert graph_info[pkg_pkg_ref]["author"] == 'John Doe'
-    assert graph_info[pkg_pkg_ref]["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
-                                                   'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
-    assert graph_info[pkg_pkg_ref]["options"] == {'fPIC': 'True', 'shared': 'False'}
-    assert graph_info[pkg_pkg_ref]["requires"] == {}
+    consumer_info = hello_pkg_info = pkg_pkg_info = None
+
+    for n in nodes:
+        ref = n["ref"]
+        if ref == consumer_ref:
+            consumer_info = n
+        elif ref == hello_pkg_ref:
+            hello_pkg_info = n
+        elif ref == pkg_pkg_ref:
+            pkg_pkg_info = n
+        else:
+            raise Exception("Ref not found. Review the revisions hash.")
+
+    # Consumer information
+    assert consumer_info["recipe"] == "Virtual"
+    assert consumer_info["package_id"] is None
+    assert consumer_info["prev"] is None
+    assert consumer_info["options"] == {}
+    assert consumer_info["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
+                                         'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
+                                         'os': 'Linux'}
+    assert consumer_info["requires"] == {'1': hello_pkg_ref}
+    # hello/0.1 pkg information
+    assert hello_pkg_info["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
+    assert hello_pkg_info["prev"] == "d95380a07c35273509dfc36b26f6cec1"
+    assert hello_pkg_info["settings"] == {}
+    assert hello_pkg_info["options"] == {}
+    assert hello_pkg_info["requires"] == {'2': pkg_pkg_ref}
+    # pkg/0.2 pkg information
+    assert pkg_pkg_info["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
+    assert pkg_pkg_info["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
+    assert pkg_pkg_info["author"] == 'John Doe'
+    assert pkg_pkg_info["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
+    assert pkg_pkg_info["options"] == {'fPIC': 'True', 'shared': 'False'}
+    assert pkg_pkg_info["requires"] == {}
