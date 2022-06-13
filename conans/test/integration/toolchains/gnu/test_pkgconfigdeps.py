@@ -2,8 +2,6 @@ import glob
 import os
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -596,3 +594,32 @@ def test_components_and_package_pc_creation_order():
     assert "Requires:" not in pc_content
     pc_content = client.load("pkgb.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
+
+
+def test_with_editable_layout():
+    """
+    https://github.com/conan-io/conan/issues/11435
+    """
+    client = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Dep(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def layout(self):
+                self.cpp.source.includedirs = ["include"]
+            def package_info(self):
+                self.cpp_info.libs = ["mylib"]
+        """)
+    client.save({"dep/conanfile.py": dep,
+                 "dep/include/header.h": "",
+                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
+    client.run("create dep")
+    client.run("editable add dep dep/0.1")
+    with client.chdir("pkg"):
+        client.run("install . -g PkgConfigDeps")
+        pc = client.load("dep.pc")
+        assert 'Libs: -L"${libdir1}" -lmylib' in pc
+        assert 'includedir1=' in pc
+        assert 'Cflags: -I"${includedir1}"' in pc

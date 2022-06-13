@@ -127,8 +127,11 @@ class Node(object):
         # print("    Transitive deps", self.transitive_deps)
         # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
+        result = None
         if prev and (prev.require is not require or prev.node is not None):
-            return prev.require, prev.node, self
+            result = prev.require, prev.node, self
+            # Do not return yet, keep checking downstream, because downstream overrides or forces
+            # have priority
 
         # Check if need to propagate downstream
         # Then propagate downstream
@@ -136,7 +139,7 @@ class Node(object):
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:
-            return
+            return result
         assert len(self.dependants) == 1
         dependant = self.dependants[0]
 
@@ -147,10 +150,10 @@ class Node(object):
 
         if down_require is None:
             # print("    No need to check downstream more")
-            return
+            return result
 
         source_node = dependant.src
-        return source_node.check_downstream_exists(down_require)
+        return source_node.check_downstream_exists(down_require) or result
 
     def check_loops(self, new_node):
         if self.ref == new_node.ref and self.context == new_node.context:
