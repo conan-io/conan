@@ -27,6 +27,17 @@ class Profile(object):
     def __repr__(self):
         return self.dumps()
 
+    def serialize(self):
+        return {
+            "settings": self.settings,
+            "package_settings": self.package_settings,
+            "options": self.options.serialize(),
+            "tool_requires": self.tool_requires,
+            "conf": self.conf.serialize(),
+            # FIXME: Perform a serialize method for ProfileEnvironment
+            "build_env": self.buildenv.dumps()
+        }
+
     @property
     def package_settings_values(self):
         if self._package_settings_values is None:

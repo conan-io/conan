@@ -325,7 +325,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")})
         client.run("create .")
         client.save({"conanfile.py": GenConanfile().with_name("bye").with_version("0.1")
-                                                   .with_require("hello/0.1")})
+                    .with_require("hello/0.1")})
         client.run("create .")
 
         ref = RecipeReference.loads("bye/0.1")
@@ -384,7 +384,7 @@ def test_create_build_missing():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")
-                                                          .with_requires("dep/1.0")})
+           .with_requires("dep/1.0")})
     c.run("create dep -s os=Windows")
 
     # Wrong pattern will not build it
@@ -409,3 +409,120 @@ def test_create_build_missing():
     c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
+
+def test_create_format_json():
+    """
+    Tests the ``conan create . -f json`` result
+
+    The result should be something like:
+
+    {
+        'graph': {
+            'nodes': [
+                {'ref': '',  # consumer
+                 'recipe': 'Virtual',
+                 ....
+                },
+                {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
+                 'requires': {'2': 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'},
+                 ....
+                },
+                {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
+                 ....
+                }
+            ],
+            'root': {'0': 'None'}
+        }
+    }
+    """
+    client = TestClient()
+    profile_build = textwrap.dedent("""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    [conf]
+    user.first:value="my value"
+    user.second:value=["my value"]
+    user.second:value+=["other value"]
+    [buildenv]
+    VAR1=myvalue1
+    """)
+    profile_host = textwrap.dedent("""\
+    [settings]
+    arch=x86
+    build_type=Debug
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+            settings = "build_type", "compiler"
+            author = "John Doe"
+            license = "MIT"
+            url = "https://foo.bar.baz"
+            homepage = "https://foo.bar.site"
+            topics = "foo", "bar", "qux"
+            provides = "libjpeg", "libjpg"
+            deprecated = "other-pkg"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "host": profile_host, "build": profile_build})
+    client.run("create . -pr:h host -pr:b build")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                .with_require("pkg/0.2"),
+                 "host": profile_host, "build": profile_build}, clean_first=True)
+    client.run("create . -f json -pr:h host -pr:b build")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]['nodes']
+    consumer_ref = 'conanfile'
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
+    consumer_info = hello_pkg_info = pkg_pkg_info = None
+
+    for n in nodes:
+        ref = n["ref"]
+        if ref == consumer_ref:
+            consumer_info = n
+        elif ref == hello_pkg_ref:
+            hello_pkg_info = n
+        elif ref == pkg_pkg_ref:
+            pkg_pkg_info = n
+        else:
+            raise Exception("Ref not found. Review the revisions hash.")
+
+    # Consumer information
+    assert consumer_info["recipe"] == "Virtual"
+    assert consumer_info["package_id"] is None
+    assert consumer_info["prev"] is None
+    assert consumer_info["options"] == {}
+    assert consumer_info["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
+                                         'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
+                                         'os': 'Linux'}
+    assert consumer_info["requires"] == {'1': hello_pkg_ref}
+    # hello/0.1 pkg information
+    assert hello_pkg_info["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
+    assert hello_pkg_info["prev"] == "d95380a07c35273509dfc36b26f6cec1"
+    assert hello_pkg_info["settings"] == {}
+    assert hello_pkg_info["options"] == {}
+    assert hello_pkg_info["requires"] == {'2': pkg_pkg_ref}
+    # pkg/0.2 pkg information
+    assert pkg_pkg_info["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
+    assert pkg_pkg_info["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
+    assert pkg_pkg_info["author"] == 'John Doe'
+    assert pkg_pkg_info["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
+    assert pkg_pkg_info["options"] == {'fPIC': 'True', 'shared': 'False'}
+    assert pkg_pkg_info["requires"] == {}

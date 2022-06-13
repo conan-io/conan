@@ -309,7 +309,7 @@ def load_binary_info(text):
     build_requires = parse_list(parser.build_requires)
 
     conan_info_json = {"settings": dict(settings),
-                       "options": dict(options.serialize())["options"],
+                       "options": options.serialize(),
                        "requires": requires,
                        "settings_target": dict(settings_target),
                        "conf": conf,

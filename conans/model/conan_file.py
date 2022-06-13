@@ -258,7 +258,7 @@ class ConanFile:
         result["settings"] = self.settings.serialize()
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
-        result.update(self.options.serialize())  # FIXME: The options contain an "options" already
+        result["options"] = self.options.serialize()
         result["source_folder"] = self.source_folder
         result["build_folder"] = self.build_folder
         result["package_folder"] = self.package_folder

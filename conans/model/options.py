@@ -278,7 +278,7 @@ class Options:
         for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
             for key, value in pkg_option.items():
                 result["%s:%s" % (pkg_pattern, key)] = value
-        return {"options": result}
+        return result
 
     def clear(self):
         # for header_only() clearing

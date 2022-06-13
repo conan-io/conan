@@ -114,6 +114,17 @@ class _ConfValue(object):
         else:
             return "{}={}".format(self._name, self._value)
 
+    def serialize(self):
+        if self._value is None:
+            _value = "!"  # unset
+        elif self._value_type is list and _ConfVarPlaceHolder in self._value:
+            v = self._value[:]
+            v.remove(_ConfVarPlaceHolder)
+            _value = v
+        else:
+            _value = self._value
+        return {self._name: _value}
+
     def update(self, value):
         if self._value_type is dict:
             self._value.update(value)
@@ -271,10 +282,19 @@ class Conf:
         return c
 
     def dumps(self):
-        """ returns a string with a profile-like original definition, not the full environment
-        values
+        """
+        Returns a string with the format ``name=conf-value``
         """
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
+
+    def serialize(self):
+        """
+        Returns a dict-like object, e.g., ``{"tools.xxxx": "value1"}``
+        """
+        ret = {}
+        for v in self._values.values():
+            ret.update(v.serialize())
+        return ret
 
     def define(self, name, value):
         """
@@ -534,6 +554,16 @@ class ConfDefinition:
         if result:
             result.append("")
         return "\n".join(result)
+
+    def serialize(self):
+        result = {}
+        for pattern, conf in self._pattern_confs.items():
+            if pattern is None:
+                result.update(conf.serialize())
+            else:
+                for k, v in conf.serialize():
+                    result[f"{pattern}:{k}"] = v
+        return result
 
     @staticmethod
     def _get_evaluated_value(__v):
