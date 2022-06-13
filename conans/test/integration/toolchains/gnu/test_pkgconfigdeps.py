@@ -627,3 +627,32 @@ def test_pkgconfigdeps_with_test_requires():
     client.run("install . -g PkgConfigDeps")
     assert "Description: Conan package: test" in client.load("test.pc")
     assert "Description: Conan package: app" in client.load("app.pc")
+
+
+def test_with_editable_layout():
+    """
+    https://github.com/conan-io/conan/issues/11435
+    """
+    client = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Dep(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def layout(self):
+                self.cpp.source.includedirs = ["include"]
+            def package_info(self):
+                self.cpp_info.libs = ["mylib"]
+        """)
+    client.save({"dep/conanfile.py": dep,
+                 "dep/include/header.h": "",
+                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
+    client.run("create dep")
+    client.run("editable add dep dep/0.1")
+    with client.chdir("pkg"):
+        client.run("install . -g PkgConfigDeps")
+        pc = client.load("dep.pc")
+        assert "Libs: -lmylib" in pc
+        assert 'includedir1=' in pc
+        assert 'Cflags: -I"${includedir1}"' in pc
