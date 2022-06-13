@@ -656,18 +656,21 @@ def test_tool_requires():
 
 
 class TestDuplicateBuildRequires:
-    """ what happens when you require and build_require the same dependency
+    """ what happens when you require and tool_require the same dependency
     """
     # https://github.com/conan-io/conan/issues/11179
 
     @pytest.fixture()
     def client(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=tool1 --version=1.0")
-        client.run("create . --name=tool2 --version=1.0")
-        client.run("create . --name=tool3 --version=1.0")
-        client.run("create . --name=tool4 --version=1.0")
+        msg = "self.output.info('This is the binary for OS={}'.format(self.settings.os))"
+        msg2 = "self.output.info('This is in context={}'.format(self.context))"
+        client.save({"conanfile.py": GenConanfile().with_settings("os").with_package_id(msg)
+                                                                       .with_package_id(msg2)})
+        client.run("create . --name=tool1 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool2 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool3 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool4 --version=1.0 -s os=Windows")
 
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -704,15 +707,14 @@ class TestDuplicateBuildRequires:
         """)
 
         client.save({"test_package/conanfile.py": test})
-        client.run("create . -s:b os=Windows")
-        # No requires
-        assert textwrap.dedent("""\
-            Build requirements
-                consumer/1.0#c9f0aa49098f6adac0f28e37149f79e3 - Cache
-                tool1/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-                tool2/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-                tool3/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-                tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache""") in client.out
+        client.run("create . -s:b os=Windows -s:h os=Linux")
+        assert "This is the binary for OS=Linux" not in client.out
+        assert "This is in context=host" not in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache"}, build=True)
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
 
         assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
         assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
@@ -729,16 +731,18 @@ class TestDuplicateBuildRequires:
         """)
 
         client.save({"test_package/conanfile.py": test})
-        client.run("create . -s:b os=Windows")
-        assert textwrap.dedent("""\
-        Requirements
-            consumer/1.0#c9f0aa49098f6adac0f28e37149f79e3 - Cache
-            tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-        Build requirements
-            tool1/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-            tool2/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-            tool3/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache
-            tool4/1.0#4d670581ccb765839f2239cc8dff8fbd - Cache""") in client.out
+        client.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache",
+                                      "tool4/1.0": "Cache"})
+        client.assert_listed_binary({"tool4/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270",
+                                                   "Build")})
+
+        assert "tool4/1.0: This is the binary for OS=Linux" in client.out
+        assert "tool4/1.0: This is in context=host" in client.out
 
         assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
         assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
