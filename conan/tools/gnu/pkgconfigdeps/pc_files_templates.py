@@ -87,7 +87,7 @@ def _get_formatted_dirs(folders, prefix_path_):
 
 
 def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp_info=None):
-    package_folder = dep.package_folder
+    package_folder = dep.package_folder or ""  # If editable, package_folder can be None
     cpp_info = cpp_info or dep.cpp_info
     version = cpp_info.get_property("component_version") or dep.ref.version
 
