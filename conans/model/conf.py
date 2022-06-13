@@ -28,6 +28,7 @@ BUILT_IN_CONFS = {
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
+    "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
@@ -35,6 +36,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
+    "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
@@ -218,11 +220,12 @@ class Conf:
 
     def get(self, conf_name, default=None, check_type=None):
         """
-        Get all the values belonging to the passed conf name.
 
-        :param conf_name: conf name
-        :param default: default value in case of conf does not have the conf_name key
-        :param check_type: check the conf type(value) is the same as the given by this param.
+        Get all the values of the given configuration name.
+
+        :param conf_name: Name of the configuration.
+        :param default: Default value in case of conf does not have the conf_name key.
+        :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
         """
         conf_value = self._values.get(conf_name)
@@ -247,7 +250,11 @@ class Conf:
 
     def pop(self, conf_name, default=None):
         """
-        Remove any key-value given the conf name
+        Remove the given configuration, returning its value.
+
+        :param conf_name: Name of the configuration.
+        :param default: Default value to return in case the configuration doesn't exist.
+        :return:
         """
         value = self.get(conf_name, default=default)
         self._values.pop(conf_name, None)
@@ -270,31 +277,63 @@ class Conf:
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value):
+        """
+        Define a value for the given configuration name.
+
+        :param name: Name of the configuration.
+        :param value: Value of the configuration.
+        """
         self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value)
 
     def unset(self, name):
         """
-        clears the variable, equivalent to a unset or set XXX=
+        Clears the variable, equivalent to a unset or set XXX=
+
+        :param name: Name of the configuration.
         """
         self._values[name] = _ConfValue(name, None)
 
     def update(self, name, value):
+        """
+        Update the value to the given configuration name.
+
+        :param name: Name of the configuration.
+        :param value: Value of the configuration.
+        """
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, {})
         self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
+        """
+        Append a value to the given configuration name.
+
+        :param name: Name of the configuration.
+        :param value: Value to append.
+        """
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).append(value)
 
     def prepend(self, name, value):
+        """
+        Prepend a value to the given configuration name.
+
+        :param name: Name of the configuration.
+        :param value: Value to prepend.
+        """
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):
+        """
+        Remove a value from the given configuration name.
+
+        :param name: Name of the configuration.
+        :param value: Value to remove.
+        """
         conf_value = self._values.get(name)
         if conf_value:
             conf_value.remove(value)

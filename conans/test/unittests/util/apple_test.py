@@ -76,6 +76,7 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(to_apple_arch('mips'))
         self.assertEqual(to_apple_arch('mips', default='mips'), 'mips')
 
+
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
 

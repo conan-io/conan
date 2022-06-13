@@ -27,7 +27,7 @@ def test_shared_cmake_toolchain():
     client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", "app", cwd=client.current_folder)
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out
@@ -90,7 +90,7 @@ def test_client_shared():
 
     # We can run the exe from the test package directory also, without environment
     # because there is an internal RPATH in the exe with an abs path to the "hello"
-    exe_folder = os.path.join("test_package", "test_output", "cmake-build-release")
+    exe_folder = os.path.join("test_package", "test_output", "build", "release")
     assert os.path.exists(os.path.join(client.current_folder, exe_folder, "example"))
     client.run_command(os.path.join(exe_folder, "example"))
 
@@ -108,7 +108,7 @@ def test_shared_same_dir_using_tool(test_client_shared):
     If we build an executable in Mac and we want it to locate the shared libraries in the same
     directory, we have different alternatives, here we use the "install_name_tool"
     """
-    exe_folder = os.path.join("test_package", "test_output", "cmake-build-release")
+    exe_folder = os.path.join("test_package", "test_output", "build", "release")
     # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
     test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
     test_client_shared.run_command("install_name_tool -add_rpath '.' example")
@@ -196,7 +196,7 @@ def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
     """
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
-    exe_folder = os.path.join("test_package", "test_output", "cmake-build-release")
+    exe_folder = os.path.join("test_package", "test_output", "build", "release")
     rmdir(os.path.join(test_client_shared.current_folder, exe_folder))
     test_client_shared.run("create . -o hello*:shared=True")
     test_client_shared.run("remove '*' -f")

@@ -17,6 +17,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def setUp(self):
         self.tmp_folder = temp_folder()
         self.cache = ClientCache(self.tmp_folder)
+        save(os.path.join(self.cache.plugins_path, "profile.py"), "")
 
     def _save_profile(self, compiler_cppstd=None, filename="default"):
         fullpath = os.path.join(self.cache.profiles_path, filename)

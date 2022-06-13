@@ -1,17 +1,17 @@
 import jinja2
 from jinja2 import Template
 
-from conan.tools.cmake.utils import get_file_name
+from conan.tools.cmake.utils import get_cmake_package_name
 from conans.errors import ConanException
 
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, require, conanfile, find_module_mode=False):
+    def __init__(self, cmakedeps, require, conanfile, generating_module=False):
         self.cmakedeps = cmakedeps
         self.require = require
         self.conanfile = conanfile
-        self.find_module_mode = find_module_mode
+        self.generating_module = generating_module
 
     @property
     def pkg_name(self):
@@ -23,7 +23,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile, forced_module_mode=self.find_module_mode) + self.suffix
+        return get_cmake_package_name(self.conanfile, module_mode=self.generating_module) + self.suffix
 
     @property
     def suffix(self):
@@ -84,7 +84,7 @@ class CMakeDepsFileTemplate(object):
                                                         name=req.ref.name, suffix=suffix)
 
     def get_root_target_name(self, req, suffix=""):
-        if self.find_module_mode:
+        if self.generating_module:
             ret = req.cpp_info.get_property("cmake_module_target_name")
             if ret:
                 return ret
@@ -98,7 +98,7 @@ class CMakeDepsFileTemplate(object):
                 return self.get_root_target_name(req)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
-        if self.find_module_mode:
+        if self.generating_module:
             ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name")
             if ret:
                 return ret

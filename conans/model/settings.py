@@ -172,9 +172,22 @@ class Settings(object):
                       for k, v in definition.items()}
 
     def serialize(self):
-        return {k: v.value for k, v in self._data.items()}
+        """
+        Returns a dictionary with all the settings (and sub-settings) as ``field: value``
+        """
+        ret = []
+        for _, s in self._data.items():
+            # TODO: Refactor it and use s.serialize()
+            ret.extend(s.values_list)
+        return dict(ret)
 
     def get_safe(self, name, default=None):
+        """
+        Get the setting value avoiding
+        :param name:
+        :param default:
+        :return:
+        """
         try:
             tmp = self
             for prop in name.split("."):

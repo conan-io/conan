@@ -76,15 +76,6 @@ def chdir(newdir):
         os.chdir(old_path)
 
 
-def decode_text(text, encoding="auto"):
-    bom_length = 0
-    if encoding == "auto":
-        encoding, bom_length = _detect_encoding(text)
-        if encoding is None:
-            return text.decode("utf-8", "ignore")  # Ignore not compatible characters
-    return text[bom_length:].decode(encoding)
-
-
 def touch(fname, times=None):
     os.utime(fname, times)
 
@@ -195,11 +186,42 @@ def save_files(path, files, only_if_modified=False, encoding="utf-8"):
         save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
 
 
-def load(path, binary=False, encoding="auto"):
+def load(path, binary=False, encoding="utf-8"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        return tmp if binary else decode_text(tmp, encoding)
+        return tmp if binary else tmp.decode(encoding=encoding)
+
+
+def load_user_encoded(path):
+    """ Exclusive for user side read-only files:
+     - conanfile.txt
+     - profile files
+     """
+    with open(path, 'rb') as handle:
+        text = handle.read()
+
+    import codecs
+    encodings = {codecs.BOM_UTF8: "utf_8_sig",
+                 codecs.BOM_UTF32_BE: "utf_32_be",
+                 codecs.BOM_UTF32_LE: "utf_32_le",
+                 codecs.BOM_UTF16_BE: "utf_16_be",
+                 codecs.BOM_UTF16_LE: "utf_16_le",
+                 b'\x2b\x2f\x76\x38': "utf_7",
+                 b'\x2b\x2f\x76\x39': "utf_7",
+                 b'\x2b\x2f\x76\x2b': "utf_7",
+                 b'\x2b\x2f\x76\x2f': "utf_7",
+                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
+    for bom, encoding in encodings.items():
+        if text.startswith(bom):
+            return text[len(bom):].decode(encoding)
+
+    for decoder in ["utf-8", "Windows-1252"]:
+        try:
+            return text.decode(decoder)
+        except UnicodeDecodeError as e:
+            continue
+    raise Exception(f"Unknown encoding of file: {path}\nIt is recommended to use utf-8 encoding")
 
 
 def get_abs_path(folder, origin):
@@ -310,7 +332,7 @@ def exception_message_safe(exc):
     try:
         return str(exc)
     except Exception:
-        return decode_text(repr(exc))
+        return repr(exc)
 
 
 def merge_directories(src, dst, excluded=None):

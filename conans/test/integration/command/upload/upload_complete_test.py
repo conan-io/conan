@@ -62,10 +62,10 @@ def test_upload_with_pattern():
 
     client.run("upload hello* --confirm -r default")
     for num in range(3):
-        assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
+        assert "Uploading recipe 'hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    assert f"hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7 "\
+    assert f"'hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7' "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
     assert "hello2" not in client.out
@@ -78,13 +78,13 @@ def test_check_upload_confirm_question():
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
-    assert "Uploading hello1/1.2.1@frodo/stable" in client.out
+    assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
-    assert "Uploading hello2/1.2.1@frodo/stable" not in client.out
+    assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
 
 
 class UploadTest(unittest.TestCase):

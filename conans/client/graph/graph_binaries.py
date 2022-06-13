@@ -131,7 +131,8 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         self._process_node(node, build_mode)
-        if node.binary in (BINARY_MISSING, BINARY_INVALID):
+        if node.binary in (BINARY_MISSING, BINARY_INVALID) \
+                and not build_mode.should_build_missing(node.conanfile):
             self._process_compatible_packages(node)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
@@ -152,7 +153,8 @@ class GraphBinariesAnalyzer(object):
             return
 
         if node.recipe == RECIPE_EDITABLE:
-            if build_mode.editable or self._evaluate_build(node, build_mode):
+            if build_mode.editable or self._evaluate_build(node, build_mode) or \
+                    build_mode.should_build_missing(node.conanfile):
                 node.binary = BINARY_EDITABLE_BUILD
             else:
                 node.binary = BINARY_EDITABLE  # TODO: PREV?
@@ -293,14 +295,20 @@ class GraphBinariesAnalyzer(object):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc
                     self._evaluate_package_id(node)
-                continue
-            self._evaluate_package_id(node)
-            if lockfile:
-                locked_prev = lockfile.resolve_prev(node)
-                if locked_prev:
-                    self._process_locked_node(node, build_mode, locked_prev)
-                    continue
-            self._evaluate_node(node, build_mode)
+                elif node.path is not None and node.path.endswith(".txt"):
+                    # To support the ``[layout]`` in conanfile.txt
+                    # TODO: Refactorize this a bit, the call to ``layout()``
+                    if hasattr(node.conanfile, "layout"):
+                        with conanfile_exception_formatter(node.conanfile, "layout"):
+                            node.conanfile.layout()
+            else:
+                self._evaluate_package_id(node)
+                if lockfile:
+                    locked_prev = lockfile.resolve_prev(node)
+                    if locked_prev:
+                        self._process_locked_node(node, build_mode, locked_prev)
+                        continue
+                self._evaluate_node(node, build_mode)
 
         self._skip_binaries(deps_graph)
 

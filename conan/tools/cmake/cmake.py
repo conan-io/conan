@@ -42,8 +42,8 @@ class CMake(object):
         self._conanfile = conanfile
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
-        configure_preset = get_configure_preset(cmake_presets,
-                                                conanfile.settings.get_safe("build_type"))
+        configure_preset = get_configure_preset(cmake_presets, conanfile)
+
         self._generator = configure_preset["generator"]
         self._toolchain_file = configure_preset["toolchainFile"]
         self._cache_variables = configure_preset["cacheVariables"]
@@ -128,7 +128,7 @@ class CMake(object):
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
-        arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
+        arg_list = ['"{}"'.format(bf), build_config, args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
@@ -167,8 +167,8 @@ class CMake(object):
         is_multi = is_multi_configuration(self._generator)
         build_config = "--config {}".format(bt) if bt and is_multi else ""
 
-        pkg_folder = args_to_string([self._conanfile.package_folder.replace("\\", "/")])
-        build_folder = args_to_string([self._conanfile.build_folder])
+        pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
+        build_folder = '"{}"'.format(self._conanfile.build_folder)
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
