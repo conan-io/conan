@@ -376,3 +376,21 @@ class OptionsValuesTest(unittest.TestCase):
     def test_package_with_spaces(self):
         self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
                          OptionsValues([('pck2 :opt', 50), ]).dumps())
+
+
+def test_validate_any_as_list():
+    package_options = PackageOptions.loads("""{
+    path: ["ANY", "kk"]}""")
+    values = PackageOptionValues()
+    values.add_option("path", "FOO")
+    package_options.values = values
+    sut = Options(package_options)
+    assert sut.path == "FOO"
+
+    package_options = PackageOptions.loads("""{
+        path: "ANY"}""")
+    values = PackageOptionValues()
+    values.add_option("path", "WHATEVER")
+    package_options.values = values
+    sut = Options(package_options)
+    assert sut.path == "WHATEVER"
