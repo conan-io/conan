@@ -16,11 +16,8 @@ from conans.util.files import chdir, mkdir
 
 
 def json_create(info):
-    deps_graph, profile_build, profile_host = info
-    graph_info = {}
-    for n in deps_graph.serialize()["nodes"]:
-        graph_info[n['ref']] = n
-    return json.dumps({"graph": graph_info}, indent=4)
+    deps_graph = info
+    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
@@ -111,7 +108,7 @@ def create(conan_api, parser, *args):
         _check_tested_reference_matches(deps_graph, ref, out)
         test_package(conan_api, deps_graph, test_conanfile_path)
 
-    return deps_graph, profile_build, profile_host
+    return deps_graph
 
 
 def _check_tested_reference_matches(deps_graph, tested_ref, out):
