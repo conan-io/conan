@@ -596,27 +596,17 @@ def test_create_format_json_and_deps_cpp_info():
 
             def package_info(self):
                 self.cpp_info.libs = ["pkg"]
-                self.cpp_info.includedirs = []
-                self.cpp_info.includedirs.append("path/includes/pkg")
-                self.cpp_info.includedirs.append("other/include/path/pkg")
-                self.cpp_info.libdirs = []
-                self.cpp_info.libdirs.append("one/lib/path/pkg")
-                self.cpp_info.defines = []
-                self.cpp_info.defines.append("pkg_onedefinition")
-                self.cpp_info.defines.append("pkg_twodefinition")
+                self.cpp_info.includedirs = ["path/includes/pkg", "other/include/path/pkg"]
+                self.cpp_info.libdirs = ["one/lib/path/pkg"]
+                self.cpp_info.defines = ["pkg_onedefinition", "pkg_twodefinition"]
                 self.cpp_info.cflags = ["pkg_a_c_flag"]
                 self.cpp_info.cxxflags = ["pkg_a_cxx_flag"]
                 self.cpp_info.sharedlinkflags = ["pkg_shared_link_flag"]
                 self.cpp_info.exelinkflags = ["pkg_exe_link_flag"]
                 self.cpp_info.sysroot = "/path/to/folder/pkg"
-                self.cpp_info.frameworks = []
-                self.cpp_info.frameworks.append("pkg_oneframework")
-                self.cpp_info.frameworks.append("pkg_twoframework")
-                self.cpp_info.system_libs = []
-                self.cpp_info.system_libs.append("pkg_onesystemlib")
-                self.cpp_info.system_libs.append("pkg_twosystemlib")
-                self.cpp_info.frameworkdirs = []
-                self.cpp_info.frameworkdirs.append("one/framework/path/pkg")
+                self.cpp_info.frameworks = ["pkg_oneframework", "pkg_twoframework"]
+                self.cpp_info.system_libs = ["pkg_onesystemlib", "pkg_twosystemlib"]
+                self.cpp_info.frameworkdirs = ["one/framework/path/pkg"]
                 self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
                 self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
@@ -632,7 +622,7 @@ def test_create_format_json_and_deps_cpp_info():
     info = json.loads(client.stdout)
     nodes = info["graph"]["nodes"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
-    pkg_pkg_ref = 'pkg/0.2#1a451cd35196f8a3264a7775283a5ed2'
+    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
     for n in nodes:
         ref = n["ref"]
