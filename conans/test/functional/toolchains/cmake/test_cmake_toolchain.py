@@ -75,10 +75,13 @@ def test_cmake_toolchain_custom_toolchain():
 @pytest.mark.skipif(platform.system() != "Darwin",
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool_cmake(version="3.23")
-def test_cmake_user_presets_load():
+@pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
+def test_cmake_user_presets_load(existing_user_presets):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
-    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
+    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
+    a CMakeUserPresets.cmake, leave the file untouched, and only generate or modify the file if
+    the `conan` object exists in the `vendor` field.
     """
     t = TestClient()
     t.run("new mylib/1.0 --template cmake_lib")
@@ -105,10 +108,31 @@ def test_cmake_user_presets_load():
         project(PackageTest CXX)
         find_package(mylib REQUIRED CONFIG)
         """)
-    t.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelist}, clean_first=True)
+
+    user_presets = None
+    if existing_user_presets == "user_provided":
+        user_presets = "{}"
+    elif existing_user_presets == "conan_generated":
+        user_presets = '{ "vendor": {"conan": {} } }'
+
+    files_to_save = {"conanfile.py": consumer, "CMakeLists.txt": cmakelist}
+
+    if user_presets:
+        files_to_save['CMakeUserPresets.json'] = user_presets
+    t.save(files_to_save, clean_first=True)
     t.run("install . -s:h build_type=Debug -g CMakeToolchain")
     t.run("install . -s:h build_type=Release -g CMakeToolchain")
-    assert os.path.exists(os.path.join(t.current_folder, "CMakeUserPresets.json"))
+
+    user_presets_path = os.path.join(t.current_folder, "CMakeUserPresets.json")
+    assert os.path.exists(user_presets_path)
+
+    user_presets_data = json.loads(load(user_presets_path))
+    if existing_user_presets == "user_provided":
+        assert not user_presets_data
+    else:
+        assert "include" in user_presets_data.keys()
+
+    if existing_user_presets == None:
     t.run_command("cmake . --preset release")
     assert 'CMAKE_BUILD_TYPE="Release"' in t.out
     t.run_command("cmake . --preset debug")
