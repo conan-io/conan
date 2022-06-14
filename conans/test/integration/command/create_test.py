@@ -526,3 +526,134 @@ def test_create_format_json():
                                         'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
     assert pkg_pkg_info["options"] == {'fPIC': 'True', 'shared': 'False'}
     assert pkg_pkg_info["requires"] == {}
+
+
+def test_create_format_json_and_deps_cpp_info():
+    """
+    Tests the ``conan create . -f json`` result, but ``cpp_info`` object only.
+
+    The goal is to get something like:
+
+    ```
+    { ....
+    'cpp_info': {'cmp1': {'bindirs': None,
+                          'builddirs': None,
+                          'cflags': None,
+                          'cxxflags': None,
+                          'defines': None,
+                          'exelinkflags': None,
+                          'frameworkdirs': None,
+                          'frameworks': None,
+                          'includedirs': None,
+                          'libdirs': None,
+                          'libs': ['libcmp1'],
+                          'objects': None,
+                          'properties': {'pkg_config_aliases': ['compo1_alias'],
+                                         'pkg_config_name': 'compo1'},
+                          'requires': None,
+                          'resdirs': None,
+                          'sharedlinkflags': None,
+                          'srcdirs': None,
+                          'sysroot': '/another/sysroot',
+                          'system_libs': None},
+                 'root': {'bindirs': ['bin'],
+                          'builddirs': [],
+                          'cflags': ['pkg_a_c_flag'],
+                          'cxxflags': ['pkg_a_cxx_flag'],
+                          'defines': ['pkg_onedefinition',
+                                      'pkg_twodefinition'],
+                          'exelinkflags': ['pkg_exe_link_flag'],
+                          'frameworkdirs': ['framework/path/pkg'],
+                          'frameworks': ['pkg_oneframework',
+                                         'pkg_twoframework'],
+                          'includedirs': ['path/includes/pkg',
+                                          'include/path/pkg'],
+                          'libdirs': ['lib/path/pkg'],
+                          'libs': ['pkg'],
+                          'objects': None,
+                          'properties': {'pkg_config_aliases': ['pkg_alias1',
+                                                                'pkg_alias2'],
+                                         'pkg_config_name': 'pkg_other_name'},
+                          'requires': None,
+                          'resdirs': ['/path '
+                                      'with '
+                                      'spaces/.conan2/p/d15a235e212166d9/p/res'],
+                          'sharedlinkflags': ['pkg_shared_link_flag'],
+                          'srcdirs': None,
+                          'sysroot': '/path/to/folder/pkg',
+                          'system_libs': ['pkg_onesystemlib',
+                                          'pkg_twosystemlib']}
+    }}
+    ```
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+
+            def package_info(self):
+                self.cpp_info.libs = ["pkg"]
+                self.cpp_info.includedirs = ["path/includes/pkg", "other/include/path/pkg"]
+                self.cpp_info.libdirs = ["one/lib/path/pkg"]
+                self.cpp_info.defines = ["pkg_onedefinition", "pkg_twodefinition"]
+                self.cpp_info.cflags = ["pkg_a_c_flag"]
+                self.cpp_info.cxxflags = ["pkg_a_cxx_flag"]
+                self.cpp_info.sharedlinkflags = ["pkg_shared_link_flag"]
+                self.cpp_info.exelinkflags = ["pkg_exe_link_flag"]
+                self.cpp_info.sysroot = "/path/to/folder/pkg"
+                self.cpp_info.frameworks = ["pkg_oneframework", "pkg_twoframework"]
+                self.cpp_info.system_libs = ["pkg_onesystemlib", "pkg_twosystemlib"]
+                self.cpp_info.frameworkdirs = ["one/framework/path/pkg"]
+                self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
+                self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
+                self.cpp_info.components["cmp1"].sysroot = "/another/sysroot"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                                               .with_require("pkg/0.2")}, clean_first=True)
+    client.run("create . -f json")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]["nodes"]
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
+    hello_cpp_info = pkg_cpp_info = None
+    for n in nodes:
+        ref = n["ref"]
+        if ref == hello_pkg_ref:
+            hello_cpp_info = n['cpp_info']
+        elif ref == pkg_pkg_ref:
+            pkg_cpp_info = n['cpp_info']
+
+    assert hello_cpp_info and pkg_cpp_info
+    # hello/0.1 cpp_info
+    assert hello_cpp_info['root']["libs"] is None
+    assert len(hello_cpp_info['root']["bindirs"]) == 1
+    assert len(hello_cpp_info['root']["libdirs"]) == 1
+    assert hello_cpp_info['root']["sysroot"] is None
+    assert hello_cpp_info['root']["properties"] is None
+    # pkg/0.2 cpp_info
+    # root info
+    assert pkg_cpp_info['root']["libs"] == ['pkg']
+    assert len(pkg_cpp_info['root']["bindirs"]) == 1
+    assert len(pkg_cpp_info['root']["libdirs"]) == 1
+    assert pkg_cpp_info['root']["sysroot"] == '/path/to/folder/pkg'
+    assert pkg_cpp_info['root']["system_libs"] == ['pkg_onesystemlib', 'pkg_twosystemlib']
+    assert pkg_cpp_info['root']['cflags'] == ['pkg_a_c_flag']
+    assert pkg_cpp_info['root']['cxxflags'] == ['pkg_a_cxx_flag']
+    assert pkg_cpp_info['root']['defines'] == ['pkg_onedefinition', 'pkg_twodefinition']
+    assert pkg_cpp_info['root']["properties"] == {'pkg_config_aliases': ['pkg_alias1', 'pkg_alias2'],
+                                                  'pkg_config_name': 'pkg_other_name'}
+    # component info
+    assert pkg_cpp_info['cmp1']["libs"] == ['libcmp1']
+    assert pkg_cpp_info['cmp1']["bindirs"] is None
+    assert pkg_cpp_info['cmp1']["libdirs"] is None
+    assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
+    assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
+                                                  'pkg_config_name': 'compo1'}

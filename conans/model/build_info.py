@@ -61,6 +61,29 @@ class _Component(object):
         self.names = {}
         self.filenames = {}
 
+    def serialize(self):
+        return {
+            "includedirs": self._includedirs,
+            "srcdirs": self._srcdirs,
+            "libdirs": self._libdirs,
+            "resdirs": self._resdirs,
+            "bindirs": self._bindirs,
+            "builddirs": self._builddirs,
+            "frameworkdirs": self._frameworkdirs,
+            "system_libs": self._system_libs,
+            "frameworks": self._frameworks,
+            "libs": self._libs,
+            "defines": self._defines,
+            "cflags": self._cflags,
+            "cxxflags": self._cxxflags,
+            "sharedlinkflags": self._sharedlinkflags,
+            "exelinkflags": self._exelinkflags,
+            "objects": self._objects,
+            "sysroot": self._sysroot,
+            "requires": self._requires,
+            "properties": self._generator_properties
+        }
+
     @property
     def includedirs(self):
         if self._includedirs is None:
@@ -293,6 +316,13 @@ class CppInfo(object):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
+
+    def serialize(self):
+        ret = {}
+        for component_name, info in self.components.items():
+            _name = "root" if component_name is None else component_name
+            ret[_name] = info.serialize()
+        return ret
 
     @property
     def has_components(self):
