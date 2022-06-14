@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient, GenConanfile, TestServer
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
 
@@ -238,48 +238,25 @@ class TestDefaultCompat:
                f"Using compatible package '{package_id1}'"
 
     def test_fail_with_options_deleted(self):
-        c = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
                 name = "mylib"
                 version = "1.0"
-                package_type = "library"
-                options = {"shared": [True, False], "with_fmt_alias": [True, False], "header_only": [True, False]}
-                default_options = {"header_only": False, "shared": False, "with_fmt_alias": False}
+
+                options = {"with_fmt_alias": [True, False]}
+                default_options = {"with_fmt_alias": False}
+
                 settings = "os", "arch", "compiler", "build_type"
+
                 def package_id(self):
-                    if self.options.header_only:
-                        self.info.header_only()
-                    else:
-                        del self.info.options.with_fmt_alias
+                    del self.info.options.with_fmt_alias
+
                 def package_info(self):
-                    print(self.options.with_fmt_alias)
+                    self.output.warning("WITH_FMT_ALIAS={}".format(self.options.with_fmt_alias))
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("create . -s compiler.cppstd=14")
-        c.run("upload '*' -c -r default")
-        c.run("remove '*' -f")
 
-        consumer = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.build import check_min_cppstd
-            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
-            class consumer(ConanFile):
-                name = "consumer"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                options = {"shared": [True, False], "fPIC": [True, False]}
-                default_options = {"shared": False, "fPIC": True}
-                def requirements(self):
-                    self.requires("mylib/1.0")
-                """)
-        c.save({"conanfile.txt": consumer})
-
-        # this passes
-        c.run("create . --build=mylib/1.0 -s compiler.cppstd=17")
-        c.run("remove '*' -f")
-
-        # this fails building after looking for compatible packages
         c.run("create . --build=missing -s compiler.cppstd=17")
         assert "Possible options are ['shared', 'header_only']" not in c.out
