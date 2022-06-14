@@ -14,6 +14,7 @@ PACKAGES_FOLDER = "p"
 EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
+METADATA = "metadata"
 
 
 class LayoutBase:
@@ -118,7 +119,7 @@ class PackageLayout(LayoutBase):
         return os.path.join(self.base_folder, PACKAGES_FOLDER)
 
     def download_package(self):
-        return os.path.join(self.base_folder, "dl")
+        return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
 
     def package_manifests(self):
         package_folder = self.package()
