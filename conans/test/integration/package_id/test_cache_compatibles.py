@@ -251,7 +251,7 @@ class TestDefaultCompat:
                 settings = "os", "arch", "compiler", "build_type"
 
                 def package_id(self):
-                    del self.options.with_fmt_alias
+                    del self.info.options.with_fmt_alias
 
                 def package_info(self):
                     self.output.warning("WITH_FMT_ALIAS={}".format(self.options.with_fmt_alias))

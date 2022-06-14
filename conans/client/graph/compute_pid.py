@@ -49,8 +49,6 @@ def compute_package_id(node, new_config):
                                conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
 
-    conanfile.settings = conanfile.info.settings
-    conanfile.options = conanfile.info.options
     run_validate_package_id(conanfile)
 
     info = conanfile.info
