@@ -132,8 +132,8 @@ class BinaryCompatibility:
         original_info = conanfile.info
         for c in compat_infos:
             conanfile.info = c
-            conanfile.settings = c.settings
-            conanfile.options = c.options
+            #conanfile.settings = c.settings
+            #conanfile.options = c.options
             run_validate_package_id(conanfile)
             pid = c.package_id()
             if pid not in result and not c.invalid:
