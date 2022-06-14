@@ -251,12 +251,18 @@ class TestDefaultCompat:
                 settings = "os", "arch", "compiler", "build_type"
 
                 def package_id(self):
-                    del self.info.options.with_fmt_alias
+                    del self.options.with_fmt_alias
 
                 def package_info(self):
                     self.output.warning("WITH_FMT_ALIAS={}".format(self.options.with_fmt_alias))
             """)
         c.save({"conanfile.py": conanfile})
 
+        c.run("create .")
+        c.run("remove * -f")
+
         c.run("create . --build=missing -s compiler.cppstd=17")
+        print(c.out)
         assert "Possible options are ['shared', 'header_only']" not in c.out
+        assert "mylib/1.0: WARN: WITH_FMT_ALIAS=False" in c.out
+
