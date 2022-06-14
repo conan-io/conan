@@ -254,12 +254,32 @@ class TestDefaultCompat:
                     else:
                         del self.info.options.with_fmt_alias
                 def package_info(self):
-                    print(self.info.options.with_fmt_alias)
+                    print(self.options.with_fmt_alias)
             """)
         c.save({"conanfile.py": conanfile})
         c.run("create . -s compiler.cppstd=14")
         c.run("upload '*' -c -r default")
         c.run("remove '*' -f")
 
-        c.save({"conanfile.txt": "[requires]\nmylib/1.0\n"})
-        c.run("install . --build=missing -s compiler.cppstd=17")
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+            class consumer(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+                def requirements(self):
+                    self.requires("mylib/1.0")
+                """)
+        c.save({"conanfile.txt": consumer})
+
+        # this passes
+        c.run("create . --build=mylib/1.0 -s compiler.cppstd=17")
+        c.run("remove '*' -f")
+
+        # this fails when looking for compatible packages
+        c.run("create . --build=missing -s compiler.cppstd=17")
+        assert "Possible options are ['shared', 'header_only']" not in c.out
