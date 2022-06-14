@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import save
 
 
@@ -236,3 +236,30 @@ class TestDefaultCompat:
               f"-s compiler.runtime={runtime}")
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
+
+    def test_fail_with_options_deleted(self):
+        c = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "mylib"
+                version = "1.0"
+                package_type = "library"
+                options = {"shared": [True, False], "with_fmt_alias": [True, False], "header_only": [True, False]}
+                default_options = {"header_only": False, "shared": False, "with_fmt_alias": False}
+                settings = "os", "arch", "compiler", "build_type"
+                def package_id(self):
+                    if self.options.header_only:
+                        self.info.header_only()
+                    else:
+                        del self.info.options.with_fmt_alias
+                def package_info(self):
+                    print(self.info.options.with_fmt_alias)
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . -s compiler.cppstd=14")
+        c.run("upload '*' -c -r default")
+        c.run("remove '*' -f")
+
+        c.save({"conanfile.txt": "[requires]\nmylib/1.0\n"})
+        c.run("install . --build=missing -s compiler.cppstd=17")
