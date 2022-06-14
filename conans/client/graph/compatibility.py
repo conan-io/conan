@@ -140,8 +140,8 @@ class BinaryCompatibility:
                 result[pid] = c
         # Restore the original state
         conanfile.info = original_info
-        conanfile.settings = original_info.settings
-        conanfile.options = original_info.options
+        #conanfile.settings = original_info.settings
+        #conanfile.options = original_info.options
         return result
 
     @staticmethod
