@@ -133,10 +133,10 @@ def test_cmake_user_presets_load(existing_user_presets):
         assert "include" in user_presets_data.keys()
 
     if existing_user_presets == None:
-    t.run_command("cmake . --preset release")
-    assert 'CMAKE_BUILD_TYPE="Release"' in t.out
-    t.run_command("cmake . --preset debug")
-    assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
+        t.run_command("cmake . --preset release")
+        assert 'CMAKE_BUILD_TYPE="Release"' in t.out
+        t.run_command("cmake . --preset debug")
+        assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
 
 
 def test_cmake_toolchain_user_toolchain_from_dep():
