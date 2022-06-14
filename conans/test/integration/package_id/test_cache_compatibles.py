@@ -280,6 +280,6 @@ class TestDefaultCompat:
         c.run("create . --build=mylib/1.0 -s compiler.cppstd=17")
         c.run("remove '*' -f")
 
-        # this fails when looking for compatible packages
+        # this fails building after looking for compatible packages
         c.run("create . --build=missing -s compiler.cppstd=17")
         assert "Possible options are ['shared', 'header_only']" not in c.out
