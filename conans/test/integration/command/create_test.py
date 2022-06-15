@@ -696,3 +696,40 @@ def test_default_framework_dirs_with_layout():
     client.save({"conanfile.py": conanfile})
     client.run("create .")
     assert "FRAMEWORKS: []" in client.out
+
+
+def test_header_only_build_missing():
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class SumConan(ConanFile):
+            name = "sum"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+
+            def build(self):
+                self.output.warning("My compiler is '{}'".format(self.settings.compiler))
+
+            def package_id(self):
+                self.info.header_only()
+
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s compiler.cppstd=11 --build missing")
+    assert "My compiler is 'apple-clang'" in client.out
+    """
+    HAPPENING:
+
+    ConanException: 'settings.compiler' doesn't exist for 'settings'
+           'settings' possible configurations are none
+
+
+    IMPORTANT:
+
+    It works if:
+        - Removing --build missing
+        - Using --build missing:*
+    """
