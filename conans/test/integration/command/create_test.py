@@ -657,3 +657,42 @@ def test_create_format_json_and_deps_cpp_info():
     assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
     assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
                                                   'pkg_config_name': 'compo1'}
+
+
+def test_default_framework_dirs():
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def package_info(self):
+            self.output.warning("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out
+
+
+def test_default_framework_dirs_with_layout():
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.output.warning("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out

@@ -304,7 +304,7 @@ class CppInfo(object):
             self.resdirs = ["res"]
             self.bindirs = ["bin"]
             self.builddirs = []
-            self.frameworkdirs = ["Frameworks"]
+            self.frameworkdirs = []
 
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 

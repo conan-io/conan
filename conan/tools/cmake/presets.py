@@ -120,13 +120,14 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
         if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
-                data = {"version": 4, "include": [preset_path]}
+                data = {"version": 4, "include": [preset_path], "vendor": {"conan": dict()}}
             else:
                 data = json.loads(load(user_presets_path))
-                # Clear the folders that have been deleted
-                data["include"] = [i for i in data["include"] if os.path.exists(i)]
-                if preset_path not in data["include"]:
-                    data["include"].append(preset_path)
+                if "conan" in data.get("vendor", {}):
+                    # Clear the folders that have been deleted
+                    data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
+                    if preset_path not in data["include"]:
+                        data["include"].append(preset_path)
 
             data = json.dumps(data, indent=4)
             save(user_presets_path, data)

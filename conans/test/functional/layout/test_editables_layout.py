@@ -86,7 +86,7 @@ def test_cpp_info_editable():
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
     assert "**builddirs:[]**" in out
-    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
+    assert "**frameworkdirs:['package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
     assert "**objects:['myobject.o']**" in out
     assert "**build_modules:['mymodules/mybuildmodule']**" in out
