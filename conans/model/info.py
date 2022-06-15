@@ -387,6 +387,15 @@ class ConanInfo:
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
+    def dump_diff(self, compatible):
+        self_dump = self.dumps()
+        compatible_dump = compatible.dumps()
+        result = []
+        for line in compatible_dump.splitlines():
+            if line not in self_dump:
+                result.append(line)
+        return ', '.join(result)
+
     def package_id(self):
         """
         Get the `package_id` that is the result of applying the has function SHA-1 to the

@@ -108,8 +108,10 @@ class GraphBinariesAnalyzer(object):
                                   "the default package ID")
 
         if compatibles:
-            conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
+            conanfile.output.info(f"Checking {len(compatibles)} compatible configurations:")
         for package_id, compatible_package in compatibles.items():
+            conanfile.output.info(f"'{package_id}': "
+                                  f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
             self._process_compatible_node(node)
