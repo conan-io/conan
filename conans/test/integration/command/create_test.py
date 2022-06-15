@@ -540,3 +540,42 @@ class MyPkg(ConanFile):
         self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
         self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
         self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+
+
+def test_default_framework_dirs():
+
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake, tools
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def package_info(self):
+            self.output.warn("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: ['Frameworks']" in client.out
+
+
+def test_default_framework_dirs_with_layout():
+
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake, tools
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.output.warn("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out
