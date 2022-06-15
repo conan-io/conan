@@ -258,8 +258,9 @@ class TestDefaultCompat:
             """)
         c.save({"conanfile.py": conanfile})
 
-        c.run("create .")
-        c.run("remove * -f")
+        c.run("create . -s compiler.cppstd=14")
+        print(c.out)
+        #c.run("remove * -f")
 
         c.run("create . --build=missing -s compiler.cppstd=17")
         print(c.out)
