@@ -118,8 +118,11 @@ class GraphBinariesAnalyzer(object):
                                       "compatible package '%s'" % (original_package_id, package_id))
                 # So they are available in package_info() method
                 conanfile.info = compatible_package  # Redefine current
-                conanfile.settings = compatible_package.settings
-                conanfile.options = compatible_package.options
+                conanfile.settings.update_values(compatible_package.settings.values_list)
+                # Trick to allow mutating the options (they were freeze=True)
+                # TODO: Improve this interface
+                conanfile.options = conanfile.options.copy_conaninfo_options()
+                conanfile.options.update_options(compatible_package.options)
                 break
         else:  # If no compatible is found, restore original state
             node.binary = original_binary
