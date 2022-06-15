@@ -265,8 +265,8 @@ class TestDefaultCompat:
         c.run("create . -s compiler.cppstd=14")
 
         c.run("create . --build=missing -s compiler.cppstd=17")
-        assert "mylib/1.0: Main binary package 'a0a14c35eeb78c552ac01bde2bc48a20823fb5ad'"\
-               " missing. Using compatible package" in c.out
+        assert "mylib/1.0: Main binary package" in c.out
+        assert " missing. Using compatible package" in c.out
         assert "Possible options are ['shared', 'header_only']" not in c.out
         assert "mylib/1.0: WARN: WITH_FMT_ALIAS=False" in c.out
 
