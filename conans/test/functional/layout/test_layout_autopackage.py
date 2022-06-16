@@ -303,10 +303,10 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs is None
             assert el.components["foo"].resdirs is None
 
-        # The defaults for cpp.package are filled includedirs and libdirs
+        # The defaults for cpp.package are filled includedirs and libdirs and bindirs
         assert self.cpp.package.components["foo"].includedirs is not None
         assert self.cpp.package.components["foo"].libdirs is not None
-        assert self.cpp.package.components["foo"].bindirs is None
+        assert self.cpp.package.components["foo"].bindirs is not None
         assert self.cpp.package.components["foo"].frameworkdirs is None
         assert self.cpp.package.components["foo"].srcdirs is None
         assert self.cpp.package.components["foo"].resdirs is None
