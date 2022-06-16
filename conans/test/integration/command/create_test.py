@@ -583,6 +583,8 @@ def test_default_framework_dirs_with_layout():
     assert "FRAMEWORKS: []" in client.out
 
 
+import pytest
+import re
 @pytest.mark.parametrize("with_layout", [True, False])
 def test_defaults_in_components_without_layout(with_layout):
     lib_conan_file = textwrap.dedent("""
@@ -596,11 +598,7 @@ def test_defaults_in_components_without_layout(with_layout):
             pass
 
         def package_info(self):
-            self.cpp_info.components["foo"].libs = ["mylib"]
-            self.output.warn("LIBDIRS: {}".format(self.cpp_info.libdirs))
-            self.output.warn("INCLUDEDIRS: {}".format(self.cpp_info.includedirs))
-            self.output.warn("FOO LIBDIRS: {}".format(self.cpp_info.components["foo"].libdirs))
-            self.output.warn("FOO INCLUDEDIRS: {}".format(self.cpp_info.components["foo"].includedirs))
+            self.cpp_info.components["foo"].libs = ["foolib"]
 
     """)
     if not with_layout:
@@ -617,8 +615,15 @@ def test_defaults_in_components_without_layout(with_layout):
             version = "1.0"
             requires = "lib/1.0"
 
+            def layout(self):
+                pass
+
             def generate(self):
-                cppinfo = self.dependencies["lib"].cpp_info
+                if hasattr(self, "layout"):
+                    cppinfo = self.dependencies["lib"].cpp_info
+                else:
+                    cppinfo = dict(self.deps_cpp_info.dependencies)["lib"]
+
                 components = cppinfo.components
                 self.output.warn("LIBDIRS: {}".format(cppinfo.libdirs))
                 self.output.warn("INCLUDEDIRS: {}".format(cppinfo.includedirs))
@@ -626,6 +631,9 @@ def test_defaults_in_components_without_layout(with_layout):
                 self.output.warn("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
 
         """)
+
+    if not with_layout:
+        consumer_conanfile = consumer_conanfile.replace("def layout(", "def potato(")
 
     client.save({"conanfile.py": consumer_conanfile})
     client.run("create . ")
@@ -638,8 +646,8 @@ def test_defaults_in_components_without_layout(with_layout):
         assert bool(re.search("FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
         assert bool(re.search("FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
     else:
-        # The paths are not absolute and the components have no defaults
-        assert re.search("LIBDIRS: \['lib'\]", str(client.out))
-        assert re.search("INCLUDEDIRS: \['include'\]", str(client.out))
-        assert bool(re.search("FOO LIBDIRS: \[\]", str(client.out))) is with_layout
-        assert bool(re.search("FOO INCLUDEDIRS: \[\]", str(client.out))) is with_layout
+        # The paths are not absolute and the components have defaults
+        assert "LIBDIRS: ['lib']" in client.out
+        assert "INCLUDEDIRS: ['include']" in client.out
+        assert "FOO LIBDIRS: ['lib']" in client.out
+        assert "FOO INCLUDEDIRS: ['include']" in client.out
