@@ -675,7 +675,7 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
-                            conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
+                            # conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
@@ -683,25 +683,21 @@ class BinaryInstaller(object):
 
                     conanfile.package_info()
 
-                    if hasattr(conanfile, "layout"):
-                        if is_editable:
-                            # Adjust the folders of the layout to consolidate the rootfolder of the
-                            # cppinfos inside
-                            # convert directory entries to be relative to the declared folders.build
-                            conanfile.cpp.build.set_relative_base_folder(conanfile.build_folder)
+                    if hasattr(conanfile, "layout") and is_editable:
+                        # Adjust the folders of the layout to consolidate the rootfolder of the
+                        # cppinfos inside
+                        # convert directory entries to be relative to the declared folders.build
+                        conanfile.cpp.build.set_relative_base_folder(conanfile.build_folder)
 
-                            # convert directory entries to be relative to the declared folders.source
-                            conanfile.cpp.source.set_relative_base_folder(conanfile.source_folder)
+                        # convert directory entries to be relative to the declared folders.source
+                        conanfile.cpp.source.set_relative_base_folder(conanfile.source_folder)
 
-                            full_editable_cppinfo = NewCppInfo()
-                            full_editable_cppinfo.merge(conanfile.cpp.source)
-                            full_editable_cppinfo.merge(conanfile.cpp.build)
-                            # Paste the editable cpp_info but prioritizing it, only if a
-                            # variable is not declared at build/source, the package will keep the value
-                            fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
-                        else:
-                            fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
-
+                        full_editable_cppinfo = NewCppInfo()
+                        full_editable_cppinfo.merge(conanfile.cpp.source)
+                        full_editable_cppinfo.merge(conanfile.cpp.build)
+                        # Paste the editable cpp_info but prioritizing it, only if a
+                        # variable is not declared at build/source, the package will keep the value
+                        fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
