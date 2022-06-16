@@ -628,8 +628,10 @@ def test_defaults_in_components_without_layout(with_layout):
                 self.output.warn("BINDIRS: {}".format(cppinfo.bindirs))
                 self.output.warn("LIBDIRS: {}".format(cppinfo.libdirs))
                 self.output.warn("INCLUDEDIRS: {}".format(cppinfo.includedirs))
+                self.output.warn("RESDIRS: {}".format(cppinfo.resdirs))
                 self.output.warn("FOO LIBDIRS: {}".format(components["foo"].libdirs))
                 self.output.warn("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
+                self.output.warn("FOO RESDIRS: {}".format(components["foo"].resdirs))
 
         """)
 
@@ -645,8 +647,10 @@ def test_defaults_in_components_without_layout(with_layout):
         assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
         assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
         assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
-        assert bool(re.search("FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
-        assert bool(re.search("FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
+        assert "WARN: RES DIRS: []"
+        assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
+        assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
+        assert "WARN: FOO RESDIRS: []" in client.out
     else:
         # The paths are not absolute and the components have defaults
         assert "BINDIRS: ['bin']" in client.out
@@ -654,3 +658,4 @@ def test_defaults_in_components_without_layout(with_layout):
         assert "INCLUDEDIRS: ['include']" in client.out
         assert "FOO LIBDIRS: ['lib']" in client.out
         assert "FOO INCLUDEDIRS: ['include']" in client.out
+        assert "FOO RESDIRS: ['res']" in client.out
