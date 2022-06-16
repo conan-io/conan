@@ -652,8 +652,8 @@ def test_create_format_json_and_deps_cpp_info():
                                                   'pkg_config_name': 'pkg_other_name'}
     # component info
     assert pkg_cpp_info['cmp1']["libs"] == ['libcmp1']
-    assert pkg_cpp_info['cmp1']["bindirs"] is None
-    assert pkg_cpp_info['cmp1']["libdirs"] is None
+    assert pkg_cpp_info['cmp1']["bindirs"][0].endswith("bin")  # Abs path /bin
+    assert pkg_cpp_info['cmp1']["libdirs"][0].endswith("lib")  # Abs path /lib
     assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
     assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
                                                   'pkg_config_name': 'compo1'}
