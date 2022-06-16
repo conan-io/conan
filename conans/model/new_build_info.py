@@ -2,7 +2,7 @@ import copy
 import os
 from collections import OrderedDict
 
-from conans.model.build_info import DefaultOrderedDict
+from conans.model.build_info import DefaultOrderedDict, CppInfoDefaultValues
 
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
                    "frameworkdirs", "objects"]
@@ -13,7 +13,7 @@ _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 class _NewComponent(object):
 
-    def __init__(self):
+    def __init__(self, with_defaults=False):
         # ###### PROPERTIES
         self._generator_properties = None
 
@@ -39,6 +39,10 @@ class _NewComponent(object):
 
         self.sysroot = None
         self.requires = None
+
+        if with_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
 
     @property
     def required_component_names(self):
@@ -70,10 +74,10 @@ class _NewComponent(object):
 
 class NewCppInfo(object):
 
-    def __init__(self):
-        self.components = DefaultOrderedDict(lambda: _NewComponent())
+    def __init__(self, with_defaults=False):
+        self.components = DefaultOrderedDict(lambda: _NewComponent(with_defaults))
         # Main package is a component with None key
-        self.components[None] = _NewComponent()
+        self.components[None] = _NewComponent(with_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
@@ -271,3 +275,7 @@ def fill_old_cppinfo(origin, old_cpp):
                 setattr(old_cpp, varname, copy.copy(value))
         if origin._generator_properties is not None:
             old_cpp._generator_properties = copy.copy(origin._generator_properties)
+
+    # We change the defaults for the components of the old cpp info that we are managing in
+    # self.cpp_info
+    old_cpp._default_values = CppInfoDefaultValues(includedir="include", libdir="lib")

@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import textwrap
 import unittest
+import pytest
 
 from parameterized.parameterized import parameterized
 
@@ -579,3 +581,47 @@ def test_default_framework_dirs_with_layout():
     client.save({"conanfile.py": conanfile})
     client.run("create .")
     assert "FRAMEWORKS: []" in client.out
+
+
+@pytest.mark.parametrize("with_layout", [True, False])
+def test_defaults_in_components_without_layout(with_layout):
+    conan_file = textwrap.dedent("""
+    from conan import ConanFile
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.cpp_info.components["foo"].libs = ["mylib"]
+            self.output.warn("LIBDIRS: {}".format(self.cpp_info.libdirs))
+            self.output.warn("INCLUDEDIRS: {}".format(self.cpp_info.includedirs))
+            self.output.warn("FOO LIBDIRS: {}".format(self.cpp_info.components["foo"].libdirs))
+            self.output.warn("FOO INCLUDEDIRS: {}".format(self.cpp_info.components["foo"].includedirs))
+
+    """)
+    if not with_layout:
+        conan_file = conan_file.replace("def layout(", "def potato(")
+    client = TestClient()
+    client.save({"conanfile.py": conan_file})
+    client.run("create . lib/1.0@")
+    pref = PackageReference(ConanFileReference.loads("lib/1.0"),
+                            "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+
+    if with_layout:
+        # The paths are absolute and the components have defaults
+        # ".+" Check that there is a path, not only "lib"
+        assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
+        assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+        assert bool(re.search("FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
+        assert bool(re.search("FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
+    else:
+        # The paths are not absolute and the components have not defaults
+        assert re.search("LIBDIRS: \['lib'\]", str(client.out))
+        assert re.search("INCLUDEDIRS: \['include'\]", str(client.out))
+        assert bool(re.search("FOO LIBDIRS: \[\]", str(client.out))) is with_layout
+        assert bool(re.search("FOO INCLUDEDIRS: \[\]", str(client.out))) is with_layout
