@@ -368,7 +368,7 @@ class BinaryInstaller:
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
-                if hasattr(conanfile, "layout") and is_editable:
+                if is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
 
