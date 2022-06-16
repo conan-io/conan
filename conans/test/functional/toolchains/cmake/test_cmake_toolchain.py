@@ -907,7 +907,6 @@ def test_cmake_presets_with_conanfile_txt():
     assert "Hello World Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_forbidden_build_type():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
