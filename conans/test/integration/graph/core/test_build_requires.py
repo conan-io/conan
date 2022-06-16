@@ -725,7 +725,7 @@ class TestDuplicateBuildRequires:
     @pytest.fixture()
     def client(self):
         client = TestClient()
-        msg = "self.output.info('This is the binary for OS={}'.format(self.settings.os))"
+        msg = "self.output.info('This is the binary for OS={}'.format(self.info.settings.os))"
         msg2 = "self.output.info('This is in context={}'.format(self.context))"
         client.save({"conanfile.py": GenConanfile().with_settings("os").with_package_id(msg)
                                                                        .with_package_id(msg2)})

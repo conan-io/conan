@@ -298,3 +298,34 @@ class TestDefaultCompat:
         client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Cache")})
         assert "Installing (downloading, building) binaries" in client.out
+
+    def test_check_min_cppstd(self):
+        """ test that the check_min_cppstd works fine wiht compatibility, as it is based
+        on ``conanfile.info.settings`` not ``conanfile.settings``
+        """
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd, valid_min_cppstd
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                def validate(self):
+                    check_min_cppstd(self, "17", False)
+                    self.output.info("valid standard!!")
+                def package_info(self):
+                    self.output.info("CPPSTD: {}".format(self.settings.compiler.cppstd))
+            """)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile})
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        c.run(f"create .  {settings} -s compiler.cppstd=17")
+        assert "pkg/0.1: valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14")
+        assert "valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
+        assert "valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out

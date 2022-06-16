@@ -84,7 +84,7 @@ class TestValidate(unittest.TestCase):
                    settings = "os"
 
                    def validate(self):
-                       if self.settings.os == "Windows":
+                       if self.info.settings.os == "Windows":
                            raise ConanInvalidConfiguration("Windows not supported")
 
                    def package_id(self):
