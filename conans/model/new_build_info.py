@@ -276,6 +276,6 @@ def fill_old_cppinfo(origin, old_cpp):
         if origin._generator_properties is not None:
             old_cpp._generator_properties = copy.copy(origin._generator_properties)
 
-    # We change the defaults for the components of the old cpp info that we are managing in
-    # self.cpp_info
+    # We change the defaults so the new components the user is going to declare in package_info
+    # have also defaults, not only the declared in the `self.cpp.package`
     old_cpp._default_values = CppInfoDefaultValues(includedir="include", libdir="lib")
