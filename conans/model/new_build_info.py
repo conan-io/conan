@@ -43,6 +43,7 @@ class _NewComponent(object):
         if with_defaults:
             self.includedirs = ["include"]
             self.libdirs = ["lib"]
+            self.bindirs = ["bin"]
 
     @property
     def required_component_names(self):
@@ -278,4 +279,4 @@ def fill_old_cppinfo(origin, old_cpp):
 
     # We change the defaults so the new components the user is going to declare in package_info
     # have also defaults, not only the declared in the `self.cpp.package`
-    old_cpp._default_values = CppInfoDefaultValues(includedir="include", libdir="lib")
+    old_cpp._default_values = CppInfoDefaultValues(includedir="include", libdir="lib", bindir="bin")

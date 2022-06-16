@@ -625,6 +625,7 @@ def test_defaults_in_components_without_layout(with_layout):
                     cppinfo = dict(self.deps_cpp_info.dependencies)["lib"]
 
                 components = cppinfo.components
+                self.output.warn("BINDIRS: {}".format(cppinfo.bindirs))
                 self.output.warn("LIBDIRS: {}".format(cppinfo.libdirs))
                 self.output.warn("INCLUDEDIRS: {}".format(cppinfo.includedirs))
                 self.output.warn("FOO LIBDIRS: {}".format(components["foo"].libdirs))
@@ -641,12 +642,14 @@ def test_defaults_in_components_without_layout(with_layout):
     if with_layout:
         # The paths are absolute and the components have defaults
         # ".+" Check that there is a path, not only "lib"
+        assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
         assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
         assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
         assert bool(re.search("FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
         assert bool(re.search("FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
     else:
         # The paths are not absolute and the components have defaults
+        assert "BINDIRS: ['bin']" in client.out
         assert "LIBDIRS: ['lib']" in client.out
         assert "INCLUDEDIRS: ['include']" in client.out
         assert "FOO LIBDIRS: ['lib']" in client.out
