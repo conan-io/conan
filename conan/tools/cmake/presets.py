@@ -42,7 +42,6 @@ def _configure_preset_name(conanfile, multiconfig):
         return str(build_type).lower()
 
 
-
 def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     name = _configure_preset_name(conanfile, multiconfig)
