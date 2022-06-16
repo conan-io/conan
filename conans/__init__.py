@@ -3,4 +3,4 @@ REVISIONS = "revisions"  # Only when enabled in config, not by default look at s
 ONLY_V2 = "only_v2"  # Remotes and virtuals from Artifactory returns this capability
 OAUTH_TOKEN = "oauth_token"
 
-__version__ = '2.0.0-dev'
+__version__ = '2.0.0-beta1'
