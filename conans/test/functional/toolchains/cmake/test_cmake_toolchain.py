@@ -905,3 +905,14 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
+
+
+def test_cmake_presets_forbidden_build_type():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template cmake_exe")
+    # client.run("new cmake_exe -d name=hello -d version=0.1")
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["options.missing", "settings.build_type"]\''
+    client.run("install . {}".format(settings_layout), assert_error=True)
+    assert "Error, don't include 'settings.build_type' in the " \
+           "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out
