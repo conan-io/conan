@@ -116,7 +116,7 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=libb --version=1.0")
         # libC -> libB
 
-        unrelated = "self.info.header_only()"
+        unrelated = "self.info.clear()"
         client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")
                                                    .with_package_id(unrelated)})
         client.run("create . --name=libc --version=1.0")
@@ -145,7 +145,7 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=liba --version=1.0")
         client.run("create . --name=liba --version=2.0")
         client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")
-                                                   .with_package_id("self.info.header_only()")})
+                                                   .with_package_id("self.info.clear()")})
         client.run("create . --name=libb --version=1.0")
         client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")})
         client.run("create . --name=libc --version=1.0")

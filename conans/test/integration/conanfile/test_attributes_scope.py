@@ -59,7 +59,7 @@ class TestAttributesScope:
             class Recipe(ConanFile):
 
                 def package(self):
-                    self.info.header_only()
+                    self.info.clear()
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -s os=Linux', assert_error=True)

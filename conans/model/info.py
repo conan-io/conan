@@ -416,7 +416,7 @@ class ConanInfo:
         package_id = sha1(text.encode())
         return package_id
 
-    def header_only(self):
+    def clear(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()

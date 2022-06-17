@@ -248,7 +248,7 @@ def test_conditional():
                     self.provides = 'libjpeg'
 
             def package_info(self):
-                self.info.header_only()
+                self.info.clear()
     """)
     t = TestClient()
     t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
