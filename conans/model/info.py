@@ -575,10 +575,13 @@ class ConanInfo(object):
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
 
+    # FIXME: Rename this to "clear" in 2.0
     def header_only(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+
+    clear = header_only
 
     def msvc_compatible(self):
         if self.settings.compiler != "msvc":
