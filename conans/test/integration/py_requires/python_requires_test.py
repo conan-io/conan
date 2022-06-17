@@ -1,5 +1,4 @@
 import os
-import re
 import textwrap
 import time
 import unittest
@@ -728,7 +727,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                                       "python_requires2/1.0@user/test": "Cache"}, python=True)
         #   - packages
         client.assert_listed_binary({"project/1.0@user/test":
-                                     ("1d71f9c410465b607aaf217320808237e019989f", "Build")})
+                                     ("257a966344bb19ae8ef0c208eff085952902e25f", "Build")})
 
         #   - no mention to alias
         self.assertNotIn("alias", client.out)
