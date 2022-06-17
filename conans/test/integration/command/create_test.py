@@ -3,7 +3,6 @@ import os
 import re
 import textwrap
 import unittest
-import pytest
 
 import pytest
 
@@ -654,8 +653,8 @@ def test_create_format_json_and_deps_cpp_info():
                                                   'pkg_config_name': 'pkg_other_name'}
     # component info
     assert pkg_cpp_info['cmp1']["libs"] == ['libcmp1']
-    assert pkg_cpp_info['cmp1']["bindirs"] is None
-    assert pkg_cpp_info['cmp1']["libdirs"] is None
+    assert pkg_cpp_info['cmp1']["bindirs"][0].endswith("bin")  # Abs path /bin
+    assert pkg_cpp_info['cmp1']["libdirs"][0].endswith("lib")  # Abs path /lib
     assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
     assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
                                                   'pkg_config_name': 'compo1'}
@@ -700,10 +699,10 @@ def test_default_framework_dirs_with_layout():
     assert "FRAMEWORKS: []" in client.out
 
 
-import pytest
-import re
 @pytest.mark.parametrize("with_layout", [True, False])
-def test_defaults_in_components_without_layout(with_layout):
+def test_defaults_in_components(with_layout):
+    """In Conan 2, declaring or not the layout has no influence in how cpp_info behaves. It was
+       only 1.X"""
     lib_conan_file = textwrap.dedent("""
     from conan import ConanFile
 
@@ -736,19 +735,15 @@ def test_defaults_in_components_without_layout(with_layout):
                 pass
 
             def generate(self):
-                if hasattr(self, "layout"):
-                    cppinfo = self.dependencies["lib"].cpp_info
-                else:
-                    cppinfo = dict(self.deps_cpp_info.dependencies)["lib"]
-
+                cppinfo = self.dependencies["lib"].cpp_info
                 components = cppinfo.components
-                self.output.warn("BINDIRS: {}".format(cppinfo.bindirs))
-                self.output.warn("LIBDIRS: {}".format(cppinfo.libdirs))
-                self.output.warn("INCLUDEDIRS: {}".format(cppinfo.includedirs))
-                self.output.warn("RESDIRS: {}".format(cppinfo.resdirs))
-                self.output.warn("FOO LIBDIRS: {}".format(components["foo"].libdirs))
-                self.output.warn("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
-                self.output.warn("FOO RESDIRS: {}".format(components["foo"].resdirs))
+                self.output.warning("BINDIRS: {}".format(cppinfo.bindirs))
+                self.output.warning("LIBDIRS: {}".format(cppinfo.libdirs))
+                self.output.warning("INCLUDEDIRS: {}".format(cppinfo.includedirs))
+                self.output.warning("RESDIRS: {}".format(cppinfo.resdirs))
+                self.output.warning("FOO LIBDIRS: {}".format(components["foo"].libdirs))
+                self.output.warning("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
+                self.output.warning("FOO RESDIRS: {}".format(components["foo"].resdirs))
 
         """)
 
@@ -758,21 +753,12 @@ def test_defaults_in_components_without_layout(with_layout):
     client.save({"conanfile.py": consumer_conanfile})
     client.run("create . ")
 
-    if with_layout:
-        # The paths are absolute and the components have defaults
-        # ".+" Check that there is a path, not only "lib"
-        assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
-        assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
-        assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
-        assert "WARN: RES DIRS: []"
-        assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
-        assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
-        assert "WARN: FOO RESDIRS: []" in client.out
-    else:
-        # The paths are not absolute and the components have defaults
-        assert "BINDIRS: ['bin']" in client.out
-        assert "LIBDIRS: ['lib']" in client.out
-        assert "INCLUDEDIRS: ['include']" in client.out
-        assert "FOO LIBDIRS: ['lib']" in client.out
-        assert "FOO INCLUDEDIRS: ['include']" in client.out
-        assert "FOO RESDIRS: ['res']" in client.out
+    # The paths are absolute and the components have defaults
+    # ".+" Check that there is a path, not only "lib"
+    assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
+    assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: RES DIRS: []"
+    assert re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: FOO RESDIRS: []" in client.out

@@ -30,7 +30,7 @@ class DefaultOrderedDict(OrderedDict):
 
 class _Component(object):
 
-    def __init__(self):
+    def __init__(self, set_defaults=False):
         # ###### PROPERTIES
         self._generator_properties = None
 
@@ -60,6 +60,11 @@ class _Component(object):
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = {}
         self.filenames = {}
+
+        if set_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.bindirs = ["bin"]
 
     def serialize(self):
         return {
@@ -295,17 +300,9 @@ class _Component(object):
 class CppInfo(object):
 
     def __init__(self, set_defaults=False):
-        self.components = DefaultOrderedDict(lambda: _Component())
+        self.components = DefaultOrderedDict(lambda: _Component(set_defaults))
         # Main package is a component with None key
-        self.components[None] = _Component()
-        if set_defaults:
-            self.includedirs = ["include"]
-            self.libdirs = ["lib"]
-            self.resdirs = ["res"]
-            self.bindirs = ["bin"]
-            self.builddirs = []
-            self.frameworkdirs = []
-
+        self.components[None] = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):

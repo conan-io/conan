@@ -56,6 +56,7 @@ def test_ios():
                 autotools.autoreconf()
                 autotools.configure()
                 autotools.make()
+
         """)
 
     client.save({"conanfile.py": conanfile,

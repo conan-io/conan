@@ -219,6 +219,7 @@ def test_cpp_info_components_editable():
     assert "**FOO includedirs:['package_include_foo']**" in out
     assert "**FOO libdirs:['lib']**" in out  # The components does have default dirs
     assert "**FOO builddirs:[]**" in out  # The components don't have default dirs for builddirs
+
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in out
     assert "**FOO objects:['myobject.o']**" in out
     assert "**FOO build_modules:['mymodules/mybuildmodule']**" in out
@@ -228,6 +229,7 @@ def test_cpp_info_components_editable():
     assert "**VAR includedirs:['package_include_var']**" in out
     assert "**VAR libdirs:['lib']**" in out  # The components does have default dirs
     assert "**VAR builddirs:[]**" in out  # The components don't have default dirs
+
     assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag2_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
