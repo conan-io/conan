@@ -76,7 +76,7 @@ class ConanInfoTest(unittest.TestCase):
     shared=False
 '''
         info = ConanInfo.loads(info_text)
-        info.header_only()
+        info.clear()
         self.assertEqual(info.settings.dumps(), "")
         self.assertEqual(info.options.dumps(), "")
         self.assertEqual(info.requires.dumps(), "")

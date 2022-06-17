@@ -89,7 +89,7 @@ conanfile_headeronly = Template(textwrap.dedent("""
         {% endif %}
 
         def package_id(self):
-            self.info.header_only()
+            self.info.clear()
 
         def package_info(self):
             self.cpp_info.includedirs = []

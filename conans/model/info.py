@@ -97,31 +97,41 @@ class RequirementInfo:
     def semver_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).stable()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def full_version_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def patch_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).patch()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def minor_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).minor()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def major_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).major()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def full_recipe_mode(self):
@@ -406,7 +416,7 @@ class ConanInfo:
         package_id = sha1(text.encode())
         return package_id
 
-    def header_only(self):
+    def clear(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()

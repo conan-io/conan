@@ -283,7 +283,7 @@ class TestDefaultCompat:
                 def build(self):
                     self.output.warning("My compiler is '{}'".format(self.settings.compiler))
                 def package_id(self):
-                    self.info.header_only()
+                    self.info.clear()
         """)
 
         client = TestClient()

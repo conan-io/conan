@@ -305,9 +305,9 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs == []
             assert el.components["foo"].resdirs == []
 
-        assert self.cpp.package.components["foo"].includedirs == []
-        assert self.cpp.package.components["foo"].libdirs == []
-        assert self.cpp.package.components["foo"].bindirs == []
+        assert self.cpp.package.components["foo"].includedirs == ["include"]
+        assert self.cpp.package.components["foo"].libdirs == ["lib"]
+        assert self.cpp.package.components["foo"].bindirs == ["bin"]
         assert self.cpp.package.components["foo"].frameworkdirs == []
         assert self.cpp.package.components["foo"].srcdirs == []
         assert self.cpp.package.components["foo"].resdirs == []
