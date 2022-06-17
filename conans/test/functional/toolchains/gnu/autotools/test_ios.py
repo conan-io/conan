@@ -53,6 +53,9 @@ def test_ios():
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsToolchain", "AutotoolsDeps"
 
+            def layout(self):
+                self.cpp.package.resdirs = ["res"]
+
             def build(self):
                 autotools = Autotools(self)
                 autotools.autoreconf()
