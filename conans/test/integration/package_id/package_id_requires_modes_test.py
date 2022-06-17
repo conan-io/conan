@@ -107,7 +107,7 @@ class PackageIDTest(unittest.TestCase):
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: Missing binary: "
-                      "hello2/2.3.8@lasote/stable:f25bd0cc2b8eec83e11ca16e79f4e43539cd93b9",
+                      "hello2/2.3.8@lasote/stable:971e20f31a0d8deb18f03a0f8f72fd95623a8e29",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -248,17 +248,17 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . --name=libd --version=0.1.0 --user=user --channel=testing", assert_error=True)
-        package_id_missing = "c4e90f390819b782c27ad290de6727acbcbc76bd"
+        package_id_missing = "18e1a54bf351cd291da5a01ef545ce338243285f"
         self.assertIn(f"""ERROR: Missing binary: libc/0.1.0@user/testing:{package_id_missing}
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package binary '{package_id_missing}' for the configuration:
 [options]
 an_option=off
 [requires]
-liba/0.1.0
-libb/0.1.0
-libbar/0.1.0
-libfoo/0.1.0""", self.client.out)
+liba/0.1.0@user/testing
+libb/0.1.0@user/testing
+libbar/0.1.0@user/testing
+libfoo/0.1.0@user/testing""", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):
