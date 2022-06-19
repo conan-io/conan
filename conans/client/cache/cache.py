@@ -95,9 +95,6 @@ class ClientCache(object):
         that would affect its order in our cache """
         return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, pref):
-        return self._data_cache.update_package_timestamp(pref)
-
     def all_refs(self):
         return self._data_cache.list_references()
 
