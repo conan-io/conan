@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
@@ -85,3 +86,47 @@ def test_generator_files():
         assert '#include "conandeps.xcconfig"' in conan_config
 
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "macosx", "12.1")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_aggregate_components():
+    client = TestClient()
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["liba_comp1"].includedirs = ["liba_comp1"]
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+
+    client.run("create . liba/1.0@")
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.components["libb_comp1"].includedirs = ["libb_comp1"]
+                self.cpp_info.components["libb_comp2"].includedirs = ["libb_comp2"]
+                self.cpp_info.components["libb_comp2"].requires = ["libb_comp1"]
+                self.cpp_info.components["libb_comp3"].includedirs = ["libb_comp3"]
+                self.cpp_info.components["libb_comp3"].requires = ["libb_comp1", "liba::liba_comp1"]
+                self.cpp_info.components["libb_comp4"].includedirs = ["libb_comp4"]
+                self.cpp_info.components["libb_comp4"].requires = ["libb_comp2", "libb_comp3"]
+                self.cpp_info.components["libb_comp5"].includedirs = ["libb_comp5"]
+                self.cpp_info.components["libb_comp6"].includedirs = ["libb_comp6"]
+                self.cpp_info.components["libb_comp7"].includedirs = ["libb_comp7"]
+                self.cpp_info.components["libb_comp7"].requires = ["libb_comp4", "libb_comp5", "libb_comp6"]
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+
+    client.run("create . libb/1.0@")
+
+    client.run("install libb/1.0@ -g XcodeDeps")
+
+    print(client.out)
