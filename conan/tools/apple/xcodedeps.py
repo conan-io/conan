@@ -129,8 +129,6 @@ class XcodeDeps(object):
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
-            'bin_dirs': " ".join('"{}"'.format(p) for p in cpp_info.bindirs),
-            'res_dirs': " ".join('"{}"'.format(p) for p in cpp_info.resdirs),
             'include_dirs': " ".join('"{}"'.format(p) for p in cpp_info.includedirs),
             'lib_dirs': " ".join('"{}"'.format(p) for p in cpp_info.libdirs),
             'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
