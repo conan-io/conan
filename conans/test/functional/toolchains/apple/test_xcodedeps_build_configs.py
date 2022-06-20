@@ -114,7 +114,7 @@ def test_xcodedeps_dashes_names_and_arch():
                  "project.yml": xcode_project}, clean_first=True)
     client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "conan_hello_dashes_hello_dashes_vars_release_arm64.xcconfig"))
+                                       "conan_hello_dashes_hello_dashes_release_arm64.xcconfig"))
     client.run_command("xcodegen generate")
     client.run_command("xcodebuild -project app.xcodeproj -arch arm64")
     assert "BUILD SUCCEEDED" in client.out
