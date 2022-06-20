@@ -81,15 +81,15 @@ class XcodeDeps(object):
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
-        HEADER_SEARCH_PATHS = $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
-        GCC_PREPROCESSOR_DEFINITIONS = $(GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}})
-        OTHER_CFLAGS = $(OTHER_CFLAGS_{{pkg_name}}_{{comp_name}})
-        OTHER_CPLUSPLUSFLAGS = $(OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}})
-        FRAMEWORK_SEARCH_PATHS = $(FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}})
+        OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{{pkg_name}}_{{comp_name}})
+        OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}})
+        FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
 
         // Link options for {{pkg_name}}_{{comp_name}}
-        LIBRARY_SEARCH_PATHS = $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
-        OTHER_LDFLAGS = $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
+        LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
          """)
 
     _all_xconfig = textwrap.dedent("""\
