@@ -98,6 +98,12 @@ tools_locations = {
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
+    'mingw64_clang': {
+        "disabled": True,
+        "default": "system",  # TODO use real clang 13 version
+        "exe": "clang",
+        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+    },
     'msys2': {
         "platform": "Windows",
         "default": "system",

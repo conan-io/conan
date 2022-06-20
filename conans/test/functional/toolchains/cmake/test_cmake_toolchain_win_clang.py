@@ -54,6 +54,9 @@ def client():
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang(client):
+    """ compiling with an LLVM-clang installed, which uses by default the
+    latest VS runtime
+    """
     client.run("create . pkg/0.1@ -pr=clang")
     # clang compilations in Windows will use MinGW Makefiles by default
     assert 'cmake -G "MinGW Makefiles"' in client.out
@@ -61,6 +64,26 @@ def test_clang(client):
     # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
     assert "main _MSC_VER19" in client.out
     assert "main _MSVC_LANG2014" in client.out
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.tool_mingw64_clang
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+def test_clang_mingw(client):
+    """ compiling with the clang INSIDE mingw, which uses the
+    MinGW runtime, not the MSVC one
+    """
+    client.run("create . pkg/0.1@ -pr=clang")
+    # clang compilations in Windows will use MinGW Makefiles by default
+    assert 'cmake -G "MinGW Makefiles"' in client.out
+    assert "main __clang_major__13" in client.out
+    assert "main _GLIBCXX_USE_CXX11_ABI 1" in client.out
+    assert "main __cplusplus2014" in client.out
+    assert "main __GNUC__" in client.out
+    assert "main __MINGW32__1" in client.out
+    assert "main __MINGW64__1" in client.out
+    assert "main _MSC_" not in client.out
+    assert "main _MSVC_" not in client.out
 
 
 @pytest.mark.tool_cmake
