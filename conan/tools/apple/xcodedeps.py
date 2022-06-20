@@ -59,36 +59,17 @@ def _add_includes_to_file_or_create(filename, template, files_to_include):
 class XcodeDeps(object):
     general_name = "conandeps.xcconfig"
 
-    _vars_xconfig = textwrap.dedent("""\
-        // Definition of Conan variables for {{pkg_name}}::{{comp_name}}
-        CONAN_{{pkg_name}}_{{comp_name}}_BINARY_DIRECTORIES{{condition}} = {{bin_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_C_COMPILER_FLAGS{{condition}} = {{c_compiler_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_CXX_COMPILER_FLAGS{{condition}} = {{cxx_compiler_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LINKER_FLAGS{{condition}} = {{linker_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_PREPROCESSOR_DEFINITIONS{{condition}} = {{definitions}}
-        CONAN_{{pkg_name}}_{{comp_name}}_INCLUDE_DIRECTORIES{{condition}} = {{include_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_RESOURCE_DIRECTORIES{{condition}} = {{res_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LIBRARY_DIRECTORIES{{condition}} = {{lib_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LIBRARIES{{condition}} = {{libs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_SYSTEM_LIBS{{condition}} = {{system_libs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS_DIRECTORIES{{condition}} = {{frameworkdirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS{{condition}} = {{frameworks}}
-        """)
-
     _conf_xconfig = textwrap.dedent("""\
-        // Include {{pkg_name}}::{{comp_name}} vars
-        #include "{{vars_filename}}"
-
         // Compiler options for {{pkg_name}}::{{pkg_name}}
-        HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_INCLUDE_DIRECTORIES)
-        GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_PREPROCESSOR_DEFINITIONS)
-        OTHER_CFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_C_COMPILER_FLAGS)
-        OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_CXX_COMPILER_FLAGS)
-        FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS_DIRECTORIES)
+        HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
+        GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}}{{condition}} = {{definitions}}
+        OTHER_CFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{c_compiler_flags}}
+        OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{cxx_compiler_flags}}
+        FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{frameworkdirs}}
 
         // Link options for {{name}}
-        LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_LIBRARY_DIRECTORIES)
-        OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_LINKER_FLAGS) $(CONAN_{{pkg_name}}_{{comp_name}}_LIBRARIES) $(CONAN_{{pkg_name}}_{{comp_name}}_SYSTEM_LIBS) $(CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS)
+        LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{lib_dirs}}
+        OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{linker_flags}} {{libs}} {{system_libs}} {{frameworks}}
         """)
 
     _dep_xconfig = textwrap.dedent("""\
@@ -100,15 +81,15 @@ class XcodeDeps(object):
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
-        HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
-        GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}})
-        OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{{pkg_name}}_{{comp_name}})
-        OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}})
-        FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        HEADER_SEARCH_PATHS = $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        GCC_PREPROCESSOR_DEFINITIONS = $(GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}})
+        OTHER_CFLAGS = $(OTHER_CFLAGS_{{pkg_name}}_{{comp_name}})
+        OTHER_CPLUSPLUSFLAGS = $(OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}})
+        FRAMEWORK_SEARCH_PATHS = $(FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
 
         // Link options for {{pkg_name}}_{{comp_name}}
-        LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
-        OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
+        LIBRARY_SEARCH_PATHS = $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        OTHER_LDFLAGS = $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
          """)
 
     _all_xconfig = textwrap.dedent("""\
@@ -140,9 +121,9 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _vars_xconfig_file(self, pkg_name, comp_name, cpp_info):
+    def _conf_xconfig_file(self, pkg_name, comp_name, cpp_info):
         """
-        returns a .xcconfig file with the variables definition for one package for one configuration
+        content for conan_poco_x86_release.xcconfig, containing the activation
         """
 
         fields = {
@@ -163,16 +144,9 @@ class XcodeDeps(object):
             'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.exelinkflags),
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
-        formatted_template = Template(self._vars_xconfig).render(**fields)
-        return formatted_template
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, vars_xconfig_name):
-        """
-        content for conan_poco_x86_release.xcconfig, containing the activation
-        """
         template = Template(self._conf_xconfig)
-        content_multi = template.render(pkg_name=pkg_name, comp_name=comp_name,
-                                        vars_filename=vars_xconfig_name)
+        content_multi = template.render(**fields)
         return content_multi
 
     def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename, reqs):
@@ -225,12 +199,9 @@ class XcodeDeps(object):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
-        # One file per configuration, with just the variables
-        vars_xconfig_name = "conan_{}_{}_vars{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[vars_xconfig_name] = self._vars_xconfig_file(pkg_name, component_name, cpp_info)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, vars_xconfig_name)
+        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, cpp_info)
 
         # The entry point for each package
         file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
