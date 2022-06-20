@@ -31,12 +31,7 @@ class DownloadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 
     def test_download_with_sources(self):
-        server = TestServer()
-        servers = OrderedDict()
-        servers["default"] = server
-        servers["other"] = TestServer()
-
-        client = TestClient(servers=servers, inputs=["admin", "password"])
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
@@ -215,3 +210,31 @@ class Pkg(ConanFile):
         client.run("download pkg/1.0#*:* -r default")
         self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)
+
+    def test_download_with_python_requires(self):
+        """ when having a python_require in a different repo, it cannot be ``conan download``
+        as the download runs from a single repo
+        """
+        # https://github.com/conan-io/conan/issues/9548
+        servers = OrderedDict([("tools", TestServer()),
+                               ("pkgs", TestServer())])
+        c = TestClient(servers=servers, inputs=["admin", "password", "admin", "password"])
+
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("export tool")
+        c.run("create pkg")
+        c.run("upload tool* -r tools -c")
+        c.run("upload pkg* -r pkgs -c")
+        c.run("remove * -f")
+
+        c.run("install --requires=pkg/0.1 -r pkgs -r tools")
+        self.assertIn("Downloading", c.out)
+        c.run("remove * -f")
+
+        # FIXME: This fails, as it won't allow 2 remotes
+        c.run("download pkg/0.1 -r pkgs -r tools")
+        self.assertIn("Downloading", c.out)
+        # FIXME: This fails, because the python_requires is not in the "pkgs" repo
+        c.run("download pkg/0.1 -r pkgs")
+        self.assertIn("Downloading", c.out)
