@@ -352,13 +352,34 @@ def test_configurable_default_options():
                     self.options.backend = 2
                 else:
                     self.options.backend = 3
-            def build(self):
-                self.output.info("Building with option:{}!".format(self.options.backend))
+            def package_info(self):
+                self.output.info("Package with option:{}!".format(self.options.backend))
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create . -s os=Windows")
-    assert "pkg/0.1: Building with option:2!" in c.out
+    assert "pkg/0.1: Package with option:2!" in c.out
+    c.run("create . -s os=Windows -o pkg*:backend=3")
+    assert "pkg/0.1: Package with option:3!" in c.out
     c.run("create . -s os=Linux")
-    assert "pkg/0.1: Building with option:3!" in c.out
+    assert "pkg/0.1: Package with option:3!" in c.out
     c.run("create . -s os=Windows -o pkg*:backend=1")
-    assert "pkg/0.1: Building with option:1!" in c.out
+    assert "pkg/0.1: Package with option:1!" in c.out
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "pkg/0.1"
+            def configure(self):
+                self.options["pkg"].backend = 1
+        """)
+    c.save({"conanfile.py": consumer})
+    c.run("install . -s os=Windows")
+    assert "pkg/0.1: Package with option:1!" in c.out
+    c.run("create . -s os=Windows")
+    assert "pkg/0.1: Package with option:1!" in c.out
+
+    # This fails in Conan 1.X
+    c.run("create . -s os=Windows -o pkg*:backend=3")
+    assert "pkg/0.1: Package with option:3!" in c.out
