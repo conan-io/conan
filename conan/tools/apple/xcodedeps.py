@@ -1,5 +1,6 @@
 import os
 import textwrap
+from collections import OrderedDict
 
 from jinja2 import Template
 
@@ -75,10 +76,7 @@ class XcodeDeps(object):
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
-        {% for dep in deps %}
-        // Includes for {{dep[0]}}::{{dep[1]}} dependency
-        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
-        {% endfor %}
+
         #include "{{dep_xconfig_filename}}"
 
         HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
@@ -121,27 +119,30 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, cpp_info):
+    def _conf_xconfig_file(self, pkg_name, comp_name, transitive_cpp_infos):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
+        def _merged_vars(name):
+            merged = [bindir for cpp_info in transitive_cpp_infos for bindir in getattr(cpp_info, name)]
+            return list(OrderedDict.fromkeys(merged).keys())
 
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
-            'bin_dirs': " ".join('"{}"'.format(p) for p in cpp_info.bindirs),
-            'res_dirs': " ".join('"{}"'.format(p) for p in cpp_info.resdirs),
-            'include_dirs': " ".join('"{}"'.format(p) for p in cpp_info.includedirs),
-            'lib_dirs': " ".join('"{}"'.format(p) for p in cpp_info.libdirs),
-            'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
-            'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
-            'frameworksdirs': " ".join('"{}"'.format(p) for p in cpp_info.frameworkdirs),
-            'frameworks': " ".join("-framework {}".format(framework) for framework in cpp_info.frameworks),
-            'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.defines),
-            'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cflags),
-            'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cxxflags),
-            'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.sharedlinkflags),
-            'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.exelinkflags),
+            'bin_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("bindirs")),
+            'res_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("resdirs")),
+            'include_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("includedirs")),
+            'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
+            'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
+            'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in _merged_vars("system_libs")),
+            'frameworksdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
+            'frameworks': " ".join("-framework {}".format(framework) for framework in _merged_vars("frameworks")),
+            'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("defines")),
+            'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cflags")),
+            'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cxxflags")),
+            'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("sharedlinkflags")),
+            'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
 
@@ -149,7 +150,7 @@ class XcodeDeps(object):
         content_multi = template.render(**fields)
         return content_multi
 
-    def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename, reqs):
+    def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename):
         # Current directory is the generators_folder
         multi_path = name_general
         if os.path.isfile(multi_path):
@@ -158,8 +159,7 @@ class XcodeDeps(object):
             content_multi = self._dep_xconfig
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
-                                                            "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs})
+                                                            "dep_xconfig_filename": dep_xconfig_filename})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -210,27 +210,68 @@ class XcodeDeps(object):
         result[file_dep_name] = dep_content
         return result
 
+    def _new_get_content_for_component(self, pkg_name, transitives):
+        result = {}
+
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
+
+        props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, transitives[0].name, conf_name)
+        result[props_name] = self._conf_xconfig_file(pkg_name, transitives[0].name, transitives)
+
+        # The entry point for each package
+        file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, transitives[0].name)
+        dep_content = self._dep_xconfig_file(pkg_name, transitives[0].name, file_dep_name, props_name)
+
+        result[file_dep_name] = dep_content
+        return result
+
     def _content(self):
         result = {}
 
         # Generate the config files for each component with name conan_pkgname_compname.xcconfig
         # If a package has no components the name is conan_pkgname_pkgname.xcconfig
         # Then all components are included in the conan_pkgname.xcconfig file
-        host_req = self._conanfile.dependencies.host
-        test_req = self._conanfile.dependencies.test
-        for dep in list(host_req.values()) + list(test_req.values()):
+        for dep in list(self._conanfile.dependencies.host.values()) + \
+                   list(self._conanfile.dependencies.test.values()):
+
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
             if dep.cpp_info.has_components:
-                for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
-                    component_deps = []
-                    for req in comp_cpp_info.requires:
-                        req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
-                        component_deps.append((req_pkg, req_cmp))
+                # for each component get the list of cpp_infos for the required components to
+                # later aggregate all variables in one file
+                sorted_components = dep.cpp_info.get_sorted_components().items()
+                for comp_name, comp_cpp_info in sorted_components:
 
-                    component_content = self.get_content_for_component(dep_name, comp_name, comp_cpp_info, component_deps)
-                    include_components_names.append((dep_name, comp_name))
+                    def _get_component_requires(component):
+                        requires = []
+                        for req in component.requires:
+                            req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
+                            pkg = self._conanfile.dependencies.host.get(req_pkg) or self._conanfile.dependencies.test.get(req_pkg)
+                            requires.append(pkg.cpp_info.components.get(req_cmp))
+                        return requires
+
+                    transitive = []
+
+                    def _transitive_deps(component):
+                        print("--->", component, transitive)
+                        if component is not None:
+                            print("@@@@@>", component)
+                            requires = _get_component_requires(component)
+                            print(component)
+                            transitive.append(component)
+                            if requires is not None:
+                                transitive.extend(requires)
+                                for require in requires:
+                                    print(component.name, require)
+                                    _transitive_deps(require)
+                        return transitive
+
+                    transitives = _transitive_deps(comp_cpp_info)
+                    print(comp_name, "-----", transitives)
+                    # remove duplicates
+                    transitives = list(OrderedDict.fromkeys(transitives).keys())
+                    component_content = self._new_get_content_for_component(dep_name, transitives)
                     result.update(component_content)
             else:
                 public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
