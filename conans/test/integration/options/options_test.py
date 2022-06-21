@@ -335,3 +335,30 @@ equal/1.0.0@user/testing:opt=a=b
         c.run("install .", assert_error=True)
         assert "Error while initializing options. 'b=c' is not a valid 'options.opt' value." in c.out
         assert "Possible values are ['A', 'N', 'Y']" in c.out
+
+
+def test_configurable_default_options():
+    # https://github.com/conan-io/conan/issues/11487
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os"
+            options = {"backend": [1, 2, 3]}
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    self.options.backend = 2
+                else:
+                    self.options.backend = 3
+            def build(self):
+                self.output.info("Building with option:{}!".format(self.options.backend))
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create . -s os=Windows")
+    assert "pkg/0.1: Building with option:2!" in c.out
+    c.run("create . -s os=Linux")
+    assert "pkg/0.1: Building with option:3!" in c.out
+    c.run("create . -s os=Windows -o pkg*:backend=1")
+    assert "pkg/0.1: Building with option:1!" in c.out
