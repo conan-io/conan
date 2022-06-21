@@ -128,12 +128,7 @@ def test_scm_with_source_layout():
                  ".gitignore": "build_*\n"})
     client.init_git_repo()
     client.run_command('git remote add origin "%s"' % remote_path.replace("\\", "/"))
-    try:
-        client.run_command('git config init.defaultbranch')
-        branch = client.out
-    except Exception:
-        branch = 'master'
-    client.run_command('git push origin {}'.format(branch))
+    client.run_command('git push origin master')
 
     client.run("install . -if=install")
     client.run("build . -if=install")

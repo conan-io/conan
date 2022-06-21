@@ -575,12 +575,7 @@ class Pkg(ConanFile):
             self.client.run_command('git add .')
             self.client.run_command('git commit -m "my file"')
             self.client.run_command('git tag 0.0.1')
-            try:
-                self.client.run_command('git config init.defaultbranch')
-                branch = self.client.out
-            except Exception:
-                branch = 'master'
-            self.client.run_command('git checkout {}'.format(branch))
+            self.client.run_command('git checkout master')
 
         # Without checkout
         self.client.run('config install "%s/.git"' % folder)

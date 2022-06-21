@@ -22,11 +22,7 @@ def test_change_branch_in_root_commit():
     c.save({"subfolder/subfolder.txt": "CHANGED"})
     c.run_command("git add .")
     c.run_command('git commit -m "second commit"')
-    try:
-        c.run_command('git config init.defaultbranch')
-    except Exception:
-        pass
-    c.run_command("git checkout {}".format(c.out or "master"))
+    c.run_command("git checkout master")
     c.run_command('git merge --no-ff change_branch -m "Merge branch"')
 
     git = Git(conanfile, folder=c.current_folder)

@@ -139,11 +139,7 @@ class GitToolTest(unittest.TestCase):
         git = Git(tmp)
         git.run("init")
         git.run("add indexfile")
-        try:
-            branch = git.run('config init.defaultbranch')
-        except Exception:
-            branch = "master"
-        git.clone("file://" + path, branch=branch, shallow=True)  # --depth is ignored in local clones
+        git.clone("file://" + path, branch="master", shallow=True)  # --depth is ignored in local clones
         self.assertTrue(os.path.exists(os.path.join(tmp, "repofile")))
         self.assertTrue(os.path.exists(os.path.join(tmp, "localfile")))
         self.assertTrue(os.path.exists(os.path.join(tmp, "indexfile")))
