@@ -675,7 +675,6 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
-                            conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:

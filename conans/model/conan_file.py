@@ -175,9 +175,9 @@ class ConanFile(object):
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
         self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.resdirs = []
         self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
+        self.cpp.package.frameworkdirs = []
 
     @property
     def context(self):

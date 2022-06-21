@@ -12,7 +12,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save, load
+from conans.util.files import save, load, rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -75,10 +75,13 @@ def test_cmake_toolchain_custom_toolchain():
 @pytest.mark.skipif(platform.system() != "Darwin",
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool_cmake(version="3.23")
-def test_cmake_user_presets_load():
+@pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
+def test_cmake_user_presets_load(existing_user_presets):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
-    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
+    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
+    a CMakeUserPresets.cmake, leave the file untouched, and only generate or modify the file if
+    the `conan` object exists in the `vendor` field.
     """
     t = TestClient()
     t.run("new mylib/1.0 --template cmake_lib")
@@ -105,14 +108,35 @@ def test_cmake_user_presets_load():
         project(PackageTest CXX)
         find_package(mylib REQUIRED CONFIG)
         """)
-    t.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelist}, clean_first=True)
+
+    user_presets = None
+    if existing_user_presets == "user_provided":
+        user_presets = "{}"
+    elif existing_user_presets == "conan_generated":
+        user_presets = '{ "vendor": {"conan": {} } }'
+
+    files_to_save = {"conanfile.py": consumer, "CMakeLists.txt": cmakelist}
+
+    if user_presets:
+        files_to_save['CMakeUserPresets.json'] = user_presets
+    t.save(files_to_save, clean_first=True)
     t.run("install . -s:h build_type=Debug -g CMakeToolchain")
     t.run("install . -s:h build_type=Release -g CMakeToolchain")
-    assert os.path.exists(os.path.join(t.current_folder, "CMakeUserPresets.json"))
-    t.run_command("cmake . --preset release")
-    assert 'CMAKE_BUILD_TYPE="Release"' in t.out
-    t.run_command("cmake . --preset debug")
-    assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
+
+    user_presets_path = os.path.join(t.current_folder, "CMakeUserPresets.json")
+    assert os.path.exists(user_presets_path)
+
+    user_presets_data = json.loads(load(user_presets_path))
+    if existing_user_presets == "user_provided":
+        assert not user_presets_data
+    else:
+        assert "include" in user_presets_data.keys()
+
+    if existing_user_presets == None:
+        t.run_command("cmake . --preset release")
+        assert 'CMAKE_BUILD_TYPE="Release"' in t.out
+        t.run_command("cmake . --preset debug")
+        assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
 
 
 def test_cmake_toolchain_user_toolchain_from_dep():
@@ -622,6 +646,56 @@ def test_cmake_presets_multiple_settings_single_config():
         assert "__cplusplus2020" in client.out
 
 
+@pytest.mark.parametrize("multiconfig", [True, False])
+def test_cmake_presets_duplicated_install(multiconfig):
+    # https://github.com/conan-io/conan/issues/11409
+    """Only failed when using a multiconfig generator"""
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings = '-s compiler=gcc -s compiler.version=5 -s compiler.libcxx=libstdc++11 ' \
+               '-c tools.cmake.cmake_layout:build_folder_vars=' \
+               '\'["settings.compiler", "settings.compiler.version"]\' '
+    if multiconfig:
+        settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
+    client.run("install . {}".format(settings))
+    client.run("install . {}".format(settings))
+    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                "CMakePresets.json")
+    assert os.path.exists(presets_path)
+    contents = json.loads(load(presets_path))
+    assert len(contents["buildPresets"]) == 1
+
+
+def test_remove_missing_presets():
+    # https://github.com/conan-io/conan/issues/11413
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    settings = '-s compiler=gcc -s compiler.version=5 -s compiler.libcxx=libstdc++11 ' \
+               '-c tools.cmake.cmake_layout:build_folder_vars=' \
+               '\'["settings.compiler", "settings.compiler.version"]\' '
+    client.run("install . {}".format(settings))
+    client.run("install . {} -s compiler.version=6".format(settings))
+
+    presets_path_5 = os.path.join(client.current_folder, "build", "gcc-5")
+    assert os.path.exists(presets_path_5)
+
+    presets_path_6 = os.path.join(client.current_folder, "build", "gcc-6")
+    assert os.path.exists(presets_path_6)
+
+    rmdir(presets_path_5)
+
+    # If we generate another configuration, the missing one (removed) for gcc-5 is not included
+    client.run("install . {} -s compiler.version=11".format(settings))
+
+    user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
+    assert os.path.exists(user_presets_path)
+
+    contents = json.loads(load(user_presets_path))
+    assert len(contents["include"]) == 2
+    assert "gcc-6" in contents["include"][0]
+    assert "gcc-11" in contents["include"][1]
+
+
 @pytest.mark.tool_cmake(version="3.23")
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
@@ -833,3 +907,14 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
+
+
+def test_cmake_presets_forbidden_build_type():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template cmake_exe")
+    # client.run("new cmake_exe -d name=hello -d version=0.1")
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["options.missing", "settings.build_type"]\''
+    client.run("install . {}".format(settings_layout), assert_error=True)
+    assert "Error, don't include 'settings.build_type' in the " \
+           "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out

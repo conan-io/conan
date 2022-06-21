@@ -67,6 +67,16 @@ def rmdir(conanfile, path):
     _internal_rmdir(path)
 
 
+def rm(conanfile, pattern, folder, recursive=False):
+    for root, _, filenames in os.walk(folder):
+        for filename in filenames:
+            if fnmatch(filename, pattern):
+                fullname = os.path.join(root, filename)
+                os.unlink(fullname)
+        if not recursive:
+            break
+
+
 def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):

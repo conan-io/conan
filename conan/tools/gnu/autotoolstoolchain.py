@@ -203,7 +203,7 @@ class AutotoolsToolchain:
                                        _get_argument("includedir", "includedirs"),
                                        _get_argument("oldincludedir", "includedirs"),
                                        _get_argument("datarootdir", "resdirs")])
-        return configure_install_flags
+        return [el for el in configure_install_flags if el]
 
     def _default_autoreconf_flags(self):
         return ["--force", "--install"]

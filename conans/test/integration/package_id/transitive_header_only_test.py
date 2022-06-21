@@ -107,7 +107,7 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . libb/1.0@")
         # libC -> libB
 
-        unrelated = "self.info.header_only()"
+        unrelated = "self.info.clear()"
         client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")
                                                    .with_package_id(unrelated)})
         client.run("create . libc/1.0@")
