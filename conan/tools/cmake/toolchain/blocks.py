@@ -102,8 +102,11 @@ class VSRuntimeBlock(Block):
     def context(self):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
+        if settings.get_safe("os") != "Windows":
+            return
+
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
+        if compiler not in ("Visual Studio", "msvc", "clang", "intel-cc"):
             return
 
         config_dict = {}
@@ -125,12 +128,13 @@ class VSRuntimeBlock(Block):
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc" or compiler == "intel-cc":
+        if compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
                 rt += "DLL"
             config_dict[build_type] = rt
+
         return {"vs_runtimes": config_dict}
 
 
