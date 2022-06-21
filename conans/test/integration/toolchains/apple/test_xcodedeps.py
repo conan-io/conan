@@ -17,30 +17,14 @@ _expected_dep_xconfig = [
     "OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{name}_{name})",
 ]
 
-_expected_vars_xconfig = [
-    "CONAN_{name}_{name}_BINARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_C_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_CXX_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LINKER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_PREPROCESSOR_DEFINITIONS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_INCLUDE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_RESOURCE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LIBRARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LIBRARIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -l{name}",
-    "CONAN_{name}_{name}_SYSTEM_LIBS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_FRAMEWORKS_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_FRAMEWORKS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -framework framework_{name}"
-]
-
 _expected_conf_xconfig = [
-    "#include \"{vars_name}\"",
-    "HEADER_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_INCLUDE_DIRECTORIES",
-    "GCC_PREPROCESSOR_DEFINITIONS_{name}_{name} = $(CONAN_{name}_{name}_PREPROCESSOR_DEFINITIONS",
-    "OTHER_CFLAGS_{name}_{name} = $(CONAN_{name}_{name}_C_COMPILER_FLAGS",
-    "OTHER_CPLUSPLUSFLAGS_{name}_{name} = $(CONAN_{name}_{name}_CXX_COMPILER_FLAGS",
-    "FRAMEWORK_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_FRAMEWORKS_DIRECTORIES",
-    "LIBRARY_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_LIBRARY_DIRECTORIES",
-    "OTHER_LDFLAGS_{name}_{name} = $(CONAN_{name}_{name}_LINKER_FLAGS) $(CONAN_{name}_{name}_LIBRARIES) $(CONAN_{name}_{name}_SYSTEM_LIBS) $(CONAN_{name}_{name}_FRAMEWORKS"
+    "HEADER_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "GCC_PREPROCESSOR_DEFINITIONS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_CFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_CPLUSPLUSFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "FRAMEWORK_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "LIBRARY_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_LDFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = "
 ]
 
 
@@ -50,8 +34,6 @@ def expected_files(current_folder, configuration, architecture, sdk, sdk_version
     deps = ["hello", "goodbye"]
     files.extend(
         [os.path.join(current_folder, "conan_{dep}_{dep}{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
-    files.extend(
-        [os.path.join(current_folder, "conan_{dep}_{dep}_vars{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
     files.append(os.path.join(current_folder, "conandeps.xcconfig"))
     return files
 
@@ -67,17 +49,10 @@ def check_contents(client, deps, configuration, architecture, sdk, sdk_version):
             line = var.format(name=dep_name)
             assert line in dep_xconfig
 
-        vars_name = "conan_{}_{}_vars{}.xcconfig".format(dep_name, dep_name,
-                                                      _get_filename(configuration, architecture, sdk, sdk_version))
-        conan_vars = client.load(vars_name)
-        for var in _expected_vars_xconfig:
-            line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
-                              sdk=sdk, sdk_version=sdk_version)
-            assert line in conan_vars
-
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
-            assert var.format(vars_name=vars_name, name=dep_name) in conan_conf
+            assert var.format(name=dep_name, configuration=configuration, architecture=architecture,
+                              sdk=sdk, sdk_version=sdk_version) in conan_conf
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
