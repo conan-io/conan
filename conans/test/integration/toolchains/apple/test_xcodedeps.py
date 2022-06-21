@@ -52,7 +52,7 @@ def check_contents(client, deps, configuration, architecture, sdk_version):
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
             assert var.format(name=dep_name, configuration=configuration, architecture=architecture,
-                              sdk=sdk, sdk_version=sdk_version) in conan_conf
+                              sdk="macosx", sdk_version=sdk_version) in conan_conf
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
