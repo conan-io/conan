@@ -129,9 +129,6 @@ class DataCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def update_package_timestamp(self, ref: PkgReference):
-        self._db.update_package_timestamp(ref)
-
     def list_references(self):
         return self._db.list_references()
 

@@ -78,8 +78,8 @@ def fix_apple_shared_install_name(conanfile):
 
     def _get_install_name(path_to_dylib):
         command = "otool -D {}".format(path_to_dylib)
-        install_name = check_output_runner(command).strip().split(":")[1].strip()
-        return install_name
+        installname = check_output_runner(command).strip().split(":")[1].strip()
+        return installname
 
     def _osx_collect_dylibs(lib_folder):
         return [os.path.join(full_folder, f) for f in os.listdir(lib_folder) if f.endswith(".dylib")

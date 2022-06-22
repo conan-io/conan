@@ -262,8 +262,6 @@ class GraphBinariesAnalyzer(object):
             except NoRemoteAvailable:
                 output.warning("Can't update, there are no remotes configured or enabled")
             else:
-                # TODO: Most likely get_packag_timestamp is no longer necessary
-                # cache_time = self._cache.get_package_timestamp(cache_latest_prev)
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
                 if cache_time < node.pref_timestamp and cache_latest_prev != node.pref:
