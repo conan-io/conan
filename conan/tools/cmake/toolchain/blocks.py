@@ -723,7 +723,7 @@ class GenericSystemBlock(Block):
                     toolset = msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator:
+                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
                     toolset = "ClangCL"
                 else:
                     raise ConanException("CMakeToolchain compiler=clang only supported VS 16")

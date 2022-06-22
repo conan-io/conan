@@ -111,6 +111,29 @@ class TestClangVSRuntime:
         cmd = cmd + ".exe"
         check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
 
+    @pytest.mark.tool_cmake(version="3.23")
+    @pytest.mark.tool_visual_studio(version="17")
+    def test_clang_visual_studio_generator(self, client):
+        cc_paths = textwrap.dedent("""
+            [buildenv]
+            #CC=C:/ws/LLVM/clang12/bin/clang
+            #CXX=C:/ws/LLVM/clang12/bin/clang++
+            """)
+        client.save({"cc_paths": cc_paths})
+        generator = "Visual Studio 17"
+        client.run("create . pkg/0.1@ -pr=clang -pr=cc_paths -s compiler.runtime=dynamic "
+                   "-s compiler.cppstd=17 -s compiler.runtime_version=v142 "
+                   '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
+        print(client.out)
+        assert 'cmake -G "{}"'.format(generator) in client.out
+        assert "main __clang_major__12" in client.out
+        # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
+        assert "main _MSC_VER192" in client.out
+        assert "main _MSVC_LANG2017" in client.out
+        cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
+        cmd = cmd + ".exe"
+        check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
+
 
 @pytest.mark.tool_cmake
 @pytest.mark.tool_mingw64_clang
