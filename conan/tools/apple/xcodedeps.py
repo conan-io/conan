@@ -230,27 +230,25 @@ class XcodeDeps(object):
 
             include_components_names = []
             if dep.cpp_info.has_components:
-                # for each component get the list of cpp_infos for the required components to
-                # later aggregate all variables in one file
+
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
 
+                    # returns: ("list of cpp infos from required components in same package",
+                    #           "list of names from required components from other packages")
                     def _get_component_requires(component):
-                        requires_external = []
-                        requires_internal = []
-                        for req in component.requires:
-                            if "::" in req:
-                                requires_external.append((req.split("::")[0], req.split("::")[1]))
-                            else:
-                                pkg = self._conanfile.dependencies.host.get(dep_name) or self._conanfile.dependencies.test.get(dep_name)
-                                req_cpp_info = pkg.cpp_info.components.get(req)
-                                requires_internal.append(req_cpp_info)
+                        requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
+                                             component.requires if "::" in req]
+                        requires_internal = [dep.cpp_info.components.get(req) for req in
+                                             component.requires if "::" not in req]
                         return requires_internal, requires_external
 
+                    # these are the transitive dependencies between components of the same package
                     transitive_internal = []
+                    # these are the transitive dependencies to components from other packages
                     transitive_external = []
 
-                    # return the internal and external components separated
+                    # return the internal cpp_infos and external components names
                     def _transitive_components(component):
                         requires_internal, requires_external = _get_component_requires(component)
                         transitive_internal.append(component)
