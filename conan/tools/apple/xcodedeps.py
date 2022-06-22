@@ -200,22 +200,7 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
-    def get_content_for_component(self, pkg_name, component_name, cpp_info, reqs):
-        result = {}
-
-        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
-
-        props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, cpp_info)
-
-        # The entry point for each package
-        file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
-        dep_content = self._dep_xconfig_file(pkg_name, component_name, file_dep_name, props_name, reqs)
-
-        result[file_dep_name] = dep_content
-        return result
-
-    def _new_get_content_for_component(self, pkg_name, component_name, transitive_internal, transitive_external):
+    def get_content_for_component(self, pkg_name, component_name, transitive_internal, transitive_external):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
@@ -280,14 +265,16 @@ class XcodeDeps(object):
                     transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
                     transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
-                    component_content = self._new_get_content_for_component(dep_name, comp_name, transitive_internal, transitive_external)
+                    component_content = self.get_content_for_component(dep_name, comp_name,
+                                                                       transitive_internal,
+                                                                       transitive_external)
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
                 public_deps = [(_format_name(d.ref.name), None) for r, d in
                                dep.dependencies.direct_host.items() if r.visible]
-                root_content = self._new_get_content_for_component(dep_name, dep_name, [dep.cpp_info],
-                                                                   public_deps)
+                root_content = self.get_content_for_component(dep_name, dep_name, [dep.cpp_info],
+                                                              public_deps)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 

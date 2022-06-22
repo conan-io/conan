@@ -161,5 +161,16 @@ def test_xcodedeps_aggregate_components():
     for index in range(1, 8):
         assert f"libb_comp{index}" in component7_vars
 
-    # folders are aggregated
     assert "mylibdir" in component7_vars
+
+    component4_vars = client.load("conan_libb_libb_comp4_release_x86_64.xcconfig")
+
+    # all of the transitive required components and the component itself are added
+    for index in range(1, 5):
+        assert f"libb_comp{index}" in component4_vars
+
+    for index in range(5, 8):
+        assert f"libb_comp{index}" not in component4_vars
+
+    # folders are aggregated
+    assert "mylibdir" in component4_vars
