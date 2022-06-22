@@ -59,7 +59,7 @@ def client():
 @pytest.mark.tool_cmake
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-class TestClangVSRuntime:
+class TestClangExternalVSRuntime:
     """ External LLVM/clang, with different CMake generators
     """
 
@@ -76,8 +76,8 @@ class TestClangVSRuntime:
                    "-s compiler.runtime={}".format(runtime))
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
+        assert "GNU-like command-line" in client.out
         assert "main __clang_major__12" in client.out
-        # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -93,9 +93,10 @@ class TestClangVSRuntime:
         client.run("create . pkg/0.1@ -pr=clang -s compiler.runtime=dynamic "
                    "-s compiler.runtime_version=v143 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
+
         assert 'cmake -G "{}"'.format(generator) in client.out
+        assert "GNU-like command-line" in client.out
         assert "main __clang_major__12" in client.out
-        # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -105,13 +106,17 @@ class TestClangVSRuntime:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
     @pytest.mark.tool_visual_studio(version="16")
-    @pytest.mark.parametrize("generator", ["Ninja", "NMake Makefiles"])
-    def test_clang_cmake_runtime_version(self, client, generator):
+    def test_clang_cmake_runtime_version(self, client):
+        generator = "Ninja"
+        # Make sure that normal CMakeLists with verify=False works
+        client.save({"CMakeLists.txt": gen_cmakelists(verify=False, appname="my_app",
+                                                      appsources=["src/main.cpp"])})
         client.run("create . pkg/0.1@ -pr=clang -s compiler.runtime=dynamic -s compiler.cppstd=17 "
                    "-s compiler.runtime_version=v142 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
-        print(client.out)
+
         assert 'cmake -G "{}"'.format(generator) in client.out
+        assert "GNU-like command-line" in client.out
         assert "main __clang_major__12" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER192" in client.out
@@ -122,15 +127,19 @@ class TestClangVSRuntime:
         cmd = cmd + ".exe"
         check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
 
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+class TestClangInternalClangCL:
     @pytest.mark.tool_cmake(version="3.23")
     @pytest.mark.tool_visual_studio(version="17")
     def test_clang_visual_studio_generator(self, client):
+        """ This is using the embedded ClangCL compiler, not the external one"""
         generator = "Visual Studio 17"
         client.run("create . pkg/0.1@ -pr=clang -s compiler.runtime=dynamic "
                    "-s compiler.cppstd=17 -s compiler.runtime_version=v143 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
-        print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
+        assert "MSVC-like command-line" in client.out
         assert "main __clang_major__13" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out

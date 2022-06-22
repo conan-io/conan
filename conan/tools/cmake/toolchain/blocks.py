@@ -135,6 +135,13 @@ class VSRuntimeBlock(Block):
                 rt += "DLL"
             config_dict[build_type] = rt
 
+            # If clang is being used the CMake check of compiler will try to create a simple
+            # test application, and will fail because the Debug runtime is not there
+            if compiler == "clang":
+                if config_dict.get("Debug") is None:
+                    clang_rt = "MultiThreadedDebug" + ("DLL" if runtime != "static" else "")
+                    config_dict["Debug"] = clang_rt
+
         return {"vs_runtimes": config_dict}
 
 
