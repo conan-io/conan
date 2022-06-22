@@ -124,6 +124,9 @@ class XcodeDeps(object):
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
         def _merged_vars(name):
+            if "zlib" in pkg_name:
+                print("sdasdaasdasada")
+            print(pkg_name, comp_name)
             merged = [bindir for cpp_info in transitive_cpp_infos for bindir in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
 
@@ -246,43 +249,28 @@ class XcodeDeps(object):
                     def _get_component_requires(component):
                         requires = []
                         for req in component.requires:
-                            if "libbacktrace::libbacktrace" in component.requires:
-                                print("sdasdasda")
-                                print("sdasdasda")
-                                print("sdasdasda")
                             req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
                             pkg = self._conanfile.dependencies.host.get(req_pkg) or self._conanfile.dependencies.test.get(req_pkg)
-                            requires.append(pkg.cpp_info.components.get(req_cmp))
+                            req_cpp_info = pkg.cpp_info.components.get(req_cmp) if pkg.cpp_info.has_components else pkg.cpp_info.components[None]
+                            if not pkg.cpp_info.has_components:
+                                print("sdasdasda")
+                            requires.append(req_cpp_info)
                         return requires
 
                     transitive = []
 
-                    def _transitive_deps(component):
-                        print("--->", component, transitive)
-                        if None in transitive:
-                            print("dasdasda")
-                            print("dasdasda")
-                            print("dasdasda")
-                            print("dasdasda")
-                        if component is not None:
-                            print("@@@@@>", component)
-                            requires = _get_component_requires(component)
-                            print(component)
-                            transitive.append(component)
-                            if requires is not None:
-                                # THE PROBLEM IS LIBBACKTRACE::
-                                if None in requires:
-                                    print("dasdasda")
-                                    print("dasdasda")
-                                    print("dasdasda")
-                                transitive.extend(requires)
-                                for require in requires:
-                                    print(component.name, require)
-                                    _transitive_deps(require)
+                    # return just the transitive components inside the library
+                    # the components required from other direct requirements are
+                    # handled including the files, not aggregated
+                    def _transitive_internal_components(component):
+                        requires = _get_component_requires(component)
+                        transitive.append(component)
+                        transitive.extend(requires)
+                        for require in requires:
+                            _transitive_internal_components(require)
                         return transitive
 
-                    transitives = _transitive_deps(comp_cpp_info)
-                    print(comp_name, "-----", transitives)
+                    transitives = _transitive_internal_components(comp_cpp_info)
                     # remove duplicates
                     transitives = list(OrderedDict.fromkeys(transitives).keys())
                     component_content = self._new_get_content_for_component(dep_name, transitives)
