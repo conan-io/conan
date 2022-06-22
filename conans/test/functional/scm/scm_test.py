@@ -226,9 +226,9 @@ class ConanLib(ConanFile):
         path, _ = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self.client.init_git_repo()
+        self.client.init_git_repo(main_branch="main")
         self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
-        self.client.run_command('git push origin master')
+        self.client.run_command('git push origin main')
         self.client.run("export . user/channel")
 
         # delete old source, but it doesn't matter because the sources are in the cache
@@ -306,7 +306,6 @@ class ConanLib(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
-        self.client.init_git_repo()
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
