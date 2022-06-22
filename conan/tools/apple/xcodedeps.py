@@ -127,14 +127,12 @@ class XcodeDeps(object):
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
         def _merged_vars(name):
-            merged = [bindir for cpp_info in transitive_cpp_infos for bindir in getattr(cpp_info, name)]
+            merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
 
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
-            'bin_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("bindirs")),
-            'res_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("resdirs")),
             'include_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("includedirs")),
             'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
             'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
