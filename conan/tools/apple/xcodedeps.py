@@ -235,8 +235,9 @@ class XcodeDeps(object):
         # Generate the config files for each component with name conan_pkgname_compname.xcconfig
         # If a package has no components the name is conan_pkgname_pkgname.xcconfig
         # Then all components are included in the conan_pkgname.xcconfig file
-        for dep in list(self._conanfile.dependencies.host.values()) + \
-                   list(self._conanfile.dependencies.test.values()):
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
+        for dep in list(host_req.values()) + list(test_req.values()):
 
             dep_name = _format_name(dep.ref.name)
 
@@ -278,15 +279,13 @@ class XcodeDeps(object):
                     transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
                     component_content = self._new_get_content_for_component(dep_name, comp_name, transitive_internal, transitive_external)
+                    include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                pass # FIXME
-                # public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
-                #                dep.dependencies.direct_host.items() if r.visible]
-                # required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                # root_content = self.get_content_for_component(dep_name, dep_name, dep.cpp_info, required_components)
-                # include_components_names.append((dep_name, dep_name))
-                # result.update(root_content)
+                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in dep.dependencies.direct_host.items() if r.visible]
+                root_content = self._new_get_content_for_component(dep_name, dep_name, [dep.cpp_info], public_deps)
+                include_components_names.append((dep_name, dep_name))
+                result.update(root_content)
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
