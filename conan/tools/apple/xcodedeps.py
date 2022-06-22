@@ -246,6 +246,10 @@ class XcodeDeps(object):
                     def _get_component_requires(component):
                         requires = []
                         for req in component.requires:
+                            if "libbacktrace::libbacktrace" in component.requires:
+                                print("sdasdasda")
+                                print("sdasdasda")
+                                print("sdasdasda")
                             req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
                             pkg = self._conanfile.dependencies.host.get(req_pkg) or self._conanfile.dependencies.test.get(req_pkg)
                             requires.append(pkg.cpp_info.components.get(req_cmp))
@@ -255,12 +259,22 @@ class XcodeDeps(object):
 
                     def _transitive_deps(component):
                         print("--->", component, transitive)
+                        if None in transitive:
+                            print("dasdasda")
+                            print("dasdasda")
+                            print("dasdasda")
+                            print("dasdasda")
                         if component is not None:
                             print("@@@@@>", component)
                             requires = _get_component_requires(component)
                             print(component)
                             transitive.append(component)
                             if requires is not None:
+                                # THE PROBLEM IS LIBBACKTRACE::
+                                if None in requires:
+                                    print("dasdasda")
+                                    print("dasdasda")
+                                    print("dasdasda")
                                 transitive.extend(requires)
                                 for require in requires:
                                     print(component.name, require)

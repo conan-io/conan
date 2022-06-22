@@ -91,6 +91,8 @@ def test_generator_files():
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_xcodedeps_aggregate_components():
     client = TestClient()
+    client.cache_folder = "/Users/carlosz/.conan"
+    client.run("install boost/1.79.0@ --install-folder=generators -g XcodeDeps -s build_type=Debug")
 
     conanfile_py = textwrap.dedent("""
         from conan import ConanFile
