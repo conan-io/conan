@@ -61,14 +61,14 @@ class XcodeDeps(object):
     general_name = "conandeps.xcconfig"
 
     _conf_xconfig = textwrap.dedent("""\
-        // Compiler options for {{pkg_name}}::{{pkg_name}}
+        // Compiler options for {{pkg_name}}::{{comp_name}}
         HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
         GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}}{{condition}} = {{definitions}}
         OTHER_CFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{c_compiler_flags}}
         OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{cxx_compiler_flags}}
         FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{frameworkdirs}}
 
-        // Link options for {{name}}
+        // Link options for {{pkg_name}}::{{comp_name}}
         LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{lib_dirs}}
         OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{linker_flags}} {{libs}} {{system_libs}} {{frameworks}}
         """)
@@ -77,8 +77,8 @@ class XcodeDeps(object):
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
         {% for dep in deps %}
-        // Includes for {{dep[0]}}::{{dep[1]}} dependency
-        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        // Includes for {{dep}} dependency
+        #include "conan_{{dep}}.xcconfig"
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
@@ -160,10 +160,11 @@ class XcodeDeps(object):
             content_multi = load(multi_path)
         else:
             content_multi = self._dep_xconfig
+            reqs_include_names = [f"{req[0]}::{req[1]}" if req[1] is not None else f"{req[0]}" for req in reqs]
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs})
+                                                            "deps": reqs_include_names})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -237,7 +238,8 @@ class XcodeDeps(object):
         # Then all components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        for dep in list(host_req.values()) + list(test_req.values()):
+        all_deps = list(host_req.values()) + list(test_req.values())
+        for dep in all_deps:
 
             dep_name = _format_name(dep.ref.name)
 
@@ -282,8 +284,10 @@ class XcodeDeps(object):
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in dep.dependencies.direct_host.items() if r.visible]
-                root_content = self._new_get_content_for_component(dep_name, dep_name, [dep.cpp_info], public_deps)
+                public_deps = [(_format_name(d.ref.name), None) for r, d in
+                               dep.dependencies.direct_host.items() if r.visible]
+                root_content = self._new_get_content_for_component(dep_name, dep_name, [dep.cpp_info],
+                                                                   public_deps)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
