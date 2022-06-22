@@ -439,3 +439,34 @@ def test_cmake_presets_singleconfig():
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["configurePresets"]) == 2
+
+
+def test_toolchain_cache_variables():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.cache_variables["foo"] = True
+                toolchain.cache_variables["foo2"] = False
+                toolchain.cache_variables["var"] = "23"
+                toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS PRIORITY"
+                toolchain.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . mylib/1.0@ -c tools.cmake.cmaketoolchain:generator='MinGW Makefiles'")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["foo"] == 'ON'
+    assert cache_variables["foo2"] == 'OFF'
+    assert cache_variables["var"] == '23'
+    assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_MAKE_PROGRAM"] == "THIS VALUE HAS PRIORITY"

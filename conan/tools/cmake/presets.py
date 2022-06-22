@@ -42,7 +42,6 @@ def _configure_preset_name(conanfile, multiconfig):
         return str(build_type).lower()
 
 
-
 def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     name = _configure_preset_name(conanfile, multiconfig)
@@ -78,15 +77,19 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
     return ret
 
 
-def write_cmake_presets(conanfile, toolchain_file, generator):
-    cache_variables = {}
+def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
+    cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
-        cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
-        if cmake_make_program:
-            cmake_make_program = cmake_make_program.replace("\\", "/")
-            cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
-    cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
+        if "CMAKE_SH" not in cache_variables:
+            cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
+        if "CMAKE_MAKE_PROGRAM" not in cache_variables:
+            cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
+            if cmake_make_program:
+                cmake_make_program = cmake_make_program.replace("\\", "/")
+                cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
+
+    if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
+        cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
