@@ -1,5 +1,6 @@
 import platform
 import re
+import tempfile
 import textwrap
 
 import pytest
@@ -14,7 +15,10 @@ from conans.util.files import save
 
 @pytest.fixture
 def client():
-    c = TestClient()
+    # IMPORTANT: This cannot use the default tests location, if in Windows, it can be another unit
+    # like F and Visual WONT FIND ClangCL
+    t = tempfile.mkdtemp(suffix='conans')
+    c = TestClient(cache_folder=t)
     save(c.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     clang_profile = textwrap.dedent("""
         [settings]
@@ -61,9 +65,9 @@ class TestClangVSRuntime:
 
     @pytest.mark.tool_mingw64
     @pytest.mark.tool_visual_studio(version="17")
-    @pytest.mark.tool_clang(version="12")  # repeated, for priority
+    @pytest.mark.tool_clang(version="12")  # repeated, for priority over the mingw64 clang
     @pytest.mark.parametrize("runtime", ["static", "dynamic"])
-    def test_clang_vs_runtime(self, client, runtime):
+    def test_clang_mingw(self, client, runtime):
         """ compiling with an LLVM-clang installed, which uses by default the
         VS runtime
         """
@@ -76,6 +80,8 @@ class TestClangVSRuntime:
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
+        assert "main _M_X64 defined" in client.out
+        assert "main __x86_64__ defined" in client.out
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         static_runtime = True if runtime == "static" else False
@@ -92,6 +98,8 @@ class TestClangVSRuntime:
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
+        assert "main _M_X64 defined" in client.out
+        assert "main __x86_64__ defined" in client.out
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
@@ -102,11 +110,14 @@ class TestClangVSRuntime:
         client.run("create . pkg/0.1@ -pr=clang -s compiler.runtime=dynamic -s compiler.cppstd=17 "
                    "-s compiler.runtime_version=v142 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
+        print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "main __clang_major__12" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER192" in client.out
         assert "main _MSVC_LANG2017" in client.out
+        assert "main _M_X64 defined" in client.out
+        assert "main __x86_64__ defined" in client.out
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
@@ -114,22 +125,19 @@ class TestClangVSRuntime:
     @pytest.mark.tool_cmake(version="3.23")
     @pytest.mark.tool_visual_studio(version="17")
     def test_clang_visual_studio_generator(self, client):
-        cc_paths = textwrap.dedent("""
-            [buildenv]
-            #CC=C:/ws/LLVM/clang12/bin/clang
-            #CXX=C:/ws/LLVM/clang12/bin/clang++
-            """)
-        client.save({"cc_paths": cc_paths})
         generator = "Visual Studio 17"
-        client.run("create . pkg/0.1@ -pr=clang -pr=cc_paths -s compiler.runtime=dynamic "
-                   "-s compiler.cppstd=17 -s compiler.runtime_version=v142 "
+        client.run("create . pkg/0.1@ -pr=clang -s compiler.runtime=dynamic "
+                   "-s compiler.cppstd=17 -s compiler.runtime_version=v143 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
         print(client.out)
         assert 'cmake -G "{}"'.format(generator) in client.out
-        assert "main __clang_major__12" in client.out
+        assert "main __clang_major__13" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
-        assert "main _MSC_VER192" in client.out
+        assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2017" in client.out
+        assert "main _M_X64 defined" in client.out
+        assert "main __x86_64__ defined" in client.out
+        assert "-m64" not in client.out
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=False)
@@ -153,12 +161,14 @@ def test_clang_mingw(client):
     assert "main __MINGW64__1" in client.out
     assert "main _MSC_" not in client.out
     assert "main _MSVC_" not in client.out
+    assert "main _M_X64 defined" in client.out
+    assert "main __x86_64__ defined" in client.out
 
 
 @pytest.mark.tool_cmake
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-def test_clang_cmake_ninja_custom_cxx(client):
+def test_error_clang_cmake_ninja_custom_cxx(client):
     with environment_append({"CXX": "/no/exist/clang++"}):
         client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
                    assert_error=True)
@@ -180,26 +190,3 @@ def test_clang_cmake_ninja_custom_cxx(client):
                assert_error=True)
     assert 'Could not find compiler' in client.out
     assert '/no/exist/clang++' in client.out
-
-
-@pytest.mark.tool_cmake
-@pytest.mark.tool_visual_studio(version="16")  # With Clang distributed in VS!
-@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-def test_clang_cmake_visual(client):
-    clang_profile = textwrap.dedent("""
-        [settings]
-        os=Windows
-        arch=x86_64
-        build_type=Release
-        compiler=clang
-        compiler.version=11
-        """)
-    # TODO: Clang version is unused, it can change, still 11 from inside VS is used
-    client.save({"clang": clang_profile})
-    client.run("create . pkg/0.1@ -pr=clang "
-               '-c tools.cmake.cmaketoolchain:generator="Visual Studio 16"')
-    assert 'cmake -G "Visual Studio 16"' in client.out
-    assert "main __clang_major__11" in client.out
-    # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
-    assert "main _MSC_VER19" in client.out
-    assert "main _MSVC_LANG2014" in client.out

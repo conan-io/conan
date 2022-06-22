@@ -162,7 +162,6 @@ class CMakeToolchain(object):
     def content(self):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
-        print(content)
         return content
 
     def generate(self):

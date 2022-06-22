@@ -743,7 +743,7 @@ class GenericSystemBlock(Block):
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
+        if (compiler in ("Visual Studio", "msvc", "clang") or compiler_base == "Visual Studio") and \
                 generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
@@ -760,7 +760,7 @@ class GenericSystemBlock(Block):
         # TODO: Check if really necessary now that conanvcvars is used
         if "Ninja" in str(generator) and is_msvc(self._conanfile):
             compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in str(generator):
+        elif os_ == "Windows" and compiler == "clang":
             compiler_rc = "clang"
             compiler_c = "clang"
             compiler_cpp = "clang++"

@@ -18,7 +18,11 @@ def architecture_flag(settings):
     if the_os == "Android":
         return ""
 
-    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+    if compiler == "clang" and the_os == "Windows":
+        # Clang in Windows (VS) shouldn't add arch flags
+        # TODO: Maybe Mingw runtime does
+        return ""
+    elif str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
