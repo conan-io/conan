@@ -76,7 +76,10 @@ class XcodeDeps(object):
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
-
+        {% for dep in deps %}
+        // Includes for {{dep[0]}}::{{dep[1]}} dependency
+        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
         HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
@@ -124,9 +127,6 @@ class XcodeDeps(object):
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
         def _merged_vars(name):
-            if "zlib" in pkg_name:
-                print("sdasdaasdasada")
-            print(pkg_name, comp_name)
             merged = [bindir for cpp_info in transitive_cpp_infos for bindir in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
 
@@ -153,7 +153,7 @@ class XcodeDeps(object):
         content_multi = template.render(**fields)
         return content_multi
 
-    def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename):
+    def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename, reqs):
         # Current directory is the generators_folder
         multi_path = name_general
         if os.path.isfile(multi_path):
@@ -162,7 +162,8 @@ class XcodeDeps(object):
             content_multi = self._dep_xconfig
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
-                                                            "dep_xconfig_filename": dep_xconfig_filename})
+                                                            "dep_xconfig_filename": dep_xconfig_filename,
+                                                            "deps": reqs})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -213,17 +214,17 @@ class XcodeDeps(object):
         result[file_dep_name] = dep_content
         return result
 
-    def _new_get_content_for_component(self, pkg_name, transitives):
+    def _new_get_content_for_component(self, pkg_name, component_name, transitive_internal, transitive_external):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
-        props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, transitives[0].name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, transitives[0].name, transitives)
+        props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
+        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, transitive_internal)
 
         # The entry point for each package
-        file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, transitives[0].name)
-        dep_content = self._dep_xconfig_file(pkg_name, transitives[0].name, file_dep_name, props_name)
+        file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
+        dep_content = self._dep_xconfig_file(pkg_name, component_name, file_dep_name, props_name, transitive_external)
 
         result[file_dep_name] = dep_content
         return result
@@ -247,41 +248,45 @@ class XcodeDeps(object):
                 for comp_name, comp_cpp_info in sorted_components:
 
                     def _get_component_requires(component):
-                        requires = []
+                        requires_external = []
+                        requires_internal = []
                         for req in component.requires:
-                            req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
-                            pkg = self._conanfile.dependencies.host.get(req_pkg) or self._conanfile.dependencies.test.get(req_pkg)
-                            req_cpp_info = pkg.cpp_info.components.get(req_cmp) if pkg.cpp_info.has_components else pkg.cpp_info.components[None]
-                            if not pkg.cpp_info.has_components:
-                                print("sdasdasda")
-                            requires.append(req_cpp_info)
-                        return requires
+                            if "::" in req:
+                                requires_external.append((req.split("::")[0], req.split("::")[1]))
+                            else:
+                                pkg = self._conanfile.dependencies.host.get(dep_name) or self._conanfile.dependencies.test.get(dep_name)
+                                req_cpp_info = pkg.cpp_info.components.get(req)
+                                requires_internal.append(req_cpp_info)
+                        return requires_internal, requires_external
 
-                    transitive = []
+                    transitive_internal = []
+                    transitive_external = []
 
-                    # return just the transitive components inside the library
-                    # the components required from other direct requirements are
-                    # handled including the files, not aggregated
-                    def _transitive_internal_components(component):
-                        requires = _get_component_requires(component)
-                        transitive.append(component)
-                        transitive.extend(requires)
-                        for require in requires:
-                            _transitive_internal_components(require)
-                        return transitive
+                    # return the internal and external components separated
+                    def _transitive_components(component):
+                        requires_internal, requires_external = _get_component_requires(component)
+                        transitive_internal.append(component)
+                        transitive_internal.extend(requires_internal)
+                        transitive_external.extend(requires_external)
+                        for require in requires_internal:
+                            _transitive_components(require)
+                        return transitive_internal, transitive_external
+                    transitive_internal, transitive_external = _transitive_components(comp_cpp_info)
 
-                    transitives = _transitive_internal_components(comp_cpp_info)
                     # remove duplicates
-                    transitives = list(OrderedDict.fromkeys(transitives).keys())
-                    component_content = self._new_get_content_for_component(dep_name, transitives)
+                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
+                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
+
+                    component_content = self._new_get_content_for_component(dep_name, comp_name, transitive_internal, transitive_external)
                     result.update(component_content)
             else:
-                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
-                               dep.dependencies.direct_host.items() if r.visible]
-                required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                root_content = self.get_content_for_component(dep_name, dep_name, dep.cpp_info, required_components)
-                include_components_names.append((dep_name, dep_name))
-                result.update(root_content)
+                pass # FIXME
+                # public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
+                #                dep.dependencies.direct_host.items() if r.visible]
+                # required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
+                # root_content = self.get_content_for_component(dep_name, dep_name, dep.cpp_info, required_components)
+                # include_components_names.append((dep_name, dep_name))
+                # result.update(root_content)
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
