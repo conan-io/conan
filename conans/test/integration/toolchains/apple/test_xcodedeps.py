@@ -153,7 +153,7 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    assert '#include "conan_liba::liba.xcconfig"' in component7_entry
+    assert '#include "conan_liba_liba.xcconfig"' in component7_entry
 
     component7_vars = client.load("conan_libb_libb_comp7_release_x86_64.xcconfig")
 

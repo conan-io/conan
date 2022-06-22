@@ -77,8 +77,8 @@ class XcodeDeps(object):
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
         {% for dep in deps %}
-        // Includes for {{dep}} dependency
-        #include "conan_{{dep}}.xcconfig"
+        // Includes for {{dep[0]}}::{{dep[1]}} dependency
+        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
@@ -158,11 +158,10 @@ class XcodeDeps(object):
             content_multi = load(multi_path)
         else:
             content_multi = self._dep_xconfig
-            reqs_include_names = [f"{req[0]}::{req[1]}" if req[1] is not None else f"{req[0]}" for req in reqs]
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs_include_names})
+                                                            "deps": reqs})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -267,10 +266,11 @@ class XcodeDeps(object):
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_deps = [(_format_name(d.ref.name), None) for r, d in
+                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
                                dep.dependencies.direct_host.items() if r.visible]
+                required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
                 root_content = self.get_content_for_component(dep_name, dep_name, [dep.cpp_info],
-                                                              public_deps)
+                                                              required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
