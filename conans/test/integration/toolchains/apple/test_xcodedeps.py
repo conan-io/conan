@@ -97,7 +97,7 @@ def test_xcodedeps_aggregate_components():
         class LibConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                self.cpp_info.components["liba_comp1"].includedirs = ["liba_comp1"]
+                self.cpp_info.includedirs = ["liba_include"]
         """)
 
     client.save({"conanfile.py": conanfile_py})
@@ -128,7 +128,7 @@ def test_xcodedeps_aggregate_components():
                 self.cpp_info.components["libb_comp2"].requires = ["libb_comp1"]
                 self.cpp_info.components["libb_comp3"].includedirs = ["libb_comp3"]
                 self.cpp_info.components["libb_comp3"].libdirs = ["mylibdir"]
-                self.cpp_info.components["libb_comp3"].requires = ["libb_comp1", "liba::liba_comp1"]
+                self.cpp_info.components["libb_comp3"].requires = ["libb_comp1", "liba::liba"]
                 self.cpp_info.components["libb_comp4"].includedirs = ["libb_comp4"]
                 self.cpp_info.components["libb_comp4"].libdirs = ["mylibdir"]
                 self.cpp_info.components["libb_comp4"].requires = ["libb_comp2", "libb_comp3"]
@@ -153,7 +153,7 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    assert '#include "conan_liba::liba_comp1.xcconfig"' in component7_entry
+    assert '#include "conan_liba::liba.xcconfig"' in component7_entry
 
     component7_vars = client.load("conan_libb_libb_comp7_release_x86_64.xcconfig")
 
