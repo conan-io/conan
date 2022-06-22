@@ -162,4 +162,4 @@ def test_xcodedeps_aggregate_components():
         assert f"libb_comp{index}" in component7_vars
 
     # folders are aggregated
-    assert component7_vars.count("mylibdir") == 1
+    assert "mylibdir" in component7_vars
