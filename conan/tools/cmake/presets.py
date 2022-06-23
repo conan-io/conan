@@ -83,7 +83,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
         if "CMAKE_SH" not in cache_variables:
             cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
 
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
         if cmake_make_program:
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
