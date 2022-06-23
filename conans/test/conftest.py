@@ -169,65 +169,65 @@ def _get_tool(name, version):
     # True = tool not available, test error
     # (path, env) = tool available
     cached = _cached_tools.setdefault(name, {}).get(version)
-    if cached is None:
-        tool = tools_locations.get(name, {})
-        if tool.get("disabled"):
-            _cached_tools[name][version] = False
+    if cached is not None:
+        return cached
+    result = _get_individual_tool(name, version)
+    _cached_tools[name][version] = result
+    return result
+
+
+def _get_individual_tool(name, version):
+    tool = tools_locations.get(name, {})
+    if tool.get("disabled"):
+        return False
+
+    tool_platform = platform.system()
+    if tool.get("platform", tool_platform) != tool_platform:
+        return None, None
+
+    version = version or tool.get("default")
+    tool_version = tool.get(version)
+    if tool_version is not None:
+        assert isinstance(tool_version, dict)
+        if tool_version.get("disabled"):
             return False
-
-        tool_platform = platform.system()
-        if tool.get("platform", tool_platform) != tool_platform:
-            _cached_tools[name][version] = None, None
-            return None, None
-
-        exe = tool.get("exe", name)
-        version = version or tool.get("default")
-        tool_version = tool.get(version)
-        if tool_version is not None:
-            assert isinstance(tool_version, dict)
-            if tool_version.get("disabled"):
-                _cached_tools[name][version] = False
-                return False
-            tool_path = tool_version.get("path", {}).get(tool_platform)
-            # To allow to skip for a platform, we can put the path to None
-            # "cmake": { "3.23": {
-            #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-            #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
-            #                        'Linux': None}}
-            #          }
-            if tool_path is None:
-                _cached_tools[name][version] = False
-                return False
-
-        else:
-            if version is not None:  # if the version is specified, it should be in the conf
-                _cached_tools[name][version] = True
-                return True
-            tool_path = None
-
-        try:
-            tool_env = tools_environments[name][tool_platform]
-        except KeyError:
-            tool_env = None
-
-        cached = tool_path, tool_env
-
-        # Check this particular tool is installed
         if name == "visual_studio":
-            if not vswhere():  # TODO: Missing version detection
-                cached = True
-        else:  # which based detection
-            old_environ = None
-            if tool_path is not None:
-                old_environ = dict(os.environ)
-                os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
-            if not which(exe):  # TODO: This which doesn't detect version either
-                cached = True
-            if old_environ is not None:
-                os.environ.clear()
-                os.environ.update(old_environ)
+            if vswhere():  # TODO: Missing version detection
+                return None, None
 
-        _cached_tools[name][version] = cached
+        tool_path = tool_version.get("path", {}).get(tool_platform)
+        # To allow to skip for a platform, we can put the path to None
+        # "cmake": { "3.23": {
+        #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+        #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+        #                        'Linux': None}}
+        #          }
+        if tool_path is None:
+            return False
+    else:
+        if version is not None:  # if the version is specified, it should be in the conf
+            return True
+        tool_path = None
+
+    try:
+        tool_env = tools_environments[name][tool_platform]
+    except KeyError:
+        tool_env = None
+
+    cached = tool_path, tool_env
+
+    # Check this particular tool is installed
+    old_environ = None
+    if tool_path is not None:
+        old_environ = dict(os.environ)
+        os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
+    exe = tool.get("exe", name)
+    exe_found = which(exe)  # TODO: This which doesn't detect version either
+    if not exe_found:
+        cached = True
+    if old_environ is not None:
+        os.environ.clear()
+        os.environ.update(old_environ)
 
     return cached
 
