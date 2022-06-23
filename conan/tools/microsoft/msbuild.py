@@ -10,7 +10,7 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
 
 
 def msbuild_arch(arch):
-    return {'x86': 'Win32',
+    return {'x86': 'x86',
             'x86_64': 'x64',
             'armv7': 'ARM',
             'armv8': 'ARM64'}.get(str(arch))
