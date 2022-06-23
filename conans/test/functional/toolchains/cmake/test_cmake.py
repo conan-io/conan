@@ -31,13 +31,19 @@ def test_simple_cmake_mingw():
         compiler.libcxx=libstdc++11
         compiler.threads=win32
         compiler.version=11.2
-        cppstd=17
+        compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
     assert "hello/1.0: __GNUC__" in client.out
     assert "hello/1.0: __MINGW" in client.out
+    assert "hello/1.0: _M_X64 defined" in client.out
+    assert "hello/1.0: __cplusplus2017" in client.out
+    check_vs_runtime("test_package/build/Release/example.exe", client, "16", build_type="Release",
+                     static_runtime=True)
+    assert "libstdc++-6.dll" in client.out
+    assert "msvcrt.dll" in client.out
 
 
 @pytest.mark.tool_cmake

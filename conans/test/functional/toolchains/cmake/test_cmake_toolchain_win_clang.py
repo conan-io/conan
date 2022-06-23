@@ -158,8 +158,10 @@ class TestClangInternalClangCL:
 def test_clang_mingw(client):
     """ compiling with the clang INSIDE mingw, which uses the
     MinGW runtime, not the MSVC one
+    For 32 bits, it doesn't seem possible to install the toolchain
+    For 64 bits require "pacman -S mingw-w64-x86-clang++"
     """
-    client.run("create . pkg/0.1@ -pr=clang")
+    client.run(f"create . pkg/0.1@ -pr=clang")
     # clang compilations in Windows will use MinGW Makefiles by default
     assert 'cmake -G "MinGW Makefiles"' in client.out
     assert "main __clang_major__13" in client.out
@@ -172,6 +174,13 @@ def test_clang_mingw(client):
     assert "main _MSVC_" not in client.out
     assert "main _M_X64 defined" in client.out
     assert "main __x86_64__ defined" in client.out
+
+    cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
+    cmd = cmd + ".exe"
+    check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=True)
+    print(client.out)
+    assert "libstdc++-6.dll" in client.out
+    assert "msvcrt.dll" in client.out
 
 
 @pytest.mark.tool_cmake
