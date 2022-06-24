@@ -448,7 +448,7 @@ def test_cmake_presets_singleconfig():
 def test_toolchain_cache_variables():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain, CMake
 
         class Conan(ConanFile):
@@ -466,7 +466,8 @@ def test_toolchain_cache_variables():
         """)
     client.save({"conanfile.py": conanfile})
     with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
-        client.run("install . mylib/1.0@ -c tools.cmake.cmaketoolchain:generator='MinGW Makefiles' "
+        client.run("install . --name=mylib --version=1.0 "
+                   "-c tools.cmake.cmaketoolchain:generator='MinGW Makefiles' "
                    "-c tools.gnu:make_program='MyMake'")
     presets = json.loads(client.load("CMakePresets.json"))
     cache_variables = presets["configurePresets"][0]["cacheVariables"]
