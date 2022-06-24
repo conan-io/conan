@@ -4,6 +4,7 @@ import platform
 import textwrap
 
 import pytest
+from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
@@ -442,3 +443,37 @@ def test_cmake_presets_singleconfig():
                "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["configurePresets"]) == 2
+
+
+def test_toolchain_cache_variables():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.cache_variables["foo"] = True
+                toolchain.cache_variables["foo2"] = False
+                toolchain.cache_variables["var"] = "23"
+                toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS NO PRIORITY"
+                toolchain.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        client.run("install . --name=mylib --version=1.0 "
+                   "-c tools.cmake.cmaketoolchain:generator='MinGW Makefiles' "
+                   "-c tools.gnu:make_program='MyMake'")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["foo"] == 'ON'
+    assert cache_variables["foo2"] == 'OFF'
+    assert cache_variables["var"] == '23'
+    assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"

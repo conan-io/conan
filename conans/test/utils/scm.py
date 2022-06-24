@@ -17,7 +17,7 @@ def git_create_bare_repo(folder=None, reponame="repo.git"):
 
 
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
-                          tags=None, origin_url=None):
+                          tags=None, origin_url=None, main_branch="master"):
     tmp = folder or temp_folder()
     if files:
         save_files(tmp, files)
@@ -29,9 +29,7 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
     _run("init .", tmp)
     _run('config user.name "Your Name"', tmp)
     _run('config user.email "you@example.com"', tmp)
-
-    if branch:
-        _run("checkout -b %s" % branch, tmp)
+    _run("checkout -b {}".format(branch or main_branch), tmp)
 
     _run("add .", tmp)
     for i in range(0, commits):
