@@ -1,6 +1,5 @@
 import json
 from collections import OrderedDict
-from json import JSONEncoder
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
@@ -105,7 +104,6 @@ def _add_remotes_and_cache_options(subparser):
     remotes_group.add_argument("-r", "--remote", default=None, action=Extender,
                                help="Remote names. Accepts wildcards")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
-
 
 def _selected_cache_remotes(conan_api, args):
     # If neither remote nor cache are defined, show results only from cache

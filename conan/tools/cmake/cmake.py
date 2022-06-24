@@ -98,11 +98,27 @@ class CMake(object):
 
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
+        arg_list.append(self._get_log_level_arg())
 
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(self, build_folder):
             self._conanfile.run(command)
+
+    @staticmethod
+    def _get_log_level_arg():
+        """
+        cmake --log-level=<ERROR|WARNING|NOTICE|STATUS|VERBOSE|DEBUG|TRACE>
+        """
+        from conans.cli.output import conan_log_level, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
+            LEVEL_STATUS, LEVEL_DEBUG, LEVEL_TRACE, LEVEL_VERBOSE
+        cmake_level = {LEVEL_ERROR: "ERROR", LEVEL_WARNING: "WARNING", LEVEL_NOTICE: "NOTICE",
+                       LEVEL_STATUS: "STATUS", LEVEL_VERBOSE: "VERBOSE",
+                       LEVEL_DEBUG: "DEBUG", LEVEL_TRACE: "TRACE"}.get(conan_log_level, None)
+        if not cmake_level:
+            return ""
+        # TODO: Usage of -DCMAKE_VERBOSE_MAKEFILE to limit build traces?
+        return "--log-level={}".format(cmake_level)
 
     def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
         bf = self._conanfile.build_folder
