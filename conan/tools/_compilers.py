@@ -20,10 +20,10 @@ def architecture_flag(settings):
 
     if compiler == "clang" and the_os == "Windows":
         # Clang in Windows (VS) shouldn't add arch flags
-        # TODO: Maybe Mingw runtime does
         runtime = settings.get_safe("compiler.runtime")
         if runtime is not None:
             return ""
+        # TODO: Maybe Clang-Mingw runtime does, but with C++ is impossible to test
         return "-m64" if arch == "x86_64" else "-m32"
     elif str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':

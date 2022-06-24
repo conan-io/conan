@@ -104,6 +104,12 @@ tools_locations = {
         "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
+    'mingw32_clang': {
+        "disabled": True,
+        "default": "system",  # TODO use real clang 13 version
+        "exe": "clang",
+        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+    },
     'msys2': {
         "platform": "Windows",
         "default": "system",
