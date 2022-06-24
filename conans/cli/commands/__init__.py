@@ -3,6 +3,7 @@ import os
 from json import JSONEncoder
 
 from conan.api.model import Remote
+from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -37,6 +38,9 @@ def json_formatter(data):
 def add_log_level_args(subparser):
     subparser.add_argument("-v", "--output-level",  default="status", nargs='?',
                            help="Level of detail of the output")
+    subparser.add_argument("--sol", "--strict-output-level", action='store_true',
+                           help="If specified, only the messages corresponding to the '-v' arg "
+                                "will be shown")
 
 
 def process_log_level_args(args):
@@ -58,4 +62,7 @@ def process_log_level_args(args):
               }
 
     level = levels.get(args.output_level)
-    output.conan_log_level = level
+    if not level:
+        raise ConanException(f"Invalid argument '-v{args.output_level}'")
+    output.conan_output_level = level
+    output.conan_strict_output_level = args.sol

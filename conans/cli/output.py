@@ -15,8 +15,16 @@ LEVEL_VERBOSE = 30  # -v  Detailed informational messages.
 LEVEL_DEBUG = 20  # -vv Closely related to internal implementation details
 LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementation details
 
-# Singleton
-conan_log_level = LEVEL_STATUS
+
+# Singletons
+conan_output_level = LEVEL_STATUS
+conan_strict_output_level = False  # If True only the messages of the specified level are shown
+
+
+def log_level_allowed(level):
+    if conan_strict_output_level:
+        return level == conan_output_level
+    return conan_output_level <= level
 
 
 class Color(object):
@@ -78,7 +86,7 @@ class ConanOutput:
         self.write(data, fg, bg, newline=True)
 
     def write(self, data, fg=None, bg=None, newline=False):
-        if conan_log_level > LEVEL_NOTICE:
+        if conan_output_level > LEVEL_NOTICE:
             return
         if self._color and (fg or bg):
             data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
@@ -100,7 +108,7 @@ class ConanOutput:
         self._color = tmp_color
 
     def _write_message(self, msg, fg=None, bg=None):
-        if conan_log_level == LEVEL_QUIET:
+        if conan_output_level == LEVEL_QUIET:
             return
         tmp = ""
         if self._scope:
@@ -117,35 +125,35 @@ class ConanOutput:
         self.stream.write("{}\n".format(tmp))
 
     def trace(self, msg):
-        if conan_log_level <= LEVEL_TRACE:
+        if log_level_allowed(LEVEL_TRACE):
             self._write_message(msg)
 
     def debug(self, msg):
-        if conan_log_level <= LEVEL_DEBUG:
+        if log_level_allowed(LEVEL_DEBUG):
             self._write_message(msg)
 
     def verbose(self, msg, fg=None, bg=None):
-        if conan_log_level <= LEVEL_VERBOSE:
+        if log_level_allowed(LEVEL_VERBOSE):
             self._write_message(msg, fg=fg, bg=bg)
 
     def info(self, msg, fg=None, bg=None):
-        if conan_log_level <= LEVEL_STATUS:
+        if log_level_allowed(LEVEL_STATUS):
             self._write_message(msg, fg=fg, bg=bg)
 
     def highlight(self, msg):
-        if conan_log_level <= LEVEL_NOTICE:
+        if log_level_allowed(LEVEL_NOTICE):
             self._write_message(msg, fg=Color.BRIGHT_MAGENTA)
 
     def success(self, msg):
-        if conan_log_level <= LEVEL_NOTICE:
+        if log_level_allowed(LEVEL_NOTICE):
             self._write_message(msg, fg=Color.BRIGHT_GREEN)
 
     def warning(self, msg):
-        if conan_log_level <= LEVEL_WARNING:
+        if log_level_allowed(LEVEL_WARNING):
             self._write_message("WARN: {}".format(msg), Color.YELLOW)
 
     def error(self, msg):
-        if conan_log_level <= LEVEL_ERROR:
+        if log_level_allowed(LEVEL_ERROR):
             self._write_message("ERROR: {}".format(msg), Color.RED)
 
     def flush(self):
