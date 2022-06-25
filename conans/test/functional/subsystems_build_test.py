@@ -16,12 +16,14 @@ class TestSubsystems:
     def test_msys2_available(self):
         client = TestClient()
         client.run_command('uname')
+        print(client.out)
         assert "MSYS" in client.out
 
     @pytest.mark.tool_cygwin
     def test_cygwin_available(self):
         client = TestClient()
         client.run_command('uname')
+        print(client.out)
         assert "CYGWIN" in client.out
 
     @pytest.mark.tool_msys2
@@ -29,6 +31,7 @@ class TestSubsystems:
     def test_mingw32_available(self):
         client = TestClient()
         client.run_command('uname')
+        print(client.out)
         assert "MINGW32_NT" in client.out
 
     @pytest.mark.tool_msys2

@@ -56,6 +56,39 @@ def client():
     return c
 
 
+@pytest.mark.tool_cmake(version="3.23")
+def test_vs(client):
+    runtime = "static"
+    client.run("create . pkg/0.1@ -s compiler.runtime=MT")
+    print(client.out)
+    cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
+    cmd = cmd + ".exe"
+    static_runtime = True if runtime == "static" else False
+    check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=static_runtime)
+    print(client.out)
+    """
+    VISUAL STUDIO
+    dynamic
+    MSVCP140.dll
+    VCRUNTIME140.dll
+    VCRUNTIME140_1.dll
+    api-ms-win-crt-runtime-l1-1-0.dll
+    api-ms-win-crt-math-l1-1-0.dll
+    api-ms-win-crt-stdio-l1-1-0.dll
+    api-ms-win-crt-locale-l1-1-0.dll
+    api-ms-win-crt-heap-l1-1-0.dll
+    KERNEL32.dll
+
+    static
+    KERNEL32.dll
+
+    MSYS
+    msys-2.0.dll
+    msys-stdc++-6.dll
+    KERNEL32.dll
+    """
+
+
 @pytest.mark.tool_cmake
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
