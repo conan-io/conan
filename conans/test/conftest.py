@@ -92,6 +92,13 @@ tools_locations = {
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
     },
+    'ucrt64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/ucrt64/bin"}},
+    },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
@@ -103,6 +110,20 @@ tools_locations = {
         "default": "system",
         "exe": "make",
         "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+    },
+    'msys2_clang64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
+    },
+    'msys2_mingw64_clang64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {
         "platform": "Windows",
@@ -156,6 +177,8 @@ except ImportError as e:
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
+    'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
+    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}},
     'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
 }
 
