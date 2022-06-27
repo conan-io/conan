@@ -1,23 +1,20 @@
 import os
-import textwrap
 
 import pytest
 
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("arch,exp_platform", [
-    ("x86", "Win32"),
-    ("x86_64", "x64"),
-    ("armv7", "ARM"),
-    ("armv8", "ARM64"),
-])
+@pytest.mark.parametrize(
+    "arch,exp_platform",
+    [
+        ("x86", "Win32"),
+        ("x86_64", "x64"),
+        ("armv7", "ARM"),
+        ("armv8", "ARM64"),
+    ],
+)
 def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
-    """
-    Simple test checking that conantoolchain_release_x64.props is adding all the expected
-    flags and preprocessor definitions
-    """
-
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=msbuild_lib")
     client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default -if=install")
