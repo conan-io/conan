@@ -94,7 +94,7 @@ class _PackageBuilder(object):
     @staticmethod
     def _copy_sources(conanfile, source_folder, build_folder):
         # Copies the sources to the build-folder, unless no_copy_source is defined
-        _remove_folder_raising(build_folder)
+        rmdir(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
             conanfile.output.info('Copying sources to build folder')
             try:
@@ -181,14 +181,6 @@ class _PackageBuilder(object):
                 raise exc
 
         return node.pref
-
-
-def _remove_folder_raising(folder):
-    try:
-        rmdir(folder)
-    except OSError as e:
-        raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                             "Close any app using it, and retry" % str(e))
 
 
 def call_system_requirements(conanfile):

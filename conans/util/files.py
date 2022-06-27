@@ -6,11 +6,12 @@ import shutil
 import stat
 import tarfile
 import tempfile
-
+import time
 
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
+from conans.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
@@ -241,12 +242,36 @@ def _change_permissions(func, path, exc_info):
 
 
 def rmdir(path):
-    try:
-        shutil.rmtree(path, onerror=_change_permissions)
-    except OSError as err:
-        if err.errno == errno.ENOENT:
-            return
-        raise
+    if not os.path.isdir(path):
+        return
+
+    retries = 3
+    delay = 0.5
+    for i in range(retries):
+        try:
+            shutil.rmtree(path, onerror=_change_permissions)
+            break
+        except OSError as err:
+            if i == retries - 1:
+                raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
+                                     "Folder might be busy or open. "
+                                     "Close any app using it and retry.")
+            time.sleep(delay)
+
+
+def renamedir(old_path, new_path):
+    retries = 3
+    delay = 0.5
+    for i in range(retries):
+        try:
+            shutil.move(old_path, new_path)
+            break
+        except OSError as err:
+            if i == retries - 1:
+                raise ConanException(f"Couldn't move folder: {old_path}->{new_path}\n{str(err)}\n"
+                                     "Folder might be busy or open. "
+                                     "Close any app using it and retry.")
+            time.sleep(delay)
 
 
 def remove(path):
