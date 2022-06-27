@@ -13,22 +13,41 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
             assert "KERNEL32.dll" in client.out
             if subsystem in ("mingw32", "mingw64"):
                 assert "msvcrt.dll" in client.out
-                assert "libstdc++-6.dll" in client.out
+                if static_runtime:
+                    assert "libstdc++-6.dll" not in client.out
+                else:
+                    assert "libstdc++-6.dll" in client.out
                 if subsystem == "mingw32":
-                    assert "libgcc_s_dw2-1.dll" in client.out
+                    if static_runtime:
+                        assert "libgcc_s_dw2-1.dll" not in client.out
+                    else:
+                        assert "libgcc_s_dw2-1.dll" in client.out
             elif subsystem == "msys2":
                 assert "msys-2.0.dll" in client.out
-                assert "msys-stdc++-6.dll" in client.out
+                if static_runtime:
+                    assert "msys-stdc++-6.dll" not in client.out
+                else:
+                    assert "msys-stdc++-6.dll" in client.out
             elif subsystem == "cygwin":
                 assert "cygwin1.dll" in client.out
-                assert "cygstdc++-6.dll" in client.out
+                if static_runtime:
+                    assert "cygstdc++-6.dll" not in client.out
+                else:
+                    assert "cygstdc++-6.dll" in client.out
             elif subsystem == "ucrt64":
                 assert "api-ms-win-crt-" in client.out
-                assert "libstdc++-6.dll" in client.out
+                if static_runtime:
+                    assert "libstdc++-6.dll" not in client.out
+                else:
+                    assert "libstdc++-6.dll" in client.out
             elif subsystem == "clang64":
                 assert "api-ms-win-crt-" in client.out
-                assert "libc++.dll" in client.out
-                assert "libunwind.dll" in client.out
+                if static_runtime:
+                    assert "libunwind.dll" not in client.out
+                    assert "libc++.dll" not in client.out
+                else:
+                    assert "libunwind.dll" in client.out
+                    assert "libc++.dll" in client.out
             else:
                 raise Exception("unknown {}".format(subsystem))
         elif static_runtime:
