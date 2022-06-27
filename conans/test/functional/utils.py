@@ -56,7 +56,10 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
             assert "VCRUNTIME" not in client.out
         else:
             assert "KERNEL32.dll" in client.out
-            assert "api-ms-win-crt-" in client.out
+            if build_type == "Debug":
+                assert "ucrtbased" in client.out
+            else:
+                assert "api-ms-win-crt-" in client.out
             if vs_version in ["15", "16", "17"]:  # UCRT
                 debug = "D" if build_type == "Debug" else ""
                 assert "MSVCP140{}.dll".format(debug) in client.out
