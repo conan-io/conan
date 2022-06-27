@@ -54,7 +54,7 @@ def create(conan_api, parser, *args):
         # FIXME: We need to update build_requires too, not only ``requires``
         lockfile.add(requires=[ref])
 
-    out.highlight("\n-------- Input profiles ----------")
+    out.highlight("-------- Input profiles ----------")
     out.info("Profile host:")
     out.info(profile_host.dumps())
     out.info("Profile build:")
@@ -89,7 +89,7 @@ def create(conan_api, parser, *args):
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
-    out.highlight("\n-------- Computing necessary packages ----------")
+    out.highlight("-------- Computing necessary packages ----------")
     if args.build is None:  # Not specified, force build the tested library
         build_modes = [ref.repr_notime()]
     else:
@@ -99,7 +99,7 @@ def create(conan_api, parser, *args):
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
 
-    out.highlight("\n-------- Installing packages ----------")
+    out.highlight("-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
@@ -126,7 +126,7 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
 
 def test_package(conan_api, deps_graph, test_conanfile_path):
     out = ConanOutput()
-    out.highlight("\n-------- Testing the package ----------")
+    out.highlight("-------- Testing the package ----------")
     if len(deps_graph.nodes) == 1:
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
@@ -141,12 +141,12 @@ def test_package(conan_api, deps_graph, test_conanfile_path):
                                        source_folder=conanfile_folder,
                                        output_folder=output_folder)
 
-    out.highlight("\n-------- Testing the package: Building ----------")
+    out.highlight("-------- Testing the package: Building ----------")
     app = ConanApp(conan_api.cache_folder)
     conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager)
 
-    out.highlight("\n-------- Testing the package: Running test() ----------")
+    out.highlight("-------- Testing the package: Running test() ----------")
     conanfile.output.highlight("Running test()")
     with conanfile_exception_formatter(conanfile, "test"):
         with chdir(conanfile.build_folder):

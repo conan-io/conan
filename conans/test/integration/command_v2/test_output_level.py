@@ -97,7 +97,29 @@ def test_output_level():
     assert "This is a warning" in t.out
     assert "This is a error" in t.out
 
-    # With warnings only warnings
+    # With notice
+    t.run("create . --name foo --version 1.0 -vstatus")
+    assert "This is a trace" not in t.out
+    assert "This is a debug" not in t.out
+    assert "This is a verbose" not in t.out
+    assert "This is a info" in t.out
+    assert "This is a highlight" in t.out
+    assert "This is a success" in t.out
+    assert "This is a warning" in t.out
+    assert "This is a error" in t.out
+
+    # With notice
+    t.run("create . --name foo --version 1.0 -vnotice")
+    assert "This is a trace" not in t.out
+    assert "This is a debug" not in t.out
+    assert "This is a verbose" not in t.out
+    assert "This is a info" not in t.out
+    assert "This is a highlight" in t.out
+    assert "This is a success" in t.out
+    assert "This is a warning" in t.out
+    assert "This is a error" in t.out
+
+    # With warnings
     t.run("create . --name foo --version 1.0 -vwarning")
     assert "This is a trace" not in t.out
     assert "This is a debug" not in t.out
@@ -108,7 +130,7 @@ def test_output_level():
     assert "This is a warning" in t.out
     assert "This is a error" in t.out
 
-    # With errors only errors
+    # With errors
     t.run("create . --name foo --version 1.0 -verror")
     assert "This is a trace" not in t.out
     assert "This is a debug" not in t.out
@@ -118,26 +140,3 @@ def test_output_level():
     assert "This is a success" not in t.out
     assert "This is a warning" not in t.out
     assert "This is a error" in t.out
-
-    # Only verbose info
-    t.run("create . --name foo --version 1.0 -vverbose --sol")
-    assert "This is a trace" not in t.out
-    assert "This is a debug" not in t.out
-    assert "This is a verbose" in t.out
-    assert "This is a info" not in t.out
-    assert "This is a highlight" not in t.out
-    assert "This is a success" not in t.out
-    assert "This is a warning" not in t.out
-    assert "This is a error" not in t.out
-
-    # Only error info
-    t.run("create . --name foo --version 1.0 -verror --sol")
-    assert "This is a trace" not in t.out
-    assert "This is a debug" not in t.out
-    assert "This is a verbose" not in t.out
-    assert "This is a info" not in t.out
-    assert "This is a highlight" not in t.out
-    assert "This is a success" not in t.out
-    assert "This is a warning" not in t.out
-    assert "This is a error" in t.out
-

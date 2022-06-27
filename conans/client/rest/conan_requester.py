@@ -9,6 +9,7 @@ import requests
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
+from conans.cli.output import ConanOutput
 from conans.util.tracer import log_client_rest_api_call
 
 # Capture SSL warnings as pointed out here:

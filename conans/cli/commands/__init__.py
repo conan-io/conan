@@ -38,9 +38,8 @@ def json_formatter(data):
 def add_log_level_args(subparser):
     subparser.add_argument("-v", "--output-level",  default="status", nargs='?',
                            help="Level of detail of the output")
-    subparser.add_argument("--sol", "--strict-output-level", action='store_true',
-                           help="If specified, only the messages corresponding to the '-v' arg "
-                                "will be shown")
+    subparser.add_argument("--logger", action="store_true",
+                           help="Show the output with log format, with time, type and message.")
 
 
 def process_log_level_args(args):
@@ -65,4 +64,4 @@ def process_log_level_args(args):
     if not level:
         raise ConanException(f"Invalid argument '-v{args.output_level}'")
     output.conan_output_level = level
-    output.conan_strict_output_level = args.sol
+    output.conan_output_logger_format = args.logger

@@ -34,12 +34,12 @@ def build(conan_api, parser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
-    out.highlight("\n-------- Installing packages ----------")
+    out.highlight("-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
     source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
-    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
+    out.highlight("-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
 

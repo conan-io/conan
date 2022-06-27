@@ -1,3 +1,4 @@
+import json
 import sys
 
 from colorama import Fore, Style
@@ -18,12 +19,10 @@ LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementatio
 
 # Singletons
 conan_output_level = LEVEL_STATUS
-conan_strict_output_level = False  # If True only the messages of the specified level are shown
+conan_output_logger_format = False
 
 
 def log_level_allowed(level):
-    if conan_strict_output_level:
-        return level == conan_output_level
     return conan_output_level <= level
 
 
@@ -107,54 +106,76 @@ class ConanOutput:
         self.stream.flush()
         self._color = tmp_color
 
-    def _write_message(self, msg, fg=None, bg=None):
+    def _write_message(self, msg, level_str, fg=None, bg=None):
         if conan_output_level == LEVEL_QUIET:
             return
-        tmp = ""
+
+        def json_encoder(_obj):
+            try:
+                return json.dumps(_obj)
+            except TypeError:
+                return repr(_obj)
+
+        if conan_output_logger_format:
+            import datetime
+            the_date = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+            ret = {"json": {"level": level_str, "time": the_date, "data": msg}}
+            ret = json.dumps(ret, default=json_encoder)
+            self.stream.write("{}\n".format(ret))
+            return
+
+        if isinstance(msg, dict):
+            # For traces we can receive a dict already
+            msg = json.dumps(msg, sort_keys=True, default=json_encoder)
+
+        ret = ""
         if self._scope:
             if self._color:
-                tmp = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+                ret = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
             else:
-                tmp = "{}: ".format(self._scope)
+                ret = "{}: ".format(self._scope)
 
         if self._color and not self._scope:
-            tmp += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+            ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         else:
-            tmp += "{}".format(msg)
+            ret += "{}".format(msg)
 
-        self.stream.write("{}\n".format(tmp))
+        self.stream.write("{}\n".format(ret))
 
     def trace(self, msg):
         if log_level_allowed(LEVEL_TRACE):
-            self._write_message(msg)
+            self._write_message(msg, "TRACE", fg=Color.BRIGHT_WHITE)
 
     def debug(self, msg):
         if log_level_allowed(LEVEL_DEBUG):
-            self._write_message(msg)
+            self._write_message(msg, "DEBUG")
 
     def verbose(self, msg, fg=None, bg=None):
         if log_level_allowed(LEVEL_VERBOSE):
-            self._write_message(msg, fg=fg, bg=bg)
+            self._write_message(msg, "VERBOSE", fg=fg, bg=bg)
 
-    def info(self, msg, fg=None, bg=None):
+    def status(self, msg, fg=None, bg=None):
         if log_level_allowed(LEVEL_STATUS):
-            self._write_message(msg, fg=fg, bg=bg)
+            self._write_message(msg, "STATUS", fg=fg, bg=bg)
+
+    # Remove in a later refactor of all the output.info calls
+    info = status
 
     def highlight(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
-            self._write_message(msg, fg=Color.BRIGHT_MAGENTA)
+            self._write_message(msg, "NOTICE", fg=Color.BRIGHT_MAGENTA)
 
     def success(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
-            self._write_message(msg, fg=Color.BRIGHT_GREEN)
+            self._write_message(msg, "NOTICE", fg=Color.BRIGHT_GREEN)
 
     def warning(self, msg):
         if log_level_allowed(LEVEL_WARNING):
-            self._write_message("WARN: {}".format(msg), Color.YELLOW)
+            self._write_message("WARN: {}".format(msg), "WARN", Color.YELLOW)
 
     def error(self, msg):
         if log_level_allowed(LEVEL_ERROR):
-            self._write_message("ERROR: {}".format(msg), Color.RED)
+            self._write_message("ERROR: {}".format(msg), "ERROR", Color.RED)
 
     def flush(self):
         self.stream.flush()

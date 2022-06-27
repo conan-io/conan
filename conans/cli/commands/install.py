@@ -94,7 +94,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
-    out.highlight("\n-------- Computing necessary packages ----------")
+    out.highlight("-------- Computing necessary packages ----------")
     if deps_graph.error:
         if allow_error:
             return deps_graph, lockfile
@@ -166,10 +166,10 @@ def install(conan_api, parser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
-    out.highlight("\n-------- Installing packages ----------")
+    out.highlight("-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
-    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
+    out.highlight("-------- Finalizing install (deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        output_folder=output_folder,
