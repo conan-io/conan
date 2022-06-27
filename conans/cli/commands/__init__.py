@@ -36,8 +36,10 @@ def json_formatter(data):
 
 
 def add_log_level_args(subparser):
-    subparser.add_argument("-v", "--output-level",  default="status", nargs='?',
-                           help="Level of detail of the output")
+    subparser.add_argument("-v", default="status", nargs='?',
+                           help="Level of detail of the output. Valid options from less verbose "
+                                "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
+                                "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
     subparser.add_argument("--logger", action="store_true",
                            help="Show the output with log format, with time, type and message.")
 
@@ -47,21 +49,21 @@ def process_log_level_args(args):
     from conans.cli.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
         LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
 
-    levels = {None: LEVEL_VERBOSE,  # -v
-              "verbose": LEVEL_VERBOSE,  # -vverbose
-              "v": LEVEL_DEBUG,  # -vv
-              "debug": LEVEL_DEBUG,  # -vdebug
-              "vv": LEVEL_TRACE,  # -vvv
-              "trace": LEVEL_TRACE,  # -vtrace
-              "status": LEVEL_STATUS,  # -vstatus
-              "notice": LEVEL_NOTICE,  # -vnotice
-              "warning": LEVEL_WARNING,  # -vwaring
-              "error": LEVEL_ERROR,  # -verror
-              "quiet": LEVEL_QUIET  # -vquiet
+    levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
+              "error": LEVEL_ERROR,  # -verror 70
+              "warning": LEVEL_WARNING,  # -vwaring 60
+              "notice": LEVEL_NOTICE,  # -vnotice 50
+              "status": LEVEL_STATUS,  # -vstatus 40
+              "verbose": LEVEL_VERBOSE,  # -vverbose 30
+              None: LEVEL_VERBOSE,  # -v 30
+              "debug": LEVEL_DEBUG,  # -vdebug 20
+              "v": LEVEL_DEBUG,  # -vv 20
+              "trace": LEVEL_TRACE,  # -vtrace 10
+              "vv": LEVEL_TRACE,  # -vvv 10
               }
 
-    level = levels.get(args.output_level)
+    level = levels.get(args.v)
     if not level:
-        raise ConanException(f"Invalid argument '-v{args.output_level}'")
+        raise ConanException(f"Invalid argument '-v{args.v}'")
     output.conan_output_level = level
     output.conan_output_logger_format = args.logger
