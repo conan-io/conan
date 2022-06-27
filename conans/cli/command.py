@@ -1,6 +1,7 @@
 import argparse
 import textwrap
 
+from conans.cli.commands import add_log_level_args, process_log_level_args
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException
 
@@ -89,6 +90,9 @@ class BaseConanCommand(object):
                                  "commands should provide a documentation string explaining "
                                  "its use briefly.".format(self._name))
 
+    def _init_log_levels(self):
+        add_log_level_args(self._parser)
+
     def _init_formatters(self):
         if self._formatters:
             help_message = "Select the output format: {}".format(", ".join(list(self._formatters)))
@@ -133,6 +137,17 @@ class BaseConanCommand(object):
         cli_out_write(result, endline="")
 
 
+class ConanArgumentParser(argparse.ArgumentParser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def parse_args(self, args=None, namespace=None):
+        args = super().parse_args(args)
+        process_log_level_args(args)
+        return args
+
+
 class ConanCommand(BaseConanCommand):
     def __init__(self, method, group=None, formatters=None):
         super().__init__(method, formatters=formatters)
@@ -140,10 +155,11 @@ class ConanCommand(BaseConanCommand):
         self._subcommand_parser = None
         self._group = group or COMMAND_GROUPS['misc']
         self._name = method.__name__.replace("_", "-")
-        self._parser = argparse.ArgumentParser(description=self._doc,
-                                               prog="conan {}".format(self._name),
-                                               formatter_class=SmartFormatter)
+        self._parser = ConanArgumentParser(description=self._doc,
+                                           prog="conan {}".format(self._name),
+                                           formatter_class=SmartFormatter)
         self._init_formatters()
+        self._init_log_levels()
 
     def add_subcommand(self, subcommand):
         if not self._subcommand_parser:
@@ -155,6 +171,7 @@ class ConanCommand(BaseConanCommand):
 
     def run(self, conan_api, parser, *args):
         info = self._method(conan_api, parser, *args)
+
         if not self._subcommands:
             self._format(self._parser, info, *args)
         else:
@@ -185,6 +202,7 @@ class ConanSubCommand(BaseConanCommand):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
         self._parent_parser = parent_parser
         self._init_formatters()
+        self._init_log_levels()
 
 
 def conan_command(group=None, formatters=None):

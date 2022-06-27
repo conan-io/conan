@@ -682,7 +682,7 @@ class TestClient(object):
         belonging to the computed package binaries
         """
         lines = self.out.splitlines()
-        line_req = lines.index("-------- Computing necessary packages ----------")
+        line_req = lines.index("-------- Computing necessary packages --------")
         line_req = lines.index("Requirements" if not build else "Build requirements", line_req)
         reqs = []
         for line in lines[line_req+1:]:

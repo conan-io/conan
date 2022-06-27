@@ -1,10 +1,29 @@
-import logging
+import json
 import sys
 
 from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
 from conans.util.env import get_env
+
+LEVEL_QUIET = 80  # -q
+
+LEVEL_ERROR = 70  # Errors
+LEVEL_WARNING = 60  # Warnings
+LEVEL_NOTICE = 50  # Important messages to attract user attention.
+LEVEL_STATUS = 40  # Default - The main interesting messages that users might be interested in.
+LEVEL_VERBOSE = 30  # -v  Detailed informational messages.
+LEVEL_DEBUG = 20  # -vv Closely related to internal implementation details
+LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementation details
+
+
+# Singletons
+conan_output_level = LEVEL_STATUS
+conan_output_logger_format = False
+
+
+def log_level_allowed(level):
+    return conan_output_level <= level
 
 
 class Color(object):
@@ -66,6 +85,8 @@ class ConanOutput:
         self.write(data, fg, bg, newline=True)
 
     def write(self, data, fg=None, bg=None, newline=False):
+        if conan_output_level > LEVEL_NOTICE:
+            return
         if self._color and (fg or bg):
             data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
 
@@ -85,41 +106,84 @@ class ConanOutput:
         self.stream.flush()
         self._color = tmp_color
 
-    def _write_message(self, msg, fg=None, bg=None):
-        tmp = ""
+    def _write_message(self, msg, level_str, fg=None, bg=None):
+        if conan_output_level == LEVEL_QUIET:
+            return
+
+        def json_encoder(_obj):
+            try:
+                return json.dumps(_obj)
+            except TypeError:
+                return repr(_obj)
+
+        if conan_output_logger_format:
+            import datetime
+            the_date = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+            ret = {"json": {"level": level_str, "time": the_date, "data": msg}}
+            ret = json.dumps(ret, default=json_encoder)
+            self.stream.write("{}\n".format(ret))
+            return
+
+        if isinstance(msg, dict):
+            # For traces we can receive a dict already, we try to transform then into more natural
+            # text
+            msg = ", ".join([f"{k}: {v}" for k, v in msg.items()])
+            msg = "=> {}".format(msg)
+            # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
+
+        ret = ""
         if self._scope:
             if self._color:
-                tmp = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+                ret = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
             else:
-                tmp = "{}: ".format(self._scope)
+                ret = "{}: ".format(self._scope)
 
         if self._color and not self._scope:
-            tmp += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+            ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         else:
-            tmp += "{}".format(msg)
+            ret += "{}".format(msg)
 
-        self.stream.write("{}\n".format(tmp))
+        self.stream.write("{}\n".format(ret))
+
+    def trace(self, msg):
+        if log_level_allowed(LEVEL_TRACE):
+            self._write_message(msg, "TRACE", fg=Color.BRIGHT_WHITE)
 
     def debug(self, msg):
-        self._write_message(msg, logging.DEBUG)
+        if log_level_allowed(LEVEL_DEBUG):
+            self._write_message(msg, "DEBUG")
 
-    def info(self, msg, fg=None, bg=None):
-        self._write_message(msg, fg=fg, bg=bg)
+    def verbose(self, msg, fg=None, bg=None):
+        if log_level_allowed(LEVEL_VERBOSE):
+            self._write_message(msg, "VERBOSE", fg=fg, bg=bg)
 
-    def highlight(self, data):
-        self.info(data, fg=Color.BRIGHT_MAGENTA)
+    def status(self, msg, fg=None, bg=None):
+        if log_level_allowed(LEVEL_STATUS):
+            self._write_message(msg, "STATUS", fg=fg, bg=bg)
 
-    def success(self, data):
-        self.info(data, fg=Color.BRIGHT_GREEN)
+    # Remove in a later refactor of all the output.info calls
+    info = status
+
+    def title(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
+            self._write_message("\n-------- {} --------".format(msg), "NOTICE",
+                                fg=Color.BRIGHT_MAGENTA)
+
+    def highlight(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
+            self._write_message(msg, "NOTICE", fg=Color.BRIGHT_MAGENTA)
+
+    def success(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
+            self._write_message(msg, "NOTICE", fg=Color.BRIGHT_GREEN)
 
     def warning(self, msg):
-        self._write_message("WARN: {}".format(msg), Color.YELLOW)
+        if log_level_allowed(LEVEL_WARNING):
+            self._write_message("WARN: {}".format(msg), "WARN", Color.YELLOW)
 
     def error(self, msg):
-        self._write_message("ERROR: {}".format(msg), Color.RED)
-
-    def critical(self, msg):
-        self._write_message("ERROR: {}".format(msg), Color.BRIGHT_RED)
+        if log_level_allowed(LEVEL_ERROR):
+            self._write_message("ERROR: {}".format(msg), "ERROR", Color.RED)
 
     def flush(self):
         self.stream.flush()
