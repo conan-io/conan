@@ -104,7 +104,7 @@ def print_graph_info(deps_graph, field_filter, package_filter):
     Used for 'graph info' command
     """
     out = ConanOutput()
-    out.highlight("-------- Basic graph information ----------")
+    out.title("Basic graph information")
     serial = deps_graph.serialize()
     for n in serial["nodes"]:
         if package_filter is not None:

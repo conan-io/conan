@@ -45,7 +45,7 @@ def create(conan_api, parser, *args):
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
-    out.highlight("-------- Exporting the recipe ----------")
+    out.highlight("Exporting the recipe")
     ref = conan_api.export.export(path=path,
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
@@ -54,7 +54,7 @@ def create(conan_api, parser, *args):
         # FIXME: We need to update build_requires too, not only ``requires``
         lockfile.add(requires=[ref])
 
-    out.highlight("-------- Input profiles ----------")
+    out.title("Input profiles")
     out.info("Profile host:")
     out.info(profile_host.dumps())
     out.info("Profile build:")
@@ -80,7 +80,7 @@ def create(conan_api, parser, *args):
                                                                 tool_requires=tool_requires,
                                                                 profile_host=profile_host)
 
-    out.highlight("-------- Computing dependency graph ----------")
+    out.highlight("Computing dependency graph")
     check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
@@ -89,7 +89,7 @@ def create(conan_api, parser, *args):
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
-    out.highlight("-------- Computing necessary packages ----------")
+    out.title("Computing necessary packages")
     if args.build is None:  # Not specified, force build the tested library
         build_modes = [ref.repr_notime()]
     else:
@@ -99,7 +99,7 @@ def create(conan_api, parser, *args):
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
 
-    out.highlight("-------- Installing packages ----------")
+    out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
@@ -126,7 +126,7 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
 
 def test_package(conan_api, deps_graph, test_conanfile_path):
     out = ConanOutput()
-    out.highlight("-------- Testing the package ----------")
+    out.title("Testing the package")
     if len(deps_graph.nodes) == 1:
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
@@ -141,12 +141,12 @@ def test_package(conan_api, deps_graph, test_conanfile_path):
                                        source_folder=conanfile_folder,
                                        output_folder=output_folder)
 
-    out.highlight("-------- Testing the package: Building ----------")
+    out.title("Testing the package: Building")
     app = ConanApp(conan_api.cache_folder)
     conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager)
 
-    out.highlight("-------- Testing the package: Running test() ----------")
+    out.title("Testing the package: Running test()")
     conanfile.output.highlight("Running test()")
     with conanfile_exception_formatter(conanfile, "test"):
         with chdir(conanfile.build_folder):

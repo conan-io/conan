@@ -161,6 +161,11 @@ class ConanOutput:
     # Remove in a later refactor of all the output.info calls
     info = status
 
+    def title(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
+            self._write_message("\n-------- {} --------".format(msg), "NOTICE",
+                                fg=Color.BRIGHT_MAGENTA)
+
     def highlight(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
             self._write_message(msg, "NOTICE", fg=Color.BRIGHT_MAGENTA)
