@@ -1,3 +1,5 @@
+import json
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -140,3 +142,21 @@ def test_output_level():
     assert "This is a success" not in t.out
     assert "This is a warning" not in t.out
     assert "This is a error" in t.out
+
+
+def test_logger_output_format():
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile()})
+
+    # By default, it prints > info
+    t.run("create . --name foo --version 1.0 --logger -vvv")
+    lines = t.out.splitlines()
+    for line in lines:
+        data = json.loads(line)
+        assert "json" in data
+        assert "level" in data["json"]
+        assert "time" in data["json"]
+        assert "data" in data["json"]
+        if data["json"]["level"] == "TRACE":
+            assert "_action" in data["json"]["data"]
+
