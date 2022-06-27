@@ -85,7 +85,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
                                                                 tool_requires=tool_requires,
                                                                 profile_host=profile_host)
 
-    out.highlight("Computing dependency graph")
+    out.title("Computing dependency graph")
     check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,

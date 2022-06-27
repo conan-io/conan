@@ -44,7 +44,7 @@ def test(conan_api, parser, *args):
                                                          update=args.update,
                                                          lockfile=lockfile)
 
-    out.highlight("Computing dependency graph")
+    out.title("Computing dependency graph")
     check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
