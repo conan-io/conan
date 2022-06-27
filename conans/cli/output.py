@@ -125,8 +125,11 @@ class ConanOutput:
             return
 
         if isinstance(msg, dict):
-            # For traces we can receive a dict already
-            msg = json.dumps(msg, sort_keys=True, default=json_encoder)
+            # For traces we can receive a dict already, we try to transform then into more natural
+            # text
+            msg = ", ".join([f"{k}: {v}" for k, v in msg.items()])
+            msg = "=> {}".format(msg)
+            # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         ret = ""
         if self._scope:
