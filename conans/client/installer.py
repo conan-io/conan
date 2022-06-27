@@ -211,7 +211,7 @@ class BinaryInstaller:
     def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
-        ConanOutput().info("Installing (downloading, building) binaries...")
+        ConanOutput().title("Installing (downloading, building) binaries...")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
