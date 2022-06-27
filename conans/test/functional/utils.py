@@ -73,6 +73,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
         elif compiler in ["gcc", "clang", "apple-clang"]:
             if compiler == "gcc":
                 assert "{} __GNUC__".format(name) in output
+                assert "clang" not in output
                 if version:  # FIXME: At the moment, the GCC version is not controlled, will change
                     major, minor = version.split(".")[0:2]
                     assert "{} __GNUC__{}".format(name, major) in output
@@ -113,9 +114,9 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
 
         if subsystem:
             if subsystem == "msys2":
-                assert "MINGW" not in output
                 assert "__MSYS__" in output
                 assert "__CYGWIN__" in output
+                assert "MINGW" not in output
             elif subsystem in ("mingw32", "mingw64"):
                 assert "__MINGW32__" in output
                 assert "__CYGWIN__" not in output

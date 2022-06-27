@@ -6,6 +6,7 @@ import textwrap
 from conans.client.tools import environment_append
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.conftest import tools_locations
 from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient
 
@@ -238,12 +239,8 @@ class TestSubsystemsAutotoolsBuild:
         client = TestClient()
         # pacman -S gcc
         self._build(client)
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
-
-        assert "__MINGW32__" not in client.out
-        assert "__MINGW64__" not in client.out
-        assert "__MSYS__" in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="msys2")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="msys2")
 
     @pytest.mark.tool_msys2
     @pytest.mark.tool_mingw64
@@ -254,12 +251,8 @@ class TestSubsystemsAutotoolsBuild:
         client = TestClient()
         # pacman -S mingw-w64-x86_64-gcc
         self._build(client)
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
-
-        assert "__MINGW64__" in client.out
-        assert "__CYGWIN__" not in client.out
-        assert "__MSYS__" not in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw64")
 
     @pytest.mark.tool_msys2
     @pytest.mark.tool_mingw32
@@ -270,12 +263,8 @@ class TestSubsystemsAutotoolsBuild:
         client = TestClient()
         # pacman -S mingw-w64-i686-gcc
         self._build(client)
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None)
-
-        assert "__MINGW32__" in client.out
-        assert "__CYGWIN__" not in client.out
-        assert "__MSYS__" not in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw32")
 
     @pytest.mark.tool_cygwin
     def test_cygwin(self):
@@ -286,18 +275,16 @@ class TestSubsystemsAutotoolsBuild:
         """
         client = TestClient()
         self._build(client)
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
-
-        assert "__CYGWIN__" in client.out
-        assert "__MINGW32__" not in client.out
-        assert "__MINGW64__" not in client.out
-        assert "__MSYS__" not in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="cygwin")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsCMakeBuild:
+    """ These tests are running the CMake INSIDE THE subsystem, not the Windows native one
+    """
     cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8)
+        cmake_minimum_required(VERSION 3.15)
         project(app)
         add_executable(app main.cpp)
         """)
@@ -316,47 +303,154 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool_msys2
     def test_msys(self):
+        """
+        pacman -S cmake
+        """
         client = TestClient()
         self._build(client)
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
-
-        assert "__MINGW32__" not in client.out
-        assert "__MINGW64__" not in client.out
-        assert "__MSYS__" in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="msys2")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="msys2")
 
     @pytest.mark.tool_msys2
     @pytest.mark.tool_mingw64
     def test_mingw64(self):
+        """
+        $ pacman -S mingw-w64-x86_64-cmake
+        """
         client = TestClient()
         self._build(client, generator="MinGW Makefiles")
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw64")
 
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
+    @pytest.mark.tool_msys2
+    @pytest.mark.tool_msys2_clang64
+    @pytest.mark.skip(reason="This doesn't work, seems CMake issue")
+    def test_msys2_clang64(self):
+        """
+        FAILS WITH:
+        System is unknown to cmake, create:
+        Platform/MINGW64_NT-10.0-19044 to use this system,
+        """
+        client = TestClient()
+        self._build(client, generator="Unix Makefiles")
+        check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
+                      subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="clang64")
 
-        assert "__MINGW64__" in client.out
-        assert "__CYGWIN__" not in client.out
-        assert "__MSYS__" not in client.out
+    @pytest.mark.tool_msys2
+    @pytest.mark.tool_msys2_mingw64_clang64
+    def test_msys2_mingw64_clang64(self):
+        """
+        """
+        client = TestClient()
+        # IMPORTANT: Need to redefine the CXX, otherwise CMake will use GCC by default
+        with environment_append({"CXX": "clang++"}):
+            self._build(client, generator="MinGW Makefiles")
+        check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
+                      subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw64")
 
     @pytest.mark.tool_msys2
     @pytest.mark.tool_mingw32
     def test_mingw32(self):
+        """
+        $ pacman -S mingw-w64-i686-cmake
+        """
         client = TestClient()
         self._build(client, generator="MinGW Makefiles")
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None)
-
-        assert "__MINGW32__" in client.out
-        assert "__CYGWIN__" not in client.out
-        assert "__MSYS__" not in client.out
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw32")
 
     @pytest.mark.tool_cygwin
     def test_cygwin(self):
+        """
+        Needs to install cmake from the cygwin setup.exe
+        """
         client = TestClient()
         # install "gcc-c++" and "make" packages
         self._build(client)
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="cygwin")
 
-        assert "__CYGWIN__" in client.out
-        assert "__MINGW32__" not in client.out
-        assert "__MINGW64__" not in client.out
-        assert "__MSYS__" not in client.out
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
+class TestSubsystemsCMakeExternalBuild:
+    """ These tests runs from the Windows native CMake, pointing just to the compilers inside
+    the subsystems
+    """
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app CXX)
+        add_executable(app main.cpp)
+        """)
+
+    def _build(self, client, location, compiler, generator="MinGW Makefiles"):
+        """ This seems it wont work with "Unix Makefiles", as now we are in Windows CMake?
+        """
+        main_cpp = gen_function_cpp(name="main")
+        client.save({"CMakeLists.txt": self.cmakelists,
+                     "main.cpp": main_cpp})
+        client.run_command("cmake --version")
+        print(client.out)
+
+        make = "mingw32-make" if "Unix" not in generator else "make"
+        compilerpp = "clang++" if compiler == "clang" else "g++"
+        client.run_command("cmake "
+                           " -DCMAKE_MAKE_PROGRAM={location}/{make}"
+                           " -DCMAKE_CXX_COMPILER={location}/{compilerpp}.exe"
+                           " -DCMAKE_C_COMPILER={location}/{compiler}.exe"
+                           " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\""
+                           " -G \"{generator}\""
+                           " .".format(make=make, location=location, compiler=compiler,
+                                       compilerpp=compilerpp, generator=generator))
+        print(client.out)
+        client.run_command("cmake --build .")
+        print(client.out)
+        # IMPORTANT: This needs the RUNTIME PATH to locate the shared libc++.dll libraries
+        with environment_append({}):
+            client.run_command("app")
+            print(client.out)
+
+    def test_msys2_gcc(self):
+        """
+        """
+        client = TestClient()
+        msys2 = tools_locations["msys2"]
+        if msys2.get("disabled"):
+            pytest.skip("msys2 disabled")
+        location = msys2["system"]["path"]["Windows"]
+        # Otherwise the msys2 gcc fails to load its own gcc shared libs to compile
+        with environment_append({}):
+            self._build(client, location, generator="Unix Makefiles", compiler="gcc")
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None,
+                      subsystem="msys2")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="msys2")
+
+    def test_msys2_clang64(self):
+        """
+        """
+        client = TestClient()
+        msys2 = tools_locations["msys2_clang64"]
+        if msys2.get("disabled"):
+            pytest.skip("msys2 disabled")
+        location = msys2["system"]["path"]["Windows"]
+        self._build(client, location, compiler="clang")
+        check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
+                      subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="clang64")
+
+    def test_msys2_mingw64(self):
+        """
+        """
+        client = TestClient()
+        msys2 = tools_locations["mingw64"]
+        if msys2.get("disabled"):
+            pytest.skip("msys2 disabled")
+        location = msys2["system"]["path"]["Windows"]
+        cmake = tools_locations["cmake"]
+        cmake = cmake["3.19"]["path"]["Windows"]
+        with environment_append({"PATH": "{};{}".format(cmake, location)}):
+            self._build(client, location=location, generator="MinGW Makefiles", compiler="gcc")
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None,
+                      subsystem="mingw64")
+        check_vs_runtime("app.exe", client, "15", "Release", subsystem="mingw64")
