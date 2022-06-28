@@ -456,3 +456,58 @@ class TestGitMonorepoSCMFlow:
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
         assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
         assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out
+
+
+class TestConanFileSubfolder:
+    """verify that we can have a conanfile in a subfolder
+        # https://github.com/conan-io/conan/issues/11275
+    """
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import update_conandata, load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, os.path.dirname(self.recipe_folder))
+                url, commit = git.get_url_and_commit()
+                # We store the current url and commit in conandata.yml
+                update_conandata(self, {"sources": {"commit": commit, "url": url}})
+                self.output.info("URL: {}".format(url))
+                self.output.info("COMMIT: {}".format(commit))
+
+            def layout(self):
+                pass # self.folders.source = "source"
+
+            def source(self):
+                git = Git(self)
+                sources = self.conan_data["sources"]
+                url = sources["url"]
+                commit = sources["commit"]
+                git.clone(url=url, target=".")
+                git.checkout(commit=commit)
+                self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
+        """)
+
+    def test_conanfile_subfolder(self):
+        """
+        A local repo, without remote, will have commit, but no URL
+        """
+        c = TestClient()
+        c.save({"conan/conanfile.py": self.conanfile,
+                "CMakeLists.txt": "mycmakelists",
+                "src/myfile.h": "myheader"})
+        commit = c.init_git_repo()
+        c.run("export conan")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: URL: {}".format(c.current_folder.replace("\\", "/")) in c.out
+
+        c.run("create conan")
+        assert "pkg/0.1: MYCMAKE: mycmakelists" in c.out
+        assert "pkg/0.1: MYFILE: myheader" in c.out

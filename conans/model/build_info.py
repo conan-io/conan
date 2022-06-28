@@ -608,8 +608,15 @@ class DepCppInfo(object):
                             del components[comp_name]
                             break
                     else:
+                        dset = set()
+                        for comp_name, comp in components.items():
+                            for dep_name, dep in components.items():
+                                for require in self._filter_component_requires(dep.requires):
+                                    if require == comp_name:
+                                        dset.add("   {} requires {}".format(dep_name, comp_name))
+                        dep_mesg = "\n".join(dset)
                         raise ConanException("There is a dependency loop in "
-                                             "'self.cpp_info.components' requires")
+                                "'self.cpp_info.components' requires:\n{}".format(dep_mesg))
                 self._sorted_components = ordered
             else:  # If components do not have requirements, keep them in the same order
                 self._sorted_components = self._cpp_info.components
