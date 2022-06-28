@@ -663,3 +663,23 @@ def test_skip_virtualbuildenv_run():
     # client.run("create . --name consumer --version 1.0")
     client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
     assert "FOO is BAR" not in client.out
+
+
+def test_files_always_created():
+    """ test that even if there are no env-variables, the generators always create files,
+    they will be mostly empty, but exist
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "consumer/conanfile.txt": "[requires]\ndep/0.1"})
+    c.run("create dep")
+    c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv")
+    ext = "bat" if platform.system() == "Windows" else "sh"
+
+    assert os.path.isfile(os.path.join(c.current_folder, "conanbuild.{}".format(ext)))
+    assert os.path.isfile(os.path.join(c.current_folder, "conanrun.{}".format(ext)))
+    assert os.path.isfile(os.path.join(c.current_folder,
+                                       "conanbuildenv-release-x86_64.{}".format(ext)))
+    assert os.path.isfile(os.path.join(c.current_folder,
+                                       "conanbuildenv-release-x86_64.{}".format(ext)))
+
