@@ -55,9 +55,12 @@ class MSBuildToolchain(object):
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
-                 # FIXME: This probably requires mapping ARM architectures
+                 # TODO: refactor, put in common with MSBuildDeps. Beware this is != msbuild_arch
+                 #  because of Win32
                  ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
+                               'x86_64': 'x64',
+                               'armv7': 'ARM',
+                               'armv8': 'ARM64'}.get(settings.get_safe("arch")))]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
