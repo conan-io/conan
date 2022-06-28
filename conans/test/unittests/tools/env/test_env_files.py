@@ -146,5 +146,6 @@ def test_env_files_sh(env, prevenv):
         env.save_sh("test.sh")
         save("display.sh", display)
         os.chmod("display.sh", 0o777)
-        cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
+        # We include the "set -e" to test it is robust against errors
+        cmd = 'set -e && . ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
         check_env_files_output(cmd, prevenv)

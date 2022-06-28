@@ -11,8 +11,6 @@ from conans.test.utils.tools import TestClient
 
 
 def editable_cmake(generator, build_folder=None):
-    multi = (generator is None and platform.system() == "Windows") or \
-            generator in ("Ninja Multi-Config", "Xcode")
     c = TestClient()
     if generator is not None:
         c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
@@ -36,12 +34,12 @@ def editable_cmake(generator, build_folder=None):
 
     def build_pkg(msg):
         c.run("build . -if=install_release")
-        folder = os.path.join("build", "Release") if multi else "cmake-build-release"
+        folder = os.path.join("build", "Release")
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
         c.run("build . -if=install_debug")
-        folder = os.path.join("build", "Debug") if multi else "cmake-build-debug"
+        folder = os.path.join("build", "Debug")
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
         assert "{}: Debug!".format(msg) in c.out

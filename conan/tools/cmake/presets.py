@@ -2,7 +2,7 @@ import json
 import os
 import platform
 
-from conan.tools.cmake.layout import get_build_folder_vars_suffix
+from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -20,22 +20,26 @@ def _add_build_preset(conanfile, multiconfig):
 
 def _build_preset_name(conanfile):
     build_type = conanfile.settings.get_safe("build_type")
-    suffix = get_build_folder_vars_suffix(conanfile)
-    if suffix:
+    custom_conf = get_build_folder_custom_vars(conanfile)
+    if custom_conf:
         if build_type:
-            return "{}-{}".format(build_type, suffix)
+            return "{}-{}".format(custom_conf, build_type.lower())
         else:
-            return suffix
-    return build_type or "default"
+            return custom_conf
+    return build_type.lower() if build_type else "default"
 
 
 def _configure_preset_name(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    suffix = get_build_folder_vars_suffix(conanfile)
-    base = "default" if multiconfig or not build_type else build_type
-    if suffix:
-        return "{}-{}".format(base, suffix)
-    return base
+    custom_conf = get_build_folder_custom_vars(conanfile)
+
+    if multiconfig or not build_type:
+        return "default" if not custom_conf else custom_conf
+
+    if custom_conf:
+        return "{}-{}".format(custom_conf, str(build_type).lower())
+    else:
+        return str(build_type).lower()
 
 
 def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
@@ -73,15 +77,19 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
     return ret
 
 
-def write_cmake_presets(conanfile, toolchain_file, generator):
-    cache_variables = {}
+def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
+    cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
-        cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=None)
+        if "CMAKE_SH" not in cache_variables:
+            cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
+
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
         if cmake_make_program:
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
-    cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
+
+    if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
+        cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
@@ -90,18 +98,15 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
         # We append the new configuration making sure that we don't overwrite it
         data = json.loads(load(preset_path))
         if multiconfig:
-            build_presets = data["buildPresets"]
-            build_preset_name = _build_preset_name(conanfile)
-            already_exist = any([b["configuration"]
-                                 for b in build_presets if b == build_preset_name])
+            new_build_preset_name = _build_preset_name(conanfile)
+            already_exist = any([b["name"] for b in data["buildPresets"]
+                                 if b["name"] == new_build_preset_name])
             if not already_exist:
                 data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
         else:
-            configure_presets = data["configurePresets"]
-            configure_preset_name = _configure_preset_name(conanfile, multiconfig)
-            already_exist = any([c["name"]
-                                 for c in configure_presets
-                                 if c["name"] == configure_preset_name])
+            new_configure_preset_name = _configure_preset_name(conanfile, multiconfig)
+            already_exist = any([c["name"] for c in data["configurePresets"]
+                                 if c["name"] == new_configure_preset_name])
             if not already_exist:
                 conf_preset = _add_configure_preset(conanfile, generator, cache_variables,
                                                     toolchain_file, multiconfig)
@@ -118,11 +123,14 @@ def write_cmake_presets(conanfile, toolchain_file, generator):
         if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
-                data = {"version": 4, "include": [preset_path]}
+                data = {"version": 4, "include": [preset_path], "vendor": {"conan": dict()}}
             else:
                 data = json.loads(load(user_presets_path))
-                if preset_path not in data["include"]:
-                    data["include"].append(preset_path)
+                if "conan" in data.get("vendor", {}):
+                    # Clear the folders that have been deleted
+                    data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
+                    if preset_path not in data["include"]:
+                        data["include"].append(preset_path)
 
             data = json.dumps(data, indent=4)
             save(user_presets_path, data)

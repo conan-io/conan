@@ -119,6 +119,8 @@ class CMakeToolchain(object):
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
         self.variables = Variables()
+        # This doesn't support multi-config, they go to the same configPreset common in multi-config
+        self.cache_variables = {}
         self.preprocessor_definitions = Variables()
 
         self.blocks = ToolchainBlocks(self._conanfile, self,
@@ -175,7 +177,14 @@ class CMakeToolchain(object):
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
         toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
-        write_cmake_presets(self._conanfile, toolchain, self.generator)
+        cache_variables = {}
+        for name, value in self.cache_variables.items():
+            if isinstance(value, bool):
+                cache_variables[name] = "ON" if value else "OFF"
+            else:
+                cache_variables[name] = value
+
+        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

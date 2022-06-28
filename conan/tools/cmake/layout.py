@@ -20,17 +20,17 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    suffix = get_build_folder_vars_suffix(conanfile)
+    build_folder = "build"
+    custom_conf = get_build_folder_custom_vars(conanfile)
+    if custom_conf:
+        build_folder = "{}/{}".format(build_folder, custom_conf)
+
     if multi:
-        conanfile.folders.build = "build"
+        conanfile.folders.build = build_folder
     else:
-        conanfile.folders.build = "cmake-build-{}".format(str(build_type).lower())
+        conanfile.folders.build = "{}/{}".format(build_folder, build_type)
 
-    if suffix:
-        conanfile.folders.build += "-{}".format(suffix)
-
-    conanfile.folders.generators = os.path.join("build" if not suffix else "build-{}".format(suffix),
-                                                "generators")
+    conanfile.folders.generators = "{}/{}".format(build_folder, "generators")
 
     conanfile.cpp.source.includedirs = ["include"]
 
@@ -42,7 +42,7 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_build_folder_vars_suffix(conanfile):
+def get_build_folder_custom_vars(conanfile):
 
     build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
                                     default=[], check_type=list)
@@ -51,6 +51,11 @@ def get_build_folder_vars_suffix(conanfile):
         tmp = None
         if s.startswith("settings."):
             _, var = s.split("settings.", 1)
+            if var == "build_type":
+                raise ConanException("Error, don't include 'settings.build_type' in the "
+                                     "'tools.cmake.cmake_layout:build_folder_vars' conf. It is "
+                                     "managed by default because 'CMakeToolchain' and 'CMakeDeps' "
+                                     "are multi-config generators.`")
             tmp = conanfile.settings.get_safe(var)
         elif s.startswith("options."):
             _, var = s.split("options.", 1)
