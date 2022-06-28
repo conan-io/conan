@@ -151,6 +151,8 @@ def test_autotoolsdeps_mingw_msys():
 
 @pytest.mark.tool_msys2
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# If we use the cmake inside msys2, it fails, so better force our own cmake
+@pytest.mark.tool_cmake
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""
         [settings]
