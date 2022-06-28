@@ -515,11 +515,7 @@ def collect_libs(conanfile, folder=None):
         name, ext = os.path.splitext(f)
         if ext != ".lib" and name.startswith("lib"):
             name = name[3:]
-        if name in result:
-            conanfile.output.warn("Library '%s' was either already found in a previous "
-                                  "'conanfile.cpp_info.libdirs' folder or appears several "
-                                  "times with a different file extension" % name)
-        else:
+        if name not in result:
             result.append(name)
     result.sort()
     return result

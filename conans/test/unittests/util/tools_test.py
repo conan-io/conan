@@ -817,21 +817,6 @@ class CollectLibTestCase(unittest.TestCase):
         result = tools.collect_libs(conanfile, folder="custom_folder")
         self.assertEqual(["customlib"], result)
 
-        # Warn same lib different folders
-        conanfile = ConanFileMock()
-        conanfile.folders.set_base_package(temp_folder())
-        conanfile.cpp_info = CppInfo(conanfile.name, "")
-        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(custom_mylib_path, "")
-        save(lib_mylib_path, "")
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("Library 'mylib' was either already found in a previous "
-                      "'conanfile.cpp_info.libdirs' folder or appears several times with a "
-                      "different file extension", conanfile.output)
-
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.folders.set_base_package(temp_folder())
@@ -879,21 +864,6 @@ class CollectLibTestCase(unittest.TestCase):
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
         result = conanfile.collect_libs(folder="custom_folder")
         self.assertEqual(["customlib"], result)
-
-        # Warn same lib different folders
-        conanfile = ConanFileMock()
-        conanfile.folders.set_base_package(temp_folder())
-        conanfile.cpp_info = CppInfo("", "")
-        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(custom_mylib_path, "")
-        save(lib_mylib_path, "")
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = conanfile.collect_libs()
-        self.assertEqual(["mylib"], result)
-        self.assertIn("Library 'mylib' was either already found in a previous "
-                      "'conanfile.cpp_info.libdirs' folder or appears several times with a "
-                      "different file extension", conanfile.output)
 
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
