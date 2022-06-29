@@ -829,6 +829,24 @@ class CollectLibTestCase(unittest.TestCase):
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
+        # Keep only the shortest lib name per group of symlinks
+        conanfile = ConanFileMock()
+        conanfile.folders.set_base_package(temp_folder())
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
+        version_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.0.0.dylib")
+        soversion_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.dylib")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.dylib")
+        lib_mylib2_path = os.path.join(conanfile.package_folder, "lib", "libmylib.2.dylib")
+        lib_mylib3_path = os.path.join(conanfile.package_folder, "custom_folder", "libmylib.3.dylib")
+        save(version_mylib_path, "")
+        os.symlink(version_mylib_path, soversion_mylib_path)
+        os.symlink(soversion_mylib_path, lib_mylib_path)
+        save(lib_mylib2_path, "")
+        save(lib_mylib3_path, "")
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "mylib.2", "mylib.3"], result)
+
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.folders.set_base_package(temp_folder())
@@ -888,6 +906,24 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
         self.assertEqual(["mylib"], result)
+
+        # Keep only the shortest lib name per group of symlinks
+        conanfile = ConanFileMock()
+        conanfile.folders.set_base_package(temp_folder())
+        conanfile.cpp_info = CppInfo("", "")
+        version_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.0.0.dylib")
+        soversion_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.dylib")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.dylib")
+        lib_mylib2_path = os.path.join(conanfile.package_folder, "lib", "libmylib.2.dylib")
+        lib_mylib3_path = os.path.join(conanfile.package_folder, "custom_folder", "libmylib.3.dylib")
+        save(version_mylib_path, "")
+        os.symlink(version_mylib_path, soversion_mylib_path)
+        os.symlink(soversion_mylib_path, lib_mylib_path)
+        save(lib_mylib2_path, "")
+        save(lib_mylib3_path, "")
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = conanfile.collect_libs()
+        self.assertEqual(["mylib", "mylib.2", "mylib.3"], result)
 
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
