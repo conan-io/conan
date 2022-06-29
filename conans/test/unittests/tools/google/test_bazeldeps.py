@@ -2,6 +2,7 @@ import os
 import re
 import platform
 
+import pytest
 import mock
 from mock import Mock
 
@@ -13,7 +14,8 @@ from conans.model.dependencies import Requirement, ConanFileDependencies
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockOptions
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conans.test.utils.tools import TestClient
+from conans.util.files import save, remove
 
 
 class MockConanFileDeps(ConanFile):
@@ -221,6 +223,118 @@ cc_library(
     visibility=["//visibility:public"],
     deps = [
         ":lib1_precompiled",
+    ],
+)
+"""
+    assert(dependency_content == re.sub(r"\s", "", expected_content))
+
+
+@pytest.fixture
+def shared_library_with_soname():
+    source_folder = temp_folder()
+    build_folder = temp_folder()
+    package_folder = temp_folder()
+
+    save(os.path.join(source_folder, "foobar.cc"), "")
+    save(os.path.join(source_folder, "CMakeLists.txt"), """
+add_library(foobar SHARED foobar.cc)
+set_target_properties(
+  foobar PROPERTIES
+  VERSION 0.1.2
+  SOVERSION 0.1)
+install(TARGETS foobar)
+""".lstrip())
+
+    client = TestClient()
+    client.run_command("cmake -S '{}' -B '{}'".format(source_folder, build_folder))
+    client.run_command("cmake --build '{}'".format(build_folder))
+    client.run_command("cmake --install '{}' --prefix '{}'".format(build_folder, package_folder))
+
+    def remove_symlinks():
+        entry_path = os.path.join(package_folder, 'lib/libfoobar.so')
+        soname_path = os.path.join(package_folder, 'lib/libfoobar.so.0.1')
+        versioned_path = os.path.join(package_folder, 'lib/libfoobar.so.0.1.2')
+        if os.path.exists(versioned_path):
+            remove(entry_path)
+            remove(soname_path)
+            os.rename(versioned_path, entry_path)
+
+    return {
+        'name': 'foobar',
+        'shared': True,
+        'package_folder': package_folder,
+        'remove_symlinks': remove_symlinks,
+    }
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
+def test_bazeldeps_shared_library_with_soname(shared_library_with_soname):
+    cpp_info = CppInfo("mypkg", "dummy_root_folder2")
+    cpp_info.libs = [shared_library_with_soname['name']]
+
+    options = MockOptions({"shared": shared_library_with_soname['shared']})
+    conanfile_dep = MockConanFileDeps(ConanFileDependencies({}), Mock(), None)
+    conanfile_dep.options = options
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep.folders.set_base_package(temp_folder())
+    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep.folders.set_base_package(shared_library_with_soname['package_folder'])
+
+    req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+    mock_deps = ConanFileDependencies(
+        {req: ConanFileInterface(conanfile_dep)})
+    conanfile = MockConanFileDeps(mock_deps, Mock(), None)
+
+    bazeldeps = BazelDeps(conanfile)
+
+    # Test when SONAME is present
+    dependency = next(iter(bazeldeps._conanfile.dependencies.host.values()))
+    dependency_content = re.sub(r"\s",
+                                "",
+                                bazeldeps._get_dependency_buildfile_content(dependency))
+    expected_content = """
+load("@rules_cc//cc:defs.bzl","cc_import","cc_library")
+
+cc_import(
+    name = "foobar_precompiled",
+    shared_library = "lib/libfoobar.so.0.1"
+)
+
+cc_library(
+    name = "OriginalDepName",
+    hdrs=glob(["include/**"]),
+    includes=["include"],
+    visibility=["//visibility:public"],
+    deps = [
+        ":foobar_precompiled",
+    ],
+)
+"""
+    assert(dependency_content == re.sub(r"\s", "", expected_content))
+
+    # Test when SONAME is incorrect
+    shared_library_with_soname['remove_symlinks']()
+    dependency = next(iter(bazeldeps._conanfile.dependencies.host.values()))
+    dependency_content = re.sub(r"\s",
+                                "",
+                                bazeldeps._get_dependency_buildfile_content(dependency))
+    expected_content = """
+load("@rules_cc//cc:defs.bzl","cc_import","cc_library")
+
+cc_import(
+    name = "foobar_precompiled",
+    shared_library = "lib/libfoobar.so"
+)
+
+cc_library(
+    name = "OriginalDepName",
+    hdrs=glob(["include/**"]),
+    includes=["include"],
+    visibility=["//visibility:public"],
+    deps = [
+        ":foobar_precompiled",
     ],
 )
 """

@@ -3,6 +3,8 @@ import platform
 import textwrap
 
 from jinja2 import Template
+from elftools.elf.elffile import ELFFile
+from elftools.common.exceptions import ELFError
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
@@ -162,6 +164,7 @@ class BazelDeps(object):
                     _relativize_path(lib_path, package_folder),
                     _relativize_path(dll_path, package_folder))
             elif lib_path:
+                lib_path = self._follow_soname_of_shared_lib_if_possible(lib_path)
                 libs[lib] = _relativize_path(lib_path, package_folder)
 
         context = {
@@ -231,6 +234,29 @@ class BazelDeps(object):
         self._conanfile.output.warning("The library {} cannot be found in the "
                                        "dependency".format(lib))
         return None, None
+
+    def _get_soname_from_shared_lib(self, path):
+        # Try to parse an ELF file and respect its SONAME tag
+        with open(path, 'rb') as elf_file_io:
+            try:
+                elf_file = ELFFile(elf_file_io)
+            except ELFError:
+                return
+            elf_tag = next((
+                t for t in elf_file.get_section_by_name('.dynamic').iter_tags()
+                if t.entry.d_tag == 'DT_SONAME'), None)
+            if elf_tag is None:
+                return
+            return elf_tag.soname
+
+    def _follow_soname_of_shared_lib_if_possible(self, full_path):
+        soname = self._get_soname_from_shared_lib(full_path)
+        if soname is None:
+            return full_path
+        soname_path = os.path.join(os.path.split(full_path)[0], soname)
+        if not os.path.exists(soname_path):
+            return full_path
+        return soname_path
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
         if dependency.package_folder is None:
