@@ -5,7 +5,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="The detection of cycles have been removed in 2.0, this test hangs")
+@pytest.mark.skip(reason="The detection of cycles have been removed in 2.0, this test hangs")
 def test_components_cycles():
     c = TestClient()
     conanfile = textwrap.dedent("""
