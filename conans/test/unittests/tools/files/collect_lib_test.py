@@ -43,6 +43,18 @@ def test_collect_libs():
     result = collect_libs(conanfile, folder="custom_folder")
     assert ["customlib"] == result
 
+    # Unicity of lib names
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_package(temp_folder())
+    conanfile.cpp_info = CppInfo(conanfile.name, "")
+    custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+    lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+    save(custom_mylib_path, "")
+    save(lib_mylib_path, "")
+    conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+    result = collect_libs(conanfile)
+    assert ["mylib"] == result
+
     # Warn lib folder does not exist with correct result
     conanfile = ConanFileMock()
     conanfile.folders.set_base_package(temp_folder())
