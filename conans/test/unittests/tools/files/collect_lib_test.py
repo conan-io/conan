@@ -1,4 +1,7 @@
 import os
+import platform
+
+import pytest
 
 from conan.tools.files import check_md5, check_sha1, check_sha256, collect_libs
 from conans.model.build_info import CppInfo
@@ -55,6 +58,21 @@ def test_collect_libs():
     result = collect_libs(conanfile)
     assert ["mylib"] == result
 
+    # Warn lib folder does not exist with correct result
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_package(temp_folder())
+    conanfile.cpp_info = CppInfo(conanfile.name, "")
+    lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+    save(lib_mylib_path, "")
+    no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+    conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+    result = collect_libs(conanfile)
+    assert ["mylib"] == result
+    assert "WARN: Lib folder doesn't exist, can't collect libraries: %s" % no_folder_path \
+           in conanfile.output
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Needs symlinks support")
+def test_collect_libs_symlinks():
     # Keep only the shortest lib name per group of symlinks
     conanfile = ConanFileMock()
     conanfile.folders.set_base_package(temp_folder())
@@ -72,16 +90,3 @@ def test_collect_libs():
     conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
     result = collect_libs(conanfile)
     assert ["mylib", "mylib.2", "mylib.3"] == result
-
-    # Warn lib folder does not exist with correct result
-    conanfile = ConanFileMock()
-    conanfile.folders.set_base_package(temp_folder())
-    conanfile.cpp_info = CppInfo(conanfile.name, "")
-    lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-    save(lib_mylib_path, "")
-    no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
-    conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-    result = collect_libs(conanfile)
-    assert ["mylib"] == result
-    assert "WARN: Lib folder doesn't exist, can't collect libraries: %s" % no_folder_path \
-           in conanfile.output

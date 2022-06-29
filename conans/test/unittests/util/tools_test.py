@@ -829,6 +829,21 @@ class CollectLibTestCase(unittest.TestCase):
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
+        # Warn lib folder does not exist with correct result
+        conanfile = ConanFileMock()
+        conanfile.folders.set_base_package(temp_folder())
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(lib_mylib_path, "")
+        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                      % no_folder_path, conanfile.output)
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Needs symlinks support")
+    def test_collect_libs_symlinks(self):
         # Keep only the shortest lib name per group of symlinks
         conanfile = ConanFileMock()
         conanfile.folders.set_base_package(temp_folder())
@@ -846,19 +861,6 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib", "mylib.2", "mylib.3"], result)
-
-        # Warn lib folder does not exist with correct result
-        conanfile = ConanFileMock()
-        conanfile.folders.set_base_package(temp_folder())
-        conanfile.cpp_info = CppInfo(conanfile.name, "")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(lib_mylib_path, "")
-        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
-        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
-                      % no_folder_path, conanfile.output)
 
     def test_self_collect_libs(self):
         conanfile = ConanFileMock()
@@ -907,6 +909,21 @@ class CollectLibTestCase(unittest.TestCase):
         result = conanfile.collect_libs()
         self.assertEqual(["mylib"], result)
 
+        # Warn lib folder does not exist with correct result
+        conanfile = ConanFileMock()
+        conanfile.folders.set_base_package(temp_folder())
+        conanfile.cpp_info = CppInfo("", "")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(lib_mylib_path, "")
+        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+        result = conanfile.collect_libs()
+        self.assertEqual(["mylib"], result)
+        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                      % no_folder_path, conanfile.output)
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Needs symlinks support")
+    def test_self_collect_libs_symlinks(self):
         # Keep only the shortest lib name per group of symlinks
         conanfile = ConanFileMock()
         conanfile.folders.set_base_package(temp_folder())
@@ -924,16 +941,3 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
         self.assertEqual(["mylib", "mylib.2", "mylib.3"], result)
-
-        # Warn lib folder does not exist with correct result
-        conanfile = ConanFileMock()
-        conanfile.folders.set_base_package(temp_folder())
-        conanfile.cpp_info = CppInfo("", "")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(lib_mylib_path, "")
-        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
-        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-        result = conanfile.collect_libs()
-        self.assertEqual(["mylib"], result)
-        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
-                      % no_folder_path, conanfile.output)
