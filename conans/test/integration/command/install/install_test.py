@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 from collections import OrderedDict
@@ -384,3 +385,82 @@ def test_install_multiple_requires_cli():
     lock = c.load("conan.lock")
     assert "pkg1/0.1" in lock
     assert "pkg2/0.1" in lock
+
+
+def test_install_json_formatter():
+    """
+    Tests the ``conan install . -f json`` result
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+
+            def package_info(self):
+                self.cpp_info.libs = ["pkg"]
+                self.cpp_info.includedirs = ["path/includes/pkg", "other/include/path/pkg"]
+                self.cpp_info.libdirs = ["one/lib/path/pkg"]
+                self.cpp_info.defines = ["pkg_onedefinition", "pkg_twodefinition"]
+                self.cpp_info.cflags = ["pkg_a_c_flag"]
+                self.cpp_info.cxxflags = ["pkg_a_cxx_flag"]
+                self.cpp_info.sharedlinkflags = ["pkg_shared_link_flag"]
+                self.cpp_info.exelinkflags = ["pkg_exe_link_flag"]
+                self.cpp_info.sysroot = "/path/to/folder/pkg"
+                self.cpp_info.frameworks = ["pkg_oneframework", "pkg_twoframework"]
+                self.cpp_info.system_libs = ["pkg_onesystemlib", "pkg_twosystemlib"]
+                self.cpp_info.frameworkdirs = ["one/framework/path/pkg"]
+                self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
+                self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
+                self.cpp_info.components["cmp1"].sysroot = "/another/sysroot"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                .with_require("pkg/0.2")}, clean_first=True)
+    client.run("install . -f json")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]["nodes"]
+    hello_pkg_ref = 'hello/0.1'  # no revision available
+    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
+    hello_cpp_info = pkg_cpp_info = None
+    for n in nodes:
+        ref = n["ref"]
+        if ref == hello_pkg_ref:
+            assert n['binary'] is None
+            hello_cpp_info = n['cpp_info']
+        elif ref == pkg_pkg_ref:
+            assert n['binary'] == "Cache"
+            pkg_cpp_info = n['cpp_info']
+    assert hello_cpp_info and pkg_cpp_info
+    # hello/0.1 cpp_info
+    assert hello_cpp_info['root']["libs"] is None
+    assert len(hello_cpp_info['root']["bindirs"]) == 1
+    assert len(hello_cpp_info['root']["libdirs"]) == 1
+    assert hello_cpp_info['root']["sysroot"] is None
+    assert hello_cpp_info['root']["properties"] is None
+    # pkg/0.2 cpp_info
+    # root info
+    assert pkg_cpp_info['root']["libs"] == ['pkg']
+    assert len(pkg_cpp_info['root']["bindirs"]) == 1
+    assert len(pkg_cpp_info['root']["libdirs"]) == 1
+    assert pkg_cpp_info['root']["sysroot"] == '/path/to/folder/pkg'
+    assert pkg_cpp_info['root']["system_libs"] == ['pkg_onesystemlib', 'pkg_twosystemlib']
+    assert pkg_cpp_info['root']['cflags'] == ['pkg_a_c_flag']
+    assert pkg_cpp_info['root']['cxxflags'] == ['pkg_a_cxx_flag']
+    assert pkg_cpp_info['root']['defines'] == ['pkg_onedefinition', 'pkg_twodefinition']
+    assert pkg_cpp_info['root']["properties"] == {
+        'pkg_config_aliases': ['pkg_alias1', 'pkg_alias2'],
+        'pkg_config_name': 'pkg_other_name'}
+    # component info
+    assert pkg_cpp_info['cmp1']["libs"] == ['libcmp1']
+    assert pkg_cpp_info['cmp1']["bindirs"][0].endswith("bin")  # Abs path /bin
+    assert pkg_cpp_info['cmp1']["libdirs"][0].endswith("lib")  # Abs path /lib
+    assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
+    assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
+                                                  'pkg_config_name': 'compo1'}
