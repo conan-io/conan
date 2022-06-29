@@ -15,7 +15,7 @@ def json_export_pkg(info):
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
-    Export recipe to the Conan package cache
+    Export recipe to the Conan package cache, and create a package directly from pre-compiled binaries
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
     add_reference_args(parser)
