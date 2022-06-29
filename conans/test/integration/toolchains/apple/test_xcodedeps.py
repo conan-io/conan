@@ -102,7 +102,7 @@ def test_xcodedeps_aggregate_components():
 
     client.save({"conanfile.py": conanfile_py})
 
-    client.run("create . liba/1.0@")
+    client.run("create . --name=liba --version=1.0")
 
     r""""
         1   a
@@ -143,9 +143,9 @@ def test_xcodedeps_aggregate_components():
 
     client.save({"conanfile.py": conanfile_py})
 
-    client.run("create . libb/1.0@")
+    client.run("create . --name=libb --version=1.0")
 
-    client.run("install libb/1.0@ -g XcodeDeps")
+    client.run("install --requires=libb/1.0 -g XcodeDeps")
 
     lib_entry = client.load("conan_libb.xcconfig")
 

@@ -519,7 +519,8 @@ def test_multiple_deactivate():
     out = out.decode()
     assert "VAR1=Value1!!" in out
     assert "VAR2=Value2!!" in out
-    assert 2 == str(out).count("Restoring environment")
+    # conanbuildenv is included
+    assert 3 == str(out).count("Restoring environment")
     assert "VAR1=!!" in out
     assert "VAR2=!!" in out
 
