@@ -253,8 +253,8 @@ class XcodeDeps(object):
                         transitive_external.extend(requires_external)
                         for require in requires_internal:
                             _transitive_components(require)
-                        return transitive_internal, transitive_external
-                    transitive_internal, transitive_external = _transitive_components(comp_cpp_info)
+
+                    _transitive_components(comp_cpp_info)
 
                     # remove duplicates
                     transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
