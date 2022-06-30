@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 from shutil import which
 
 from conans.cli.output import ConanOutput
@@ -149,7 +150,8 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         from conans.util.runners import check_output_runner
-        output = check_output_runner(arguments).strip()
+        cmd = subprocess.list2cmdline(arguments)
+        output = check_output_runner(cmd).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()

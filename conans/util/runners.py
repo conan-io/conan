@@ -81,12 +81,12 @@ def detect_runner(command):
 
 def check_output_runner(cmd, stderr=None):
     # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
+    assert isinstance(cmd, str)
     d = tempfile.mkdtemp()
     tmp_file = os.path.join(d, "output")
     try:
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
-        cmd = cmd if isinstance(cmd, str) else subprocess.list2cmdline(cmd)
         command = '{} > "{}"'.format(cmd, tmp_file)
         process = subprocess.Popen(command, shell=True, stderr=stderr)
         stdout, stderr = process.communicate()
