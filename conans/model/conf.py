@@ -14,6 +14,12 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    # Package ID
+    "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
+    "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
+    "core.package_id:default_embed_mode": "By default, 'full_mode'",
+    "core.package_id:default_python_mode": "By default, 'minor_mode'",
+    "core.package_id:default_build_mode": "",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
@@ -68,6 +74,8 @@ BUILT_IN_CONFS = {
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain and AutotoolsToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
     "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
+    # Package ID composition
+    "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
 
 
