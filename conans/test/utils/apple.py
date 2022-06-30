@@ -1,3 +1,5 @@
+from conan.tools.build import cmd_args_to_string
+
 
 class XCRun(object):
 
@@ -11,8 +13,8 @@ class XCRun(object):
     def _invoke(self, args):
         def cmd_output(cmd):
             from conans.util.runners import check_output_runner
-            cmd = " ".join(cmd)
-            return check_output_runner(cmd).strip()
+            cmd_str = cmd_args_to_string(cmd)
+            return check_output_runner(cmd_str).strip()
 
         command = ['xcrun']
         if self.sdk:
