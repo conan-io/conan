@@ -37,10 +37,14 @@ def _windows_cmd_args_to_string(args):
     # FIXME: This is not managing all the parsing from list2cmdline, but covering simplified cases
     ret = []
     for arg in args:
-        # escaped quotes have to be double escaped
-        arg = arg.replace(r'\"', r'\\"')
+        # escaped quotes have to escape the \ and then the ". Replace with <QUOTE> so next
+        # replace doesn't interfere
+        arg = arg.replace(r'\"', r'\\\<QUOTE>')
         # quotes have to be escaped
         arg = arg.replace(r'"', r'\"')
+
+        # restore the quotes
+        arg = arg.replace("<QUOTE>", '"')
         # if argument have spaces, quote it
         if ' ' in arg or '\t' in arg:
             ret.append('"{}"'.format(arg))
