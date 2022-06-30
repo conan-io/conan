@@ -62,7 +62,8 @@ class BazelDeps(object):
             {% for libname, filepath in libs.items() %}
             cc_import(
                 name = "{{ libname }}_precompiled",
-                {{ library_type }} = "{{ filepath }}"
+                {{ library_type }} = "{{ filepath }}",
+                alwayslink = True,
             )
             {% endfor %}
 
