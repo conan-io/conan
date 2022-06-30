@@ -12,6 +12,10 @@ from conans.util.runners import check_output_runner
 
 @pytest.fixture(scope="module")
 def application_folder():
+    """
+    This is building a simple C app to print the received arguments and see if the obtained
+    value is the expected once it is escaped by the Conan cmd_args_to_string tool
+    """
     t = TestClient()
     main = textwrap.dedent("""
     #include<stdio.h>
@@ -63,6 +67,30 @@ def test_unix_cases(application_folder, _input, output):
     # Check calling the exe that the arguments are the same we tried to input
     with chdir(application_folder):
         cmd_parsed_output = check_output_runner("./{}".format(output))
+        interpreted_args = cmd_parsed_output.splitlines()
+        real_args = _input[1:]
+        assert real_args == interpreted_args
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows console parsing")
+@pytest.mark.parametrize("_input, output", [
+         (['.', 'foo'], '. foo'),
+         (['"."', '"foo"'], r'\".\" \"foo\"'),
+         ([r'\".\"', '"foo"'], r'\\\".\\\" \"foo\"'),
+         (['path with spaces/foo', 'var'], '"path with spaces/foo" var'),
+         ([r'c:\path with spaces\foo', '%var$:.'], r'"c:\path with spaces\foo" %var$:.'),
+])
+def test_windows_cases(application_folder, _input, output):
+    from subprocess import list2cmdline
+    _input = ["arg_printer.exe"] + _input
+    output = "arg_printer.exe {}".format(output)
+    assert list2cmdline(_input) == output
+    assert cmd_args_to_string(_input) == output
+
+    # Check calling the exe that the arguments are the same we tried to input
+    with chdir(application_folder):
+        cmd_parsed_output = check_output_runner(output)
         interpreted_args = cmd_parsed_output.splitlines()
         real_args = _input[1:]
         assert real_args == interpreted_args
