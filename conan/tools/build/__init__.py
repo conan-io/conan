@@ -42,7 +42,9 @@ def _windows_cmd_args_to_string(args):
         # quotes have to be escaped
         arg = arg.replace(r'"', r'\"')
         # if argument have spaces, quote it
-        if ' ' or '\t' in arg:
+        if ' ' in arg or '\t' in arg:
             ret.append('"{}"'.format(arg))
+        else:
+            ret.append(arg)
     return " ".join(ret)
 
