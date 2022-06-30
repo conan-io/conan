@@ -11,6 +11,7 @@ class XCRun(object):
     def _invoke(self, args):
         def cmd_output(cmd):
             from conans.util.runners import check_output_runner
+            cmd = " ".join(cmd)
             return check_output_runner(cmd).strip()
 
         command = ['xcrun']
