@@ -63,7 +63,6 @@ class BazelDeps(object):
             cc_import(
                 name = "{{ libname }}_precompiled",
                 {{ library_type }} = "{{ filepath }}",
-                alwayslink = True,
             )
             {% endfor %}
 
@@ -92,6 +91,7 @@ class BazelDeps(object):
                 visibility = ["//visibility:public"],
                 {% if libs or shared_with_interface_libs %}
                 deps = [
+                    # do not sort
                 {% for lib in libs %}
                 ":{{ lib }}_precompiled",
                 {% endfor %}
