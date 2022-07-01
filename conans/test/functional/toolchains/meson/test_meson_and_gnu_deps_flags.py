@@ -1,7 +1,4 @@
 import textwrap
-import platform
-
-import pytest
 
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
@@ -10,7 +7,6 @@ from conans.test.utils.tools import TestClient
 
 class TestMesonToolchainAndGnuFlags(TestMesonBase):
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="Unix only")
     def test_mesontoolchain_using_gnu_deps_flags(self):
         client = TestClient(path_with_spaces=False)
         client.run("new hello/0.1 -s")
