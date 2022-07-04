@@ -220,7 +220,7 @@ cc_library(
     includes=["include"],
     visibility=["//visibility:public"],
     deps = [
-        #donotsort
+        # do not sort
         ":lib1_precompiled",
     ],
 )
