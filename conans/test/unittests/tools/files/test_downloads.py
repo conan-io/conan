@@ -1,4 +1,5 @@
 import os
+import platform
 
 import pytest
 import requests
@@ -157,6 +158,32 @@ class TestDownload:
         assert "Waiting" not in str(conanfile.output)
         assert "retry" not in str(conanfile.output)
 
+    def test_download_localfile(self, fs):
+        conanfile = ConanFileMock()
+        conanfile._conan_requester = requests
+
+        file_location = '/path/to/file.txt'
+        if platform.system() == "Windows":
+            file_location = "C:" + file_location
+        fs.create_file(file_location, contents='this is some content')
+        file_url = f"file:///{file_location}"
+        
+        dest = os.path.join(temp_folder(), "file.txt")
+        download(conanfile, file_url, dest)
+        content = load(dest)
+        assert "this is some content" == content
+
+    def test_download_localfile_notfound(self):
+        conanfile = ConanFileMock()
+        conanfile._conan_requester = requests
+
+        file_url = "file:///path/to/missing/file.txt"
+        dest = os.path.join(temp_folder(), "file.txt")
+
+        with pytest.raises(FileNotFoundError) as exc:
+            download(conanfile, file_url, dest)
+
+        assert "No such file" in str(exc.value)
 
 @pytest.fixture()
 def bottle_server_zip():
