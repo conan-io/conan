@@ -26,6 +26,10 @@ class MesonToolchain(object):
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
+    c_args = []
+    c_link_args = []
+    cpp_args = []
+    cpp_link_args = []
 
     [project options]
     {% for it, value in project_options.items() -%}
@@ -52,10 +56,10 @@ class MesonToolchain(object):
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
-    c_args = {{c_args}} + preprocessor_definitions
-    c_link_args = {{c_link_args}}
-    cpp_args = {{cpp_args}} + preprocessor_definitions
-    cpp_link_args = {{cpp_link_args}}
+    c_args = {{c_args}} + preprocessor_definitions + c_args
+    c_link_args = {{c_link_args}} + c_link_args
+    cpp_args = {{cpp_args}} + preprocessor_definitions + cpp_args
+    cpp_link_args = {{cpp_link_args}} + cpp_link_args
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
 
     {% for context, values in cross_build.items() %}

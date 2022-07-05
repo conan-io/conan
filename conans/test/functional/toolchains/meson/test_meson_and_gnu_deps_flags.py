@@ -15,28 +15,15 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
 
         conanfile_py = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.meson import Meson, MesonToolchain
-        from conan.tools.gnu import get_gnu_deps_flags
-
+        from conan.tools.meson import Meson
 
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
+            generators = "MesonDeps", "MesonToolchain"
 
             def layout(self):
                 self.folders.build = "build"
-
-            def generate(self):
-                # Get GNU flags from all the dependencies
-                cflags, cxxflags, cpp_flags, libs, ldflags = get_gnu_deps_flags(self)
-
-                tc = MesonToolchain(self)
-                # Extend flags to MesonToolchain
-                tc.c_args.extend(cpp_flags)
-                tc.cpp_args.extend(cpp_flags)
-                tc.c_link_args.extend(ldflags)
-                tc.cpp_link_args.extend(ldflags)
-                tc.generate()
 
             def build(self):
                 meson = Meson(self)
