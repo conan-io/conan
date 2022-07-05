@@ -1,3 +1,4 @@
+import re
 from collections import OrderedDict
 
 
@@ -19,7 +20,7 @@ BUILT_IN_CONFS = {
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
     "core.package_id:default_embed_mode": "By default, 'full_mode'",
     "core.package_id:default_python_mode": "By default, 'minor_mode'",
-    "core.package_id:default_build_mode": "",
+    "core.package_id:default_build_mode": "By default, 'None'",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
@@ -42,6 +43,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:toolset_arch": "",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -68,6 +70,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
+    "tools.env.virtualenv:powershell": "",
     # Flags configuration
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -79,10 +82,15 @@ BUILT_IN_CONFS = {
 }
 
 
+CORE_CONF_PATTERN = re.compile(r"^core[\.:]")
+TOOLS_CONF_PATTERN = re.compile(r"^tools[\.:]")
+USER_CONF_PATTERN = re.compile(r"^user[\.:]")
+
+
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _user_modules = "tools.", "user."
-    return any(module_name.startswith(user_module) for user_module in _user_modules)
+    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
+    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -239,7 +247,6 @@ class Conf:
 
     def get(self, conf_name, default=None, check_type=None):
         """
-
         Get all the values of the given configuration name.
 
         :param conf_name: Name of the configuration.
@@ -247,6 +254,11 @@ class Conf:
         :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
         """
+        # Skipping this check only the user.* configurations
+        if USER_CONF_PATTERN.match(conf_name) is None and conf_name not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf_name}' does not exist in configuration list. "
+                                 f" Run 'conan config list' to see all the available confs.")
+
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
@@ -259,10 +271,9 @@ class Conf:
             elif v is None:  # value was unset
                 return default
             elif check_type is not None and not isinstance(v, check_type):
-                raise ConanException("[conf] {name} must be a {type}-like object. "
-                                     "The value '{value}' introduced is a {vtype} "
-                                     "object".format(name=conf_name, type=check_type.__name__,
-                                                     value=v, vtype=type(v).__name__))
+                raise ConanException(f"[conf] {conf_name} must be a "
+                                     f"{check_type.__name__}-like object. The value '{v}' "
+                                     f"introduced is a {type(v).__name__} object")
             return v
         else:
             return default
