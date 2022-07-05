@@ -221,5 +221,6 @@ def test_xcodedeps_test_require():
     client.run("install . -g XcodeDeps")
     assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest.xcconfig"))
     assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest_gtest.xcconfig"))
-    assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest_gtest_release_x86_64.xcconfig"))
+    assert os.path.isfile(os.path.join(client.current_folder,
+                                       "conan_gtest_gtest_release_x86_64.xcconfig"))
     assert '#include "conan_gtest.xcconfig"' in client.load("conandeps.xcconfig")

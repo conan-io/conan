@@ -97,6 +97,14 @@ def rmdir(conanfile, path):
 
 
 def rm(conanfile, pattern, folder, recursive=False):
+    """
+    Utility functions to remove files matching a ``pattern`` in a ``folder``.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param pattern: Pattern that the files to be removed have to match (fnmatch).
+    :param folder: Folder to search/remove the files.
+    :param recursive: If ``recursive`` is specified it will search in the subfolders.
+    """
     for root, _, filenames in os.walk(folder):
         for filename in filenames:
             if fnmatch(filename, pattern):
