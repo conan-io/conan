@@ -3,9 +3,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 
@@ -506,12 +504,6 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_m1():
-    xcrun = XCRun(None, sdk='iphoneos')
-    cflags = " -isysroot " + xcrun.sdk_path
-    cflags += " -arch " + to_apple_arch('armv8')
-    cxxflags = cflags
-    ldflags = cflags
-
     profile = textwrap.dedent("""
         include(default)
         [settings]
@@ -519,13 +511,7 @@ def test_m1():
         os.version=12.0
         os.sdk=iphoneos
         arch=armv8
-        [env]
-        CC={cc}
-        CXX={cxx}
-        CFLAGS={cflags}
-        CXXFLAGS={cxxflags}
-        LDFLAGS={ldflags}
-    """).format(cc=xcrun.cc, cxx=xcrun.cxx, cflags=cflags, cxxflags=cxxflags, ldflags=ldflags)
+    """).format()
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)

@@ -439,11 +439,6 @@ class ProfileAggregationTest(unittest.TestCase):
     [settings]
     os=Windows
     arch=x86_64
-
-    [env]
-    ENV1=foo
-    ENV2=bar
-
     """)
 
     profile2 = dedent("""
@@ -453,10 +448,6 @@ class ProfileAggregationTest(unittest.TestCase):
     compiler=msvc
     compiler.version=191
     compiler.runtime=dynamic
-
-    [env]
-    ENV1=foo2
-    ENV3=bar2
     """)
 
     conanfile = dedent("""
