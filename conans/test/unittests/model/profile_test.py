@@ -74,11 +74,10 @@ arch=x86_64
 compiler=Visual Studio
 compiler.version=12
 zlib:compiler=gcc
-[options]
 [tool_requires]
 *: zlib/1.2.8@lasote/testing
 zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
-[env]""".splitlines(), profile.dumps().splitlines())
+""".splitlines(), profile.dumps().splitlines())
 
     def test_apply(self):
         # Settings
@@ -90,10 +89,7 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
-                         '\ncompiler.version=14\n'
-                         '[options]\n'
-                         '[tool_requires]\n'
-                         '[env]\n',
+                         '\ncompiler.version=14\n',
                          profile.dumps())
 
 
