@@ -385,12 +385,6 @@ class GraphBinariesAnalyzer(object):
         if apple_clang_compatible:
             conanfile.compatible_packages.append(apple_clang_compatible)
 
-        # Once we are done, call package_id() to narrow and change possible values
-        with conanfile_exception_formatter(str(conanfile), "package_id"):
-            with conan_v2_property(conanfile, 'cpp_info',
-                                   "'self.cpp_info' access in package_id() method is deprecated"):
-                conanfile.package_id()
-
         if hasattr(conanfile, "validate") and callable(conanfile.validate):
             with conanfile_exception_formatter(str(conanfile), "validate"):
                 try:
@@ -399,6 +393,12 @@ class GraphBinariesAnalyzer(object):
                     conanfile._conan_dependencies = None
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
+
+        # Once we are done, call package_id() to narrow and change possible values
+        with conanfile_exception_formatter(str(conanfile), "package_id"):
+            with conan_v2_property(conanfile, 'cpp_info',
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
+                conanfile.package_id()
 
         info = conanfile.info
         node.package_id = info.package_id()
