@@ -112,36 +112,7 @@ def test_cmakedeps_propagate_components():
 
     client.run("create middle")
 
-    consumer = textwrap.dedent("""
-        [requires]
-        middle/1.0
-        [generators]
-        CMakeDeps
-        CMakeToolchain
-    """)
-
-    main = textwrap.dedent("""
-        // Use cmp2 that is not required by middle
-        #include "cmp2.h"
-        int main() { cmp2(); }
-        """)
-
-    cmakelist = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(consumer CXX)
-        find_package(middle CONFIG REQUIRED)
-        add_executable(consumer main.cpp)
-        target_link_libraries(consumer top::cmp2)
-        install(TARGETS consumer)
-        """)
-
-    client.save({
-        'consumer/conanfile.txt': consumer,
-        'consumer/CMakeLists.txt': cmakelist,
-        'consumer/main.cpp': main,
-    })
-
-    client.run("install consumer")
+    client.run("install middle/1.0@ -g CMakeDeps")
 
     assert "top::cmp2" not in client.load("top-release-x86_64-data.cmake")
     assert "top::cmp2" not in client.load("top-Target-release.cmake")
