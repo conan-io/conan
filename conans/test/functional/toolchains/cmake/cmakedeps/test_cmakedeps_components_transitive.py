@@ -172,7 +172,7 @@ def test_cmakedeps_propagate_components():
         client.run("install ..")
         if platform.system() == "Windows":
             client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                               '-G "Visual Studio 15 Win64"')
+                               '-G "Visual Studio 15"')
             client.run_command('cmake --build . --config Release')
             client.run_command(r"Release\\consumer.exe")
         else:
