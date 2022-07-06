@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -169,8 +170,14 @@ def test_cmakedeps_propagate_components():
 
     with client.chdir("consumer/build"):
         client.run("install ..")
-        client.run_command(
-            "cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
-        client.run_command("cmake --build .")
-        client.run_command("./consumer")
-        assert not "cmp2" in client.out
+        if platform.system() == "Windows":
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
+                               '-G "Visual Studio 15 Win64"')
+            client.run_command('cmake --build . --config Release')
+            client.run_command(r"Release\\consumer.exe")
+        else:
+            client.run_command(
+                "cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+            client.run_command("cmake --build .")
+            client.run_command("./consumer")
+        assert "cmp2" not in client.out
