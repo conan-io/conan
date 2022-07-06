@@ -15,10 +15,10 @@ class MesonDeps(object):
 
     _meson_file_template = textwrap.dedent("""
     [constants]
-    c_args = {{c_args}}
-    c_link_args = {{c_link_args}}
-    cpp_args = {{cpp_args}}
-    cpp_link_args = {{cpp_link_args}}
+    deps_c_args = {{c_args}}
+    deps_c_link_args = {{c_link_args}}
+    deps_cpp_args = {{cpp_args}}
+    deps_cpp_link_args = {{cpp_link_args}}
     """)
 
     def __init__(self, conanfile):

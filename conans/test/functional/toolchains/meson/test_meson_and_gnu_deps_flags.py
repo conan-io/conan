@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 from conan.tools.files import load
@@ -55,9 +56,15 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
         from both generators and nothing is being messed up.
         """
         client = TestClient(path_with_spaces=False)
+        if platform.system() == "Windows":
+            deps_flags = '"/GA", "/analyze:quiet"'
+            flags = '"/Wall", "/W4"'
+        else:
+            deps_flags = '"-Wpedantic", "-Werror"'
+            flags = '"-Wall", "-finline-functions"'
         # Dependency - hello/0.1
         conanfile_py = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloConan(ConanFile):
             name = "hello"
@@ -65,14 +72,14 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
 
             def package_info(self):
                 self.cpp_info.libs = ["hello"]
-                self.cpp_info.cxxflags = ["-Wpedantic", "-Werror"]
+                self.cpp_info.cxxflags = [{}]
                 self.cpp_info.defines = ['DEF1=one_string', 'DEF2=other_string']
-        """)
+        """.format(deps_flags))
         client.save({"conanfile.py": conanfile_py})
         client.run("create . %s" % self._settings_str)
         # Dependency - other/0.1
         conanfile_py = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class OtherConan(ConanFile):
             name = "other"
@@ -122,8 +129,10 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                      "main.cpp": "int main()\n{return 0;}\n"},
                     clean_first=True)
 
-        client.run("install . %s -c 'tools.build:cxxflags=[\"-Wall\", \"-finline-functions\"]'" % self._settings_str)
+        client.run("install . %s -c 'tools.build:cxxflags=[%s]'" % (self._settings_str, flags))
         client.run("build .")
+        deps_flags = deps_flags.replace('"', "").replace(",", "")
+        flags = flags.replace('"', "").replace(",", "")
         meson_log_path = os.path.join(client.current_folder, "build", "meson-logs", "meson-log.txt")
         meson_log = load(None, meson_log_path)
         meson_log = meson_log.replace("\\", "/")
@@ -131,6 +140,7 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                "'--native-file {folder}/conan_meson_native.ini' " \
                "'--native-file {folder}/conan_meson_deps_flags.ini'" \
                "".format(folder=client.current_folder.replace("\\", "/")) in meson_log
-        assert '-Wall -finline-functions -DVAR="VALUE" -DVAR2="VALUE2" ' \
-               '-Wpedantic -Werror -DDEF3=simple_string -DDEF1=one_string ' \
-               '-DDEF2=other_string' in meson_log
+        # Flags/Defines from deps and consumer are appearing in meson-log.txt as part
+        # of the command-line
+        assert '%s -DVAR="VALUE" -DVAR2="VALUE2" %s' % (flags, deps_flags) in meson_log
+        assert '-DDEF3=simple_string -DDEF1=one_string -DDEF2=other_string' in meson_log
