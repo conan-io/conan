@@ -50,6 +50,7 @@ class GraphBinariesAnalyzer(object):
             conanfile.output.info('Forced build from source')
             node.binary = BINARY_BUILD
             node.prev = None
+            _call_validate_build(node)
             return True
 
     def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
@@ -178,6 +179,7 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+                _call_validate_build(node)
                 node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD:
                 locked.unlock_prev()
@@ -232,6 +234,7 @@ class GraphBinariesAnalyzer(object):
                         node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
+                    _call_validate_build(conanfile)
 
             if locked:
                 # package_id was not locked, this means a base lockfile that is being completed
@@ -295,6 +298,7 @@ class GraphBinariesAnalyzer(object):
                     conanfile.output.info("Outdated package!")
                     node.binary = BINARY_BUILD
                     node.prev = None
+                    _call_validate_build(conanfile)
                 else:
                     conanfile.output.info("Package is up to date")
 
@@ -451,3 +455,14 @@ class GraphBinariesAnalyzer(object):
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:
             output.info("Binary for the updated ID has to be built")
+
+
+def _call_validate_build(node):
+    conanfile = node.conanfile
+    if hasattr(conanfile, "validate_build") and callable(conanfile.validate_build):
+        with conanfile_exception_formatter(str(conanfile), "validate_build"):
+            try:
+                conanfile.validate_build()
+            except ConanInvalidConfiguration as e:
+                conanfile.info.invalid = str(e)
+                node.binary = BINARY_INVALID
