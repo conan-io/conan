@@ -79,8 +79,10 @@ class DepsGraphBuilder(object):
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous)
-                # FIXME: THis will fail if prev_node is None
-                self._conflicting_options(require, node, prev_node, prev_require, base_previous)
+                if prev_node is not None:  # Conflicts cannot be checked if not expanded yet
+                    # and prev_node is None if it hasn't been expanded yet (half-diamonds, overrides)
+                    self._conflicting_options(require, node, prev_node, prev_require, base_previous,
+                                              profile_host, profile_build)
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
@@ -132,17 +134,33 @@ class DepsGraphBuilder(object):
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
 
     @staticmethod
-    def _conflicting_options(require, node, prev_node, prev_require, base_previous):
+    def _conflicting_options(require, node, prev_node, prev_require, base_previous, profile_host,
+                             profile_build):
         # Even if the version matches, there still can be a configuration conflict
         # Only the propagated options can conflict, because profile would have already been asigned
         is_consumer = node.conanfile._conan_is_consumer
+
+        def _get_profile_value(option):
+            # We apply the same logic when the profile options are actually applied to the package
+            context = CONTEXT_BUILD if require.build else node.context
+            profile_options = profile_build.options if context == CONTEXT_BUILD \
+                else profile_host.options
+            option_value = None
+            for pattern, profile_pkg_options in profile_options._deps_package_options.items():
+                if ref_matches(require.ref, pattern, is_consumer=is_consumer):
+                    match_value = profile_pkg_options.get_safe(option)
+                    option_value = match_value if match_value is not None else option_value
+            return option_value
+
         upstream_options = node.conanfile.up_options.get(require.ref, is_consumer)
         for k, v in upstream_options.items():
             prev_option = prev_node.conanfile.options.get_safe(k)
             if prev_option is not None:
                 if prev_option != v:
-                    raise GraphError.conflict_config(node, require, prev_node, prev_require,
-                                                     base_previous, k, prev_option, v)
+                    profile_value = _get_profile_value(k)
+                    if profile_value is None or profile_value != prev_option:
+                        raise GraphError.conflict_config(node, require, prev_node, prev_require,
+                                                         base_previous, k, prev_option, v)
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options):

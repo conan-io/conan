@@ -337,9 +337,11 @@ equal/1.0.0@user/testing:opt=a=b
         assert "Possible values are ['A', 'N', 'Y']" in c.out
 
 
-    def test_transitive_order_matter(self):
-        # https://github.com/conan-io/conan/issues/11571
-        c = TestClient()
+class TestRequireOrderConflicts:
+    # https://github.com/conan-io/conan/issues/11571
+
+    @pytest.fixture
+    def _client(self):
         lib1 = textwrap.dedent("""
             from conan import ConanFile
 
@@ -364,42 +366,63 @@ equal/1.0.0@user/testing:opt=a=b
                 def configure(self):
                     self.options["lib1/*"].foobar = self.options.logic_for_foobar
             """)
-        app = textwrap.dedent("""
-            from conan import ConanFile
+        c = TestClient()
 
-            class App(ConanFile):
-
-                def requirements(self):
-                    self.requires("{}/1.0")
-                    self.requires("{}/1.0")
-
-                def configure(self):
-                    self.options["lib2/*"].logic_for_foobar = True
-                    self.options["lib1/*"].foobar = False
-
-                def generate(self):
-                    self.output.info("LIB1 FOOBAR: {{}}".format(
-                                                   self.dependencies["lib1"].options.foobar))
-                    self.output.info("LIB2 LOGIC: {{}}".format(
-                                                self.dependencies["lib2"].options.logic_for_foobar))
-            """)
         c.save({"lib1/conanfile.py": lib1,
-                "lib2/conanfile.py": lib2,
-                "app/conanfile.py": app.format("lib1", "lib2")})
+                "lib2/conanfile.py": lib2})
 
         c.run("create lib1 -o lib1/*:foobar=True")
         c.run("create lib1 -o lib1/*:foobar=False")
         c.run("create lib2 -o lib2/*:logic_for_foobar=True")
         c.run("create lib2 -o lib2/*:logic_for_foobar=False")
+        return c
 
+    @staticmethod
+    def _app(lib1, lib2, configure):
+        app = textwrap.dedent("""
+           from conan import ConanFile
+
+           class App(ConanFile):
+
+              def requirements(self):
+                  self.requires("{}/1.0")
+                  self.requires("{}/1.0")
+
+              def {}(self):
+                  self.options["lib2/*"].logic_for_foobar = True
+                  self.options["lib1/*"].foobar = False
+
+              def generate(self):
+                  self.output.info("LIB1 FOOBAR: {{}}".format(
+                                                 self.dependencies["lib1"].options.foobar))
+                  self.output.info("LIB2 LOGIC: {{}}".format(
+                                              self.dependencies["lib2"].options.logic_for_foobar))
+           """)
+        return app.format(lib1, lib2, configure)
+
+    def test_transitive_order(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
-        c.run("install app")
-        print(c.out)
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
         assert "conanfile.py: LIB1 FOOBAR: False" in c.out
         assert "conanfile.py: LIB2 LOGIC: True" in c.out
 
         # Now swap order
-        c.save({"app/conanfile.py": app.format("lib2", "lib1")})
-        c.run("install app", assert_error=True)
-        print(c.out)
-        assert "ERROR: lib1/1.0:  tried to change lib1/1.0 option foobar to False" in c.out
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_transitive_order_configure(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+        # Now swap order
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out

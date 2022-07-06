@@ -63,12 +63,29 @@ class TestOptions(GraphManagerTest):
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requires("liba/0.1").
                               with_default_option("liba*:shared", True))
 
+        # If we expand first the "libb", it will expand to "liba" as static, freeze it, and then
+        # later when "libc" expands and tries to set "liba" as shared, it will conflict
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
         assert deps_graph.error.kind == GraphError.CONFIG_CONFLICT
-
         self.assertEqual(4, len(deps_graph.nodes))
+
+        # But if we change the order, and expand "libc" first, it will set "liba" as shared,
+        # later when "libb" expands, it doesn't define any options, so it is fine with whatever
+        # is upstream, and it doesn't fail
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "libb/0.1"])
+        deps_graph = self.build_consumer(consumer)
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+        assert liba is liba2
+        self._check_node(app, "app/0.1", deps=[libc, libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], options={"shared": "True"})
 
 
 class TestBuildRequireOptions(GraphManagerTest):
