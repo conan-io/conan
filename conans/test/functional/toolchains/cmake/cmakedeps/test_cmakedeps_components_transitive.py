@@ -10,23 +10,19 @@ from conans.test.utils.tools import TestClient
 def test_cmakedeps_propagate_components():
     client = TestClient()
     top = textwrap.dedent("""
+        import os
         from conan import ConanFile
-        from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.files import copy
 
         class TopConan(ConanFile):
             name = "top"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            exports_sources = "CMakeLists.txt", "include/*"
-            generators = "CMakeToolchain"
-
-            def layout(self):
-                cmake_layout(self)
+            exports_sources = "include/*"
 
             def package(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.install()
+                copy(self, "*.h", os.path.join(self.source_folder, "include"),
+                                   os.path.join(self.package_folder, "include"))
 
             def package_info(self):
                 self.cpp_info.components["cmp1"].includedirs = ["include"]
@@ -39,22 +35,8 @@ def test_cmakedeps_propagate_components():
         void {cmpname}(){{ std::cout << "{cmpname}" << std::endl; }};
         """)
 
-    cmakelist = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(top CXX)
-        add_library(cmp1 INTERFACE)
-        add_library(cmp2 INTERFACE)
-        target_include_directories(cmp1 INTERFACE include)
-        target_include_directories(cmp2 INTERFACE include)
-        set_target_properties(cmp1 PROPERTIES PUBLIC_HEADER "include/cmp1.h")
-        set_target_properties(cmp2 PROPERTIES PUBLIC_HEADER "include/cmp2.h")
-        install(TARGETS cmp1)
-        install(TARGETS cmp2)
-        """)
-
     client.save({
         'top/conanfile.py': top,
-        'top/CMakeLists.txt': cmakelist,
         'top/include/cmp1.h': cmp_include.format(cmpname="cmp1"),
         'top/include/cmp2.h': cmp_include.format(cmpname="cmp2"),
     })
@@ -62,8 +44,9 @@ def test_cmakedeps_propagate_components():
     client.run("create top")
 
     middle = textwrap.dedent("""
+        import os
         from conan import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+        from conan.tools.files import copy
 
 
         class MiddleConan(ConanFile):
@@ -71,16 +54,11 @@ def test_cmakedeps_propagate_components():
             version = "1.0"
             requires = "top/1.0"
             settings = "os", "compiler", "build_type", "arch"
-            generators = "CMakeDeps", "CMakeToolchain"
-            exports_sources = "CMakeLists.txt", "include/*"
-
-            def layout(self):
-                cmake_layout(self)
+            exports_sources = "include/*"
 
             def package(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.install()
+                copy(self, "*.h", os.path.join(self.source_folder, "include"),
+                                   os.path.join(self.package_folder, "include"))
 
             def package_info(self):
                 self.cpp_info.requires = ["top::cmp1"]
@@ -93,20 +71,9 @@ def test_cmakedeps_propagate_components():
         void middle(){ cmp1(); };
         """)
 
-    cmakelist = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(middle CXX)
-        find_package(top CONFIG REQUIRED COMPONENTS cmp1)
-        add_library(middle INTERFACE)
-        target_include_directories(middle INTERFACE include)
-        target_link_libraries(middle INTERFACE top::cmp1)
-        set_target_properties(middle PROPERTIES PUBLIC_HEADER "include/middle.h")
-        install(TARGETS middle)
-        """)
 
     client.save({
         'middle/conanfile.py': middle,
-        'middle/CMakeLists.txt': cmakelist,
         'middle/include/middle.h': middle_include,
     })
 
