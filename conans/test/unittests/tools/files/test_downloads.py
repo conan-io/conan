@@ -158,18 +158,18 @@ class TestDownload:
         assert "Waiting" not in str(conanfile.output)
         assert "retry" not in str(conanfile.output)
 
-    def test_download_localfile(self, fs):
+    def test_download_localfile(self):
         conanfile = ConanFileMock()
         conanfile._conan_requester = requests
 
-        file_location = '/path/to/file.txt'
-        if platform.system() == "Windows":
-            file_location = "C:" + file_location
-        fs.create_file(file_location, contents=b'this is some content\n')
+        file_location =  os.path.join(temp_folder(), "file.txt")
+        with open(file_location, 'w') as textfile:
+            textfile.write('this is some content\n')
+
         file_url = f"file:///{file_location}"
         file_md5 = "a0b156435474e688206c68e5c66a3327"
         
-        dest = os.path.join(temp_folder(), "file.txt")
+        dest = os.path.join(temp_folder(), "downloaded_file.txt")
         download(conanfile, file_url, dest, md5=file_md5)
         content = load(dest)
         assert "this is some content" == content.rstrip()
