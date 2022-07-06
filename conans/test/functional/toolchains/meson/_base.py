@@ -19,7 +19,7 @@ class TestMesonBase(unittest.TestCase):
     def _settings(self):
         settings_macosx = {"compiler": "apple-clang",
                            "compiler.libcxx": "libc++",
-                           "compiler.version": "12.0",
+                           "compiler.version": "13.0",
                            "arch": "x86_64",
                            "build_type": "Release"}
 
