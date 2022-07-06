@@ -19,7 +19,7 @@ class DefaultProfileTest(unittest.TestCase):
         conanfile = GenConanfile()
 
         client = TestClient()
-        save(client.cache.default_profile_path, "[env]\nValue1=A")
+        save(client.cache.default_profile_path, "")
 
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")

@@ -13,7 +13,7 @@ from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
-from conans.util.files import mkdir, save, load_user_encoded
+from conans.util.files import mkdir, load_user_encoded
 
 
 def _unquote(text):
@@ -298,7 +298,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
-                                                         "settings", "env",
+                                                         "settings",
                                                          "options", "conf", "buildenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
