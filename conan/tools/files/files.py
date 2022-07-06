@@ -165,20 +165,13 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     download_cache = config["tools.files.download:download_cache"] if checksum else None
 
     def _download_file(file_url):
-        if file_url.startswith('file:'):
-            filepath = _path_from_file_uri(file_url)
-            shutil.copyfile(filepath, filename)
-        else:
-            # The download cache is only used if a checksum is provided, otherwise, a normal download
-            run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
-                        user_download=True, url=file_url,
-                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
-                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+        # The download cache is only used if a checksum is provided, otherwise, a normal download
+        local_filesystem = True if file_url.startswith("file:") else False
+        run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
+                    user_download=True, url=file_url, local_filesystem=local_filesystem,
+                    file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
+                    auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
-
-    def _path_from_file_uri(uri):
-       path = urllib.parse.urlparse(uri).path
-       return urllib.request.url2pathname(path)
 
     if not isinstance(url, (list, tuple)):
         _download_file(url)

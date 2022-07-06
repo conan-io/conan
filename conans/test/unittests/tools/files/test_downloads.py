@@ -165,13 +165,14 @@ class TestDownload:
         file_location = '/path/to/file.txt'
         if platform.system() == "Windows":
             file_location = "C:" + file_location
-        fs.create_file(file_location, contents='this is some content')
+        fs.create_file(file_location, contents=b'this is some content\n')
         file_url = f"file:///{file_location}"
+        file_md5 = "a0b156435474e688206c68e5c66a3327"
         
         dest = os.path.join(temp_folder(), "file.txt")
-        download(conanfile, file_url, dest)
+        download(conanfile, file_url, dest, md5=file_md5)
         content = load(dest)
-        assert "this is some content" == content
+        assert "this is some content" == content.rstrip()
 
     def test_download_localfile_notfound(self):
         conanfile = ConanFileMock()
