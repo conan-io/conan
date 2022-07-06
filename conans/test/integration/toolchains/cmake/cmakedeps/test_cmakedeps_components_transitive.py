@@ -1,12 +1,10 @@
 import platform
 import textwrap
 
-import pytest
 
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
 def test_cmakedeps_propagate_components():
     client = TestClient()
     top = textwrap.dedent("""
