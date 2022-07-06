@@ -350,7 +350,7 @@ class WinTest(Base):
                        "MYVAR_CONFIG": "MYVAR_{}".format(build_type.upper()),
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_{}".format(build_type.upper())
-                       })
+                       }, subsystem="mingw64")
 
         self._modify_code()
         time.sleep(2)
