@@ -113,8 +113,7 @@ def full_deploy(conanfile, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
-        if os.path.isdir(new_folder):
-            rmdir(new_folder)
+        rmdir(new_folder)
         shutil.copytree(dep.package_folder, new_folder)
         dep.set_deploy_folder(new_folder)
 
@@ -134,7 +133,6 @@ def direct_deploy(conanfile, output_folder):
     # dependencies
     for dep in conanfile.dependencies.filter({"direct": True}).values():
         new_folder = os.path.join(output_folder, dep.ref.name)
-        if os.path.isdir(new_folder):
-            rmdir(new_folder)
+        rmdir(new_folder)
         shutil.copytree(dep.package_folder, new_folder)
         dep.set_deploy_folder(new_folder)
