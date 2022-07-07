@@ -150,19 +150,19 @@ def test_exports_sources_common_code_layout():
                                                  custom_content=cmake_include),
             "common/myutils.cmake": 'message(STATUS "MYUTILS.CMAKE!")',
             "common/myheader.h": '#define MYDEFINE "MYDEFINEVALUE"'})
-    c.run("create pkg -s compiler.version=15")
+    c.run("create pkg")
     assert "MYUTILS.CMAKE!" in c.out
     assert "main: Release!" in c.out
     assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
     # Local flow
-    c.run("install pkg -s compiler.version=15")
+    c.run("install pkg")
     c.run("build pkg")
     assert "MYUTILS.CMAKE!" in c.out
     assert "main: Release!" in c.out
     assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
-    c.run("install pkg -s compiler.version=15 -s build_type=Debug")
+    c.run("install pkg -s build_type=Debug")
     c.run("build pkg")
     assert "MYUTILS.CMAKE!" in c.out
     assert "main: Debug!" in c.out
