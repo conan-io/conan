@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -29,7 +30,7 @@ def test_basic_validate_build_test():
     t.save({"conanfile.py": conanfile})
     t.run(f"create . {settings_gcc}", assert_error=True)
 
-    assert "This doesn't build in GCC" in t.out
+    assert "foo/1.0: Cannot build for this configuration: This doesn't build in GCC" in t.out
 
     t.run(f"create . {settings_clang}")
 
@@ -39,4 +40,15 @@ def test_basic_validate_build_test():
 
     # But if I force the build... it will fail
     t.run(f"create . {settings_gcc} ", assert_error=True)
-    assert "This doesn't build in GCC" in t.out
+    assert "foo/1.0: Cannot build for this configuration: This doesn't build in GCC" in t.out
+
+    # What happens with a conan info?
+    t.run(f"info foo/1.0@ {settings_gcc} --json=myjson")
+    myjson = json.loads(t.load("myjson"))
+    assert myjson[0]["invalid_build"] is True
+    assert myjson[0]["invalid_build_reason"] == "This doesn't build in GCC"
+
+    t.run(f"info foo/1.0@ {settings_clang} --json=myjson")
+    myjson = json.loads(t.load("myjson"))
+    assert myjson[0]["invalid_build"] is False
+    assert "invalid_build_reason" not in myjson[0]

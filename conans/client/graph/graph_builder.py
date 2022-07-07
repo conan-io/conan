@@ -3,7 +3,7 @@ import time
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
@@ -471,4 +471,12 @@ class DepsGraphBuilder(object):
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)
+
+        if hasattr(dep_conanfile, "validate_build") and callable(dep_conanfile.validate_build):
+            with conanfile_exception_formatter(str(dep_conanfile), "validate_build"):
+                try:
+                    dep_conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    new_node.cant_build = str(e)
+
         return new_node

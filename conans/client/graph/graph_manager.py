@@ -9,7 +9,7 @@ from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
     BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import ConanException, conanfile_exception_formatter
+from conans.errors import ConanException, conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLock, GraphLockFile
@@ -124,6 +124,7 @@ class GraphManager(object):
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id, is_build_require,
                                          require_overrides)
+
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
