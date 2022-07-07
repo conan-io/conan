@@ -1,3 +1,4 @@
+from pathlib import Path
 from conans.client.graph.graph import CONTEXT_BUILD
 
 
@@ -28,6 +29,11 @@ class ConanFileInterface:
     @property
     def package_folder(self):
         return self._conanfile.package_folder
+
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
 
     @property
     def ref(self):

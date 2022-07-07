@@ -8,6 +8,8 @@ import uuid
 
 import yaml
 
+from pathlib import Path
+
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
@@ -73,6 +75,7 @@ class ConanFileLoader(object):
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
+            conanfile.recipe_path = Path(conanfile.recipe_folder)
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
