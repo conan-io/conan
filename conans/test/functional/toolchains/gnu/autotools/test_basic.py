@@ -53,11 +53,12 @@ def test_autotools():
     client.run("build .")
     client.run_command("./main")
     cxx11_abi = 0 if platform.system() == "Linux" else None
-    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=cxx11_abi)
+    compiler = "gcc" if platform.system() == "Linux" else "clang"
+    check_exe_run(client.out, "main", compiler, None, "Release", "x86_64", None, cxx11_abi=cxx11_abi)
     assert "hello/0.1: Hello World Release!" in client.out
 
 
-def build_windows_subsystem(profile, make_program):
+def build_windows_subsystem(profile, make_program, subsystem):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
     """
@@ -99,7 +100,7 @@ def build_windows_subsystem(profile, make_program):
     client.run_command(cmd)
     client.run_command("app")
     # TODO: fill compiler version when ready
-    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, subsystem=subsystem)
     assert "hello/0.1: Hello World Release!" in client.out
 
     client.save({"app.cpp": gen_function_cpp(name="main", msg="main2",
@@ -111,7 +112,8 @@ def build_windows_subsystem(profile, make_program):
     client.run("build .")
     client.run_command("app")
     # TODO: fill compiler version when ready
-    check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
+    check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0,
+                  subsystem=subsystem)
     assert "hello/0.1: Hello World Release!" in client.out
     return client.out
 
@@ -129,10 +131,7 @@ def test_autotoolsdeps_cygwin():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc, make_program="make")
-    assert "__MSYS__" not in out
-    assert "MINGW" not in out
-    assert "main2 __CYGWIN__1" in out
+    build_windows_subsystem(gcc, make_program="make", subsystem="cygwin")
 
 
 @pytest.mark.tool_mingw64
@@ -147,13 +146,13 @@ def test_autotoolsdeps_mingw_msys():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc, make_program="mingw32-make")
-    assert "__MSYS__" not in out
-    assert "main2 __MINGW64__1" in out
+    build_windows_subsystem(gcc, make_program="mingw32-make", subsystem="mingw64")
 
 
 @pytest.mark.tool_msys2
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# If we use the cmake inside msys2, it fails, so better force our own cmake
+@pytest.mark.tool_cmake
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""
         [settings]
@@ -165,11 +164,7 @@ def test_autotoolsdeps_msys():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc, make_program="make")
-    # Msys2 is a rewrite of Msys, using Cygwin
-    assert "MINGW" not in out
-    assert "main2 __MSYS__1" in out
-    assert "main2 __CYGWIN__1" in out
+    build_windows_subsystem(gcc, make_program="make", subsystem="msys2")
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")

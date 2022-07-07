@@ -171,7 +171,8 @@ def test_locally_build_gcc(build_type, shared, client):
 
     client.run_command("myapp.exe")
     # TODO: Need full gcc version check
-    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
+    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None,
+                  subsystem="mingw64")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
