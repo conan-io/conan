@@ -337,7 +337,7 @@ equal/1.0.0@user/testing:opt=a=b
         assert "Possible values are ['A', 'N', 'Y']" in c.out
 
 
-class TestRequireOrderConflicts:
+class TestOptionsPriorities:
     # https://github.com/conan-io/conan/issues/11571
 
     @pytest.fixture
@@ -400,7 +400,7 @@ class TestRequireOrderConflicts:
            """)
         return app.format(lib1, lib2, configure)
 
-    def test_transitive_order(self, _client):
+    def test_profile_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
@@ -414,7 +414,35 @@ class TestRequireOrderConflicts:
         assert "conanfile.py: LIB1 FOOBAR: False" in c.out
         assert "conanfile.py: LIB2 LOGIC: True" in c.out
 
-    def test_transitive_order_configure(self, _client):
+    def test_lib1_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_lib2_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_consumer_configure_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
         c.run("install app")

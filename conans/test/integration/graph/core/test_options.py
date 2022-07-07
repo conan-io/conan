@@ -55,25 +55,30 @@ class TestOptions(GraphManagerTest):
                                 (liba, True, True, False, False)])
         _check_transitive(libb, [(liba, True, True, False, False)])
 
-    def test_diamond_conflict(self):
+    def test_diamond_no_conflict(self):
         # app -> libb0.1 ---------------> liba0.1
         #    \-> libc0.1 (liba shared) -> liba0.1
+        # Just the first expended one will prevail
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requires("liba/0.1").
                               with_default_option("liba*:shared", True))
 
-        # If we expand first the "libb", it will expand to "liba" as static, freeze it, and then
-        # later when "libc" expands and tries to set "liba" as shared, it will conflict
+        # If we expand first the "libb", it will expand to "liba" as static (shared=False)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
-        deps_graph = self.build_consumer(consumer, install=False)
-
-        assert deps_graph.error.kind == GraphError.CONFIG_CONFLICT
+        deps_graph = self.build_consumer(consumer)
         self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+        assert liba is liba2
+        self._check_node(app, "app/0.1", deps=[libc, libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], options={"shared": "False"})
 
-        # But if we change the order, and expand "libc" first, it will set "liba" as shared,
-        # later when "libb" expands, it doesn't define any options, so it is fine with whatever
-        # is upstream, and it doesn't fail
+        # Changing the order, will make "liba" shared=True
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -86,6 +91,50 @@ class TestOptions(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libc, libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], options={"shared": "True"})
+
+    def test_diamond_downstream_priority(self):
+        # app(liba:shared) -> libb0.1 ---------------> liba0.1
+        #    \--------------> libc0.1 (liba shared) -> liba0.1
+        self.recipe_cache("liba/0.1", option_shared=False)
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requires("liba/0.1").
+                              with_default_option("liba*:shared", True))
+
+        for shared in True, False:
+            consumer = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                               .with_requires("libb/0.1", "libc/0.1")
+                                               .with_default_option("liba*:shared", shared))
+            deps_graph = self.build_consumer(consumer)
+
+            self.assertEqual(4, len(deps_graph.nodes))
+            app = deps_graph.root
+            libb = app.dependencies[0].dst
+            libc = app.dependencies[1].dst
+            liba = libb.dependencies[0].dst
+            liba2 = libc.dependencies[0].dst
+            assert liba is liba2
+            self._check_node(app, "app/0.1", deps=[libc, libb])
+            self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+            self._check_node(liba, "liba/0.1#123", dependents=[libb, libc],
+                             options={"shared": str(shared)})
+
+            # order doesn't matter
+            consumer = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                               .with_requires("libc/0.1", "libb/0.1")
+                                               .with_default_option("liba*:shared", shared))
+            deps_graph = self.build_consumer(consumer)
+
+            self.assertEqual(4, len(deps_graph.nodes))
+            app = deps_graph.root
+            libc = app.dependencies[0].dst
+            libb = app.dependencies[1].dst
+            liba = libb.dependencies[0].dst
+            liba2 = libc.dependencies[0].dst
+            assert liba is liba2
+            self._check_node(app, "app/0.1", deps=[libc, libb])
+            self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+            self._check_node(liba, "liba/0.1#123", dependents=[libb, libc],
+                             options={"shared": str(shared)})
 
 
 class TestBuildRequireOptions(GraphManagerTest):
