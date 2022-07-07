@@ -52,7 +52,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_INVALID
             else:
                 node.binary = BINARY_BUILD
-                node.prev = None
+            node.prev = None
             return True
 
     def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
@@ -308,7 +308,7 @@ class GraphBinariesAnalyzer(object):
                         node.binary = BINARY_INVALID
                     else:
                         node.binary = BINARY_BUILD
-                        node.prev = None
+                    node.prev = None
                 else:
                     conanfile.output.info("Package is up to date")
 
