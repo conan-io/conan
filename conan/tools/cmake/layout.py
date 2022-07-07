@@ -3,7 +3,7 @@ import os
 from conans.errors import ConanException
 
 
-def cmake_layout(conanfile, generator=None, src_folder="."):
+def cmake_layout(conanfile, generator=None, src_folder=".", subfolder=None):
     gen = conanfile.conf.get("tools.cmake.cmaketoolchain:generator", default=generator)
     if gen:
         multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
@@ -14,13 +14,13 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         else:
             multi = False
 
-    conanfile.folders.source = src_folder
+    conanfile.folders.source = src_folder if not subfolder else os.path.join(subfolder, src_folder)
     try:
         build_type = str(conanfile.settings.build_type)
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    build_folder = "build"
+    build_folder = "build" if not subfolder else os.path.join(subfolder, "build")
     custom_conf = get_build_folder_custom_vars(conanfile)
     if custom_conf:
         build_folder = "{}/{}".format(build_folder, custom_conf)

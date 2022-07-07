@@ -1,5 +1,9 @@
 import textwrap
 
+import pytest
+
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
@@ -106,3 +110,60 @@ def test_exports_sources_common_code():
     c.run("build pkg")
     assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake!" in c.out
     assert "conanfile.py (pkg/0.1): MYUTILS-BUILD: myutils!" in c.out
+
+
+@pytest.mark.tool_cmake
+def test_exports_sources_common_code_layout():
+    """ Equal to the previous test, but actually building and using cmake_layout
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout, CMake
+        from conan.tools.files import load, copy, save
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.root = ".."
+                cmake_layout(self, subfolder="pkg")
+
+            def export_sources(self):
+                source_folder = os.path.join(self.recipe_folder, "..")
+                copy(self, "*", source_folder, self.export_sources_folder)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                self.run(os.path.join(self.cpp.build.bindirs[0], "myapp"))
+            """)
+    cmake_include = "include(${CMAKE_CURRENT_LIST_DIR}/../common/myutils.cmake)"
+    c.save({"pkg/conanfile.py": conanfile,
+            "pkg/app.cpp": gen_function_cpp(name="main", includes=["../common/myheader"],
+                                            preprocessor=["MYDEFINE"]),
+            "pkg/CMakeLists.txt": gen_cmakelists(appsources=["app.cpp"],
+                                                 custom_content=cmake_include),
+            "common/myutils.cmake": 'message(STATUS "MYUTILS.CMAKE!")',
+            "common/myheader.h": '#define MYDEFINE "MYDEFINEVALUE"'})
+    c.run("create pkg -s compiler.version=15")
+    assert "MYUTILS.CMAKE!" in c.out
+    assert "main: Release!" in c.out
+    assert "MYDEFINE: MYDEFINEVALUE" in c.out
+
+    # Local flow
+    c.run("install pkg -s compiler.version=15")
+    c.run("build pkg")
+    assert "MYUTILS.CMAKE!" in c.out
+    assert "main: Release!" in c.out
+    assert "MYDEFINE: MYDEFINEVALUE" in c.out
+
+    c.run("install pkg -s compiler.version=15 -s build_type=Debug")
+    c.run("build pkg")
+    assert "MYUTILS.CMAKE!" in c.out
+    assert "main: Debug!" in c.out
+    assert "MYDEFINE: MYDEFINEVALUE" in c.out
