@@ -323,9 +323,11 @@ class TestSubsystemsCMakeBuild:
                            " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\" -G \"{}\" .".format(cmake_compiler,
                                                                                   toolset,
                                                                                   generator))
+        build_out = client.out
         client.run_command("cmake --build .")
         app = "app" if "Visual" not in generator else r"Debug\app"
         client.run_command(app)
+        return build_out
 
     @pytest.mark.tool_msys2
     def test_msys(self):
@@ -371,8 +373,8 @@ class TestSubsystemsCMakeBuild:
         Exactly the same as the previous tests, but with a native cmake 3.19 (higher priority)
         """
         client = TestClient()
-        self._build(client)
-        assert "MYCMAKE VERSION=3.19" in client.out
+        build_out = self._build(client)
+        assert "MYCMAKE VERSION=3.19" in build_out
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
