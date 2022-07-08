@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
 
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.cli.output import ConanOutput
@@ -232,10 +234,14 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, verify=verify, download_cache=download_cache,
-                       url=file_url, overwrite=overwrite,
-                       file_path=filename, retry=retry, retry_wait=retry_wait,
-                       auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+        if file_url.startswith("file:"):
+            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
+                                      sha1=sha1, sha256=sha256)
+        else:
+            run_downloader(requester=requester, verify=verify, download_cache=download_cache,
+                           url=file_url, overwrite=overwrite,
+                           file_path=filename, retry=retry, retry_wait=retry_wait,
+                           auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):
@@ -250,6 +256,23 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                 out.warning(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+
+
+def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):
+    file_origin = _path_from_file_uri(url)
+    shutil.copyfile(file_origin, file_path)
+
+    if md5:
+        check_md5(conanfile, file_path, md5)
+    if sha1:
+        check_sha1(conanfile, file_path, sha1)
+    if sha256:
+        check_sha256(conanfile, file_path, sha256)
+
+
+def _path_from_file_uri(uri):
+    path = urlparse(uri).path
+    return url2pathname(path)
 
 
 def rename(conanfile, src, dst):
@@ -611,7 +634,6 @@ def collect_libs(conanfile, folder=None):
                     result.append(name)
     result.sort()
     return result
-
 
 
 # TODO: Do NOT document this yet. It is unclear the interface, maybe should be split

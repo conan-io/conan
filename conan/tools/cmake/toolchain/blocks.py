@@ -236,7 +236,9 @@ class AndroidSystemBlock(Block):
     template = textwrap.dedent("""
         # New toolchain things
         set(ANDROID_PLATFORM {{ android_platform }})
+        {% if android_stl %}
         set(ANDROID_STL {{ android_stl }})
+        {% endif %}
         set(ANDROID_ABI {{ android_abi }})
         include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
         """)
@@ -253,7 +255,7 @@ class AndroidSystemBlock(Block):
 
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
-        libcxx_str = str(self._conanfile.settings.compiler.libcxx)
+        libcxx_str = self._conanfile.settings.get_safe("compiler.libcxx")
 
         android_ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
         if not android_ndk_path:
