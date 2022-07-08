@@ -482,15 +482,17 @@ def test_toolchain_cache_variables():
 def test_android_c_library():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeToolchain"
 
             def configure(self):
-                del self.settings.compiler.libcxx
+                if self.settings.compiler != "msvc":
+                    del self.settings.compiler.libcxx
 
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@ -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo")
+    client.run("create . --name=foo --version=1.0 -s os=Android -s os.api_level=23 "
+               "-c tools.android:ndk_path=/foo")
