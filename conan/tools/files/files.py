@@ -230,7 +230,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
         else retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
-    download_cache = config["tools.files.download:download_cache"] if checksum else None
+    download_cache = config.get("tools.files.download:download_cache") if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download

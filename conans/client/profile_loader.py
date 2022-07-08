@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
@@ -118,6 +118,9 @@ class ProfileLoader:
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
+        if conf and any(CORE_CONF_PATTERN.match(c) for c in conf):
+            raise ConanException("[conf] 'core.*' configurations are not allowed in profiles.")
+
         result = Profile()
         for p in profiles:
             tmp = self.load_profile(p, cwd)
