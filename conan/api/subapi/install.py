@@ -50,7 +50,8 @@ class InstallAPI:
         _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
-        write_generators(conanfile)
+        app = ConanApp(self.conan_api.cache_folder)
+        write_generators(conanfile, app.hook_manager)
         call_system_requirements(conanfile)
 
 
