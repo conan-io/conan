@@ -1,5 +1,7 @@
+import json
 import os
 
+from conans.model.conf import BUILT_IN_CONFS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -45,3 +47,15 @@ def test_config_home_custom_install():
         client.save({"conanfile.py": GenConanfile()})
         client.run("install .")
         assert "Installing (downloading, building) binaries" in client.out
+
+
+def test_config_list():
+    """
+    'conan config list' shows all the built-in Conan configurations
+    """
+    client = TestClient()
+    client.run("config list")
+    for k, v in BUILT_IN_CONFS.items():
+        assert f"{k}: {v}" in client.out
+    client.run("config list --format=json")
+    assert json.dumps(BUILT_IN_CONFS, indent=4) == client.stdout

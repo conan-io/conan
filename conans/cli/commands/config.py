@@ -1,6 +1,5 @@
-import json
-
 from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conans.cli.commands import json_formatter
 from conans.cli.output import ConanOutput, Color
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
@@ -51,7 +50,7 @@ def config_home(conan_api, parser, subparser, *args):
     return home
 
 
-@conan_subcommand(formatters={"json": lambda x: json.dumps(x, indent=4)})
+@conan_subcommand(formatters={"json": json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
     Prints all the Conan available configurations: core and tools.
