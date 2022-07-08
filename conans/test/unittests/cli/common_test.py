@@ -15,12 +15,7 @@ from conans.test.utils.test_files import temp_folder
 def conan_api():
     tmp_folder = temp_folder()
     cache = ClientCache(tmp_folder)
-    save(None, cache.default_profile_path, textwrap.dedent("""\
-        [settings]
-        [options]
-        [tool_requires]
-        [conf]
-    """))
+    save(None, cache.default_profile_path, "")
     return ConanAPIV2(tmp_folder)
 
 
