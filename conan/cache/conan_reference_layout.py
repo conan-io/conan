@@ -27,10 +27,7 @@ class LayoutBase:
         return self._base_folder
 
     def remove(self):
-        try:
-            rmdir(self.base_folder)
-        except OSError as e:
-            raise ConanException(f"Couldn't remove folder {self.base_folder}: {str(e)}")
+        rmdir(self.base_folder)
 
 
 class RecipeLayout(LayoutBase):
@@ -76,12 +73,7 @@ class RecipeLayout(LayoutBase):
 
     def sources_remove(self):
         src_folder = self.source()
-        try:
-            rmdir(src_folder)  # This will remove the shortened path too if exists
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (src_folder, str(e)))
+        rmdir(src_folder)
 
     def export_remove(self):
         export_folder = self.export()
@@ -138,21 +130,13 @@ class PackageLayout(LayoutBase):
         return is_dirty(self.package())
 
     def build_remove(self):
-        try:
-            rmdir(self.build())
-        except OSError as e:
-            raise ConanException(f"Couldn't remove folder {self.build()}: {str(e)}")
+        rmdir(self.build())
 
     # TODO: cache2.0 locks
     def package_remove(self):
         # Here we could validate and check we own a write lock over this package
         tgz_folder = self.download_package()
         rmdir(tgz_folder)
-        try:
-            rmdir(self.package())
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (self.package(), str(e)))
+        rmdir(self.package())
         if is_dirty(self.package()):
             clean_dirty(self.package())

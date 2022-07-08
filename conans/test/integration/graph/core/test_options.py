@@ -58,7 +58,7 @@ class TestOptions(GraphManagerTest):
     def test_diamond_no_conflict(self):
         # app -> libb0.1 ---------------> liba0.1
         #    \-> libc0.1 (liba shared) -> liba0.1
-        # Just the first expended one will prevail
+        # Just the first expanded one will prevail
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requires("liba/0.1").
