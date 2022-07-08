@@ -1,6 +1,7 @@
 import os
 import platform
 from contextlib import contextmanager
+from pathlib import Path
 
 import six
 from six import string_types
@@ -259,6 +260,11 @@ class ConanFile(object):
         return self.folders.source_folder
 
     @property
+    def source_path(self) -> Path:
+        assert self.source_folder is not None, "`source_folder` is `None`"
+        return Path(self.source_folder)
+
+    @property
     def export_sources_folder(self):
         """points to the base source folder when calling source() and to the cache export sources
         folder while calling the exports_sources() method. Prepared in case we want to introduce a
@@ -266,16 +272,36 @@ class ConanFile(object):
         return self.folders.base_export_sources
 
     @property
+    def export_sources_path(self) -> Path:
+        assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
+        return Path(self.export_sources_folder)
+
+    @property
     def export_folder(self):
         return self.folders.base_export
+
+    @property
+    def export_path(self) -> Path:
+        assert self.export_folder is not None, "`export_folder` is `None`"
+        return Path(self.export_folder)
 
     @property
     def build_folder(self):
         return self.folders.build_folder
 
     @property
+    def build_path(self) -> Path:
+        assert self.build_folder is not None, "`build_folder` is `None`"
+        return Path(self.build_folder)
+
+    @property
     def package_folder(self):
         return self.folders.base_package
+
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
 
     @property
     def install_folder(self):
@@ -286,6 +312,11 @@ class ConanFile(object):
     def generators_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.generators_folder if self.folders.generators else self.install_folder
+
+    @property
+    def generators_path(self) -> Path:
+        assert self.generators_folder is not None, "`generators_folder` is `None`"
+        return Path(self.generators_folder)
 
     @property
     def imports_folder(self):
