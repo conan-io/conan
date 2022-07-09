@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
@@ -17,30 +18,14 @@ _expected_dep_xconfig = [
     "OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{name}_{name})",
 ]
 
-_expected_vars_xconfig = [
-    "CONAN_{name}_{name}_BINARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_C_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_CXX_COMPILER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LINKER_FLAGS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_PREPROCESSOR_DEFINITIONS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_INCLUDE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_RESOURCE_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LIBRARY_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_LIBRARIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -l{name}",
-    "CONAN_{name}_{name}_SYSTEM_LIBS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_FRAMEWORKS_DIRECTORIES[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] =",
-    "CONAN_{name}_{name}_FRAMEWORKS[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = -framework framework_{name}"
-]
-
 _expected_conf_xconfig = [
-    "#include \"{vars_name}\"",
-    "HEADER_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_INCLUDE_DIRECTORIES",
-    "GCC_PREPROCESSOR_DEFINITIONS_{name}_{name} = $(CONAN_{name}_{name}_PREPROCESSOR_DEFINITIONS",
-    "OTHER_CFLAGS_{name}_{name} = $(CONAN_{name}_{name}_C_COMPILER_FLAGS",
-    "OTHER_CPLUSPLUSFLAGS_{name}_{name} = $(CONAN_{name}_{name}_CXX_COMPILER_FLAGS",
-    "FRAMEWORK_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_FRAMEWORKS_DIRECTORIES",
-    "LIBRARY_SEARCH_PATHS_{name}_{name} = $(CONAN_{name}_{name}_LIBRARY_DIRECTORIES",
-    "OTHER_LDFLAGS_{name}_{name} = $(CONAN_{name}_{name}_LINKER_FLAGS) $(CONAN_{name}_{name}_LIBRARIES) $(CONAN_{name}_{name}_SYSTEM_LIBS) $(CONAN_{name}_{name}_FRAMEWORKS"
+    "HEADER_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "GCC_PREPROCESSOR_DEFINITIONS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_CFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_CPLUSPLUSFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "FRAMEWORK_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "LIBRARY_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "OTHER_LDFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = "
 ]
 
 
@@ -50,8 +35,6 @@ def expected_files(current_folder, configuration, architecture, sdk_version):
     deps = ["hello", "goodbye"]
     files.extend(
         [os.path.join(current_folder, "conan_{dep}_{dep}{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
-    files.extend(
-        [os.path.join(current_folder, "conan_{dep}_{dep}_vars{name}.xcconfig".format(dep=dep, name=name)) for dep in deps])
     files.append(os.path.join(current_folder, "conandeps.xcconfig"))
     return files
 
@@ -67,17 +50,10 @@ def check_contents(client, deps, configuration, architecture, sdk_version):
             line = var.format(name=dep_name)
             assert line in dep_xconfig
 
-        vars_name = "conan_{}_{}_vars{}.xcconfig".format(dep_name, dep_name,
-                                                      _get_filename(configuration, architecture, sdk_version))
-        conan_vars = client.load(vars_name)
-        for var in _expected_vars_xconfig:
-            line = var.format(name=dep_name, configuration=configuration, architecture=architecture,
-                              sdk="macosx", sdk_version=sdk_version)
-            assert line in conan_vars
-
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
-            assert var.format(vars_name=vars_name, name=dep_name) in conan_conf
+            assert var.format(name=dep_name, configuration=configuration, architecture=architecture,
+                              sdk="macosx", sdk_version=sdk_version) in conan_conf
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
@@ -110,3 +86,91 @@ def test_generator_files():
         assert '#include "conandeps.xcconfig"' in conan_config
 
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_aggregate_components():
+    client = TestClient()
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.includedirs = ["liba_include"]
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+
+    client.run("create . --name=liba --version=1.0")
+
+    r""""
+        1   a
+       / \ /
+      2   3
+       \ /
+        4   5  6
+        |   |  /
+         \ / /
+           7
+    """
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.components["libb_comp1"].includedirs = ["libb_comp1"]
+                self.cpp_info.components["libb_comp1"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp2"].includedirs = ["libb_comp2"]
+                self.cpp_info.components["libb_comp2"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp2"].requires = ["libb_comp1"]
+                self.cpp_info.components["libb_comp3"].includedirs = ["libb_comp3"]
+                self.cpp_info.components["libb_comp3"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp3"].requires = ["libb_comp1", "liba::liba"]
+                self.cpp_info.components["libb_comp4"].includedirs = ["libb_comp4"]
+                self.cpp_info.components["libb_comp4"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp4"].requires = ["libb_comp2", "libb_comp3"]
+                self.cpp_info.components["libb_comp5"].includedirs = ["libb_comp5"]
+                self.cpp_info.components["libb_comp5"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp6"].includedirs = ["libb_comp6"]
+                self.cpp_info.components["libb_comp6"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp7"].includedirs = ["libb_comp7"]
+                self.cpp_info.components["libb_comp7"].libdirs = ["mylibdir"]
+                self.cpp_info.components["libb_comp7"].requires = ["libb_comp4", "libb_comp5", "libb_comp6"]
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+
+    client.run("create . --name=libb --version=1.0")
+
+    client.run("install --requires=libb/1.0 -g XcodeDeps")
+
+    lib_entry = client.load("conan_libb.xcconfig")
+
+    for index in range(1, 8):
+        assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
+
+    component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
+    assert '#include "conan_liba_liba.xcconfig"' in component7_entry
+
+    component7_vars = client.load("conan_libb_libb_comp7_release_x86_64.xcconfig")
+
+    # all of the transitive required components and the component itself are added
+    for index in range(1, 8):
+        assert f"libb_comp{index}" in component7_vars
+
+    assert "mylibdir" in component7_vars
+
+    component4_vars = client.load("conan_libb_libb_comp4_release_x86_64.xcconfig")
+
+    # all of the transitive required components and the component itself are added
+    for index in range(1, 5):
+        assert f"libb_comp{index}" in component4_vars
+
+    for index in range(5, 8):
+        assert f"libb_comp{index}" not in component4_vars
+
+    # folders are aggregated
+    assert "mylibdir" in component4_vars

@@ -611,13 +611,14 @@ class TestClient(object):
         self.run(f"export . {user} {channel}")
         os.remove(os.path.join(self.current_folder, "conanfile.py"))
 
-    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
+    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None,
+                      main_branch="master"):
         if folder is not None:
             folder = os.path.join(self.current_folder, folder)
         else:
             folder = self.current_folder
         _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
-                                          origin_url=origin_url)
+                                          origin_url=origin_url, main_branch=main_branch)
         return commit
 
     def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
@@ -681,7 +682,7 @@ class TestClient(object):
         belonging to the computed package binaries
         """
         lines = self.out.splitlines()
-        line_req = lines.index("-------- Computing necessary packages ----------")
+        line_req = lines.index("-------- Computing necessary packages --------")
         line_req = lines.index("Requirements" if not build else "Build requirements", line_req)
         reqs = []
         for line in lines[line_req+1:]:

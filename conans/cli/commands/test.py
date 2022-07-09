@@ -32,7 +32,7 @@ def test(conan_api, parser, *args):
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
-    out.highlight("\n-------- Input profiles ----------")
+    out.title("Input profiles")
     out.info("Profile host:")
     out.info(profile_host.dumps())
     out.info("Profile build:")
@@ -44,7 +44,7 @@ def test(conan_api, parser, *args):
                                                          update=args.update,
                                                          lockfile=lockfile)
 
-    out.highlight("-------- Computing dependency graph ----------")
+    out.title("Computing dependency graph")
     check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
@@ -53,13 +53,13 @@ def test(conan_api, parser, *args):
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
-    out.highlight("\n-------- Computing necessary packages ----------")
+    out.title("Computing necessary packages")
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
 
-    out.highlight("\n-------- Installing packages ----------")
+    out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)

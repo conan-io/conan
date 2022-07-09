@@ -72,7 +72,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("Installing (downloading, building) binaries", self.client.out)
 
-    @pytest.mark.xfail(reason="New environment changed")
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . --user=lasote --channel=stable")
@@ -108,16 +107,6 @@ class ProfileTest(unittest.TestCase):
                       self.client.out)
 
         profile = '''
-        [env]
-        as
-        '''
-        save(clang_profile_path, profile)
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang",
-                        assert_error=True)
-        self.assertIn("Error reading 'clang' profile: Invalid env line 'as'",
-                      self.client.out)
-
-        profile = '''
         [settings]
         os =   a value
         '''
@@ -126,26 +115,6 @@ class ProfileTest(unittest.TestCase):
                         assert_error=True)
         # stripped "a value"
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.out)
-
-        profile = '''
-        include(default)
-        [env]
-        ENV_VAR =   a value
-        '''
-        save(clang_profile_path, profile)
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr clang")
-        self._assert_env_variable_printed("ENV_VAR", "a value")
-
-        profile = '''
-        include(default)
-        # Line with comments is not a problem
-        [env]
-        # Not even here
-        ENV_VAR =   a value
-        '''
-        save(clang_profile_path, profile)
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build -pr clang")
-        self._assert_env_variable_printed("ENV_VAR", "a value")
 
     @parameterized.expand([("", ), ("./local_profiles/", ), (None, )])
     def test_install_with_missing_profile(self, path):
@@ -337,21 +306,18 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
-    @pytest.mark.xfail(reason="New environment changed")
     def test_scopes_env(self):
         # Create a profile and use it
-        create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
-                       env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
-        self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export . --user=lasote --channel=stable")
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr scopes_env")
+        c = TestClient()
+        c.save({"profile": "include(default)\n[buildenv]\nCXX=/path/tomy/g++",
+                "conanfile.py": conanfile_scope_env})
 
-        self._assert_env_variable_printed("CC", "/path/tomy/gcc")
-        self._assert_env_variable_printed("CXX", "/path/tomy/g++")
+        c.run("build . -pr=profile")
+        assert "CXX=/path/tomy/g++" in c.out
 
         # The env variable shouldn't persist after install command
-        self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
-        self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
+        assert os.environ.get("CC", None) != "/path/tomy/gcc"
+        assert os.environ.get("CXX", None) != "/path/tomy/g++"
 
     @pytest.mark.xfail(reason="New environment changed")
     def test_test_package(self):
@@ -473,11 +439,6 @@ class ProfileAggregationTest(unittest.TestCase):
     [settings]
     os=Windows
     arch=x86_64
-
-    [env]
-    ENV1=foo
-    ENV2=bar
-
     """)
 
     profile2 = dedent("""
@@ -487,10 +448,6 @@ class ProfileAggregationTest(unittest.TestCase):
     compiler=msvc
     compiler.version=191
     compiler.runtime=dynamic
-
-    [env]
-    ENV1=foo2
-    ENV3=bar2
     """)
 
     conanfile = dedent("""

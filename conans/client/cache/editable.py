@@ -34,6 +34,11 @@ class EditablePackages:
         _tmp.revision = None
         return self._edited_refs.get(_tmp)
 
+    def get_path(self, ref):
+        editable = self.get(ref)
+        if editable is not None:
+            return editable["path"]
+
     def add(self, ref, path, output_folder=None):
         assert isinstance(ref, RecipeReference)
         _tmp = copy.copy(ref)

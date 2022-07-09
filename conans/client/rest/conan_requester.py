@@ -4,8 +4,8 @@ import os
 import platform
 import time
 
-import urllib3
 import requests
+import urllib3
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version

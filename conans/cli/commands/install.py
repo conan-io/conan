@@ -1,3 +1,4 @@
+import json
 import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
@@ -9,6 +10,11 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+
+
+def json_install(info):
+    deps_graph = info
+    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
 
 
 def _get_conanfile_path(path, cwd, py):
@@ -64,7 +70,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
-    out.highlight("-------- Input profiles ----------")
+    out.title("Input profiles")
     out.info("Profile host:")
     out.info(profile_host.dumps())
     out.info("Profile build:")
@@ -85,7 +91,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
                                                                 tool_requires=tool_requires,
                                                                 profile_host=profile_host)
 
-    out.highlight("-------- Computing dependency graph ----------")
+    out.title("Computing dependency graph")
     check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
@@ -94,7 +100,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
-    out.highlight("\n-------- Computing necessary packages ----------")
+    out.title("Computing necessary packages")
     if deps_graph.error:
         if allow_error:
             return deps_graph, lockfile
@@ -121,7 +127,7 @@ def common_graph_args(subparser):
     add_lockfile_args(subparser)
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_install})
 def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
@@ -166,10 +172,10 @@ def install(conan_api, parser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
-    out.highlight("\n-------- Installing packages ----------")
+    out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
 
-    out.highlight("\n-------- Finalizing install (deploy, generators) ----------")
+    out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        output_folder=output_folder,
@@ -178,3 +184,4 @@ def install(conan_api, parser, *args):
                                        )
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
+    return deps_graph
