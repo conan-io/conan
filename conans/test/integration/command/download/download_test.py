@@ -213,7 +213,7 @@ class Pkg(ConanFile):
 
     def test_download_with_python_requires(self):
         """ when having a python_require in a different repo, it cannot be ``conan download``
-        as the download runs from a single repo
+        as the download runs from a single repo. This test captures the failures
         """
         # https://github.com/conan-io/conan/issues/9548
         servers = OrderedDict([("tools", TestServer()),
@@ -232,9 +232,13 @@ class Pkg(ConanFile):
         self.assertIn("Downloading", c.out)
         c.run("remove * -f")
 
-        # FIXME: This fails, as it won't allow 2 remotes
-        c.run("download pkg/0.1 -r pkgs -r tools")
-        self.assertIn("Downloading", c.out)
-        # FIXME: This fails, because the python_requires is not in the "pkgs" repo
+        # This fails, as it won't allow 2 remotes
+        c.run("download pkg/0.1 -r pkgs -r tools", assert_error=True)
+        self.assertIn("-r can only be specified once", c.out)
+        # This fails, because the python_requires is not in the "pkgs" repo
+        c.run("download pkg/0.1 -r pkgs", assert_error=True)
+        self.assertIn("Unable to find 'tool/0.1' in remotes", c.out)
+        # solution, install first the python_requires
+        c.run("download tool/0.1 -r tools")
         c.run("download pkg/0.1 -r pkgs")
-        self.assertIn("Downloading", c.out)
+        # it doesn't fail anymore
