@@ -1,3 +1,4 @@
+import platform
 import pytest
 
 from conan.tools.cmake import CMake
@@ -39,4 +40,6 @@ def test_run_tests(generator, target):
     write_cmake_presets(conanfile, "toolchain", generator, {})
     cmake = CMake(conanfile)
     cmake.test()
-    assert "'--target' '%s'" % target in conanfile.command
+
+    search_pattern = "--target {}" if platform.system() == "Windows" else "'--target' '{}'"
+    assert search_pattern.format(target) in conanfile.command
