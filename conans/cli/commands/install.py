@@ -1,3 +1,4 @@
+import json
 import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
@@ -9,6 +10,11 @@ from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+
+
+def json_install(info):
+    deps_graph = info
+    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
 
 
 def _get_conanfile_path(path, cwd, py):
@@ -121,7 +127,7 @@ def common_graph_args(subparser):
     add_lockfile_args(subparser)
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_install})
 def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
@@ -178,3 +184,4 @@ def install(conan_api, parser, *args):
                                        )
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
+    return deps_graph

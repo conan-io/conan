@@ -477,3 +477,22 @@ def test_toolchain_cache_variables():
     assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
+
+
+def test_android_c_library():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+
+            def configure(self):
+                if self.settings.compiler != "msvc":
+                    del self.settings.compiler.libcxx
+
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=foo --version=1.0 -s os=Android -s os.api_level=23 "
+               "-c tools.android:ndk_path=/foo")

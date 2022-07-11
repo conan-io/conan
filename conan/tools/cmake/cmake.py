@@ -191,7 +191,8 @@ class CMake(object):
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)
-            target = "RUN_TESTS" if is_multi else "test"
+            is_ninja = "Ninja" in self._generator
+            target = "RUN_TESTS" if is_multi and not is_ninja else "test"
 
         # CTest behavior controlled by CTEST_ env-vars should be directly defined in [buildenv]
         self._build(build_type=build_type, target=target, cli_args=cli_args,

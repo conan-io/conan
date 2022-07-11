@@ -21,6 +21,7 @@ class parentLib(ConanFile):
 conanfile = """
 import os
 from conan import ConanFile
+from pathlib import Path
 
 class AConan(ConanFile):
     name = "lib"
@@ -39,6 +40,8 @@ class AConan(ConanFile):
 
     def source(self):
         assert(self.source_folder == os.getcwd())
+        assert(isinstance(self.source_path, Path))
+        assert(str(self.source_path) == self.source_folder)
 
         # Prevented to use them, it's dangerous, because the source is run only for the first
         # config, so only the first build_folder/package_folder would be modified
@@ -50,6 +53,8 @@ class AConan(ConanFile):
 
     def build(self):
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
 
         if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
@@ -57,10 +62,14 @@ class AConan(ConanFile):
             assert(self.source_folder == self.build_folder)
 
         assert(self.package_folder is not None)
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         self.copy_build_folder = self.build_folder
 
     def package(self):
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
 
         if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
@@ -71,7 +80,8 @@ class AConan(ConanFile):
 
     def package_info(self):
         assert(self.package_folder == os.getcwd())
-
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         assert(self.source_folder is None)
         assert(self.build_folder is None)
 """

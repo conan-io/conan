@@ -59,15 +59,15 @@ class Profile(object):
             for name, value in sorted(values.items()):
                 result.append("%s:%s=%s" % (package, name, value))
 
-        result.append("[options]")
-        result.append(self.options.dumps())
+        options_str = self.options.dumps()
+        if options_str:
+            result.append("[options]")
+            result.append(options_str)
 
-        result.append("[tool_requires]")
-        for pattern, req_list in self.tool_requires.items():
-            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
-
-        result.append("[env]")
-        result.append("")
+        if self.tool_requires:
+            result.append("[tool_requires]")
+            for pattern, req_list in self.tool_requires.items():
+                result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
         if self.conf:
             result.append("[conf]")
@@ -76,6 +76,9 @@ class Profile(object):
         if self.buildenv:
             result.append("[buildenv]")
             result.append(self.buildenv.dumps())
+
+        if result and result[-1] != "":
+            result.append("")
 
         return "\n".join(result).replace("\n\n", "\n")
 

@@ -1,6 +1,5 @@
 import hashlib
 import os
-import shutil
 
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
@@ -12,7 +11,7 @@ from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNot
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir
+from conans.util.files import rmdir, renamedir
 
 
 class DataCache:
@@ -176,12 +175,9 @@ class DataCache:
         new_path = self._get_path(pref)
 
         full_path = self._full_path(new_path)
-        if os.path.exists(full_path):
-            try:
-                rmdir(full_path)
-            except Exception:
-                raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
-        shutil.move(self._full_path(layout.base_folder), full_path)
+        rmdir(full_path)
+
+        renamedir(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
@@ -214,11 +210,8 @@ class DataCache:
         # TODO: cache2.0 probably we should not check this and move to other place or just
         #  avoid getting here if old and new paths are the same
         full_path = self._full_path(new_path)
-        try:
-            rmdir(full_path)
-        except Exception:
-            raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
-        shutil.move(self._full_path(layout.base_folder), full_path)
+        rmdir(full_path)
+        renamedir(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         # Wait until it finish to really update the DB

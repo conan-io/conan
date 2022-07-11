@@ -6,7 +6,6 @@ class GraphError(ConanException):
     LOOP = "graph loop"
     VERSION_CONFLICT = "version conflict"
     PROVIDE_CONFLICT = "provide conflict"
-    CONFIG_CONFLICT = "configuration conflict"
     MISSING_RECIPE = "missing recipe"
     RUNTIME = "runtime"
 
@@ -64,23 +63,6 @@ class GraphError(ConanException):
         result.prev_node = prev_node
         result.prev_require = prev_require
         result.base_previous = base_previous
-        node.error = base_previous.error = result
-        if prev_node:
-            prev_node.error = result
-        return result
-
-    @staticmethod
-    def conflict_config(node, require, prev_node, prev_require, base_previous,
-                        option, previous_value, new_value):
-        result = GraphError(GraphError.CONFIG_CONFLICT)
-        result.node = node
-        result.require = require
-        result.prev_node = prev_node
-        result.prev_require = prev_require
-        result.base_previous = base_previous
-        result.option = option
-        result.previous_value = previous_value
-        result.new_value = new_value
         node.error = base_previous.error = result
         if prev_node:
             prev_node.error = result

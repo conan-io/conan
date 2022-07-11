@@ -628,8 +628,10 @@ def test_create_format_json_and_deps_cpp_info():
     for n in nodes:
         ref = n["ref"]
         if ref == hello_pkg_ref:
+            assert n['binary'] == "Build"
             hello_cpp_info = n['cpp_info']
         elif ref == pkg_pkg_ref:
+            assert n['binary'] == "Cache"
             pkg_cpp_info = n['cpp_info']
 
     assert hello_cpp_info and pkg_cpp_info
@@ -755,10 +757,10 @@ def test_defaults_in_components(with_layout):
 
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
-    assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
-    assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"BINDIRS: \['.+bin'\]", str(client.out))
+    assert re.search(r"LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search(r"INCLUDEDIRS: \['.+include'\]", str(client.out))
     assert "WARN: RES DIRS: []"
-    assert re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
-    assert re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
     assert "WARN: FOO RESDIRS: []" in client.out
