@@ -6,7 +6,7 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
 
 _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
-               "MesonToolchain", "MSBuildDeps", "QbsToolchain",
+               "MesonToolchain", "MesonDeps", "MSBuildDeps", "QbsToolchain",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
@@ -37,6 +37,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "MesonToolchain":
         from conan.tools.meson import MesonToolchain
         return MesonToolchain
+    elif generator_name == "MesonDeps":
+        from conan.tools.meson import MesonDeps
+        return MesonDeps
     elif generator_name == "MSBuildDeps":
         from conan.tools.microsoft import MSBuildDeps
         return MSBuildDeps

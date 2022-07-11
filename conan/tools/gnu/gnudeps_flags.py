@@ -48,7 +48,6 @@ class GnuDepsFlags(object):
         os_ = self._conanfile.settings.get_safe("os")
         if not frameworks or not is_apple_os(os_):
             return []
-        # FIXME: Missing support for subsystems
         compiler = self._conanfile.settings.get_safe("compiler")
         if str(compiler) not in self._GCC_LIKE:
             return []
@@ -60,15 +59,14 @@ class GnuDepsFlags(object):
     def _format_include_paths(self, include_paths):
         if not include_paths:
             return []
-        # FIXME: Missing support for subsystems
-        return ["-I%s" % (self._adjust_path(include_path))
+        pattern = "/I%s" if is_msvc(self._conanfile) else "-I%s"
+        return [pattern % (self._adjust_path(include_path))
                 for include_path in include_paths if include_path]
 
     def _format_library_paths(self, library_paths):
         if not library_paths:
             return []
-        # FIXME: Missing support for subsystems
-        pattern = "-LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
+        pattern = "/LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
         return [pattern % self._adjust_path(library_path)
                 for library_path in library_paths if library_path]
 
