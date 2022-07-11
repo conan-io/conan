@@ -52,3 +52,39 @@ def test_basic_validate_build_test():
     myjson = json.loads(t.load("myjson"))
     assert myjson[0]["invalid_build"] is False
     assert "invalid_build_reason" not in myjson[0]
+
+
+def test_with_options_validate_build_test():
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conans.errors import ConanInvalidConfiguration
+
+    class myConan(ConanFile):
+        name = "foo"
+        version = "1.0"
+        options = {"my_option": [True, False]}
+        default_options = {"my_option": True}
+
+        def validate_build(self):
+            if not self.options.my_option:
+                raise ConanInvalidConfiguration("This doesn't build with False option")
+
+    """)
+    t.save({"conanfile.py": conanfile})
+    t.run("export .")
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conans.errors import ConanInvalidConfiguration
+
+        class myConan(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "foo/1.0"
+        """)
+    t.save({"consumer.py": consumer})
+    t.run("create consumer.py --build missing -o foo/*:my_option=False", assert_error=True)
+    assert "foo/1.0: Cannot build for this configuration: This doesn't build " \
+           "with False option" in t.out
+
+    t.run("create consumer.py --build missing -o foo/*:my_option=True")
