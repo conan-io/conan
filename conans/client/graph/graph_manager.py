@@ -9,7 +9,7 @@ from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
     BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import ConanException, conanfile_exception_formatter, ConanInvalidConfiguration
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLock, GraphLockFile
