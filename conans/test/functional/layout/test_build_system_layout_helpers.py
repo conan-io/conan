@@ -15,7 +15,7 @@ def conanfile():
     conanfile = str(GenConanfile()
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
-                    .with_import("from conan.tools.layout import {ly}")
+                    .with_import("from conan.tools.microsoft import vs_layout")
                     .with_import("from conan.tools.files import AutoPackager, save"))
 
     conanfile += """
@@ -26,7 +26,7 @@ def conanfile():
         save(self, "{libpath}/mylib.lib", "")
 
     def layout(self):
-        {ly}(self)
+        vs_layout(self)
 
     def package(self):
         AutoPackager(self).run()
@@ -49,7 +49,7 @@ def test_layout_in_cache(conanfile, build_type, arch):
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
     ref = RecipeReference.loads("lib/1.0")
     pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
-                         conanfile=conanfile.format(ly="vs_layout", libpath=libpath))
+                         conanfile=conanfile.format(libpath=libpath))
     bf = client.cache.pkg_layout(pref).build()
     pf = client.cache.pkg_layout(pref).package()
 
@@ -70,7 +70,7 @@ def test_layout_with_local_methods(conanfile, build_type, arch):
     client = TestClient()
     libarch = subfolders_arch.get(arch)
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
-    client.save({"conanfile.py": conanfile.format(ly="vs_layout", libpath=libpath)})
+    client.save({"conanfile.py": conanfile.format(libpath=libpath)})
     client.run("install . --name=lib --version=1.0 -s build_type={} -s arch={}".format(build_type, arch))
     client.run("source .")
     # Check the source folder (release)
