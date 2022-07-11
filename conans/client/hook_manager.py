@@ -5,7 +5,8 @@ from conans.errors import ConanException
 
 valid_hook_methods = ["pre_export", "post_export",
                       "pre_source", "post_source",
-                      "pre_build", "post_build",
+                      "pre_generate", "post_generate",
+                      "pre_build", "post_build", "post_build_fail",
                       "pre_package", "post_package",
                       "pre_package_info", "post_package_info"]
 
