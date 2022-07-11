@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -19,5 +20,6 @@ def test_basic_layout_subproject():
         """)
     c.save({"pkg/conanfile.py": conanfile})
     c.run("install pkg")
+    ext = "sh" if platform.system() != "Windows" else "bat"
     assert os.path.isfile(os.path.join(c.current_folder, "pkg", "build-release", "conan",
-                                       "conanautotoolstoolchain.bat"))
+                                       "conanautotoolstoolchain.{}".format(ext)))
