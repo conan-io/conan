@@ -1,6 +1,7 @@
 import json
 import textwrap
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -73,15 +74,7 @@ def test_with_options_validate_build_test():
     """)
     t.save({"conanfile.py": conanfile})
     t.run("export .")
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-        from conans.errors import ConanInvalidConfiguration
-
-        class myConan(ConanFile):
-            name = "consumer"
-            version = "1.0"
-            requires = "foo/1.0"
-        """)
+    consumer = GenConanfile().with_require("foo/1.0").with_name("consumer").with_version("1.0")
     t.save({"consumer.py": consumer})
     t.run("create consumer.py --build missing -o foo/*:my_option=False", assert_error=True)
     assert "foo/1.0: Cannot build for this configuration: This doesn't build " \
