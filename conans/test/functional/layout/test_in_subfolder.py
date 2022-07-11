@@ -130,7 +130,8 @@ def test_exports_sources_common_code_layout():
 
             def layout(self):
                 self.folders.root = ".."
-                cmake_layout(self, subfolder="pkg")
+                self.folders.subproject = "pkg"
+                cmake_layout(self)
 
             def export_sources(self):
                 source_folder = os.path.join(self.recipe_folder, "..")

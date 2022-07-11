@@ -15,13 +15,14 @@ def vs_layout(conanfile):
         if not arch:
             raise ConanException("The 'vs_layout' doesn't "
                                  "work with the arch '{}'".format(conanfile.settings.arch))
-        base = os.path.join(arch, str(conanfile.settings.build_type))
+        bindirs = os.path.join(arch, str(conanfile.settings.build_type))
     else:
-        base = str(conanfile.settings.build_type)
+        bindirs = str(conanfile.settings.build_type)
 
-    conanfile.folders.build = "."
-    conanfile.folders.generators = "conan"
-    conanfile.folders.source = "."
-    conanfile.cpp.build.libdirs = [base]
-    conanfile.cpp.build.bindirs = [base]
+    subproject = conanfile.folders.subproject
+    conanfile.folders.build = subproject or "."
+    conanfile.folders.generators = os.path.join(subproject, "conan") if subproject else "conan"
+    conanfile.folders.source = subproject or "."
+    conanfile.cpp.build.libdirs = [bindirs]
+    conanfile.cpp.build.bindirs = [bindirs]
     conanfile.cpp.source.includedirs = ["include"]
