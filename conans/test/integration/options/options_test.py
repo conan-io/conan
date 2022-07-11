@@ -337,6 +337,125 @@ equal/1.0.0@user/testing:opt=a=b
         assert "Possible values are ['A', 'N', 'Y']" in c.out
 
 
+class TestOptionsPriorities:
+    # https://github.com/conan-io/conan/issues/11571
+
+    @pytest.fixture
+    def _client(self):
+        lib1 = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Lib1Conan(ConanFile):
+                name = "lib1"
+                version = "1.0"
+                options = {"foobar": [True, False]}
+                default_options = {"foobar": False}
+            """)
+        lib2 = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Lib2Conan(ConanFile):
+                name = "lib2"
+                version = "1.0"
+                options = {"logic_for_foobar": [True, False]}
+                default_options = {"logic_for_foobar": False}
+
+                def requirements(self):
+                    self.requires("lib1/1.0")
+
+                def configure(self):
+                    self.options["lib1/*"].foobar = self.options.logic_for_foobar
+            """)
+        c = TestClient()
+
+        c.save({"lib1/conanfile.py": lib1,
+                "lib2/conanfile.py": lib2})
+
+        c.run("create lib1 -o lib1/*:foobar=True")
+        c.run("create lib1 -o lib1/*:foobar=False")
+        c.run("create lib2 -o lib2/*:logic_for_foobar=True")
+        c.run("create lib2 -o lib2/*:logic_for_foobar=False")
+        return c
+
+    @staticmethod
+    def _app(lib1, lib2, configure):
+        app = textwrap.dedent("""
+           from conan import ConanFile
+
+           class App(ConanFile):
+
+              def requirements(self):
+                  self.requires("{}/1.0")
+                  self.requires("{}/1.0")
+
+              def {}(self):
+                  self.options["lib2/*"].logic_for_foobar = True
+                  self.options["lib1/*"].foobar = False
+
+              def generate(self):
+                  self.output.info("LIB1 FOOBAR: {{}}".format(
+                                                 self.dependencies["lib1"].options.foobar))
+                  self.output.info("LIB2 LOGIC: {{}}".format(
+                                              self.dependencies["lib2"].options.logic_for_foobar))
+           """)
+        return app.format(lib1, lib2, configure)
+
+    def test_profile_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+        # Now swap order
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_lib1_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_lib2_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_consumer_configure_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+        # Now swap order
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+
 def test_configurable_default_options():
     # https://github.com/conan-io/conan/issues/11487
     c = TestClient()
