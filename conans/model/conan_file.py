@@ -1,5 +1,10 @@
 import os
 
+import platform
+from contextlib import contextmanager
+from pathlib import Path
+
+
 from conans.cli.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
@@ -325,6 +330,11 @@ class ConanFile:
         return self.folders.source_folder
 
     @property
+    def source_path(self) -> Path:
+        assert self.source_folder is not None, "`source_folder` is `None`"
+        return Path(self.source_folder)
+
+    @property
     def export_sources_folder(self):
         """
         The value depends on the method you access it:
@@ -340,8 +350,18 @@ class ConanFile:
         return self.folders.base_export_sources
 
     @property
+    def export_sources_path(self) -> Path:
+        assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
+        return Path(self.export_sources_folder)
+
+    @property
     def export_folder(self):
         return self.folders.base_export
+
+    @property
+    def export_path(self) -> Path:
+        assert self.export_folder is not None, "`export_folder` is `None`"
+        return Path(self.export_folder)
 
     @property
     def build_folder(self):
@@ -353,6 +373,11 @@ class ConanFile:
         :return: A string with the path to the build folder.
         """
         return self.folders.build_folder
+
+    @property
+    def build_path(self) -> Path:
+        assert self.build_folder is not None, "`build_folder` is `None`"
+        return Path(self.build_folder)
 
     @property
     def package_folder(self):
@@ -367,6 +392,16 @@ class ConanFile:
     @property
     def generators_folder(self):
         return self.folders.generators_folder
+
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
+
+    @property
+    def generators_path(self) -> Path:
+        assert self.generators_folder is not None, "`generators_folder` is `None`"
+        return Path(self.generators_folder)
 
     def source(self):
         pass
