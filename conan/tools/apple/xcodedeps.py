@@ -282,7 +282,7 @@ class XcodeDeps(object):
                 public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
                                dep.dependencies.direct_host.items() if r.visible]
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                root_content = self.get_content_for_component(dep_name, dep_name, [dep.cpp_info],
+                root_content = self.get_content_for_component(require, dep_name, dep_name, [dep.cpp_info],
                                                               required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
