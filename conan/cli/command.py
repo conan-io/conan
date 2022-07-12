@@ -1,8 +1,8 @@
 import argparse
 import textwrap
 
-from conans.cli.commands import add_log_level_args, process_log_level_args
-from conans.cli.output import cli_out_write
+from conan.cli.commands import add_log_level_args, process_log_level_args
+from conan.output import cli_out_write
 from conans.errors import ConanException
 
 COMMAND_GROUPS = {

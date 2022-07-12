@@ -1,6 +1,6 @@
-from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conans.cli.commands import json_formatter
-from conans.cli.output import ConanOutput, Color
+from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.commands import json_formatter
+from conan.output import ConanOutput, Color
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 

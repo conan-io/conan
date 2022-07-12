@@ -4,7 +4,7 @@ import shutil
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
-from conans.cli.output import ConanOutput
+from conan.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir

@@ -3,7 +3,7 @@ import os
 from shutil import which
 
 from conan.tools.build import cmd_args_to_string
-from conans.cli.output import ConanOutput
+from conan.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.env import get_env

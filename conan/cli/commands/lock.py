@@ -1,11 +1,11 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
     conan_subcommand
-from conans.cli.commands import make_abs_path
-from conans.cli.commands.install import common_graph_args, graph_compute, _get_conanfile_path
-from conans.cli.common import save_lockfile_out, get_lockfile
-from conans.cli.output import ConanOutput
+from conan.cli.commands import make_abs_path
+from conan.cli.commands.install import common_graph_args, graph_compute, _get_conanfile_path
+from conan.cli.common import save_lockfile_out, get_lockfile
+from conan.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference

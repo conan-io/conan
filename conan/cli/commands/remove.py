@@ -1,8 +1,5 @@
-import fnmatch
-
 from conan.api.conan_api import ConanAPIV2
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conans.cli.conan_app import ConanApp
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
 

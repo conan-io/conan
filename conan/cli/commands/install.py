@@ -1,13 +1,13 @@
 import json
 import os
 
-from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
-from conans.cli.commands import make_abs_path
-from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
+from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
+from conan.cli.commands import make_abs_path
+from conan.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \
     add_reference_args, scope_options, save_lockfile_out
-from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
-from conans.cli.output import ConanOutput
+from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
+from conan.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 

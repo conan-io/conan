@@ -1,6 +1,6 @@
 import unittest
 
-from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
+from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.test.utils.tools import TestClient
 
 

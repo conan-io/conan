@@ -1,12 +1,12 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conans.cli.commands.create import test_package
-from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.commands.create import test_package
+from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     get_multiple_remotes, add_lockfile_args, save_lockfile_out
-from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
-from conans.cli.output import ConanOutput
+from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
+from conan.output import ConanOutput
 from conans.model.recipe_ref import RecipeReference
 
 

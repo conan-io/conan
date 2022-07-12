@@ -2,8 +2,8 @@ import fnmatch
 import json
 
 from conans.assets import templates
-from conans.cli.formatters import get_template
-from conans.cli.output import ConanOutput, Color
+from conan.cli.formatters import get_template
+from conan.output import ConanOutput, Color
 from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
 from conans.client.installer import build_id

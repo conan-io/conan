@@ -1,8 +1,8 @@
 from multiprocessing.pool import ThreadPool
 
 from conan.api.conan_api import ConanAPIV2
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conans.cli.output import ConanOutput
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.output import ConanOutput
 from conans.errors import ConanException
 
 

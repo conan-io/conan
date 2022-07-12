@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.output import ConanOutput
+from conan.output import ConanOutput
 from conans.client.cache.cache import ClientCache
 from conans.migrations import Migrator
 from conans.util.files import load, save

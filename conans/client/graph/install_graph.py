@@ -2,7 +2,7 @@ import json
 import os
 import textwrap
 
-from conans.cli.output import ConanOutput
+from conan.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException

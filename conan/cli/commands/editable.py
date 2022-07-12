@@ -1,10 +1,10 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conans.cli.commands import make_abs_path
-from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.conan_app import ConanApp
-from conans.cli.output import ConanOutput
+from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.commands import make_abs_path
+from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.conan_app import ConanApp
+from conan.output import ConanOutput
 from conans.model.recipe_ref import RecipeReference
 
 

@@ -1,9 +1,9 @@
 import json
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS
-from conans.cli.commands.install import _get_conanfile_path
-from conans.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
+from conan.cli.command import conan_command, COMMAND_GROUPS
+from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
     add_lockfile_args, add_reference_args, scope_options, save_lockfile_out
 
 
