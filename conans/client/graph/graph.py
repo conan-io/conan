@@ -91,6 +91,8 @@ class Node(object):
         self.id_direct_prefs = None
         self.id_indirect_prefs = None
 
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+
     @property
     def id(self):
         return self._id
