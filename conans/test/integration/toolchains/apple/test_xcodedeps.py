@@ -187,9 +187,7 @@ def test_xcodedeps_cppinfo_requires():
     """
     client = TestClient()
     lib_a = textwrap.dedent("""
-        import os
         from conan import ConanFile
-        from conan.tools.files import copy
 
         class lib_aConan(ConanFile):
             name = "lib_a"
@@ -204,9 +202,7 @@ def test_xcodedeps_cppinfo_requires():
         """)
 
     lib = textwrap.dedent("""
-        import os
         from conan import ConanFile
-        from conan.tools.files import copy
 
 
         class lib_{name}Conan(ConanFile):
