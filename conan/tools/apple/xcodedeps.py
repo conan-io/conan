@@ -122,13 +122,31 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, transitive_cpp_infos):
+    def _conf_xconfig_file(self, require, pkg_name, comp_name, transitive_cpp_infos):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
         def _merged_vars(name):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
+
+        def _process_traits():
+            if not require.headers:
+                fields["include_dirs"] = ""
+
+            if not require.libs:
+                fields["lib_dirs"] = ""
+                fields["libs"] = ""
+                fields["system_libs"] = ""
+                fields["frameworkdirs"] = ""
+                fields["frameworks"] = ""
+
+            if not require.libs and not require.headers:
+                fields["definitions"] = ""
+                fields["c_compiler_flags"] = ""
+                fields["cxx_compiler_flags"] = ""
+                fields["linker_flags"] = ""
+                fields["exe_flags"] = ""
 
         fields = {
             'pkg_name': pkg_name,
@@ -137,7 +155,7 @@ class XcodeDeps(object):
             'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
             'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in _merged_vars("system_libs")),
-            'frameworksdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
+            'frameworkdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
             'frameworks': " ".join("-framework {}".format(framework) for framework in _merged_vars("frameworks")),
             'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("defines")),
             'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cflags")),
@@ -146,6 +164,8 @@ class XcodeDeps(object):
             'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
+
+        _process_traits()
 
         template = Template(self._conf_xconfig)
         content_multi = template.render(**fields)
@@ -197,13 +217,13 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
-    def get_content_for_component(self, pkg_name, component_name, transitive_internal, transitive_external):
+    def get_content_for_component(self, require, pkg_name, component_name, transitive_internal, transitive_external):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, transitive_internal)
+        result[props_name] = self._conf_xconfig_file(require, pkg_name, component_name, transitive_internal)
 
         # The entry point for each package
         file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
@@ -220,8 +240,8 @@ class XcodeDeps(object):
         # All components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        all_deps = list(host_req.values()) + list(test_req.values())
-        for dep in all_deps:
+
+        for require, dep in list(host_req.items()) + list(test_req.items()):
 
             dep_name = _format_name(dep.ref.name)
 
@@ -260,7 +280,7 @@ class XcodeDeps(object):
                     transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
                     transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
-                    component_content = self.get_content_for_component(dep_name, comp_name,
+                    component_content = self.get_content_for_component(require, dep_name, comp_name,
                                                                        transitive_internal,
                                                                        transitive_external)
                     include_components_names.append((dep_name, comp_name))
