@@ -21,7 +21,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
-    _check_cppstd(conanfile, cppstd, operator.lt, "lower", gnu_extensions)
+    _check_cppstd(conanfile, cppstd, operator.lt, gnu_extensions)
 
 
 def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -41,7 +41,7 @@ def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Maximum cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
-    _check_cppstd(conanfile, cppstd, operator.gt, "higher", gnu_extensions)
+    _check_cppstd(conanfile, cppstd, operator.gt, gnu_extensions)
 
 
 def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -118,7 +118,7 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     return None
 
 
-def _check_cppstd(conanfile, cppstd, comparator, comparator_error_string, gnu_extensions) -> bool:
+def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions) -> bool:
     """ Check if current cppstd fits the version required according to a given comparator.
 
         In case the current cppstd doesn't fit the maximum version required
@@ -160,9 +160,7 @@ def _check_cppstd(conanfile, cppstd, comparator, comparator_error_string, gnu_ex
     if not compare(current_cppstd, cppstd, comparator):
         raise ConanInvalidConfiguration(
             "Current cppstd ({}) is {} than the required C++ standard ({}).".format(
-                current_cppstd, comparator_error_string, cppstd))
-
-
+                current_cppstd, "higher" if comparator == operator.gt else "lower", cppstd))
 
 def _apple_clang_supported_cppstd(version):
     """
