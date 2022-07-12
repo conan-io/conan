@@ -137,7 +137,7 @@ class XcodeDeps(object):
             'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
             'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in _merged_vars("system_libs")),
-            'frameworksdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
+            'frameworkdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
             'frameworks': " ".join("-framework {}".format(framework) for framework in _merged_vars("frameworks")),
             'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("defines")),
             'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cflags")),
