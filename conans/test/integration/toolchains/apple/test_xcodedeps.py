@@ -195,7 +195,6 @@ def test_xcodedeps_cppinfo_requires():
             name = "lib_a"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            exports_sources = "include/*"
 
             def package_info(self):
                 self.cpp_info.components["cmp1"].includedirs = ["include"]
@@ -214,7 +213,6 @@ def test_xcodedeps_cppinfo_requires():
             name = "lib_{name}"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            exports_sources = "include/*"
 
             def requirements(self):
                 self.requires("lib_a/1.0")
