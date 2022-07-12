@@ -137,5 +137,6 @@ class MesonToolchainTest(TestMesonBase):
             ext = "dylib" if platform.system() == "Darwin" else "so"
             assert os.path.exists(os.path.join(package_folder, "bin", "demo"))
             assert os.path.exists(os.path.join(package_folder, "lib", "libhello." + ext))
+        # res/tutorial -> tutorial is being added automatically by Meson
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file1.txt"))
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file2.txt"))
