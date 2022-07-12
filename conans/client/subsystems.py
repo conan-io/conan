@@ -22,8 +22,8 @@ Potential scenarios:
 import os
 import platform
 import re
-import subprocess
 
+from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException
 
 WINDOWS = "windows"
@@ -88,7 +88,7 @@ def _escape_windows_cmd(command):
 
         Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
     """
-    quoted_arg = subprocess.list2cmdline([command])
+    quoted_arg = cmd_args_to_string([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 

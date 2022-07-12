@@ -1,6 +1,6 @@
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname
-from conan.tools.build import args_to_string
+from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
     build_type_link_flags
@@ -207,13 +207,13 @@ class AutotoolsToolchain:
     def generate_args(self):
         configure_args = []
         configure_args.extend(self.configure_args)
-        user_args_str = args_to_string(self.configure_args)
+        user_args_str = cmd_args_to_string(self.configure_args)
         for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
             if var and flag not in user_args_str:
                 configure_args.append('--{}={}'.format(flag, var))
 
-        args = {"configure_args": args_to_string(configure_args),
-                "make_args":  args_to_string(self.make_args),
-                "autoreconf_args": args_to_string(self.autoreconf_args)}
+        args = {"configure_args": cmd_args_to_string(configure_args),
+                "make_args":  cmd_args_to_string(self.make_args),
+                "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
 
         save_toolchain_args(args, namespace=self._namespace)

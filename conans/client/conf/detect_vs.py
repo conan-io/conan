@@ -2,6 +2,7 @@ import json
 import os
 from shutil import which
 
+from conan.tools.build import cmd_args_to_string
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -149,7 +150,8 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         from conans.util.runners import check_output_runner
-        output = check_output_runner(arguments).strip()
+        cmd = cmd_args_to_string(arguments)
+        output = check_output_runner(cmd).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()

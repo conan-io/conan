@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.build import build_jobs, args_to_string
+from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
@@ -128,7 +128,7 @@ class CMake(object):
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
-        arg_list = ['"{}"'.format(bf), build_config, args_to_string(args)]
+        arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
