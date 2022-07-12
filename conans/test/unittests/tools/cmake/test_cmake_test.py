@@ -42,5 +42,5 @@ def test_run_tests(generator, target):
     cmake = CMake(conanfile)
     cmake.test()
 
-    search_pattern = "--target {}" if platform.system() == "Windows" else "'--target' '{}'"
+    search_pattern = "--target {}"
     assert search_pattern.format(target) in conanfile.command

@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.build import build_jobs, args_to_string
+from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
@@ -49,7 +49,7 @@ class Autotools(object):
         configure_args = []
         configure_args.extend(args or [])
 
-        self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args))
+        self._configure_args = "{} {}".format(self._configure_args, cmd_args_to_string(configure_args))
 
         configure_cmd = "{}/configure".format(script_folder)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
@@ -99,7 +99,7 @@ class Autotools(object):
                      ``autoreconf`` call.
         """
         args = args or []
-        command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
+        command = join_arguments(["autoreconf", self._autoreconf_args, cmd_args_to_string(args)])
         with chdir(self, self._conanfile.source_folder):
             self._conanfile.run(command)
 
