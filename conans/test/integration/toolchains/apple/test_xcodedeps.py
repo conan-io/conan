@@ -184,8 +184,8 @@ def test_xcodedeps_frameworkdirs():
         from conan import ConanFile
         class LibConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-        def package_info(self):
-            self.cpp_info.frameworkdirs = ["lib_a_frameworkdir"]
+            def package_info(self):
+                self.cpp_info.frameworkdirs = ["lib_a_frameworkdir"]
         """)
 
     client.save({"conanfile.py": conanfile_py})
@@ -195,4 +195,4 @@ def test_xcodedeps_frameworkdirs():
 
     lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
 
-    assert "lib_a_frameworkdir" not in lib_a_xcconfig
+    assert "lib_a_frameworkdir" in lib_a_xcconfig
