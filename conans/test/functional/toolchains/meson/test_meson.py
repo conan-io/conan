@@ -1,8 +1,11 @@
 import os
 import textwrap
 
+from conan.tools.files import replace_in_file
+from conans.model.ref import ConanFileReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
+from conans.test.utils.mocks import MockConanfile
 
 
 class MesonToolchainTest(TestMesonBase):
@@ -58,7 +61,7 @@ class MesonToolchainTest(TestMesonBase):
     executable('demo', 'main.cpp', link_with: hello)
     """)
 
-    def test_build(self):
+    def test_definition_of_global_options(self):
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
@@ -94,3 +97,38 @@ class MesonToolchainTest(TestMesonBase):
         self.assertNotIn("needs_exe_wrapper", content)
 
         self._check_binary()
+
+    def test_meson_default_dirs(self):
+        self.t.run("new hello/1.0 -m meson_exe")
+        # self.t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
+
+        _meson_build = textwrap.dedent("""
+        project('tutorial', 'cpp')
+        # Creating specific library
+        hello = library('hello', 'src/hello.cpp', install: true)
+        # Creating specific executable
+        executable('demo', 'src/main.cpp', link_with: hello, install: true)
+        # Creating specific data in src/ (they're going to be exported)
+        install_data(['src/file1.txt', 'src/file2.txt'])
+        """)
+        # Replace meson.build
+        self.t.save({"meson.build": _meson_build,
+                     "src/file1.txt": "", "src/file2.txt": ""})
+        # resdirs is "" by default, putting "res" as desired value
+        replace_in_file(MockConanfile({}),
+                        os.path.join(self.t.current_folder, "conanfile.py"),
+                        'self.folders.build = "build"',
+                        'self.folders.build = "build"\n        self.cpp.package.resdirs = ["res"]')
+        # Replace correct executable
+        replace_in_file(MockConanfile({}),
+                        os.path.join(self.t.current_folder, "test_package", "conanfile.py"),
+                        'self.run("hello", env="conanrun")',
+                        'self.run("demo", env="conanrun")')
+        self.t.run("create .")
+        ref = ConanFileReference.loads("hello/1.0")
+        cache_package_folder = self.t.cache.package_layout(ref).packages()
+        package_folder = os.path.join(cache_package_folder, os.listdir(cache_package_folder)[0])
+        assert os.path.exists(os.path.join(package_folder, "lib", "libhello.dylib"))
+        assert os.path.exists(os.path.join(package_folder, "bin", "demo"))
+        assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file1.txt"))
+        assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file2.txt"))

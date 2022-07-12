@@ -30,8 +30,6 @@ class MesonInstall(TestMesonBase):
 
             def generate(self):
                 tc = MesonToolchain(self)
-                # https://mesonbuild.com/Release-notes-for-0-50-0.html#libdir-defaults-to-lib-when-cross-compiling
-                tc.project_options["libdir"] = "lib"
                 tc.generate()
 
             def build(self):
@@ -42,11 +40,6 @@ class MesonInstall(TestMesonBase):
             def package(self):
                 meson = Meson(self)
                 meson.install()
-
-                # https://mesonbuild.com/FAQ.html#why-does-building-my-project-with-msvc-output-static-libraries-called-libfooa
-                if self.settings.compiler == 'Visual Studio' and not self.options.shared:
-                    shutil.move(os.path.join(self.package_folder, "lib", "libhello.a"),
-                                os.path.join(self.package_folder, "lib", "hello.lib"))
 
             def package_info(self):
                 self.cpp_info.libs = ['hello']

@@ -19,7 +19,7 @@ class TestMesonBase(unittest.TestCase):
     def _settings(self):
         settings_macosx = {"compiler": "apple-clang",
                            "compiler.libcxx": "libc++",
-                           "compiler.version": "13.0",
+                           "compiler.version": "12.0",
                            "arch": "x86_64",
                            "build_type": "Release"}
 
@@ -47,7 +47,7 @@ class TestMesonBase(unittest.TestCase):
         if platform.system() == "Darwin":
             self.assertIn("main __x86_64__ defined", self.t.out)
             self.assertIn("main __apple_build_version__", self.t.out)
-            self.assertIn("main __clang_major__13", self.t.out)
+            self.assertIn("main __clang_major__12", self.t.out)
             # TODO: check why __clang_minor__ seems to be not defined in XCode 12
             # commented while migrating to XCode12 CI
             # self.assertIn("main __clang_minor__0", self.t.out)
