@@ -201,18 +201,6 @@ def test_xcodedeps_traits():
         self.cpp_info.components["cmp2"].frameworkdirs = ["cmp2_frameworkdir"]
         self.cpp_info.components["cmp1"].frameworks = ["cmp1_framework"]
         self.cpp_info.components["cmp2"].frameworks = ["cmp2_framework"]
-        self.cpp_info.components["cmp1"].defines = ["cmp1_define"]
-        self.cpp_info.components["cmp2"].defines = ["cmp2_define"]
-        self.cpp_info.components["cmp1"].cflags = ["cmp1_cflag"]
-        self.cpp_info.components["cmp2"].cflags = ["cmp2_cflag"]
-        self.cpp_info.components["cmp1"].cflags = ["cmp1_cflag"]
-        self.cpp_info.components["cmp2"].cflags = ["cmp2_cflag"]
-        self.cpp_info.components["cmp1"].cxxflags = ["cmp1_cxxflag"]
-        self.cpp_info.components["cmp2"].cxxflags = ["cmp2_cxxflag"]
-        self.cpp_info.components["cmp1"].sharedlinkflags = ["cmp1_sharedlinkflag"]
-        self.cpp_info.components["cmp2"].sharedlinkflags = ["cmp2_sharedlinkflag"]
-        self.cpp_info.components["cmp1"].exelinkflags = ["cmp1_exelinkflag"]
-        self.cpp_info.components["cmp2"].exelinkflags = ["cmp2_exelinkflag"]
     """
 
     client.save({"lib_a.py": conanfile_py.format(requirements="", package_info=package_info)})
