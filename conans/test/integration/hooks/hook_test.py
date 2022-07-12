@@ -53,21 +53,7 @@ class TestHooks:
         c = TestClient()
         hook_path = os.path.join(c.cache.hooks_path, "complete_hook", "hook_complete.py")
         save(hook_path, complete_hook)
-        # If methods are not defined, hooks are not triggered
-        # generate, exports and others, are always fired, because they have an implicit part
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                def build(self):
-                    pass
-                def source(self):
-                    pass
-                def package(self):
-                    pass
-                """)
-        c.save({"conanfile.py": conanfile})
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
 
         c.run("source .")
         hook_msg = "[HOOK - complete_hook/hook_complete.py]"
