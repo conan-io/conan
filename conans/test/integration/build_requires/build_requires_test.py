@@ -19,32 +19,30 @@ def client():
     openssl = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            #options = {"shared": [True, False]}
-            #default_options = {"shared": True}
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
-                    save("bin/myopenssl.bat", echo)
-                    save("bin/myopenssl.sh", echo)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
             """)
 
     cmake = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
                 self.requires("openssl/1.0", run=True)
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
-                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
-                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    save(self, "mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save(self, "mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
@@ -56,14 +54,14 @@ def client():
     gtest = textwrap.dedent(r"""
         import os
         from conan import ConanFile
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             settings = "os"
             def package(self):
-                with chdir(self.package_folder):
+                with chdir(self, self.package_folder):
                     echo = "@echo off\necho MYGTEST={}!!".format(self.settings.os)
-                    save("bin/mygtest.bat", echo)
-                    save("bin/mygtest.sh", echo)
+                    save(self, "bin/mygtest.bat", echo)
+                    save(self, "bin/mygtest.sh", echo)
                     os.chmod("bin/mygtest.sh", 0o777)
 
             def package_info(self):
@@ -87,23 +85,21 @@ def client():
     return client
 
 
-@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_conanfile_txt(client):
     # conanfile.txt -(br)-> cmake
-    client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
+    client.save({"conanfile.txt": "[tool_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux")
 
     assert "mycmake/1.0" in client.out
     assert "openssl/1.0" in client.out
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), client.current_folder, "conanbuildenv", "mycmake.{}".format(ext))
+    cmd = environment_wrap_command("conanbuildenv", client.current_folder, "mycmake.{}".format(ext))
     client.run_command(cmd)
 
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
 
-@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
@@ -124,18 +120,19 @@ def test_complete(client):
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    client.assert_listed_require("mygtest/1.0", test=True)
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), client.current_folder, "conanbuildenv",
-                                   subsystem="mycmake.{}".format(ext))
+    cmd = environment_wrap_command("conanbuildenv", client.current_folder,
+                                   cmd="mycmake.{}".format(ext))
     client.run_command(cmd)
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(), client.current_folder, "conanrunenv",
-                                   subsystem="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
-                                                                                            sep=os.sep))
+    cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                   cmd="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
+                                                                                      sep=os.sep))
     client.run_command(cmd)
     assert "MYGTEST=Linux!!" in client.out
     assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
