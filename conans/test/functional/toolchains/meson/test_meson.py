@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 from conan.tools.files import replace_in_file
@@ -128,7 +129,13 @@ class MesonToolchainTest(TestMesonBase):
         ref = ConanFileReference.loads("hello/1.0")
         cache_package_folder = self.t.cache.package_layout(ref).packages()
         package_folder = os.path.join(cache_package_folder, os.listdir(cache_package_folder)[0])
-        assert os.path.exists(os.path.join(package_folder, "lib", "libhello.dylib"))
-        assert os.path.exists(os.path.join(package_folder, "bin", "demo"))
+        if platform.system() == "Windows":
+            assert os.path.exists(os.path.join(package_folder, "lib", "hello.lib"))
+            assert os.path.exists(os.path.join(package_folder, "bin", "hello.dll"))
+            assert os.path.exists(os.path.join(package_folder, "bin", "demo.exe"))
+        else:
+            ext = "dylib" if platform.system() == "Darwin" else "so"
+            assert os.path.exists(os.path.join(package_folder, "bin", "demo"))
+            assert os.path.exists(os.path.join(package_folder, "lib", "libhello." + ext))
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file1.txt"))
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file2.txt"))
