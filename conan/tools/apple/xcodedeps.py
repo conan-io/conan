@@ -141,13 +141,6 @@ class XcodeDeps(object):
                 fields["frameworkdirs"] = ""
                 fields["frameworks"] = ""
 
-            if not require.libs and not require.headers:
-                fields["definitions"] = ""
-                fields["c_compiler_flags"] = ""
-                fields["cxx_compiler_flags"] = ""
-                fields["linker_flags"] = ""
-                fields["exe_flags"] = ""
-
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
