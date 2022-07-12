@@ -174,3 +174,9 @@ def test_xcodedeps_aggregate_components():
 
     # folders are aggregated
     assert "mylibdir" in component4_vars
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_traits():
+    client = TestClient()
+
