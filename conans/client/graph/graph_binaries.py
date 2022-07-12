@@ -414,6 +414,14 @@ class GraphBinariesAnalyzer(object):
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
 
+        if hasattr(conanfile, "validate_build") and callable(conanfile.validate_build):
+            with conanfile_exception_formatter(str(conanfile), "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
+
         info = conanfile.info
         node.package_id = info.package_id()
 
