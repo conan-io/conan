@@ -130,17 +130,6 @@ class XcodeDeps(object):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
 
-        def _process_traits():
-            if not require.headers:
-                fields["include_dirs"] = ""
-
-            if not require.libs:
-                fields["lib_dirs"] = ""
-                fields["libs"] = ""
-                fields["system_libs"] = ""
-                fields["frameworkdirs"] = ""
-                fields["frameworks"] = ""
-
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
@@ -158,7 +147,15 @@ class XcodeDeps(object):
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
 
-        _process_traits()
+        if not require.headers:
+            fields["include_dirs"] = ""
+
+        if not require.libs:
+            fields["lib_dirs"] = ""
+            fields["libs"] = ""
+            fields["system_libs"] = ""
+            fields["frameworkdirs"] = ""
+            fields["frameworks"] = ""
 
         template = Template(self._conf_xconfig)
         content_multi = template.render(**fields)
