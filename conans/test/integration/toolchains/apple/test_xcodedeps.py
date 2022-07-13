@@ -196,3 +196,87 @@ def test_xcodedeps_frameworkdirs():
     lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
 
     assert "lib_a_frameworkdir" in lib_a_xcconfig
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_cppinfo_requires():
+
+    """
+    lib_a: has four components cmp1, cmp2, cmp3, cmp4
+    lib_b --> uses libA cmp1 so cpp_info.requires = ["lib_a::cmp1"]
+    lib_c --> uses libA cmp2 so cpp_info.requires = ["lib_a::cmp2"]
+    consumer --> libB, libC
+    """
+    client = TestClient()
+    lib_a = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_aConan(ConanFile):
+            name = "lib_a"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs = ["include"]
+                self.cpp_info.components["cmp2"].includedirs = ["include"]
+                self.cpp_info.components["cmp3"].includedirs = ["include"]
+                self.cpp_info.components["cmp4"].includedirs = ["include"]
+        """)
+
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_{name}Conan(ConanFile):
+            name = "lib_{name}"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def requirements(self):
+                self.requires("lib_a/1.0")
+            def package_info(self):
+                self.cpp_info.requires = {cppinfo_comps}
+        """)
+
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "XcodeDeps"
+        def requirements(self):
+            self.requires("lib_b/1.0")
+            self.requires("lib_c/1.0")
+    """)
+
+    client.save({
+        'lib_a/conanfile.py': lib_a,
+        'lib_b/conanfile.py': lib.format(name="b", cppinfo_comps='["lib_a::cmp1"]'),
+        'lib_c/conanfile.py': lib.format(name="c", cppinfo_comps='["lib_a::cmp2"]'),
+        'consumer/conanfile.py': consumer,
+    })
+
+    client.run("create lib_a")
+
+    client.run("create lib_b")
+
+    client.run("create lib_c")
+
+    client.run("install consumer")
+
+    """
+    Check that the generated lib_b and lib_c xcconfig only use the cmp1 and cmp2 components
+    So we will only link against the components specified in the cpp_info.requires of lib_b and lib_c
+    """
+
+    lib_b = client.load("conan_lib_b_lib_b.xcconfig")
+
+    # check that nothing from other components than the specified in the cpp_info.requires
+    # from lib_b and lib_c exist in the xcconfig that adds the includes from components
+    assert "cmp1" in lib_b
+    assert "cmp2" not in lib_b
+    assert "cmp3" not in lib_b
+    assert "cmp4" not in lib_b
+
+    lib_c = client.load("conan_lib_c_lib_c.xcconfig")
+
+    assert "cmp1" not in lib_c
+    assert "cmp2" in lib_c
+    assert "cmp3" not in lib_c
+    assert "cmp4" not in lib_c
