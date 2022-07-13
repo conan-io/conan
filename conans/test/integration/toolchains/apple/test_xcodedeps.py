@@ -267,6 +267,8 @@ def test_xcodedeps_cppinfo_requires():
 
     lib_b = client.load("conan_lib_b_lib_b.xcconfig")
 
+    # check that nothing from other components than the specified in the cpp_info.requires
+    # from lib_b and lib_c exist in the xcconfig that adds the includes from components
     assert "cmp1" in lib_b
     assert "cmp2" not in lib_b
     assert "cmp3" not in lib_b
