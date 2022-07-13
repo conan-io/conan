@@ -1,7 +1,5 @@
 import os
-
 from pathlib import Path
-
 
 from conan.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
@@ -401,48 +399,6 @@ class ConanFile:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    def source(self):
-        pass
-
-    def system_requirements(self):
-        """ this method can be overwritten to implement logic for system package
-        managers, as apt-get
-        """
-
-    def config_options(self):
-        """
-        Modify options, probably conditioned to some settings. This call is executed
-        before config_settings. E.g.
-        if self.settings.os == 'Windows':
-        del self.options.shared  # shared/static not supported in win
-        """
-
-    def configure(self):
-        """
-        Modify settings, probably conditioned to some options. This call is executed
-        after config_options. E.g.
-        if self.options.header_only:
-        self.settings.clear()
-        This is also the place for conditional requirements
-        """
-
-    def build(self):
-        """
-        Build your project calling the desired build tools as done in the command line.
-        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
-        """
-        self.output.warning("This conanfile has no build step")
-
-    def package(self):
-        """ package the needed files from source and build folders.
-        E.g. copy(self, "\*.h", os.path.join(self.source_folder, "src/includes"), os.path.join(self.package_folder, "includes"))
-        """
-        self.output.warning("This conanfile has no package step")
-
-    def package_info(self):
-        """ define cpp_build_info, flags, etc
-        """
-
     def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="conanbuild", quiet=False,
             shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
@@ -458,12 +414,6 @@ class ConanFile:
             raise ConanException("Error %d while executing" % retcode)
 
         return retcode
-
-    def test(self):
-        """ test the generated executable.
-        E.g.  self.run("./example")
-        """
-        raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
         return self.display_name

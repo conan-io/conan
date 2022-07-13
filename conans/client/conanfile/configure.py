@@ -9,15 +9,17 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
 
     # Avoid extra time manipulating the sys.path for python
     with no_op():  # TODO: Remove this in a later refactor
-        with conanfile_exception_formatter(conanfile, "config_options"):
-            conanfile.config_options()
+        if hasattr(conanfile, "config_options"):
+            with conanfile_exception_formatter(conanfile, "config_options"):
+                conanfile.config_options()
 
         # Assign only the current package options values, but none of the dependencies
         is_consumer = conanfile._conan_is_consumer
         conanfile.options.apply_downstream(down_options, profile_options, ref, is_consumer)
 
-        with conanfile_exception_formatter(conanfile, "configure"):
-            conanfile.configure()
+        if hasattr(conanfile, "configure"):
+            with conanfile_exception_formatter(conanfile, "configure"):
+                conanfile.configure()
 
         self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
                                                                           is_consumer)

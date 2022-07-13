@@ -49,6 +49,14 @@ def compute_package_id(node, new_config):
                                conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
 
+    if hasattr(conanfile, "validate_build"):
+        with conanfile_exception_formatter(conanfile, "validate_build"):
+            try:
+                conanfile.validate_build()
+            except ConanInvalidConfiguration as e:
+                # This 'cant_build' will be ignored if we don't have to build the node.
+                node.cant_build = str(e)
+
     run_validate_package_id(conanfile)
 
     info = conanfile.info

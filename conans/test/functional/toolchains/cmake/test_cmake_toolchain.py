@@ -915,3 +915,94 @@ def test_cmake_presets_forbidden_build_type():
     client.run("install . {}".format(settings_layout), assert_error=True)
     assert "Error, don't include 'settings.build_type' in the " \
            "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out
+
+
+def test_resdirs_cmake_install():
+    """If resdirs is declared, the CMAKE_INSTALL_DATAROOTDIR folder is set"""
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt", "my_license"
+                name = "foo"
+                version = "1.0"
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def layout(self):
+                    self.cpp.package.resdirs = ["res"]
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+            """)
+
+    cmake = """
+    cmake_minimum_required(VERSION 3.15)
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    project(foo)
+    if(NOT CMAKE_INSTALL_DATAROOTDIR)
+        message(FATAL_ERROR "Cannot install stuff")
+    endif()
+    install(FILES my_license DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses)
+    """
+
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
+    client.run("create .")
+    assert "/res/licenses/my_license" in client.out
+    assert "Packaged 1 file: my_license" in client.out
+
+
+def test_resdirs_none_cmake_install():
+    """If no resdirs are declared, the CMAKE_INSTALL_DATAROOTDIR folder is not set"""
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt", "my_license"
+                name = "foo"
+                version = "1.0"
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+            """)
+
+    cmake = """
+    cmake_minimum_required(VERSION 3.15)
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    project(foo)
+    if(NOT CMAKE_INSTALL_DATAROOTDIR)
+        message(FATAL_ERROR "Cannot install stuff")
+    endif()
+    """
+
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
+    client.run("create .", assert_error=True)
+    assert "Cannot install stuff" in client.out

@@ -81,8 +81,9 @@ def run_source_method(conanfile, hook_manager):
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
         hook_manager.execute("pre_source", conanfile=conanfile)
-        conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
-        with conanfile_exception_formatter(conanfile, "source"):
-            with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
-                conanfile.source()
+        if hasattr(conanfile, "source"):
+            conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
+            with conanfile_exception_formatter(conanfile, "source"):
+                with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
+                    conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)

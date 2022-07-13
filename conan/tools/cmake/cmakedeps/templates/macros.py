@@ -26,12 +26,6 @@ class MacrosTemplate(CMakeDepsFileTemplate):
     @property
     def template(self):
         return textwrap.dedent("""
-        function(conan_message MESSAGE_TYPE MESSAGE_CONTENT)
-            if(NOT CONAN_CMAKE_SILENT_OUTPUT)
-                message(${MESSAGE_TYPE} "${MESSAGE_CONTENT}")
-            endif()
-        endfunction()
-
        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
            if(APPLE)
                foreach(_FRAMEWORK ${FRAMEWORKS})
@@ -39,9 +33,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
-                       conan_message(DEBUG "Framework found! ${FRAMEWORKS_FOUND}")
+                       message(VERBOSE "Framework found! ${FRAMEWORKS_FOUND}")
                    else()
-                       conan_message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
+                       message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
                    endif()
                endforeach()
            endif()
@@ -58,7 +52,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                if(CONAN_FOUND_LIBRARY)
-                   conan_message(DEBUG "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+                   message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                    list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                    # Create a micro-target for each lib/a found
@@ -89,12 +83,12 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        endif()
                        list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    else()
-                       conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
+                       message(VERBOSE "Conan: Skipping already existing target: ${_LIB_NAME}")
                    endif()
                    list(APPEND _out_libraries_target ${_LIB_NAME})
-                   conan_message(DEBUG "Found: ${CONAN_FOUND_LIBRARY}")
+                   message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()
-                   conan_message(FATAL_ERROR "Library '${_LIBRARY_NAME}' not found in package. If '${_LIBRARY_NAME}' is a system library, declare it with 'cpp_info.system_libs' property")
+                   message(FATAL_ERROR "Library '${_LIBRARY_NAME}' not found in package. If '${_LIBRARY_NAME}' is a system library, declare it with 'cpp_info.system_libs' property")
                endif()
                unset(CONAN_FOUND_LIBRARY CACHE)
            endforeach()

@@ -174,3 +174,25 @@ def test_xcodedeps_aggregate_components():
 
     # folders are aggregated
     assert "mylibdir" in component4_vars
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_frameworkdirs():
+    client = TestClient()
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.frameworkdirs = ["lib_a_frameworkdir"]
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+    client.run("create conanfile.py lib_a/1.0@")
+
+    client.run("install lib_a/1.0@ -g XcodeDeps")
+
+    lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
+
+    assert "lib_a_frameworkdir" in lib_a_xcconfig
