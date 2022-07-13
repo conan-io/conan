@@ -66,7 +66,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
-            conan_message(STATUS "Conan: Including build module from '${_BUILD_MODULE}'")
+            message(STATUS "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
 
@@ -76,9 +76,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         if({{ file_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
                 if (TARGET ${_FIND_COMPONENT})
-                    conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
+                    message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
-                    conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
+                    message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 endif()
             endforeach()
         endif()
