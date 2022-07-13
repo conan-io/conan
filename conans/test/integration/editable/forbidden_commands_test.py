@@ -29,7 +29,7 @@ class TestOtherCommands:
         assert "There are no packages" in t.out  # One binary is listed
 
         t.run('export-pkg .')
-        assert "lib/0.1: Calling package()" in t.out
+        assert "lib/0.1: Exporting package" in t.out
 
         t.run('list packages lib/0.1#latest')
         assert "lib/0.1" in t.out  # One binary is listed

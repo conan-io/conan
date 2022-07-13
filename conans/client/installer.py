@@ -14,7 +14,6 @@ from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
@@ -184,10 +183,9 @@ class _PackageBuilder(object):
 
 
 def call_system_requirements(conanfile):
-    if type(conanfile).system_requirements == ConanFile.system_requirements:
-        return
-    with conanfile_exception_formatter(conanfile, "system_requirements"):
-        conanfile.system_requirements()
+    if hasattr(conanfile, "system_requirements"):
+        with conanfile_exception_formatter(conanfile, "system_requirements"):
+            conanfile.system_requirements()
 
 
 class BinaryInstaller:
@@ -355,7 +353,8 @@ class BinaryInstaller:
             with conanfile_exception_formatter(conanfile, "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
-                conanfile.package_info()
+                if hasattr(conanfile, "package_info"):
+                    conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)

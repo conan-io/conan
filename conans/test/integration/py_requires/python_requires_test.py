@@ -632,7 +632,6 @@ class PyRequiresExtendTest(unittest.TestCase):
             from conan import ConanFile
             class PythonRequires0(ConanFile):
                 def build(self):
-                    super(PythonRequires0, self).build()
                     self.output.info("PythonRequires0::build")
                     """)})
         client.run("export . --name=python_requires0 --version=1.0 --user=user --channel=test")
