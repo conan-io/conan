@@ -1,10 +1,10 @@
 import json
 from collections import OrderedDict
 
-from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, Color, \
+    ConanOutput
 from conan.cli.commands import json_formatter
 from conan.cli.common import get_remote_selection
-from conan._internal.output import Color, ConanOutput
 from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

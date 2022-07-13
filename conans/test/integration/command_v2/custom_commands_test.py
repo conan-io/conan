@@ -10,8 +10,7 @@ class TestCustomCommands:
             import json
             import os
 
-            from conan.output import cli_out_write
-            from conan.cli.command import conan_command
+            from conan.cli.command import conan_command, cli_out_write
 
             def output_mycommand_cli(info):
                 return f"Conan cache folder is: {info.get('cache_folder')}"
@@ -42,8 +41,7 @@ class TestCustomCommands:
 
     def test_command_layer(self):
         myhello = textwrap.dedent("""
-            from conan.output import ConanOutput
-            from conan.cli.command import conan_command
+            from conan.cli.command import conan_command, ConanOutput
 
             @conan_command(group="custom commands")
             def hello(conan_api, parser, *args, **kwargs):
@@ -53,8 +51,7 @@ class TestCustomCommands:
                 ConanOutput().info("Hello {}!")
             """)
         mybye = textwrap.dedent("""
-            from conan.output import ConanOutput
-            from conan.cli.command import conan_command, conan_subcommand
+            from conan.cli.command import conan_command, conan_subcommand, ConanOutput
 
             @conan_command(group="custom commands")
             def bye(conan_api, parser, *args, **kwargs):
@@ -89,8 +86,7 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.output import cli_out_write
-            from conan.cli.command import conan_command, conan_subcommand
+            from conan.cli.command import conan_command, conan_subcommand, cli_out_write
 
             def output_cli(info):
                 return f"{info.get('argument1')}"

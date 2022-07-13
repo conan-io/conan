@@ -1,9 +1,8 @@
 import os
 
-from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS, ConanOutput
 from conan.cli.commands import json_formatter
 from conan.cli.common import add_profiles_args, get_profiles_from_args
-from conan._internal.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import save
 

@@ -3,10 +3,9 @@ from collections import OrderedDict
 
 from conan.api.conan_api import ConanAPIV2
 from conan.api.model import Remote
-from conan.cli.command import conan_command, conan_subcommand, OnceArgument
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument, ConanOutput
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
-from conan._internal.output import ConanOutput
 from conans.client.userio import UserInput
 from conans.errors import ConanException
 
