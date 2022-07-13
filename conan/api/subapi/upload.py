@@ -1,6 +1,6 @@
 from conan.api.model import UploadBundle
 from conan.api.subapi import api_method
-from conan.cli import ConanApp
+from conan.cli.conan_app import ConanApp
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin

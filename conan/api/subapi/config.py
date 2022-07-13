@@ -1,5 +1,5 @@
 from conan.api.subapi import api_method
-from conan.cli import ConanApp
+from conan.cli.conan_app import ConanApp
 
 
 class ConfigAPI:

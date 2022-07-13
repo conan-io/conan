@@ -1,7 +1,7 @@
 import os
 
 from conan.api.subapi import api_method
-from conan.cli import ConanApp
+from conan.cli.conan_app import ConanApp
 from conan.output import ConanOutput
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method

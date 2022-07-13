@@ -1,7 +1,7 @@
 import fnmatch
 
 from conan.api.subapi import api_method
-from conan.cli import ConanApp
+from conan.cli.conan_app import ConanApp
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import search_recipes

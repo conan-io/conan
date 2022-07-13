@@ -5,7 +5,7 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conan.cli import add_profiles_args
+from conan.cli.common import add_profiles_args
 
 
 @parameterized_class([{"argument": ["options", "-o", "--options"]},

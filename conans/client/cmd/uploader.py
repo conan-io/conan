@@ -4,7 +4,7 @@ import stat
 import tarfile
 import time
 
-from conan.cli import ConanApp
+from conan.cli.conan_app import ConanApp
 from conan.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
