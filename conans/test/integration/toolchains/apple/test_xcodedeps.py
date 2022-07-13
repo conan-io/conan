@@ -183,15 +183,17 @@ def test_xcodedeps_frameworkdirs():
     conanfile_py = textwrap.dedent("""
         from conan import ConanFile
         class LibConan(ConanFile):
+            name = "lib_a"
+            version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
                 self.cpp_info.frameworkdirs = ["lib_a_frameworkdir"]
         """)
 
     client.save({"conanfile.py": conanfile_py})
-    client.run("create conanfile.py lib_a/1.0@")
+    client.run("create .")
 
-    client.run("install lib_a/1.0@ -g XcodeDeps")
+    client.run("install --requires=lib_a/1.0 -g XcodeDeps")
 
     lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
 
