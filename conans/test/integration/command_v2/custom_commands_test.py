@@ -10,7 +10,7 @@ class TestCustomCommands:
             import json
             import os
 
-            from conan.cli.output import cli_out_write
+            from conan.output import cli_out_write
             from conan.cli.command import conan_command
 
             def output_mycommand_cli(info):
@@ -42,7 +42,7 @@ class TestCustomCommands:
 
     def test_command_layer(self):
         myhello = textwrap.dedent("""
-            from conan.cli.output import ConanOutput
+            from conan.output import ConanOutput
             from conan.cli.command import conan_command
 
             @conan_command(group="custom commands")
@@ -53,7 +53,7 @@ class TestCustomCommands:
                 ConanOutput().info("Hello {}!")
             """)
         mybye = textwrap.dedent("""
-            from conan.cli.output import ConanOutput
+            from conan.output import ConanOutput
             from conan.cli.command import conan_command, conan_subcommand
 
             @conan_command(group="custom commands")
@@ -89,7 +89,7 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.cli.output import cli_out_write
+            from conan.output import cli_out_write
             from conan.cli.command import conan_command, conan_subcommand
 
             def output_cli(info):
