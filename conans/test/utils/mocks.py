@@ -93,7 +93,7 @@ class MockConanfile(ConanFile):
         class MockConanInfo:
             pass
         self.info = MockConanInfo()
-        self.info.settings = settings  # Incomplete, only settings for CppstdMinCheck tests
+        self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
 
     def run(self, *args, **kwargs):
         if self.runner:
