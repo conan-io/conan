@@ -39,15 +39,15 @@ class OptionsTest(unittest.TestCase):
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=False", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
-        self.assertIn("pkg/0.1@user/testing (test package): Calling build()", client.out)
+        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
+        self.assertIn("Testing the package: Building", client.out)
 
     def test_general_scope_priorities(self):
         client = TestClient()

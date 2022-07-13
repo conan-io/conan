@@ -33,7 +33,7 @@ class GraphBinariesAnalyzer(object):
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             conanfile.output.info('Forced build from source')
-            node.binary = BINARY_BUILD
+            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
             node.prev = None
             return True
 
@@ -141,7 +141,7 @@ class GraphBinariesAnalyzer(object):
             self._process_compatible_packages(node)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-            node.binary = BINARY_BUILD
+            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
