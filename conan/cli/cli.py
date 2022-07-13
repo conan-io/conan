@@ -13,7 +13,7 @@ from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
-from conan.output import ConanOutput, cli_out_write, Color
+from conan._internal.output import ConanOutput, cli_out_write, Color
 from conans.client.cache.cache import ClientCache
 from conans.errors import ConanInvalidSystemRequirements
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError

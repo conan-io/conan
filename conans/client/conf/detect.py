@@ -4,7 +4,7 @@ import re
 import tempfile
 import textwrap
 
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.files import save

@@ -5,7 +5,7 @@ from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import common_graph_args, graph_compute, _get_conanfile_path
 from conan.cli.common import save_lockfile_out, get_lockfile
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference

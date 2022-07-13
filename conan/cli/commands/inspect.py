@@ -2,7 +2,7 @@ import json
 import inspect as python_inspect
 
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 
 
 def _inspect_json_formatter(data):

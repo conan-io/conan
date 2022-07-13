@@ -9,7 +9,7 @@ from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_i
     _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options, save_lockfile_out
 from conan.cli.conan_app import ConanApp
 from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir

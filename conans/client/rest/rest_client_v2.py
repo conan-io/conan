@@ -2,7 +2,7 @@ import copy
 import os
 import time
 
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router

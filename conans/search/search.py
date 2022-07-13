@@ -4,7 +4,7 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference

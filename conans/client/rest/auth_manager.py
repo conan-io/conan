@@ -14,7 +14,7 @@ Flow:
 import hashlib
 from uuid import getnode as get_mac
 
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.client.cmd.user import update_localdb
 from conans.client.userio import UserInput
 from conans.errors import AuthenticationException, ConanException, ForbiddenException

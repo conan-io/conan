@@ -1,6 +1,5 @@
 import fnmatch
 import os
-import re
 
 from jinja2 import Template, StrictUndefined
 
@@ -18,17 +17,17 @@ class NewAPI:
 
     @api_method
     def get_builtin_template(self, template_name):
-        from conan.api.helpers.new.alias_new import alias_file
-        from conan.api.helpers.new.cmake_exe import cmake_exe_files
-        from conan.api.helpers.new.cmake_lib import cmake_lib_files
-        from conan.api.helpers.new.meson_lib import meson_lib_files
-        from conan.api.helpers.new.meson_exe import meson_exe_files
-        from conan.api.helpers.new.msbuild_lib import msbuild_lib_files
-        from conan.api.helpers.new.msbuild_exe import msbuild_exe_files
-        from conan.api.helpers.new.bazel_lib import bazel_lib_files
-        from conan.api.helpers.new.bazel_exe import bazel_exe_files
-        from conan.api.helpers.new.autotools_lib import autotools_lib_files
-        from conan.api.helpers.new.autoools_exe import autotools_exe_files
+        from conan._internal.api.new.alias_new import alias_file
+        from conan._internal.api.new.cmake_exe import cmake_exe_files
+        from conan._internal.api.new.cmake_lib import cmake_lib_files
+        from conan._internal.api.new.meson_lib import meson_lib_files
+        from conan._internal.api.new.meson_exe import meson_exe_files
+        from conan._internal.api.new.msbuild_lib import msbuild_lib_files
+        from conan._internal.api.new.msbuild_exe import msbuild_exe_files
+        from conan._internal.api.new.bazel_lib import bazel_lib_files
+        from conan._internal.api.new.bazel_exe import bazel_exe_files
+        from conan._internal.api.new.autotools_lib import autotools_lib_files
+        from conan._internal.api.new.autoools_exe import autotools_exe_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,

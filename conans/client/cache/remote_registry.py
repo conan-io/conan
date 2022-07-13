@@ -3,7 +3,7 @@ import os
 from urllib.parse import urlparse
 
 from conan.api.model import Remote
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.files import load, save
 

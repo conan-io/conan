@@ -60,7 +60,7 @@ ConanAPI = ConanAPIV2
 
 
 def set_conan_output_level(level, activate_logger=False):
-    from conan import output
+    from conan._internal import output
     output.conan_output_level = level
     output.conan_output_logger_format = activate_logger
 

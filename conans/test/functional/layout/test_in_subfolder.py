@@ -112,7 +112,7 @@ def test_exports_sources_common_code():
     assert "conanfile.py (pkg/0.1): MYUTILS-BUILD: myutils!" in c.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_exports_sources_common_code_layout():
     """ Equal to the previous test, but actually building and using cmake_layout
     """

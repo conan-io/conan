@@ -1,7 +1,7 @@
 import copy
 import os
 
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import md5sum, sha1sum

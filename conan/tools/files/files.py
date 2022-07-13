@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conan.output import ConanOutput
+from conan._internal.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.sha import check_with_algorithm_sum

@@ -2,7 +2,7 @@ import argparse
 import textwrap
 
 from conan.cli.commands import add_log_level_args, process_log_level_args
-from conan.output import cli_out_write
+from conan._internal.output import cli_out_write
 from conans.errors import ConanException
 
 COMMAND_GROUPS = {
