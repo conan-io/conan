@@ -41,6 +41,11 @@ class MesonInstall(TestMesonBase):
                 meson = Meson(self)
                 meson.install()
 
+                # https://mesonbuild.com/FAQ.html#why-does-building-my-project-with-msvc-output-static-libraries-called-libfooa
+                if self.settings.compiler == 'Visual Studio' and not self.options.shared:
+                    shutil.move(os.path.join(self.package_folder, "lib", "libhello.a"),
+                                os.path.join(self.package_folder, "lib", "hello.lib"))
+
             def package_info(self):
                 self.cpp_info.libs = ['hello']
         """)
