@@ -40,6 +40,8 @@ class MesonToolchain(object):
     [binaries]
     {% if c %}c = '{{c}}'{% endif %}
     {% if cpp %}cpp = '{{cpp}}'{% endif %}
+    {% if objc %}objc = '{{objc}}'{% endif %}
+    {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
     {% if c_ld %}c_ld = '{{c_ld}}'{% endif %}
     {% if cpp_ld %}cpp_ld = '{{cpp_ld}}'{% endif %}
     {% if ar %}ar = '{{ar}}'{% endif %}
@@ -57,11 +59,17 @@ class MesonToolchain(object):
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
+    {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions + deps_c_args
     c_link_args = {{c_link_args}} + deps_c_link_args
     cpp_args = {{cpp_args}} + preprocessor_definitions + deps_cpp_args
     cpp_link_args = {{cpp_link_args}} + deps_cpp_link_args
-    {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    # Objective-C/C++ arguments
+    objc_args = {{objc_args}} + preprocessor_definitions + deps_c_args
+    objc_link_args = {{objc_link_args}} + deps_c_link_args
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions + deps_cpp_args
+    objcpp_link_args = {{objcpp_link_args}} + deps_cpp_link_args
 
     {% for context, values in cross_build.items() %}
     [{{context}}_machine]
@@ -160,6 +168,13 @@ class MesonToolchain(object):
         self.c_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
         self.cpp_args = self._get_env_list(build_env.get("CXXFLAGS", []))
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
+        # Objective C/C++ ones
+        self.objc = "clang"
+        self.objcpp = "clang++"
+        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
+        self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
+        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
+        self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
         # Apple flags
         self.apple_arch_flag = []
@@ -238,6 +253,12 @@ class MesonToolchain(object):
         self.cpp_args.extend(apple_flags + extra_flags["cxxflags"])
         self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+        # Objective C/C++
+        self.objc_args.extend(self.c_args)
+        self.objcpp_args.extend(self.cpp_args)
+        # These link_args have already the LDFLAGS env value so let's add only the new possible ones
+        self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
+        self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
@@ -250,6 +271,8 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
             "c": self.c,
             "cpp": self.cpp,
+            "objc": self.objc,
+            "objcpp": self.objcpp,
             "c_ld": self.c_ld,
             "cpp_ld": self.cpp_ld,
             "ar": self.ar,
@@ -271,6 +294,10 @@ class MesonToolchain(object):
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),
             "cpp_link_args": to_meson_value(self._filter_list_empty_fields(self.cpp_link_args)),
+            "objc_args": to_meson_value(self._filter_list_empty_fields(self.objc_args)),
+            "objc_link_args": to_meson_value(self._filter_list_empty_fields(self.objc_link_args)),
+            "objcpp_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_args)),
+            "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build
