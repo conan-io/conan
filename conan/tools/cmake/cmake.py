@@ -1,11 +1,9 @@
 import os
-import platform
 
 from conan.tools.build import build_jobs
 from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
-from conan.tools.files.files import load_toolchain_args
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException

@@ -66,7 +66,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
             if(NOT TARGET ${_COMPONENT})
                 add_library(${_COMPONENT} INTERFACE IMPORTED)
-                message(VERBOSE "Conan: Component target declared '${_COMPONENT}'")
+                message(STATUS "Conan: Component target declared '${_COMPONENT}'")
             endif()
         endforeach()
 
