@@ -140,6 +140,10 @@ class CommandOutputer(object):
             item_data["build_id"] = build_id(conanfile)
             item_data["context"] = conanfile.context
 
+            item_data["invalid_build"] = node.cant_build is not False
+            if node.cant_build:
+                item_data["invalid_build_reason"] = node.cant_build
+
             python_requires = getattr(conanfile, "python_requires", None)
             if python_requires and not isinstance(python_requires, dict):  # no old python requires
                 item_data["python_requires"] = [repr(r)
