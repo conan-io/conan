@@ -89,6 +89,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
+            node.pref_timestamp = previous_node.pref_timestamp
 
             # this line fixed the compatible_packages with private case.
             # https://github.com/conan-io/conan/issues/9880

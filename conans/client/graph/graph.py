@@ -263,7 +263,9 @@ class DepsGraph(object):
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = set(self.nodes)
+        # We make it a dict to preserve insertion order and be deterministic, s
+        # sets are not deterministic order. dict is fast for look up operations
+        opened = dict.fromkeys(self.nodes)
         while opened:
             current_level = []
             for o in opened:
@@ -274,8 +276,9 @@ class DepsGraph(object):
             # TODO: SORTING seems only necessary for test order
             current_level.sort()
             result.append(current_level)
-            # now initialize new level
-            opened = opened.difference(current_level)
+            # now start new level, removing the current level items
+            for item in current_level:
+                opened.pop(item)
 
         return result
 
