@@ -157,14 +157,12 @@ def test_exports_sources_common_code_layout():
     assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
     # Local flow
-    c.run("install pkg")
     c.run("build pkg")
     assert "MYUTILS.CMAKE!" in c.out
     assert "main: Release!" in c.out
     assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
-    c.run("install pkg -s build_type=Debug")
-    c.run("build pkg")
+    c.run("build pkg -s build_type=Debug")
     assert "MYUTILS.CMAKE!" in c.out
     assert "main: Debug!" in c.out
     assert "MYDEFINE: MYDEFINEVALUE" in c.out
