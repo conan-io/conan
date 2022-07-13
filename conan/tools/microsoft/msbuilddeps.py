@@ -48,7 +48,7 @@ class MSBuildDeps(object):
           </ImportGroup>
           {% if host_context %}
           <PropertyGroup>
-            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{{name}}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+            <LocalDebuggerEnvironment>$(Conan{{name}}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
             {% if ca_exclude %}
             <CAExcludePath>$(Conan{{name}}IncludeDirectories);$(CAExcludePath)</CAExcludePath>
