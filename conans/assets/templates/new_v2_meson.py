@@ -37,11 +37,6 @@ class {package_name}Conan(ConanFile):
     def package(self):
         meson = Meson(self)
         meson.install()
-        # Meson cannot install dll/so in "bin" and .a/.lib in "lib"
-        lib = os.path.join(self.package_folder, "lib")
-        bin = os.path.join(self.package_folder, "bin")
-        copy(self, "*.so", lib, bin)
-        copy(self, "*.dll", lib, bin)
 
     def package_info(self):
         self.cpp_info.libs = ["{name}"]
@@ -86,7 +81,7 @@ executable('example', 'src/example.cpp', dependencies: {name})
 
 _meson_build = """\
 project('{name} ', 'cpp')
-library('{name}', 'src/{name}.cpp', install: true, install_dir: 'lib')
+library('{name}', 'src/{name}.cpp', install: true)
 install_headers('src/{name}.h')
 """
 

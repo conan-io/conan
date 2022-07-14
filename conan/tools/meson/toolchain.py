@@ -126,6 +126,9 @@ class MesonToolchain(object):
         self.project_options = {
             "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
         }
+        # Add all the default dirs
+        self.project_options.update(self._get_default_dirs())
+
         self.preprocessor_definitions = {}
         self.pkg_config_path = self._conanfile.generators_folder
 
@@ -187,6 +190,45 @@ class MesonToolchain(object):
 
         self._resolve_apple_flags_and_variables(build_env)
         self._resolve_android_cross_compilation()
+
+    def _get_default_dirs(self):
+        """
+        Get all the default directories from cpp.package.
+
+        Issues related:
+            - https://github.com/conan-io/conan/issues/9713
+            - https://github.com/conan-io/conan/issues/11596
+        """
+        def _get_cpp_info_value(name):
+            elements = getattr(self._conanfile.cpp.package, name)
+            return elements[0] if elements else None
+
+        if not self._conanfile.package_folder:
+            return {}
+
+        ret = {}
+        bindir = _get_cpp_info_value("bindirs")
+        datadir = _get_cpp_info_value("resdirs")
+        libdir = _get_cpp_info_value("libdirs")
+        includedir = _get_cpp_info_value("includedirs")
+        if bindir:
+            ret.update({
+                'bindir': bindir,
+                'sbindir': bindir,
+                'libexecdir': bindir
+            })
+        if datadir:
+            ret.update({
+                'datadir': datadir,
+                'localedir': datadir,
+                'mandir': datadir,
+                'infodir': datadir
+            })
+        if includedir:
+            ret["includedir"] = includedir
+        if libdir:
+            ret["libdir"] = libdir
+        return ret
 
     def _resolve_apple_flags_and_variables(self, build_env):
         if not self._is_apple_system:
