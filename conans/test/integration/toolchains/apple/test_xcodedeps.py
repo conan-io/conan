@@ -191,6 +191,7 @@ def test_xcodedeps_traits():
     def package_info(self):
         self.cpp_info.components["cmp1"].includedirs = ["cmp1_includedir"]
         self.cpp_info.components["cmp2"].includedirs = ["cmp2_includedir"]
+
         self.cpp_info.components["cmp1"].libdirs = ["cmp1_libdir"]
         self.cpp_info.components["cmp2"].libdirs = ["cmp2_libdir"]
         self.cpp_info.components["cmp1"].libs = ["cmp1_lib"]
@@ -201,7 +202,18 @@ def test_xcodedeps_traits():
         self.cpp_info.components["cmp2"].frameworkdirs = ["cmp2_frameworkdir"]
         self.cpp_info.components["cmp1"].frameworks = ["cmp1_framework"]
         self.cpp_info.components["cmp2"].frameworks = ["cmp2_framework"]
-    """
+
+        self.cpp_info.components["cmp1"].defines = ["cmp1_define"]
+        self.cpp_info.components["cmp2"].defines = ["cmp2_define"]
+        self.cpp_info.components["cmp1"].cflags = ["cmp1_cflag"]
+        self.cpp_info.components["cmp2"].cflags = ["cmp2_cflag"]
+        self.cpp_info.components["cmp1"].cxxflags = ["cmp1_cxxflag"]
+        self.cpp_info.components["cmp2"].cxxflags = ["cmp2_cxxflag"]
+        self.cpp_info.components["cmp1"].sharedlinkflags = ["cmp1_sharedlinkflag"]
+        self.cpp_info.components["cmp2"].sharedlinkflags = ["cmp2_sharedlinkflag"]
+        self.cpp_info.components["cmp1"].exelinkflags = ["cmp1_exelinkflag"]
+        self.cpp_info.components["cmp2"].exelinkflags = ["cmp2_exelinkflag"]
+        """
 
     client.save({"lib_a.py": conanfile_py.format(requirements="", package_info=package_info)})
 
@@ -258,6 +270,30 @@ def test_xcodedeps_traits():
         assert not os.path.exists(os.path.join(client.current_folder, file))
 
     assert '#include "conan_lib_a.xcconfig"' not in client.load("conandeps.xcconfig")
+
+    requirements = """
+    def requirements(self):
+        self.requires("lib_a/1.0", headers=False, libs=False, run=True)
+    """
+
+    client.save({"lib_b.py": conanfile_py.format(requirements=requirements, package_info="")},
+                clean_first=True)
+
+    client.run("install lib_b.py -g XcodeDeps")
+
+    comp1_info = client.load("conan_lib_a_cmp1_release_x86_64.xcconfig")
+    comp2_info = client.load("conan_lib_a_cmp2_release_x86_64.xcconfig")
+
+    assert "cmp1_define" not in comp1_info
+    assert "cmp2_define" not in comp2_info
+    assert "cmp1_cflag" not in comp1_info
+    assert "cmp2_cflag" not in comp2_info
+    assert "cmp1_cxxflag" not in comp1_info
+    assert "cmp2_cxxflag" not in comp2_info
+    assert "cmp1_sharedlinkflag" not in comp1_info
+    assert "cmp2_sharedlinkflag" not in comp2_info
+    assert "cmp1_exelinkflag" not in comp1_info
+    assert "cmp2_exelinkflag" not in comp2_info
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
