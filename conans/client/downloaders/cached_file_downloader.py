@@ -5,7 +5,7 @@ from threading import Lock
 
 from urllib.parse import urlsplit
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException
 from conans.util.files import mkdir, set_dirty, clean_dirty, is_dirty, remove

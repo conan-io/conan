@@ -1,13 +1,7 @@
 import copy
-import json
 import os
-import time
-from os.path import isdir
 
-import fasteners
-
-from conans.cli.output import ConanOutput
-from conans.errors import ConanException
+from conan.api.output import ConanOutput
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import md5sum, sha1sum

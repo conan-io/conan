@@ -9,16 +9,15 @@ import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
-
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
+from conan.api.output import ConanOutput
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
-from conans.util.sha import check_with_algorithm_sum
 from conans.util.files import rmdir as _internal_rmdir
+from conans.util.sha import check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):

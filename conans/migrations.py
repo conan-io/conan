@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, ConanMigrationError
 from conans.model.version import Version
 from conans.util.files import load, save

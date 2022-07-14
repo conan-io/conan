@@ -1,8 +1,7 @@
 import os
-
 from pathlib import Path
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
 from conans.model.conf import Conf

@@ -3,7 +3,7 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators

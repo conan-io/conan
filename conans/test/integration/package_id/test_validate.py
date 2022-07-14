@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
+from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save

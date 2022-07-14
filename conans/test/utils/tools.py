@@ -27,7 +27,7 @@ from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPIV2
 from conan.api.model import Remote
-from conans.cli.cli import Cli
+from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
 from conans.errors import NotFoundException
