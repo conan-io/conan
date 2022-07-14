@@ -11,33 +11,51 @@ import os
 
 def pre_export(conanfile):
     conanfile.output.info("Hello")
+    # TODO: To have the export_folder here needs a bit more deep refactoring
+    assert conanfile.export_folder is None
 
 def post_export(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.export_folder, "export_folder not defined"
+    assert conanfile.export_sources_folder, "export_sources_folder not defined"
 
 def pre_source(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
 
 def post_source(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
 
 def pre_generate(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.generators_folder, "generators_folder not defined"
 
 def post_generate(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.generators_folder, "generators_folder not defined"
 
 def pre_build(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
 
 def post_build(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
 
 def pre_package(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
+    assert conanfile.package_folder, "package_folder not defined"
 
 def post_package(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
+    assert conanfile.package_folder, "package_folder not defined"
 
 def pre_package_info(conanfile):
     conanfile.output.info("Hello")
