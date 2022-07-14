@@ -1,7 +1,8 @@
 import json
 import os
 
-from conan.cli.command import conan_command, Extender, COMMAND_GROUPS, ConanOutput
+from conan.api.output import ConanOutput
+from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conan.cli.commands import make_abs_path
 from conan.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \

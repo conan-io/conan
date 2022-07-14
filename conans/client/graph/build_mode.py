@@ -1,4 +1,4 @@
-from conan._internal.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 

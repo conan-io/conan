@@ -12,7 +12,7 @@ from shutil import which
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
-from conan.cli.command import ConanOutput
+from conan.api.output import ConanOutput
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException

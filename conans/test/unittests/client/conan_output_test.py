@@ -5,7 +5,7 @@ from unittest import mock
 
 from parameterized import parameterized
 
-from conan._internal.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.userio import init_colorama
 
 

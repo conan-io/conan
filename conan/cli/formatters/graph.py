@@ -1,7 +1,7 @@
 import fnmatch
 import json
 
-from conan.cli.command import ConanOutput, Color
+from conan.api.output import ConanOutput, Color
 from conan.cli.formatters import get_template
 from conans.assets import templates
 from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_CACHE, \

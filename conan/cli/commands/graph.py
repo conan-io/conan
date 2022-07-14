@@ -1,8 +1,9 @@
 import json
 import os
 
+from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
-    Extender, ConanOutput
+    Extender
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
 from conan.cli.common import save_lockfile_out

@@ -1,7 +1,8 @@
 import json
 
 from conan.api.conan_api import ConanAPIV2
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, ConanOutput
+from conan.api.output import ConanOutput
+from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conan.cli.commands.list import json_formatter
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference

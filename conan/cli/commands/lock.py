@@ -1,7 +1,8 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, \
-    conan_subcommand, ConanOutput
+    conan_subcommand
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import common_graph_args, graph_compute, _get_conanfile_path
 from conan.cli.common import save_lockfile_out, get_lockfile

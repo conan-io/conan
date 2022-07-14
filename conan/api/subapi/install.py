@@ -1,7 +1,7 @@
 import os
 
 from conan.api.subapi import api_method
-from conan.cli.conan_app import ConanApp
+from conan.api.conan_app import ConanApp
 from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements

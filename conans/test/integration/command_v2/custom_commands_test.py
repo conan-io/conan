@@ -41,7 +41,8 @@ class TestCustomCommands:
 
     def test_command_layer(self):
         myhello = textwrap.dedent("""
-            from conan.cli.command import conan_command, ConanOutput
+            from conan.api.output import ConanOutput
+            from conan.cli.command import conan_command
 
             @conan_command(group="custom commands")
             def hello(conan_api, parser, *args, **kwargs):
@@ -51,7 +52,8 @@ class TestCustomCommands:
                 ConanOutput().info("Hello {}!")
             """)
         mybye = textwrap.dedent("""
-            from conan.cli.command import conan_command, conan_subcommand, ConanOutput
+            from conan.api.output import ConanOutput
+            from conan.cli.command import conan_command, conan_subcommand
 
             @conan_command(group="custom commands")
             def bye(conan_api, parser, *args, **kwargs):

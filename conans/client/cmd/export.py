@@ -3,7 +3,7 @@ import shutil
 
 from conan.tools.files import copy
 from conan.tools.files.copy_pattern import report_files_copied
-from conan._internal.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference

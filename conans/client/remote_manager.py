@@ -6,7 +6,7 @@ from typing import List
 from requests.exceptions import ConnectionError
 
 from conan.cache.conan_reference_layout import METADATA
-from conan._internal.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \

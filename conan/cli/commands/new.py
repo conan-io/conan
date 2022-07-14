@@ -3,7 +3,8 @@ import shutil
 
 from jinja2 import Environment, meta, exceptions
 
-from conan.cli.command import conan_command, COMMAND_GROUPS, Extender, ConanOutput
+from conan.api.output import ConanOutput
+from conan.cli.command import conan_command, COMMAND_GROUPS, Extender
 from conans.errors import ConanException
 from conans.util.files import save
 

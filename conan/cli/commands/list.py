@@ -1,8 +1,8 @@
 import json
 from collections import OrderedDict
 
-from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, Color, \
-    ConanOutput
+from conan.api.output import ConanOutput, Color
+from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import json_formatter
 from conan.cli.common import get_remote_selection
 from conans.errors import ConanException, InvalidNameException, NotFoundException

@@ -4,7 +4,6 @@ import textwrap
 
 from colorama import Style
 
-import conan._internal.output
 from conan.cli.commands import add_log_level_args, process_log_level_args
 from conans.client.userio import color_enabled
 from conans.errors import ConanException
@@ -234,9 +233,3 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
         data = f"{' ' * indentation}{data}{endline}"
 
     sys.stdout.write(data)
-
-
-# FIXME: This is a bit weird. We want a public ConanOutput but also it is used from many places
-#        in the internal implementation
-ConanOutput = conan._internal.output.ConanOutput
-Color = conan._internal.output.Color

@@ -45,8 +45,8 @@ def add_log_level_args(subparser):
 
 
 def process_log_level_args(args):
-    from conan._internal import output
-    from conan._internal.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
+    from conan.api import output
+    from conan.api.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
         LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
 
     levels = {"quiet": LEVEL_QUIET,  # -vquiet 80

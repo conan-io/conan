@@ -1,6 +1,7 @@
 import os
 
-from conan.cli.command import Extender, OnceArgument, ExtenderValueRequired, ConanOutput
+from conan.api.output import ConanOutput
+from conan.cli.command import Extender, OnceArgument, ExtenderValueRequired
 from conan.cli.commands import make_abs_path
 from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile

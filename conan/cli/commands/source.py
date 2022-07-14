@@ -3,7 +3,7 @@ import os
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import add_reference_args
-from conan.cli.conan_app import ConanApp
+from conan.api.conan_app import ConanApp
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
