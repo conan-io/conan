@@ -83,6 +83,8 @@ class Meson(object):
         """
         Runs ``meson test -v -C "."`` in the build folder.
         """
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool):
+            return
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson test -v -C "{}"'.format(meson_build_folder)
         # TODO: Do we need vcvars for test?
