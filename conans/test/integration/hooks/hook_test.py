@@ -13,11 +13,13 @@ def pre_export(conanfile):
     conanfile.output.info("Hello")
     # TODO: To have the export_folder here needs a bit more deep refactoring
     assert conanfile.export_folder is None
+    assert conanfile.recipe_folder, "recipe_folder not defined"
 
 def post_export(conanfile):
     conanfile.output.info("Hello")
     assert conanfile.export_folder, "export_folder not defined"
     assert conanfile.export_sources_folder, "export_sources_folder not defined"
+    assert conanfile.recipe_folder, "recipe_folder not defined"
 
 def pre_source(conanfile):
     conanfile.output.info("Hello")

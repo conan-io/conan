@@ -57,7 +57,8 @@ class TestExportFoldersAvailability:
                 assert os.path.exists(self.export_sources_folder)
 
             def export_sources(self):
-                assert self.export_folder is None
+                # We need it available for the post_export hook so it is available
+                assert os.path.exists(self.export_folder)
 
             def export(self):
                 assert os.path.exists(self.export_folder)
@@ -97,7 +98,8 @@ class TestExportFoldersAvailability:
                 assert os.path.exists(self.export_folder)
 
             def export_sources(self):
-                assert self.export_folder is None
+                # We need it available for the post_export hook so it is available
+                assert os.path.exists(self.export_folder)
 
             def source(self):
                 assert self.export_folder is None
