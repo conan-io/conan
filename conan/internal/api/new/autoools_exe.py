@@ -1,4 +1,4 @@
-from conan.__internal.api.new.autotools_lib import configure_ac, makefile_am
+from conan.internal.api.new.autotools_lib import configure_ac, makefile_am
 
 conanfile_exe = """
 import os

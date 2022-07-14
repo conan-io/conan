@@ -1,4 +1,4 @@
-from conan.__internal.api.new.cmake_lib import source_cpp, source_h, test_main
+from conan.internal.api.new.cmake_lib import source_cpp, source_h, test_main
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
