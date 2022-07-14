@@ -2,11 +2,9 @@ import os
 import platform
 import textwrap
 
-from conan.tools.files import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
-from conans.test.utils.mocks import MockConanfile
 
 
 class MesonToolchainTest(TestMesonBase):
@@ -103,7 +101,7 @@ class MesonToolchainTest(TestMesonBase):
         self.t.run("new hello/1.0 -m meson_exe")
         # self.t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
 
-        _meson_build = textwrap.dedent("""
+        meson_build = textwrap.dedent("""
         project('tutorial', 'cpp')
         # Creating specific library
         hello = library('hello', 'src/hello.cpp', install: true)
@@ -112,20 +110,49 @@ class MesonToolchainTest(TestMesonBase):
         # Creating specific data in src/ (they're going to be exported)
         install_data(['src/file1.txt', 'src/file2.txt'])
         """)
-        # Replace meson.build
-        self.t.save({"meson.build": _meson_build,
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import Meson
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "meson.build", "src/*"
+            generators = "MesonToolchain"
+
+            def layout(self):
+                self.folders.build = "build"
+                # Only adding "res" to resdirs
+                self.cpp.package.resdirs = ["res"]
+
+            def build(self):
+                meson = Meson(self)
+                meson.configure()
+                meson.build()
+
+            def package(self):
+                meson = Meson(self)
+                meson.install()
+        """)
+        test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.build import cross_building
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "VirtualRunEnv"
+            apply_env = False
+
+            def test(self):
+                if not cross_building(self):
+                    self.run("demo", env="conanrun")
+        """)
+        # Replace meson.build, conanfile.py and test_package/conanfile.py
+        self.t.save({"meson.build": meson_build,
+                     "conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile,
                      "src/file1.txt": "", "src/file2.txt": ""})
-        # resdirs is "" by default, putting "res" as desired value
-        replace_in_file(MockConanfile({}),
-                        os.path.join(self.t.current_folder, "conanfile.py"),
-                        'self.folders.build = "build"',
-                        'self.folders.build = "build"\n        self.cpp.package.resdirs = ["res"]')
-        # Replace correct executable
-        replace_in_file(MockConanfile({}),
-                        os.path.join(self.t.current_folder, "test_package", "conanfile.py"),
-                        'self.run("hello", env="conanrun")',
-                        'self.run("demo", env="conanrun")')
         self.t.run("create .")
+        # Check if all the files are in the final directories
         ref = ConanFileReference.loads("hello/1.0")
         cache_package_folder = self.t.cache.package_layout(ref).packages()
         package_folder = os.path.join(cache_package_folder, os.listdir(cache_package_folder)[0])
