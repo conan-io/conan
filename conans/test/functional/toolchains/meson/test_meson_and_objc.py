@@ -37,8 +37,43 @@ class App(ConanFile):
 
 _meson_build_objc = textwrap.dedent("""
 project('tutorial', 'objc')
-executable('demo', 'main.m')
+executable('demo', 'main.m', link_args: ['-framework', 'Foundation'])
 """)
+
+
+@pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
+def test_apple_meson_toolchain_native_compilation_objective_c():
+    profile = textwrap.dedent("""
+    [settings]
+    os = Macos
+    arch = x86_64
+    compiler = apple-clang
+    compiler.version = 12.0
+    compiler.libcxx = libc++
+    """)
+    app = textwrap.dedent("""
+    #import <Foundation/Foundation.h>
+
+    int main(int argc, const char * argv[]) {
+        @autoreleasepool {
+            // insert code here...
+            NSLog(@"Hello, World!");
+        }
+        return 0;
+    }
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": _conanfile_py,
+            "meson.build": _meson_build_objc,
+            "main.m": app,
+            "macos_pr": profile})
+
+    t.run("install . -pr macos_pr")
+    t.run("build .")
+    t.run_command("./demo", cwd=os.path.join(t.current_folder, "build"))
+    assert "Hello, World!" in t.out
 
 
 @pytest.mark.parametrize("arch, os_, os_version, sdk", [
@@ -63,9 +98,6 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
     compiler = apple-clang
     compiler.version = 12.0
     compiler.libcxx = libc++
-
-    [buildenv]
-    LDFLAGS=-framework Foundation
 
     [conf]
     tools.apple:sdk_path={sdk_path}
@@ -100,7 +132,6 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
     t.run("install . --profile:build=default --profile:host=profile_host")
     t.run("build .")
     assert "Objective-C compiler for the host machine: clang" in t.out
-    assert "Objective-C compiler for the build machine: cc" in t.out
 
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
