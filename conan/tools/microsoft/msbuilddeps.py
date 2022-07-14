@@ -172,6 +172,22 @@ class MSBuildDeps(object):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
+    @staticmethod
+    def _component_aggregation_file(components_files):
+        # Current directory is the generators_folder
+        content_multi = textwrap.dedent("""\
+           <?xml version="1.0" encoding="utf-8"?>
+           <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+             <ImportGroup Label="PropertySheets">
+             {% for f in components_files %}
+             <Import Project="{{f}}"/>
+             {% endfor %}
+             </ImportGroup>
+           </Project>
+           """)
+        content_multi = Template(content_multi).render({"components_files": components_files})
+        return content_multi
+
     def _vars_props_file(self, dep, name, cpp_info, deps, build):
         """
         content for conan_vars_poco_x86_release.props, containing the variables
@@ -282,22 +298,49 @@ class MSBuildDeps(object):
         dep_name = dep_name.replace(".", "_")
         if build:
             dep_name += "_build"
-        cpp_info = dep.cpp_info.aggregated_components()
-        public_deps = [d.ref.name.replace(".", "_")
-                       for r, d in dep.dependencies.direct_host.items() if r.visible]
         result = {}
-        # One file per configuration, with just the variables
-        vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
-        result[vars_props_name] = self._vars_props_file(dep, dep_name, cpp_info, public_deps,
-                                                        build=build)
-        props_name = "conan_%s%s.props" % (dep_name, conf_name)
-        result[props_name] = self._conf_props_file(dep_name, vars_props_name, public_deps,
-                                                   build=build)
+        if dep.cpp_info.has_components:
+            component_filenames = []
+            for comp_name, comp_info in dep.cpp_info.components.items():
+                if comp_name is None:
+                    continue
+                full_comp_name = "{}_{}".format(dep_name, comp_name)
+                vars_props_name = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
+                # FIXME: public_deps is wrong
+                public_deps = [d.ref.name.replace(".", "_")
+                               for r, d in dep.dependencies.direct_host.items() if r.visible]
+                result[vars_props_name] = self._vars_props_file(dep, full_comp_name, comp_info,
+                                                                public_deps, build=build)
+                props_name = "conan_%s%s.props" % (full_comp_name, conf_name)
+                result[props_name] = self._conf_props_file(full_comp_name, vars_props_name,
+                                                           public_deps, build=build)
 
-        # The entry point for each package, it will have conditionals to the others
-        file_dep_name = "conan_%s.props" % dep_name
-        dep_content = self._dep_props_file(dep_name, file_dep_name, props_name, condition)
-        result[file_dep_name] = dep_content
+                # The entry point for each component, it will have conditionals to the others
+                file_dep_name = "conan_%s.props" % full_comp_name
+                dep_content = self._dep_props_file(full_comp_name, file_dep_name, props_name,
+                                                   condition)
+                component_filenames.append(file_dep_name)
+                result[file_dep_name] = dep_content
+            # The entry point for each package, it will aggregate the components
+            file_dep_name = "conan_%s.props" % dep_name
+            dep_content = self._component_aggregation_file(component_filenames)
+            result[file_dep_name] = dep_content
+        else:
+            cpp_info = dep.cpp_info
+            public_deps = [d.ref.name.replace(".", "_")
+                           for r, d in dep.dependencies.direct_host.items() if r.visible]
+            # One file per configuration, with just the variables
+            vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
+            result[vars_props_name] = self._vars_props_file(dep, dep_name, cpp_info, public_deps,
+                                                            build=build)
+            props_name = "conan_%s%s.props" % (dep_name, conf_name)
+            result[props_name] = self._conf_props_file(dep_name, vars_props_name, public_deps,
+                                                       build=build)
+
+            # The entry point for each package, it will have conditionals to the others
+            file_dep_name = "conan_%s.props" % dep_name
+            dep_content = self._dep_props_file(dep_name, file_dep_name, props_name, condition)
+            result[file_dep_name] = dep_content
         return result
 
     def _content(self):
