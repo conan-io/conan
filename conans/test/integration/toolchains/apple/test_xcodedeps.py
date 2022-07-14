@@ -387,7 +387,7 @@ def test_xcodedeps_cppinfo_requires():
     So we will only link against the components specified in the cpp_info.requires of lib_b and lib_c
     """
 
-    lib_b = client.load("conan_lib_b_lib_b.xcconfig")
+    lib_b = client.load(os.path.join("consumer", "conan_lib_b_lib_b.xcconfig"))
 
     # check that nothing from other components than the specified in the cpp_info.requires
     # from lib_b and lib_c exist in the xcconfig that adds the includes from components
@@ -396,7 +396,7 @@ def test_xcodedeps_cppinfo_requires():
     assert "cmp3" not in lib_b
     assert "cmp4" not in lib_b
 
-    lib_c = client.load("conan_lib_c_lib_c.xcconfig")
+    lib_c = client.load(os.path.join("consumer", "conan_lib_c_lib_c.xcconfig"))
 
     assert "cmp1" not in lib_c
     assert "cmp2" in lib_c
