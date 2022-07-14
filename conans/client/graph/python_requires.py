@@ -36,7 +36,8 @@ class PyRequires(object):
         key = py_require.ref.name
         # single item assignment, direct
         existing = self._pyrequires.get(key)
-        if existing:
+        if existing and existing is not py_require:  # if is the same one, can be added.
+            # TODO: Better test python_requires conflicts
             raise ConanException("The python_require '%s' already exists" % key)
         self._pyrequires[key] = py_require
 
