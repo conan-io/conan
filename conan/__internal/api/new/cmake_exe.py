@@ -1,4 +1,4 @@
-from conan._internal.api.new.cmake_lib import source_cpp, source_h, test_main
+from conan.__internal.api.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_exe = '''from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
