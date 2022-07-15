@@ -229,8 +229,6 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
         else retry_wait if retry_wait is not None else 5
 
     # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
-    # checksum = sha256 or sha1 or md5
-    # download_cache = config.get("tools.files.download:download_cache") if checksum else None
     download_cache = False
 
     def _download_file(file_url):

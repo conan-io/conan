@@ -40,7 +40,6 @@ class RestV2Methods(RestCommonMethods):
         retry = self._config.get("core.download:retry", check_type=int)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int)
         # Conan 2.0: Removed "core.download:download_cache" configuration
-        # download_cache = False if not use_cache else self._config.get("core.download:download_cache")
         download_cache = False
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,
@@ -163,7 +162,6 @@ class RestV2Methods(RestCommonMethods):
         retry = self._config.get("core.download:retry", check_type=int)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int)
         # Conan 2.0: Removed "core.download:download_cache" configuration
-        # download_cache = False if not use_cache else self._config.get("core.download:download_cache")
         download_cache = False
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]

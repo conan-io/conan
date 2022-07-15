@@ -8,7 +8,6 @@ from threading import Thread
 import pytest
 from bottle import static_file, request
 
-from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -201,85 +200,3 @@ class DownloadCacheTest(unittest.TestCase):
         client2.run("install --requires=mypkg/0.1@user/testing")
 
         self.assertEqual("header2", get_value_from_output(client2.out))
-
-
-class CachedDownloaderUnitTest(unittest.TestCase):
-    def setUp(self):
-        cache_folder = temp_folder()
-
-        class FakeFileDownloader(object):
-            def __init__(self):
-                self.calls = Counter()
-
-            def download(self, url, file_path=None, *args, **kwargs):
-                if "slow" in url:
-                    time.sleep(0.5)
-                self.calls[url] += 1
-                if file_path:
-                    save(file_path, url)
-                else:
-                    return url
-
-        self.file_downloader = FakeFileDownloader()
-        self.cached_downloader = CachedFileDownloader(cache_folder, self.file_downloader)
-
-    def test_concurrent_locks(self):
-        folder = temp_folder()
-
-        def download(index):
-            if index % 2:
-                content = self.cached_downloader.download("slow_testurl")
-                content = content.decode("utf-8")
-            else:
-                file_path = os.path.join(folder, "myfile%s.txt" % index)
-                self.cached_downloader.download("slow_testurl", file_path)
-                content = load(file_path)
-            self.assertEqual(content, "slow_testurl")
-            self.assertEqual(self.file_downloader.calls["slow_testurl"], 1)
-
-        ps = []
-        for i in range(8):
-            thread = Thread(target=download, args=(i,))
-            thread.start()
-            ps.append(thread)
-
-        for p in ps:
-            p.join()
-
-        self.assertEqual(self.file_downloader.calls["slow_testurl"], 1)
-
-    def test_basic(self):
-        folder = temp_folder()
-        file_path = os.path.join(folder, "myfile.txt")
-        self.cached_downloader.download("testurl", file_path)
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-        self.assertEqual("testurl", load(file_path))
-
-        # Try again, the count will be the same
-        self.cached_downloader.download("testurl", file_path)
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-        # Try direct content
-        content = self.cached_downloader.download("testurl")
-        self.assertEqual(content.decode("utf-8"), "testurl")
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-
-        # Try another file
-        file_path = os.path.join(folder, "myfile2.txt")
-        self.cached_downloader.download("testurl2", file_path)
-        self.assertEqual(self.file_downloader.calls["testurl2"], 1)
-        self.assertEqual("testurl2", load(file_path))
-        self.cached_downloader.download("testurl2", file_path)
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-        self.assertEqual(self.file_downloader.calls["testurl2"], 1)
-
-    def test_content_first(self):
-        # first calling content without path also caches
-        content = self.cached_downloader.download("testurl")
-        self.assertEqual(content.decode("utf-8"), "testurl")  # content is binary here
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-        # Now the file
-        folder = temp_folder()
-        file_path = os.path.join(folder, "myfile.txt")
-        self.cached_downloader.download("testurl", file_path)
-        self.assertEqual(self.file_downloader.calls["testurl"], 1)
-        self.assertEqual("testurl", load(file_path))
