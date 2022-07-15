@@ -13,6 +13,10 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 class MSBuildDeps(object):
+    """
+    conandeps.props: unconditional import of all *direct* dependencies only
+
+    """
 
     _vars_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -120,7 +124,12 @@ class MSBuildDeps(object):
 
     def _conf_props_file(self, dep_name, vars_props_name, deps, build):
         """
-        content for conan_poco_x86_release.props, containing the activation
+        Actual activation of the VS variables, per configuration
+            - conan_pkgname_x86_release.props / conan_pkgname_compname_x86_release.props
+        :param dep_name: pkgname / pkgname_compname
+        :param vars_props_name: Name of the _vars_.props files with data to be included
+        :param deps: the name of other things to be included: [dep1, dep2:compA, ...]
+        :param build: if it is a build require or not
         """
         # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
         # Probably also the negation pattern, exclude all not @mycompany/*
@@ -135,6 +144,10 @@ class MSBuildDeps(object):
 
     @staticmethod
     def _dep_props_file(name, name_general, dep_props_filename, condition):
+        """
+        The file aggregating all configurations for a given pkg / component
+            - conan_pkgname.props
+        """
         # Current directory is the generators_folder
         multi_path = name_general
         if os.path.isfile(multi_path):
@@ -242,13 +255,13 @@ class MSBuildDeps(object):
                                       lstrip_blocks=True).render(**fields)
         return formatted_template
 
-    def _all_props_file(self, name_general):
+    def _conandeps(self):
         """ this is a .props file including direct declared dependencies
         """
         # Current directory is the generators_folder
-        multi_path = name_general
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
+        conandeps_filename = "conandeps.props"
+        if os.path.isfile(conandeps_filename):
+            content_multi = load(conandeps_filename)
         else:
             content_multi = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
@@ -283,7 +296,7 @@ class MSBuildDeps(object):
         content_multi = dom.toprettyxml()
         # To remove all extra blank lines
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
-        return content_multi
+        return {conandeps_filename: content_multi}
 
     def _package_props_files(self, dep, build=False):
         """ all the files for a given package:
@@ -350,18 +363,14 @@ class MSBuildDeps(object):
 
         host_req = list(self._conanfile.dependencies.host.values())
         test_req = list(self._conanfile.dependencies.test.values())
-
         for dep in host_req + test_req:
-            files = self._package_props_files(dep, build=False)
-            result.update(files)
+            result.update(self._package_props_files(dep, build=False))
 
         build_req = list(self._conanfile.dependencies.build.values())
         for dep in build_req:
-            files = self._package_props_files(dep, build=True)
-            result.update(files)
+            result.update(self._package_props_files(dep, build=True))
 
         # Include all direct build_requires for host context. This might change
-        conandeps_filename = "conandeps.props"
-        result[conandeps_filename] = self._all_props_file(conandeps_filename)
+        result.update(self._conandeps())
 
         return result
