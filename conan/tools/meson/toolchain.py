@@ -203,18 +203,24 @@ class MesonToolchain(object):
         #: environment value
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
-        # Apple flags
+        # Apple flags and variables
         #: Apple arch flag as a list, e.g., ``["-arch", "i386"]``
         self.apple_arch_flag = []
         #: Apple sysroot flag as a list, e.g., ``["-isysroot", "./Platforms/MacOSX.platform"]``
         self.apple_isysroot_flag = []
         #: Apple minimum binary version flag as a list, e.g., ``["-mios-version-min", "10.8"]``
         self.apple_min_version_flag = []
+        #: Defines the Meson ``objc`` variable. Defaulted to ``None``, if if any Apple OS ``clang``
         self.objc = None
+        #: Defines the Meson ``objcpp`` variable. Defaulted to ``None``, if if any Apple OS ``clang++``
         self.objcpp = None
+        #: Defines the Meson ``objc_args`` variable. Defaulted to ``OBJCFLAGS`` build environment value
         self.objc_args = []
+        #: Defines the Meson ``objc_link_args`` variable. Defaulted to ``LDFLAGS`` build environment value
         self.objc_link_args = []
+        #: Defines the Meson ``objcpp_args`` variable. Defaulted to ``OBJCXXFLAGS`` build environment value
         self.objcpp_args = []
+        #: Defines the Meson ``objcpp_link_args`` variable. Defaulted to ``LDFLAGS`` build environment value
         self.objcpp_link_args = []
 
         self._resolve_apple_flags_and_variables(build_env)
