@@ -493,7 +493,7 @@ def test_android_c_library():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
-def test_toolchain_path_correct():
+def test_presets_paths_correct():
     client = TestClient()
     conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -511,4 +511,7 @@ def test_toolchain_path_correct():
     contents = json.loads(client.load("build/generators/CMakePresets.json"))
     toolchain_file = contents["configurePresets"][0]["toolchainFile"]
     assert "/" not in toolchain_file
+
+    binary_dir = contents["configurePresets"][0]["binaryDir"]
+    assert "/" not in binary_dir
 
