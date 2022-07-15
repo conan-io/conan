@@ -76,7 +76,8 @@ def test_cmake_toolchain_custom_toolchain():
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool_cmake(version="3.23")
 @pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
-def test_cmake_user_presets_load(existing_user_presets):
+@pytest.mark.parametrize("schema2", [True, False])
+def test_cmake_user_presets_load(existing_user_presets, schema2):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
     syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
@@ -811,6 +812,46 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("build\\static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool_cmake(version="3.23")
+def test_user_presets_version2():
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=cmake_exe")
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
+    client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
+
+    client.run_command("cmake . --preset 14-release")
+    client.run_command("cmake --build --preset 14-release")
+    client.run_command("./build/14/Release/hello")
+    assert "Hello World Release!" in client.out
+
+    if platform.system() != "Windows":
+        assert "__cplusplus2014" in client.out
+    else:
+        assert "MSVC_LANG2014" in client.out
+
+    client.run_command("cmake . --preset 17-release")
+    client.run_command("cmake --build --preset 17-release")
+    client.run_command("./build/17/Release/hello")
+    assert "Hello World Release!" in client.out
+    if platform.system() != "Windows":
+        assert "__cplusplus2017" in client.out
+    else:
+        assert "MSVC_LANG2017" in client.out
+
+    client.run_command("cmake . --preset 20-release")
+    client.run_command("cmake --build --preset 20-release")
+    client.run_command("./build/20/Release/hello")
+    assert "Hello World Release!" in client.out
+
+    if platform.system() != "Windows":
+        assert "__cplusplus2020" in client.out
+    else:
+        assert "MSVC_LANG2020" in client.out
 
 
 @pytest.mark.tool_cmake
