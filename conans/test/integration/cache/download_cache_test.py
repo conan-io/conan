@@ -5,6 +5,7 @@ import unittest
 from collections import Counter
 from threading import Thread
 
+import pytest
 from bottle import static_file, request
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
@@ -73,6 +74,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("install --requires=pkg/0.1@")
         assert "pkg/0.1: Downloaded package" in client.out
 
+    @pytest.mark.skip()  # Skipping test because of tools.files.download:download_cache deletion
     def test_user_downloads_cached_newtools(self):
         http_server = StoppableThreadBottle()
 
