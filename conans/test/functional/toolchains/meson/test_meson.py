@@ -2,7 +2,7 @@ import os
 import platform
 import textwrap
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
@@ -98,7 +98,7 @@ class MesonToolchainTest(TestMesonBase):
         self._check_binary()
 
     def test_meson_default_dirs(self):
-        self.t.run("new hello/1.0 -m meson_exe")
+        self.t.run("new meson_exe -d name=hello -d version=1.0")
         # self.t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
 
         meson_build = textwrap.dedent("""
@@ -119,6 +119,7 @@ class MesonToolchainTest(TestMesonBase):
             settings = "os", "compiler", "build_type", "arch"
             exports_sources = "meson.build", "src/*"
             generators = "MesonToolchain"
+            package_type = "application"
 
             def layout(self):
                 self.folders.build = "build"
@@ -139,8 +140,9 @@ class MesonToolchainTest(TestMesonBase):
         from conan.tools.build import cross_building
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "VirtualRunEnv"
-            apply_env = False
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def test(self):
                 if not cross_building(self):
@@ -153,9 +155,9 @@ class MesonToolchainTest(TestMesonBase):
                      "src/file1.txt": "", "src/file2.txt": ""})
         self.t.run("create .")
         # Check if all the files are in the final directories
-        ref = ConanFileReference.loads("hello/1.0")
-        cache_package_folder = self.t.cache.package_layout(ref).packages()
-        package_folder = os.path.join(cache_package_folder, os.listdir(cache_package_folder)[0])
+        ref = RecipeReference.loads("hello/1.0")
+        pref = self.t.get_latest_package_reference(ref)
+        package_folder = self.t.get_latest_pkg_layout(pref).package()
         if platform.system() == "Windows":
             assert os.path.exists(os.path.join(package_folder, "lib", "hello.lib"))
             assert os.path.exists(os.path.join(package_folder, "bin", "hello.dll"))
