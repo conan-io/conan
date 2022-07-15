@@ -1,17 +1,11 @@
 import os
 import textwrap
-import time
 import unittest
-from collections import Counter
-from threading import Thread
-
-import pytest
-from bottle import static_file, request
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import load, save, set_dirty
+from conans.test.utils.tools import TestClient
+from conans.util.files import save, set_dirty
 
 
 class DownloadCacheTest(unittest.TestCase):
