@@ -53,8 +53,13 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
             "description": "'{}' configure using '{}' generator".format(name, generator),
             "generator": generator,
             "cacheVariables": cache_variables,
-            "toolchainFile": toolchain_file,
+
            }
+    if not _forced_schema_2(conanfile):
+        ret["toolchainFile"] = toolchain_file
+    else:
+        ret["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
+
     if conanfile.build_folder:
         # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
         # we don't even have a conanfile with a `layout()` to determine the build folder.
@@ -63,8 +68,16 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
     return ret
 
 
+def _forced_schema_2(conanfile):
+    return conanfile.conf.get("tools.cmake.cmaketoolchain.presets:schema2", check_type=bool)
+
+
+def _schema_version(conanfile, default):
+    return default if not _forced_schema_2(conanfile) else 2
+
+
 def _contents(conanfile, toolchain_file, cache_variables, generator):
-    ret = {"version": 3,
+    ret = {"version": _schema_version(conanfile, default=3),
            "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
            "configurePresets": [],
            "buildPresets": [],
@@ -117,23 +130,46 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
 
     data = json.dumps(data, indent=4)
     save(preset_path, data)
+    save_cmake_user_presets(conanfile, preset_path)
 
+
+def save_cmake_user_presets(conanfile, preset_path):
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
     if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
         if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
-                data = {"version": 4, "include": [preset_path], "vendor": {"conan": dict()}}
+                data = {"version": _schema_version(conanfile, default=4),
+                        "vendor": {"conan": dict()}}
             else:
                 data = json.loads(load(user_presets_path))
-                if "conan" in data.get("vendor", {}):
-                    # Clear the folders that have been deleted
-                    data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
-                    if preset_path not in data["include"]:
-                        data["include"].append(preset_path)
-
+                if "conan" not in data.get("vendor", {}):
+                    # The file is not ours, we cannot overwrite it
+                    return
+            data = _append_preset_path(conanfile, data, preset_path)
             data = json.dumps(data, indent=4)
             save(user_presets_path, data)
+
+
+def _append_preset_path(conanfile, data, preset_path):
+    if not _forced_schema_2(conanfile):
+        if "include" not in data:
+            data["include"] = []
+        data["include"].append(preset_path)
+        # Clear the folders that have been deleted
+        data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
+        if preset_path not in data["include"]:
+            data["include"].append(preset_path)
+        return data
+    else:
+        # Merge the presets
+        cmake_preset = json.loads(load(preset_path))
+        for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+            for preset in cmake_preset.get(preset_type, []):
+                if preset_type not in data:
+                    data[preset_type] = []
+                data[preset_type].append(preset)
+        return data
 
 
 def load_cmake_presets(folder):
