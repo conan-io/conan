@@ -122,25 +122,27 @@ class MSBuildDeps(object):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
-    def _conf_props_file(self, dep_name, vars_props_name, deps, build):
+    def _conf_props_file(self, dep_name, conf_name, deps, build):
         """
         Actual activation of the VS variables, per configuration
             - conan_pkgname_x86_release.props / conan_pkgname_compname_x86_release.props
         :param dep_name: pkgname / pkgname_compname
-        :param vars_props_name: Name of the _vars_.props files with data to be included
         :param deps: the name of other things to be included: [dep1, dep2:compA, ...]
         :param build: if it is a build require or not
         """
+        props_name = "conan_%s%s.props" % (dep_name, conf_name)
+        vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
         # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
         # Probably also the negation pattern, exclude all not @mycompany/*
         ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
 
-        deps = [] if build else deps  # build-requires do not propagate dependencies
+        if build:
+            assert not deps
         template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
         content_multi = template.render(host_context=not build,
                                         name=dep_name, ca_exclude=ca_exclude,
                                         vars_filename=vars_props_name, deps=deps)
-        return content_multi
+        return {props_name: content_multi}
 
     @staticmethod
     def _dep_props_file(name, name_general, dep_props_filename, condition):
@@ -201,11 +203,13 @@ class MSBuildDeps(object):
         content_multi = Template(content_multi).render({"components_files": components_files})
         return content_multi
 
-    def _vars_props_file(self, dep, name, cpp_info, deps, build):
+    def _vars_props_file(self, dep, name, conf_name, cpp_info, deps, build):
         """
-        content for conan_vars_poco_x86_release.props, containing the variables
+        content for conan_vars_poco_x86_release.props, containing the variables for 1 config
+        :return: {filename: content}
         """
-        # returns a .props file with the variables definition for one package for one configuration
+        vars_props_name = "conan_%s_vars%s.props" % (name, conf_name)
+
         def add_valid_ext(libname):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
@@ -235,6 +239,9 @@ class MSBuildDeps(object):
 
         package_folder = escape_path(dep.package_folder)
 
+        if build:
+            assert not deps
+
         fields = {
             'name': name,
             'root_folder': package_folder,
@@ -248,12 +255,12 @@ class MSBuildDeps(object):
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
-            'dependencies': ";".join(deps) if not build else "",
+            'dependencies': ";".join(deps),
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
                                       lstrip_blocks=True).render(**fields)
-        return formatted_template
+        return {vars_props_name: formatted_template}
 
     def _conandeps(self):
         """ this is a .props file including direct declared dependencies
@@ -318,15 +325,14 @@ class MSBuildDeps(object):
                 if comp_name is None:
                     continue
                 full_comp_name = "{}_{}".format(dep_name, comp_name)
-                vars_props_name = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
                 # FIXME: public_deps is wrong
                 public_deps = [d.ref.name.replace(".", "_")
                                for r, d in dep.dependencies.direct_host.items() if r.visible]
-                result[vars_props_name] = self._vars_props_file(dep, full_comp_name, comp_info,
-                                                                public_deps, build=build)
+                result.update(self._vars_props_file(dep, full_comp_name, conf_name,
+                                                    comp_info, public_deps, build=build))
                 props_name = "conan_%s%s.props" % (full_comp_name, conf_name)
-                result[props_name] = self._conf_props_file(full_comp_name, vars_props_name,
-                                                           public_deps, build=build)
+                result.update(self._conf_props_file(full_comp_name, conf_name, public_deps,
+                                                    build=build))
 
                 # The entry point for each component, it will have conditionals to the others
                 file_dep_name = "conan_%s.props" % full_comp_name
@@ -343,12 +349,9 @@ class MSBuildDeps(object):
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             # One file per configuration, with just the variables
-            vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
-            result[vars_props_name] = self._vars_props_file(dep, dep_name, cpp_info, public_deps,
-                                                            build=build)
-            props_name = "conan_%s%s.props" % (dep_name, conf_name)
-            result[props_name] = self._conf_props_file(dep_name, vars_props_name, public_deps,
-                                                       build=build)
+            result.update(self._vars_props_file(dep, dep_name, conf_name,
+                                                cpp_info, public_deps, build=build))
+            result.update(self._conf_props_file(dep_name, conf_name, public_deps, build=build))
 
             # The entry point for each package, it will have conditionals to the others
             file_dep_name = "conan_%s.props" % dep_name
