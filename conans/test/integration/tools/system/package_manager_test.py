@@ -55,6 +55,7 @@ def test_msys2():
     ("opensuse-tumbleweed", "zypper"),
     ("freebsd", "pkg"),
 ])
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
     with mock.patch("platform.system", return_value="Linux"):
         with mock.patch("distro.id", return_value=distro):
