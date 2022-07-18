@@ -1,4 +1,5 @@
 import platform
+from unittest.mock import MagicMock, patch
 
 import mock
 import pytest
@@ -111,8 +112,11 @@ def test_tools_install_mode_check(tool_class):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
-            conanfile.run_retcode = 1
-            tool.install(["package1", "package2"])
+            def fake_check(self):
+                return ["package1", "package2"]
+            from conan.tools.system.package_manager import _SystemPackageManagerTool
+            with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+                tool.install(["package1", "package2"])
         assert exc_info.value.args[0] == "System requirements: 'package1, package2' are missing but " \
                                          "can't install because tools.system.package_manager:mode is " \
                                          "'check'.Please update packages manually or set " \
