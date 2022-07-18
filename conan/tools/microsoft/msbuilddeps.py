@@ -6,6 +6,7 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -122,6 +123,14 @@ class MSBuildDeps(object):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
+    @staticmethod
+    def _dep_name(dep, build):
+        dep_name = dep.ref.name
+        dep_name = dep_name.replace(".", "_")
+        if build:  # dep.context == CONTEXT_BUILD:
+            dep_name += "_build"
+        return dep_name
+
     def _vars_props_file(self, dep, name, cpp_info, deps, build):
         """
         content for conan_vars_poco_x86_release.props, containing the variables for 1 config
@@ -155,9 +164,6 @@ class MSBuildDeps(object):
 
         package_folder = escape_path(dep.package_folder)
 
-        if build:
-            assert not deps
-
         fields = {
             'name': name,
             'root_folder': package_folder,
@@ -190,9 +196,6 @@ class MSBuildDeps(object):
         # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
         # Probably also the negation pattern, exclude all not @mycompany/*
         ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
-
-        if build:
-            assert not deps
         template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
         content_multi = template.render(host_context=not build, name=dep_name, ca_exclude=ca_exclude,
                                         vars_filename=vars_filename, deps=deps)
@@ -256,9 +259,7 @@ class MSBuildDeps(object):
             </Project>
             """)
         for req, dep in direct_deps.items():
-            dep_name = dep.ref.name.replace(".", "_")
-            if req.build:
-                dep_name += "_build"
+            dep_name = self._dep_name(dep, req.build)
             filename = "conan_%s.props" % dep_name
             comp_condition = "'$(conan_%s_props_imported)' != 'True'" % dep_name
             pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
@@ -275,10 +276,7 @@ class MSBuildDeps(object):
         """
         conf_name = self._config_filename()
         condition = self._condition()
-        dep_name = dep.ref.name
-        dep_name = dep_name.replace(".", "_")
-        if build:
-            dep_name += "_build"
+        dep_name = self._dep_name(dep, build)
         result = {}
         if dep.cpp_info.has_components:
             pkg_aggregated_content = None
@@ -314,7 +312,7 @@ class MSBuildDeps(object):
             vars_filename = "conan_%s_vars%s.props" % (dep_name, conf_name)
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
-            public_deps = [d.ref.name.replace(".", "_")
+            public_deps = [self._dep_name(d, build)
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             result[vars_filename] = self._vars_props_file(dep, dep_name, cpp_info,
                                                           public_deps, build=build)

@@ -1004,6 +1004,7 @@ def test_build_requires_transitives():
     c.run("create tool")
     c.run("install consumer -g MSBuildDeps")
     tool = c.load("conan_tool_build_release_x64.props")
-    assert "conan_dep" not in tool
+    assert "conan_dep_build.props" in tool
+    assert "conan_dep.props" not in tool
     tool_vars = c.load("conan_tool_build_vars_release_x64.props")
-    assert "<Conantool_buildDependencies></Conantool_buildDependencies>" in tool_vars
+    assert "<Conantool_buildDependencies>dep_build</Conantool_buildDependencies>" in tool_vars
