@@ -1,11 +1,8 @@
 import textwrap
 
-import pytest
-
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skip(reason="The detection of cycles have been removed in 2.0, this test hangs")
 def test_components_cycles():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -35,8 +32,8 @@ def test_components_cycles():
     c.save({"conanfile.py": conanfile,
             "test_package/conanfile.py": test_conanfile})
     c.run("create .", assert_error=True)
-    print(c.out)
-    assert "ERROR: There is a dependency loop in 'self.cpp_info.components' requires:" in c.out
+    assert "ERROR: Error in generator 'CMakeDeps': error generating context for 'testcycle/1.0': " \
+           "There is a dependency loop in 'self.cpp_info.components' requires:" in c.out
     assert "a requires c"
     assert "b requires a"
     assert "c rquires b"
