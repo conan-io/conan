@@ -187,8 +187,9 @@ def test_dnf_yum_return_code_100(tool_class, result):
         def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
             assert command == result
             return 100 if "check-update" in command else 0
-        with patch.object(ConanFileMock, 'run', MagicMock(side_effect=fake_run)):
-            tool.update()
+
+        conanfile.run = fake_run
+        tool.update()
 
     #check that some random return code fails
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
@@ -197,10 +198,11 @@ def test_dnf_yum_return_code_100(tool_class, result):
 
         def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
             return 55 if "check-update" in command else 0
-        with patch.object(ConanFileMock, 'run', MagicMock(side_effect=fake_run)):
-            with pytest.raises(ConanException) as exc_info:
-                tool.update()
-            assert f"Command '{result}' failed" == str(exc_info.value)
+
+        conanfile.run = fake_run
+        with pytest.raises(ConanException) as exc_info:
+            tool.update()
+        assert f"Command '{result}' failed" == str(exc_info.value)
 
 
 @pytest.mark.parametrize("tool_class, result", [
@@ -223,8 +225,12 @@ def test_tools_install_mode_install(tool_class, result):
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
-        tool.install(["package1", "package2"])
-    assert tool._conanfile.command == result
+
+        def fake_check(*args, **kwargs):
+            return ["package1", "package2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1", "package2"])
 
 
 @pytest.mark.parametrize("tool_class, result", [
@@ -247,4 +253,3 @@ def test_tools_check(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.check(["package"])
-    assert tool._conanfile.command == result
