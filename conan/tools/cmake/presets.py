@@ -54,7 +54,6 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
             "description": "'{}' configure using '{}' generator".format(name, generator),
             "generator": generator,
             "cacheVariables": cache_variables,
-
            }
     if "Ninja" in generator and is_msvc(conanfile):
         toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
@@ -69,7 +68,7 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
                 "armv7": "ARM",
                 "armv8": "ARM64"}.get(conanfile.settings.get_safe("arch"))
 
-        if toolset_arch:
+        if arch:
             ret["architecture"] = {
                 "value": arch,
                 "strategy": "external"
