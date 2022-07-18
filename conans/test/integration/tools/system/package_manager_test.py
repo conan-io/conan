@@ -112,7 +112,7 @@ def test_tools_install_mode_check(tool_class):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
-            def fake_check(self):
+            def fake_check(*args, **kwargs):
                 return ["package1", "package2"]
             from conan.tools.system.package_manager import _SystemPackageManagerTool
             with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -180,21 +180,27 @@ def test_dnf_yum_return_code_100(tool_class, result):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "install"
-    conanfile.run_retcode = 100
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
-        tool.update()
-    assert tool._conanfile.command == result
 
-    # check that some random return code fails
-    conanfile.run_retcode = 55
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+            assert command == result
+            return 100 if "check-update" in command else 0
+        with patch.object(ConanFileMock, 'run', MagicMock(side_effect=fake_run)):
+            tool.update()
+
+    #check that some random return code fails
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
-        with pytest.raises(ConanException) as exc_info:
-            tool.update()
-        assert f"Command '{result}' failed" == str(exc_info.value)
+
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+            return 55 if "check-update" in command else 0
+        with patch.object(ConanFileMock, 'run', MagicMock(side_effect=fake_run)):
+            with pytest.raises(ConanException) as exc_info:
+                tool.update()
+            assert f"Command '{result}' failed" == str(exc_info.value)
 
 
 @pytest.mark.parametrize("tool_class, result", [
