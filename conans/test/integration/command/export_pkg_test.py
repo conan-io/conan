@@ -552,3 +552,37 @@ def test_export_pkg_json_formatter():
     assert pkg_cpp_info['root']["properties"] is None
     # component info
     assert pkg_cpp_info.get('cmp1') is None
+
+
+def test_export_pkg_dont_update_src():
+    """
+    There was a bug in 1.X and sources were not updated correctly in export-pkg
+    close https://github.com/conan-io/conan/issues/6041
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import load
+        class Hello(ConanFile):
+            name = "hello"
+            version = "0.1"
+            exports_sources = "*.cpp"
+            def build(self):
+                content = load(self, "src/hello.cpp")
+                self.output.info("CONTENT: {}".format(content))
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "src/hello.cpp": "old code!"})
+    c.run("install .")
+    c.run("build .")
+    c.run("export-pkg .")
+    c.run("install --requires=hello/0.1@ --build=hello*")
+    assert "hello/0.1: CONTENT: old code!" in c.out
+    # Now locally change the source code
+    c.save({"src/hello.cpp": "updated code!"})
+    c.run("install .")
+    c.run("build .")
+    c.run("export-pkg .")
+    c.run("install --requires=hello/0.1@ --build=hello*")
+    assert "hello/0.1: CONTENT: updated code!" in c.out
