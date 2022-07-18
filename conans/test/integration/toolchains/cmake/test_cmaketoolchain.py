@@ -492,7 +492,6 @@ def test_android_c_library():
     client.run("create . foo/1.0@ -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo")
 
 
-
 def test_user_presets_version2():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -502,6 +501,11 @@ def test_user_presets_version2():
                 class Conan(ConanFile):
                     name = "foo"
                     version = "1.0"
+                    settings = "os", "arch", "compiler", "build_type"
+                    generators = "CMakeToolchain"
+
+                    def layout(self):
+                        cmake_layout(self)
 
             """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
@@ -577,31 +581,3 @@ def test_presets_paths_correct():
     assert "build/17/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
-
-
-def test_user_presets_version2_no_overwrite_user():
-
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import cmake_layout
-
-            class Conan(ConanFile):
-                name = "foo"
-                version = "1.0"
-                settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain"
-
-                def layout(self):
-                    cmake_layout(self)
-
-            """)
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo",
-                 "CMakeUserPresets.json": '{"from_user": 1}'})
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
-               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
-    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
-
-    presets = json.loads(client.load("CMakeUserPresets.json"))
-    assert presets == {"from_user": 1}
-

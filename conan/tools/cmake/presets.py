@@ -70,7 +70,10 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
 
 def _forced_schema_2(conanfile):
     version = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:max_schema_version",
-                                 check_type=int, default=4)
+                                 check_type=int)
+    if not version:
+        return False
+
     if version < 2:
         raise ConanException("The minimun value for 'tools.cmake.cmaketoolchain.presets:"
                              "schema_version' is 2")
@@ -88,6 +91,10 @@ def _schema_version(conanfile, default):
 
 
 def _contents(conanfile, toolchain_file, cache_variables, generator):
+    """
+    Contents for the CMakePresets.json
+    It uses schema version 3 unless it is forced to 2
+    """
     ret = {"version": _schema_version(conanfile, default=3),
            "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
            "configurePresets": [],
@@ -148,6 +155,10 @@ def save_cmake_user_presets(conanfile, preset_path):
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
     if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
         if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
+            """
+                Contents for the CMakeUserPresets.json
+                It uses schema version 4 unless it is forced to 2
+            """
             user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
                 data = {"version": _schema_version(conanfile, default=4),
@@ -157,12 +168,12 @@ def save_cmake_user_presets(conanfile, preset_path):
                 if "conan" not in data.get("vendor", {}):
                     # The file is not ours, we cannot overwrite it
                     return
-            data = _append_preset_path(conanfile, data, preset_path)
+            data = _append_user_preset_path(conanfile, data, preset_path)
             data = json.dumps(data, indent=4)
             save(user_presets_path, data)
 
 
-def _append_preset_path(conanfile, data, preset_path):
+def _append_user_preset_path(conanfile, data, preset_path):
     if not _forced_schema_2(conanfile):
         if "include" not in data:
             data["include"] = []
