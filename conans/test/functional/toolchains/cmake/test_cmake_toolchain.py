@@ -824,7 +824,10 @@ def test_user_presets_version2():
     client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
     client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
 
-    client.run_command("cmake . --preset 14-release")
+    if platform.system() == "Windows":
+        client.run_command("cmake . --preset 14")
+    else:
+        client.run_command("cmake . --preset 14-release")
     client.run_command("cmake --build --preset 14-release")
     client.run_command("./build/14/Release/hello")
     assert "Hello World Release!" in client.out

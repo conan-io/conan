@@ -166,7 +166,6 @@ def _append_preset_path(conanfile, data, preset_path):
     if not _forced_schema_2(conanfile):
         if "include" not in data:
             data["include"] = []
-        data["include"].append(preset_path)
         # Clear the folders that have been deleted
         data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
         if preset_path not in data["include"]:
