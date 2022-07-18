@@ -37,12 +37,13 @@ class _SystemPackageManagerTool(object):
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2"],
                            "choco": ["Windows"],
-                           "zypper": ["opensuse", "sles", "opensuse-tumbleweed"],
+                           "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
                            "pkgutil": ["Solaris"]}
         for tool, distros in manager_mapping.items():
-            if os_name in distros:
-                return tool
+            for d in distros:
+                if d in os_name:
+                    return tool
 
     def get_package_name(self, package):
         # TODO: should we only add the arch if cross-building?

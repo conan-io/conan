@@ -52,10 +52,13 @@ def test_msys2():
     ("arch", "pacman"),
     ("opensuse", "zypper"),
     ("sles", "zypper"),
+    ("opensuse", "zypper"),
     ("opensuse-tumbleweed", "zypper"),
+    ("opensuse-leap", "zypper"),
+    ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
 ])
-@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+#@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
     with mock.patch("platform.system", return_value="Linux"):
         with mock.patch("distro.id", return_value=distro):
