@@ -826,10 +826,13 @@ def test_user_presets_version2():
 
     if platform.system() == "Windows":
         client.run_command("cmake . --preset 14")
+        client.run_command("cmake --build --preset 14-release")
+        client.run_command("build/14/Release/hello.exe")
     else:
         client.run_command("cmake . --preset 14-release")
-    client.run_command("cmake --build --preset 14-release")
-    client.run_command("./build/14/Release/hello")
+        client.run_command("cmake --build --preset 14-release")
+        client.run_command("./build/14/Release/hello")
+
     assert "Hello World Release!" in client.out
 
     if platform.system() != "Windows":
@@ -837,24 +840,20 @@ def test_user_presets_version2():
     else:
         assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake . --preset 17-release")
-    client.run_command("cmake --build --preset 17-release")
-    client.run_command("./build/17/Release/hello")
+    if platform.system() == "Windows":
+        client.run_command("cmake . --preset 17")
+        client.run_command("cmake --build --preset 17-release")
+        client.run_command("build/17/Release/hello.exe")
+    else:
+        client.run_command("cmake . --preset 17-release")
+        client.run_command("cmake --build --preset 17-release")
+        client.run_command("./build/17/Release/hello")
+
     assert "Hello World Release!" in client.out
     if platform.system() != "Windows":
         assert "__cplusplus2017" in client.out
     else:
         assert "MSVC_LANG2017" in client.out
-
-    client.run_command("cmake . --preset 20-release")
-    client.run_command("cmake --build --preset 20-release")
-    client.run_command("./build/20/Release/hello")
-    assert "Hello World Release!" in client.out
-
-    if platform.system() != "Windows":
-        assert "__cplusplus2020" in client.out
-    else:
-        assert "MSVC_LANG2020" in client.out
 
 
 @pytest.mark.tool_cmake
