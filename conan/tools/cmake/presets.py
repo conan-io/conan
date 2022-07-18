@@ -209,6 +209,7 @@ def _append_user_preset_path(conanfile, data, preset_path):
             for preset in cmake_preset.get(preset_type, []):
                 if preset_type not in data:
                     data[preset_type] = []
+                # FIXME: Probably is better to overwrite the element with the new changes
                 already_exist = preset["name"] in [p["name"] for p in data[preset_type]]
                 if not already_exist:
                     data[preset_type].append(preset)
