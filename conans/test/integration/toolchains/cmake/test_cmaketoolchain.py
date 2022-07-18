@@ -514,19 +514,15 @@ def test_user_presets_version2():
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
     client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
     client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
-    client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
 
     presets = json.loads(client.load("CMakeUserPresets.json"))
-    assert len(presets["configurePresets"]) == 3
+    assert len(presets["configurePresets"]) == 2
     assert presets["version"] == 2
     assert "build/14/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][0]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
     assert "build/17/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
-                                                                                               "/")
-    assert "build/20/generators/conan_toolchain.cmake" \
-           in presets["configurePresets"][2]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
 
 
