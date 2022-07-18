@@ -176,7 +176,8 @@ class CMakeToolchain(object):
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        toolchain = os.path.join(self._conanfile.generators_folder, toolchain_file or self.filename)
+        toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
+                                                 toolchain_file or self.filename))
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
