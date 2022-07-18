@@ -409,9 +409,9 @@ class CppInfo(object):
                     origin[:] = new_
                 # TODO: Missing properties
 
-    def _raise_circle_components_requires(self):
+    def _raise_circle_components_requires_error(self):
         """
-        Raise an exception because of a circle requirements detection in components.
+        Raise an exception because of a requirements loop detection in components.
         The exception message gives some information about the involved components.
         """
         deps_set = set()
@@ -442,7 +442,7 @@ class CppInfo(object):
                     processed.append(name)
             else:
                 # Detected cycle components requirements!
-                self._raise_circle_components_requires()
+                self._raise_circle_components_requires_error()
 
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
 
