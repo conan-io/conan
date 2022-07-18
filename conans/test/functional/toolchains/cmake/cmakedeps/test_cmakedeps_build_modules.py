@@ -152,7 +152,10 @@ def test_build_modules_components_selection_is_not_possible():
             find_package(openssl CONFIG)
             crypto_message("hello!")
             ssl_message("hello!")
-            root_message("hello!")
+            # The root build_module is not taken into account because there are components instead
+            # FIXME: Another alternative could be passing the global_cpp but without aggregating
+            #        the components.
+            #  root_message("hello!")
             """)
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     # As we are requiring only "crypto" but it doesn't matter, it is not possible to include
@@ -160,5 +163,5 @@ def test_build_modules_components_selection_is_not_possible():
     client.run("create .")
     assert "SSL MESSAGE:hello!" in client.out
     assert "CRYPTO MESSAGE:hello!" in client.out
-    assert "ROOT MESSAGE:hello!" in client.out
+    assert "ROOT MESSAGE:hello!" not in client.out
 

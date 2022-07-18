@@ -26,7 +26,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     @property
     def context(self):
         global_cpp = self._get_global_cpp_cmake()
-        if not self.build_modules_activated:
+        if global_cpp and not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
 
         components = self._get_required_components_cpp()
@@ -84,6 +84,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### VARIABLES #######################################################################
               #############################################################################################
               set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
+
+              {% if global_cpp %}
+
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
@@ -100,11 +103,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
+              {% else %}
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
-
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
-
               ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
               set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
@@ -128,13 +130,19 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               )
               list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
               {%- endfor %}
+
+              {%- endif %}
           """)
         return ret
 
     def _get_global_cpp_cmake(self):
-        global_cppinfo = self.conanfile.cpp_info.aggregated_components()
-        pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder)
+        sorted_comps = self.conanfile.cpp_info.get_sorted_components()
+        if sorted_comps:  # There are components
+            return None
+        else:
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
+            return _TargetDataContext(self.conanfile.cpp_info, pfolder_var_name,
+                                      self.conanfile.package_folder)
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
