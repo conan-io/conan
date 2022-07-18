@@ -602,8 +602,10 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     configs = ["-c tools.cmake.cmaketoolchain:toolset_arch={}".format(arch_toolset),
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'",
                "-c tools.cmake.cmaketoolchain:generator=Ninja"]
-    msvc = " -s compiler=msvc -s compiler.version=192 -s compiler.runtime=static " \
+    msvc = " -s compiler=msvc -s compiler.runtime=static " \
            "-s compiler.runtime_type=Release"
+    if platform.system() != "Windows":
+        msvc += " -s compiler.version=192"  # In windows CI, use the real default config
     client.run("install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
 
     presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
