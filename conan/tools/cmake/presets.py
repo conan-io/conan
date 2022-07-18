@@ -64,14 +64,14 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
                 "value": toolset_arch,
                 "strategy": "external"
             }
-        toolset_arch = {"x86": "x86",
-                        "x86_64": "x64",
-                        "armv7": "ARM",
-                        "armv8": "ARM64"}.get(conanfile.settings.get_safe("arch"))
+        arch = {"x86": "x86",
+                "x86_64": "x64",
+                "armv7": "ARM",
+                "armv8": "ARM64"}.get(conanfile.settings.get_safe("arch"))
 
         if toolset_arch:
             ret["architecture"] = {
-                "value": toolset_arch,
+                "value": arch,
                 "strategy": "external"
             }
 
