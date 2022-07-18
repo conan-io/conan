@@ -43,6 +43,9 @@ class _SystemPackageManagerTool(object):
         for tool, distros in manager_mapping.items():
             if os_name in distros:
                 return tool
+            for d in distros:
+                if d in ["opensuse", "sles"] and os_name in d:
+                    return true
 
     def get_package_name(self, package):
         # TODO: should we only add the arch if cross-building?
