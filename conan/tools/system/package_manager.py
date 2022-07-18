@@ -60,7 +60,7 @@ class _SystemPackageManagerTool(object):
         askpass = "-A " if self._sudo and self._sudo_askpass else ""
         return "{}{}".format(sudo, askpass)
 
-    def _run_method(self, method, *args, **kwargs):
+    def run(self, method, *args, **kwargs):
         if self._active_tool == self.__class__.tool_name:
             return method(*args, **kwargs)
 
@@ -71,16 +71,16 @@ class _SystemPackageManagerTool(object):
         return ret
 
     def install_substitutes(self, *args, **kwargs):
-        return self._run_method(self._install_substitutes, *args, **kwargs)
+        return self.run(self._install_substitutes, *args, **kwargs)
 
     def install(self, *args, **kwargs):
-        return self._run_method(self._install, *args, **kwargs)
+        return self.run(self._install, *args, **kwargs)
 
     def update(self, *args, **kwargs):
-        return self._run_method(self._update, *args, **kwargs)
+        return self.run(self._update, *args, **kwargs)
 
     def check(self, *args, **kwargs):
-        return self._run_method(self._check, *args, **kwargs)
+        return self.run(self._check, *args, **kwargs)
 
     def _install_substitutes(self, *packages_substitutes, update=False, check=True, **kwargs):
         errors = []
@@ -118,8 +118,7 @@ class _SystemPackageManagerTool(object):
                                                       tool=self.tool_name,
                                                       packages=" ".join(packages_arch),
                                                       **kwargs)
-                accepted_returns = self.accepted_install_codes
-                return self._conanfile_run(command, accepted_returns)
+                return self._conanfile_run(command, self.accepted_install_codes)
         else:
             self._conanfile.output.info("System requirements: {} already "
                                         "installed".format(" ".join(packages)))
@@ -134,8 +133,7 @@ class _SystemPackageManagerTool(object):
                                  "'-c tools.system.package_manager:mode={1}'".format(self.mode_check,
                                                                                      self.mode_install))
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-        accepted_returns = self.accepted_update_codes
-        return self._conanfile_run(command, accepted_returns)
+        return self._conanfile_run(command, self.accepted_update_codes)
 
     def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
@@ -144,8 +142,7 @@ class _SystemPackageManagerTool(object):
     def check_package(self, package):
         command = self.check_command.format(tool=self.tool_name,
                                             package=package)
-        accepted_returns = self.accepted_check_codes
-        return self._conanfile_run(command, accepted_returns)
+        return self._conanfile_run(command, self.accepted_check_codes)
 
 
 class Apt(_SystemPackageManagerTool):
