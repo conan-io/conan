@@ -164,7 +164,6 @@ def test_msbuild_deps_components():
                                                    calls=["chat"]),
                  "greet.vcxproj": vcproj2})
     client.run("create .")
-    print(client.out)
     assert "main: Release!" in client.out
     assert "core/1.0: Hello World Release!" in client.out
     assert "tcp/1.0: Hello World Release!" in client.out
