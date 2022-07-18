@@ -490,3 +490,28 @@ def test_android_c_library():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . foo/1.0@ -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
+def test_presets_paths_correct():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    cmake_layout(self)
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . ")
+    contents = json.loads(client.load("build/generators/CMakePresets.json"))
+    toolchain_file = contents["configurePresets"][0]["toolchainFile"]
+    assert "/" not in toolchain_file
+
+    binary_dir = contents["configurePresets"][0]["binaryDir"]
+    assert "/" not in binary_dir
+
