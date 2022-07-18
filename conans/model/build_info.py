@@ -440,7 +440,7 @@ class CppInfo(object):
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
-            else:
+            if not processed:
                 # Detected cycle components requirements!
                 self._raise_circle_components_requires_error()
 
