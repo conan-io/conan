@@ -69,7 +69,8 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
 
 
 def _forced_schema_2(conanfile):
-    version = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:max_schema_version", check_type=int)
+    version = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:max_schema_version",
+                                 check_type=int, default=4)
     if version < 2:
         raise ConanException("The minimun value for 'tools.cmake.cmaketoolchain.presets:"
                              "schema_version' is 2")
