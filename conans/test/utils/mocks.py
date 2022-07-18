@@ -190,6 +190,7 @@ class ConanFileMock(ConanFile):
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
         self.cpp = Infos()
+        self.run_retcode = 0
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
@@ -197,6 +198,10 @@ class ConanFileMock(ConanFile):
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+        # fake the execution of the command
+        if not ignore_errors and self.run_retcode != 0:
+            raise ConanException("Error %d while executing %s" % (self.run_retcode, command))
+        return self.run_retcode
 
 
 MockOptions = MockSettings

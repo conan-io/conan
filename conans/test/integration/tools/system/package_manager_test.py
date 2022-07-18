@@ -111,6 +111,7 @@ def test_tools_install_mode_check(tool_class):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
+            conanfile.run_retcode = 1
             tool.install(["package1", "package2"])
         assert exc_info.value.args[0] == "System requirements: 'package1, package2' are missing but " \
                                          "can't install because tools.system.package_manager:mode is " \
@@ -140,7 +141,6 @@ def test_tools_update_mode_check(tool_class):
                                          "'-c tools.system.package_manager:mode=install'"
 
 
-
 @pytest.mark.parametrize("tool_class, result", [
     (Apt, "apt-get update"),
     (Yum, "yum check-update -y"),
@@ -163,6 +163,34 @@ def test_tools_update_mode_install(tool_class, result):
         tool = tool_class(conanfile)
         tool.update()
     assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("tool_class, result", [
+    (Yum, "yum check-update -y"),
+    (Dnf, "dnf check-update -y"),
+])
+def test_dnf_yum_return_code_100(tool_class, result):
+    # https://github.com/conan-io/conan/issues/11661
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.settings = Settings()
+    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
+    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    conanfile.run_retcode = 100
+    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+        tool.update()
+    assert tool._conanfile.command == result
+
+    # check that some random return code fails
+    conanfile.run_retcode = 55
+    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+        with pytest.raises(ConanException) as exc_info:
+            tool.update()
+        assert f"Command '{result}' failed" == str(exc_info.value)
 
 
 @pytest.mark.parametrize("tool_class, result", [

@@ -11,6 +11,9 @@ class _SystemPackageManagerTool(object):
     install_command = ""
     update_command = ""
     check_command = ""
+    accepted_install_codes = [0]
+    accepted_update_codes = [0]
+    accepted_check_codes = [0, 1]
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -57,21 +60,27 @@ class _SystemPackageManagerTool(object):
         askpass = "-A " if self._sudo and self._sudo_askpass else ""
         return "{}{}".format(sudo, askpass)
 
-    def run(self, method, *args, **kwargs):
+    def _run_method(self, method, *args, **kwargs):
         if self._active_tool == self.__class__.tool_name:
             return method(*args, **kwargs)
 
+    def _conanfile_run(self, command, accepted_returns):
+        ret = self._conanfile.run(command, ignore_errors=True)
+        if ret not in accepted_returns:
+            raise ConanException("Command '%s' failed" % command)
+        return ret
+
     def install_substitutes(self, *args, **kwargs):
-        return self.run(self._install_substitutes, *args, **kwargs)
+        return self._run_method(self._install_substitutes, *args, **kwargs)
 
     def install(self, *args, **kwargs):
-        return self.run(self._install, *args, **kwargs)
+        return self._run_method(self._install, *args, **kwargs)
 
     def update(self, *args, **kwargs):
-        return self.run(self._update, *args, **kwargs)
+        return self._run_method(self._update, *args, **kwargs)
 
     def check(self, *args, **kwargs):
-        return self.run(self._check, *args, **kwargs)
+        return self._run_method(self._check, *args, **kwargs)
 
     def _install_substitutes(self, *packages_substitutes, update=False, check=True, **kwargs):
         errors = []
@@ -109,7 +118,8 @@ class _SystemPackageManagerTool(object):
                                                       tool=self.tool_name,
                                                       packages=" ".join(packages_arch),
                                                       **kwargs)
-                return self._conanfile.run(command)
+                accepted_returns = self.accepted_install_codes
+                return self._conanfile_run(command, accepted_returns)
         else:
             self._conanfile.output.info("System requirements: {} already "
                                         "installed".format(" ".join(packages)))
@@ -124,7 +134,8 @@ class _SystemPackageManagerTool(object):
                                  "'-c tools.system.package_manager:mode={1}'".format(self.mode_check,
                                                                                      self.mode_install))
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-        return self._conanfile.run(command)
+        accepted_returns = self.accepted_update_codes
+        return self._conanfile_run(command, accepted_returns)
 
     def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
@@ -133,7 +144,8 @@ class _SystemPackageManagerTool(object):
     def check_package(self, package):
         command = self.check_command.format(tool=self.tool_name,
                                             package=package)
-        return self._conanfile.run(command, ignore_errors=True)
+        accepted_returns = self.accepted_check_codes
+        return self._conanfile_run(command, accepted_returns)
 
 
 class Apt(_SystemPackageManagerTool):
@@ -167,6 +179,7 @@ class Yum(_SystemPackageManagerTool):
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} check-update -y"
     check_command = "rpm -q {package}"
+    accepted_update_codes = [0, 100]
 
     def __init__(self, conanfile, arch_names=None):
         super(Yum, self).__init__(conanfile)
