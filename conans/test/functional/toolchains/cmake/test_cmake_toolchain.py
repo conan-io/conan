@@ -827,7 +827,7 @@ def test_user_presets_version2():
     if platform.system() == "Windows":
         client.run_command("cmake . --preset 14")
         client.run_command("cmake --build --preset 14-release")
-        client.run_command("build/14/Release/hello.exe")
+        client.run_command(r"build\14\Release\hello.exe")
     else:
         client.run_command("cmake . --preset 14-release")
         client.run_command("cmake --build --preset 14-release")
@@ -843,7 +843,7 @@ def test_user_presets_version2():
     if platform.system() == "Windows":
         client.run_command("cmake . --preset 17")
         client.run_command("cmake --build --preset 17-release")
-        client.run_command("build/17/Release/hello.exe")
+        client.run_command(r"build\17\Release\hello.exe")
     else:
         client.run_command("cmake . --preset 17-release")
         client.run_command("cmake --build --preset 17-release")
