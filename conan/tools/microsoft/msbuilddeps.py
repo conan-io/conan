@@ -14,6 +14,7 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 class MSBuildDeps(object):
     """
     MSBuildDeps class generator
+    conandeps.props: unconditional import of all *direct* dependencies only
     """
 
     _vars_props = textwrap.dedent("""\
@@ -131,65 +132,21 @@ class MSBuildDeps(object):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
-    def _conf_props_file(self, dep_name, vars_props_name, deps, build):
-        """
-        content for conan_poco_x86_release.props, containing the activation
-        """
-        # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
-        # Probably also the negation pattern, exclude all not @mycompany/*
-        ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
-
-        deps = [] if build else deps  # build-requires do not propagate dependencies
-        template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
-        content_multi = template.render(host_context=not build,
-                                        name=dep_name, ca_exclude=ca_exclude,
-                                        vars_filename=vars_props_name, deps=deps)
-        return content_multi
-
     @staticmethod
-    def _dep_props_file(name, name_general, dep_props_filename, condition):
-        # Current directory is the generators_folder
-        multi_path = name_general
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
-        else:
-            content_multi = textwrap.dedent("""\
-            <?xml version="1.0" encoding="utf-8"?>
-            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-              <ImportGroup Label="PropertySheets">
-              </ImportGroup>
-              <PropertyGroup>
-                <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
-              </PropertyGroup>
-            </Project>
-            """)
-            content_multi = Template(content_multi).render({"name": name})
-
-        # parse the multi_file and add new import statement if needed
-        dom = minidom.parseString(content_multi)
-        import_vars = dom.getElementsByTagName('ImportGroup')[0]
-
-        # Current vars
-        children = import_vars.getElementsByTagName("Import")
-        for node in children:
-            if (dep_props_filename == node.getAttribute("Project") and
-                    condition == node.getAttribute("Condition")):
-                break  # the import statement already exists
-        else:  # create a new import statement
-            import_node = dom.createElement('Import')
-            import_node.setAttribute('Condition', condition)
-            import_node.setAttribute('Project', dep_props_filename)
-            import_vars.appendChild(import_node)
-
-        content_multi = dom.toprettyxml()
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
-        return content_multi
+    def _dep_name(dep, build):
+        dep_name = dep.ref.name
+        dep_name = dep_name.replace(".", "_")
+        if build:  # dep.context == CONTEXT_BUILD:
+            dep_name += "_build"
+        return dep_name
 
     def _vars_props_file(self, dep, name, cpp_info, deps, build):
         """
-        content for conan_vars_poco_x86_release.props, containing the variables
+        content for conan_vars_poco_x86_release.props, containing the variables for 1 config
+        This will be for 1 package or for one component of a package
+        :return: varfile content
         """
-        # returns a .props file with the variables definition for one package for one configuration
+
         def add_valid_ext(libname):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
@@ -203,18 +160,15 @@ class MSBuildDeps(object):
             return path.replace("\\", "/").lstrip("/")
 
         def join_paths(paths):
-            # ALmost copied from CMakeDeps TargetDataContext
+            # TODO: ALmost copied from CMakeDeps TargetDataContext
             ret = []
             for p in paths:
                 assert os.path.isabs(p), "{} is not absolute".format(p)
-
-                if p.startswith(package_folder):
-                    rel = p[len(package_folder):]
-                    rel = escape_path(rel)
-                    norm_path = ("${%s}/%s" % (pkg_placeholder, rel))
-                else:
-                    norm_path = escape_path(p)
-                ret.append(norm_path)
+                full_path = escape_path(p)
+                if full_path.startswith(package_folder):
+                    rel = full_path[len(package_folder)+1:]
+                    full_path = ("%s/%s" % (pkg_placeholder, rel))
+                ret.append(full_path)
             return "".join("{};".format(e) for e in ret)
 
         package_folder = escape_path(dep.package_folder)
@@ -232,55 +186,95 @@ class MSBuildDeps(object):
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
-            'dependencies': ";".join(deps) if not build else "",
+            'dependencies': ";".join(deps),
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
                                       lstrip_blocks=True).render(**fields)
         return formatted_template
 
-    def _all_props_file(self, name_general):
-        """ this is a .props file including direct declared dependencies
+    def _activate_props_file(self, dep_name, vars_filename, deps, build):
+        """
+        Actual activation of the VS variables, per configuration
+            - conan_pkgname_x86_release.props / conan_pkgname_compname_x86_release.props
+        :param dep_name: pkgname / pkgname_compname
+        :param deps: the name of other things to be included: [dep1, dep2:compA, ...]
+        :param build: if it is a build require or not
+        """
+
+        # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
+        # Probably also the negation pattern, exclude all not @mycompany/*
+        ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
+        template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
+        content_multi = template.render(host_context=not build, name=dep_name, ca_exclude=ca_exclude,
+                                        vars_filename=vars_filename, deps=deps)
+        return content_multi
+
+    @staticmethod
+    def _dep_props_file(dep_name, filename, aggregated_filename, condition, content=None):
+        """
+        The file aggregating all configurations for a given pkg / component
+            - conan_pkgname.props
         """
         # Current directory is the generators_folder
-        multi_path = name_general
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
+        if content:
+            content_multi = content  # Useful for aggregating multiple components in one pass
+        elif os.path.isfile(filename):
+            content_multi = load(filename)
         else:
             content_multi = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
             <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
               <ImportGroup Label="PropertySheets">
               </ImportGroup>
+              <PropertyGroup>
+                <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
+              </PropertyGroup>
             </Project>
             """)
+            content_multi = Template(content_multi).render({"name": dep_name})
 
-        # parse the multi_file and add a new import statement if needed
+        # parse the multi_file and add new import statement if needed
         dom = minidom.parseString(content_multi)
-        import_group = dom.getElementsByTagName('ImportGroup')[0]
-        children = import_group.getElementsByTagName("Import")
-        direct_deps = self._conanfile.dependencies.filter({"direct": True})
-        for req, dep in direct_deps.items():
-            dep_name = dep.ref.name.replace(".", "_")
-            if req.build:
-                dep_name += "_build"
-            conf_props_name = "conan_%s.props" % dep_name
-            for node in children:
-                if conf_props_name == node.getAttribute("Project"):
-                    # the import statement already exists
-                    break
-            else:
-                # create a new import statement
-                import_node = dom.createElement('Import')
-                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep_name
-                import_node.setAttribute('Project', conf_props_name)
-                import_node.setAttribute('Condition', dep_imported)
-                # add it to the import group
-                import_group.appendChild(import_node)
+        import_vars = dom.getElementsByTagName('ImportGroup')[0]
+
+        # Current vars
+        children = import_vars.getElementsByTagName("Import")
+        for node in children:
+            if aggregated_filename == node.getAttribute("Project") \
+                    and condition == node.getAttribute("Condition"):
+                break
+        else:  # create a new import statement
+            import_node = dom.createElement('Import')
+            import_node.setAttribute('Condition', condition)
+            import_node.setAttribute('Project', aggregated_filename)
+            import_vars.appendChild(import_node)
+
         content_multi = dom.toprettyxml()
-        # To remove all extra blank lines
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
+
+    def _conandeps(self):
+        """ this is a .props file including direct declared dependencies
+        """
+        # Current directory is the generators_folder
+        conandeps_filename = "conandeps.props"
+        direct_deps = self._conanfile.dependencies.filter({"direct": True})
+        pkg_aggregated_content = textwrap.dedent("""\
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <ImportGroup Label="PropertySheets">
+              </ImportGroup>
+            </Project>
+            """)
+        for req, dep in direct_deps.items():
+            dep_name = self._dep_name(dep, req.build)
+            filename = "conan_%s.props" % dep_name
+            comp_condition = "'$(conan_%s_props_imported)' != 'True'" % dep_name
+            pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
+                                                          condition=comp_condition,
+                                                          content=pkg_aggregated_content)
+        return {conandeps_filename: pkg_aggregated_content}
 
     def _package_props_files(self, dep, build=False):
         """ all the files for a given package:
@@ -291,26 +285,50 @@ class MSBuildDeps(object):
         """
         conf_name = self._config_filename()
         condition = self._condition()
-        dep_name = dep.ref.name
-        dep_name = dep_name.replace(".", "_")
-        if build:
-            dep_name += "_build"
-        cpp_info = dep.cpp_info.aggregated_components()
-        public_deps = [d.ref.name.replace(".", "_")
-                       for r, d in dep.dependencies.direct_host.items() if r.visible]
+        dep_name = self._dep_name(dep, build)
         result = {}
-        # One file per configuration, with just the variables
-        vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
-        result[vars_props_name] = self._vars_props_file(dep, dep_name, cpp_info, public_deps,
-                                                        build=build)
-        props_name = "conan_%s%s.props" % (dep_name, conf_name)
-        result[props_name] = self._conf_props_file(dep_name, vars_props_name, public_deps,
-                                                   build=build)
+        if dep.cpp_info.has_components:
+            pkg_aggregated_content = None
+            for comp_name, comp_info in dep.cpp_info.components.items():
+                if comp_name is None:
+                    continue
+                full_comp_name = "{}_{}".format(dep_name, comp_name)
+                vars_filename = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
+                activate_filename = "conan_%s%s.props" % (full_comp_name, conf_name)
+                comp_filename = "conan_%s.props" % full_comp_name
+                pkg_filename = "conan_%s.props" % dep_name
 
-        # The entry point for each package, it will have conditionals to the others
-        file_dep_name = "conan_%s.props" % dep_name
-        dep_content = self._dep_props_file(dep_name, file_dep_name, props_name, condition)
-        result[file_dep_name] = dep_content
+                public_deps = []
+                for r in comp_info.requires:
+                    if "::" in r:  # Points to a component of a different package
+                        pkg, cmp_name = r.split("::")
+                        public_deps.append(pkg if pkg == cmp_name else "{}_{}".format(pkg, cmp_name))
+                    else:  # Points to a component of same package
+                        public_deps.append("{}_{}".format(dep_name, r))
+                result[vars_filename] = self._vars_props_file(dep, full_comp_name, comp_info,
+                                                              public_deps, build=build)
+                result[activate_filename] = self._activate_props_file(full_comp_name, vars_filename,
+                                                                      public_deps, build=build)
+                result[comp_filename] = self._dep_props_file(full_comp_name, comp_filename,
+                                                             activate_filename, condition)
+                comp_condition = "'$(conan_%s_props_imported)' != 'True'" % full_comp_name
+                pkg_aggregated_content = self._dep_props_file(dep_name, pkg_filename, comp_filename,
+                                                              condition=comp_condition,
+                                                              content=pkg_aggregated_content)
+                result[pkg_filename] = pkg_aggregated_content
+        else:
+            cpp_info = dep.cpp_info
+            vars_filename = "conan_%s_vars%s.props" % (dep_name, conf_name)
+            activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
+            pkg_filename = "conan_%s.props" % dep_name
+            public_deps = [self._dep_name(d, build)
+                           for r, d in dep.dependencies.direct_host.items() if r.visible]
+            result[vars_filename] = self._vars_props_file(dep, dep_name, cpp_info,
+                                                          public_deps, build=build)
+            result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
+                                                                  public_deps, build=build)
+            result[pkg_filename] = self._dep_props_file(dep_name, pkg_filename, activate_filename,
+                                                        condition=condition)
         return result
 
     def _content(self):
@@ -320,18 +338,14 @@ class MSBuildDeps(object):
 
         host_req = list(self._conanfile.dependencies.host.values())
         test_req = list(self._conanfile.dependencies.test.values())
-
         for dep in host_req + test_req:
-            files = self._package_props_files(dep, build=False)
-            result.update(files)
+            result.update(self._package_props_files(dep, build=False))
 
         build_req = list(self._conanfile.dependencies.build.values())
         for dep in build_req:
-            files = self._package_props_files(dep, build=True)
-            result.update(files)
+            result.update(self._package_props_files(dep, build=True))
 
         # Include all direct build_requires for host context. This might change
-        conandeps_filename = "conandeps.props"
-        result[conandeps_filename] = self._all_props_file(conandeps_filename)
+        result.update(self._conandeps())
 
         return result
