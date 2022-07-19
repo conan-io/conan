@@ -44,8 +44,11 @@ def test_components_cycles():
     assert "c requires b" in out
 
 
-def test_components_cycle_in_the_middle():
-    """ a -> b -> c -> d -> b"""
+def test_components_cycle_complex():
+    """
+    Cycle: a -> b -> c -> d -> b
+    Isolated j declaring its libs
+    """
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -59,6 +62,7 @@ def test_components_cycle_in_the_middle():
                 self.cpp_info.components["b"].requires = ["c"]
                 self.cpp_info.components["c"].requires = ["d"]
                 self.cpp_info.components["d"].requires = ["b"]  # cycle!
+                self.cpp_info.components["j"].libs = ["libj"]
         """)
     test_conanfile = textwrap.dedent("""
         from conan import ConanFile

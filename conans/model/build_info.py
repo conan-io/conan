@@ -434,14 +434,15 @@ class CppInfo(object):
         processed = []  # Names of the components ordered
         # FIXME: Cache the sort
         while (len(self.components) - 1) > len(processed):
+            cached_processed = processed[:]
             for name, c in self.components.items():
                 if name is None:
                     continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
-            if not processed:
-                # Detected cycle components requirements!
+            # If cached_processed did not change then detected cycle components requirements!
+            if cached_processed == processed:
                 self._raise_circle_components_requires_error()
 
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
