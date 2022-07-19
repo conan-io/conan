@@ -2,6 +2,8 @@ import copy
 import os
 from collections import OrderedDict
 
+from conans.errors import ConanException
+
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
@@ -407,20 +409,41 @@ class CppInfo(object):
                     origin[:] = new_
                 # TODO: Missing properties
 
+    def _raise_circle_components_requires_error(self):
+        """
+        Raise an exception because of a requirements loop detection in components.
+        The exception message gives some information about the involved components.
+        """
+        deps_set = set()
+        for comp_name, comp in self.components.items():
+            for dep_name, dep in self.components.items():
+                for require in dep.required_component_names:
+                    if require == comp_name:
+                        deps_set.add("   {} requires {}".format(dep_name, comp_name))
+        dep_mesg = "\n".join(deps_set)
+        raise ConanException(f"There is a dependency loop in "
+                             f"'self.cpp_info.components' requires:\n{dep_mesg}")
+
     def get_sorted_components(self):
-        """Order the components taking into account if they depend on another component in the
-        same package (not scoped with ::). First less dependant
-        return:  {component_name: component}
+        """
+        Order the components taking into account if they depend on another component in the
+        same package (not scoped with ::). First less dependant.
+
+        :return: ``OrderedDict`` {component_name: component}
         """
         processed = []  # Names of the components ordered
         # FIXME: Cache the sort
         while (len(self.components) - 1) > len(processed):
+            cached_processed = processed[:]
             for name, c in self.components.items():
                 if name is None:
                     continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
+            # If cached_processed did not change then detected cycle components requirements!
+            if cached_processed == processed:
+                self._raise_circle_components_requires_error()
 
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
 
