@@ -16,6 +16,7 @@ BUILT_IN_CONFS = {
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Download folder used by Rest API methods",
+    "core.cache:storage_path": "Absolute path where the packages and database are stored",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
