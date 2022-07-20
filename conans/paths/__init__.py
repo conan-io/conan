@@ -25,7 +25,7 @@ def get_conan_user_home():
         except KeyError:
             pass
 
-    if conanrc_home and conanrc_home[:2] in ("./", ".\\") or conanrc_home.startswith(".."):  # local
+    if conanrc_home and (conanrc_home[:2] in ("./", ".\\") or conanrc_home.startswith("..")):  # local
         conanrc_home = os.path.abspath(os.path.join(os.getcwd(), conanrc_home))
 
     user_home = conanrc_home or os.getenv("CONAN_HOME")
