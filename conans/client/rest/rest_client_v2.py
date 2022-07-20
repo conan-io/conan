@@ -34,11 +34,13 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
+    # FIXME: This method seems to be useless
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         retry = self._config.get("core.download:retry", check_type=int)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int)
-        download_cache = False if not use_cache else self._config.download_cache
+        # Conan 2.0: Removed "core.download:download_cache" configuration
+        download_cache = False
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,
                                   auth=self.auth, headers=headers)
@@ -159,7 +161,8 @@ class RestV2Methods(RestCommonMethods):
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int)
-        download_cache = False if not use_cache else self._config.get("core.download:download_cache")
+        # Conan 2.0: Removed "core.download:download_cache" configuration
+        download_cache = False
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)

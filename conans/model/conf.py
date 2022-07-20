@@ -15,7 +15,6 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
-    "core.download:download_cache": "Download folder used by Rest API methods",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
@@ -34,7 +33,6 @@ BUILT_IN_CONFS = {
     # Gzip compression
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
-    "tools.files.download:download_cache": "Download folder to be used by 'download' tool and only if a checksum is provided",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
