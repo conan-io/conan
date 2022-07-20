@@ -365,6 +365,11 @@ def test_custom_defines():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     be.extra_defines = ["MyDefine1", "MyDefine2"]
+
+    assert "MyDefine1" in be.defines
+    assert "MyDefine2" in be.defines
+    assert "NDEBUG" in be.defines
+
     env = be.vars()
     assert "-DMyDefine1" in env["CPPFLAGS"]
     assert "-DMyDefine2" in env["CPPFLAGS"]
@@ -381,6 +386,13 @@ def test_custom_cxxflags():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     be.extra_cxxflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.cxxflags
+    assert "MyFlag2" in be.cxxflags
+    assert "-mios-version-min=14" in be.cxxflags
+    assert "MyFlag" not in be.cflags
+    assert "MyFlag" not in be.ldflags
+
     env = be.vars()
     assert "MyFlag1" in env["CXXFLAGS"]
     assert "MyFlag2" in env["CXXFLAGS"]
@@ -400,6 +412,13 @@ def test_custom_cflags():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     be.extra_cflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.cflags
+    assert "MyFlag2" in be.cflags
+    assert "-mios-version-min=14" in be.cflags
+    assert "MyFlag" not in be.cxxflags
+    assert "MyFlag" not in be.ldflags
+
     env = be.vars()
     assert "MyFlag1" in env["CFLAGS"]
     assert "MyFlag2" in env["CFLAGS"]
@@ -419,6 +438,13 @@ def test_custom_ldflags():
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     be.extra_ldflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.ldflags
+    assert "MyFlag2" in be.ldflags
+    assert "-mios-version-min=14" in be.ldflags
+    assert "MyFlag" not in be.cxxflags
+    assert "MyFlag" not in be.cflags
+
     env = be.vars()
     assert "MyFlag1" in env["LDFLAGS"]
     assert "MyFlag2" in env["LDFLAGS"]
