@@ -26,7 +26,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     @property
     def context(self):
         global_cpp = self._get_global_cpp_cmake()
-        if global_cpp and not self.build_modules_activated:
+        if not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
 
         components = self._get_required_components_cpp()
