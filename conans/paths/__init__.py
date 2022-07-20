@@ -1,7 +1,8 @@
 # coding=utf-8
-
+from configparser import ConfigParser
 import os
 import platform
+
 
 if platform.system() == "Windows":
     from conans.util.windows import conan_expand_user
@@ -12,7 +13,22 @@ DEFAULT_CONAN_HOME = ".conan2"
 
 
 def get_conan_user_home():
-    user_home = os.getenv("CONAN_HOME")
+    conanrc_home = None
+
+    conanrc_config = ConfigParser()
+    conanrc_file = conanrc_config.read(os.path.join(os.getcwd(), "conan.conanrc"))
+
+    if conanrc_file:
+        try:
+            init_section = conanrc_config["init"]
+            conanrc_home = init_section["conan_home"]
+        except KeyError:
+            pass
+
+    if conanrc_home[:2] in ("./", ".\\") or conanrc_home.startswith(".."):  # local
+        conanrc_home = os.path.abspath(os.path.join(os.getcwd(), conanrc_home))
+
+    user_home = conanrc_home or os.getenv("CONAN_HOME")
     if user_home is None:
         # the default, in the user home
         user_home = os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME)
