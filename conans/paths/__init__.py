@@ -20,7 +20,7 @@ def get_conan_user_home():
                        not line.startswith("#"))}
             conan_home = values["conan_home"]
             # check if it's a local folder
-            if conan_home and (conan_home[:2] in ("./", ".\\") or conan_home.startswith("..")):
+            if conan_home[:2] in ("./", ".\\") or conan_home.startswith(".."):
                 conan_home = os.path.abspath(os.path.join(os.getcwd(), conan_home))
             return conan_home
         except (IOError, KeyError):
