@@ -1,5 +1,4 @@
 # coding=utf-8
-from configparser import ConfigParser
 import os
 import platform
 
@@ -13,22 +12,21 @@ DEFAULT_CONAN_HOME = ".conan2"
 
 
 def get_conan_user_home():
-    conanrc_home = None
-
-    conanrc_config = ConfigParser()
-    conanrc_file = conanrc_config.read(os.path.join(os.getcwd(), "conan.conanrc"))
-
-    if conanrc_file:
+    def _read_user_home_from_rc():
         try:
-            init_section = conanrc_config["init"]
-            conanrc_home = init_section["conan_home"]
-        except KeyError:
-            pass
+            conanrc_path = os.path.join(os.getcwd(), "conan.conanrc")
+            values = {k: str(v) for k, v in
+                      (line.split('=') for line in open(conanrc_path).read().splitlines() if
+                       not line.startswith("#"))}
+            conan_home = values["conan_home"]
+            # check if it's a local folder
+            if conan_home and (conan_home[:2] in ("./", ".\\") or conan_home.startswith("..")):
+                conan_home = os.path.abspath(os.path.join(os.getcwd(), conan_home))
+            return conan_home
+        except (IOError, KeyError):
+            return None
 
-    if conanrc_home and (conanrc_home[:2] in ("./", ".\\") or conanrc_home.startswith("..")):  # local
-        conanrc_home = os.path.abspath(os.path.join(os.getcwd(), conanrc_home))
-
-    user_home = conanrc_home or os.getenv("CONAN_HOME")
+    user_home = _read_user_home_from_rc() or os.getenv("CONAN_HOME")
     if user_home is None:
         # the default, in the user home
         user_home = os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME)
