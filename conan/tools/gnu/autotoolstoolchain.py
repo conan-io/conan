@@ -152,14 +152,19 @@ class AutotoolsToolchain:
                             + apple_flags + extra_flags["ldflags"])
         self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
 
+        self.cxxflags = self._filter_list_empty_fields(self.cxxflags)
+        self.cflags = self._filter_list_empty_fields(self.cflags)
+        self.ldflags = self._filter_list_empty_fields(self.ldflags)
+        self.defines = self._filter_list_empty_fields(self.defines)
+
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
 
-        env.append("CPPFLAGS", ["-D{}".format(d) for d in self._filter_list_empty_fields(self.defines)])
-        env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
-        env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
-        env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
+        env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
+        env.append("CXXFLAGS", self.cxxflags)
+        env.append("CFLAGS", self.cflags)
+        env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
 
         return env
