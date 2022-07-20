@@ -56,7 +56,6 @@ def test_not_none_values():
 
             def generate(self):
                 tc = AutotoolsToolchain(self)
-                tc.environment()
                 assert None not in tc.defines
                 assert None not in tc.cxxflags
                 assert None not in tc.cflags
