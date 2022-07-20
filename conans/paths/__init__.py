@@ -14,7 +14,7 @@ DEFAULT_CONAN_HOME = ".conan2"
 def get_conan_user_home():
     def _read_user_home_from_rc():
         try:
-            conanrc_path = os.path.join(os.getcwd(), "conan.conanrc")
+            conanrc_path = os.path.join(os.getcwd(), ".conanrc")
             values = {k: str(v) for k, v in
                       (line.split('=') for line in open(conanrc_path).read().splitlines() if
                        not line.startswith("#"))}
