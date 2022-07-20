@@ -5,20 +5,13 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 @pytest.mark.tool("cmake")
-def test_transitive_headers_not_public():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create .")
+def test_transitive_headers_not_public(transitive_libraries):
+    c = transitive_libraries
 
     conanfile = textwrap.dedent("""\
        from conan import ConanFile
@@ -57,13 +50,8 @@ def test_transitive_headers_not_public():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 @pytest.mark.tool("cmake")
-def test_shared_requires_static():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb/*:shared=True")
+def test_shared_requires_static(transitive_libraries):
+    c = transitive_libraries
 
     conanfile = textwrap.dedent("""\
        from conan import ConanFile
@@ -97,13 +85,8 @@ def test_shared_requires_static():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 @pytest.mark.tool("cmake")
-def test_transitive_binary_skipped():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb/*:shared=True")
+def test_transitive_binary_skipped(transitive_libraries):
+    c = transitive_libraries
     # IMPORTANT: liba binary can be removed, no longer necessary
     c.run("remove liba* -p -f")
 
