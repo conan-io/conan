@@ -140,7 +140,7 @@ class MSBuildDeps(object):
             dep_name += "_build"
         return dep_name
 
-    def _vars_props_file(self, dep, name, cpp_info, deps, build):
+    def _vars_props_file(self, require, dep, name, cpp_info, deps, build):
         """
         content for conan_vars_poco_x86_release.props, containing the variables for 1 config
         This will be for 1 package or for one component of a package
@@ -176,11 +176,11 @@ class MSBuildDeps(object):
         fields = {
             'name': name,
             'root_folder': package_folder,
-            'bin_dirs': join_paths(cpp_info.bindirs),
+            'bin_dirs': join_paths(cpp_info.bindirs) if require.run else "",
             'res_dirs': join_paths(cpp_info.resdirs),
-            'include_dirs': join_paths(cpp_info.includedirs),
-            'lib_dirs': join_paths(cpp_info.libdirs),
-            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
+            'include_dirs': join_paths(cpp_info.includedirs) if require.headers else "",
+            'lib_dirs': join_paths(cpp_info.libdirs) if require.libs else "",
+            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]) if require.libs else "",
             # TODO: Missing objects
             'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
@@ -276,7 +276,7 @@ class MSBuildDeps(object):
                                                           content=pkg_aggregated_content)
         return {conandeps_filename: pkg_aggregated_content}
 
-    def _package_props_files(self, dep, build=False):
+    def _package_props_files(self, require, dep, build=False):
         """ all the files for a given package:
         - conan_pkgname_vars_config.props: definition of variables, one per config
         - conan_pkgname_config.props: The one using those variables. This is very different for
@@ -305,8 +305,8 @@ class MSBuildDeps(object):
                         public_deps.append(pkg if pkg == cmp_name else "{}_{}".format(pkg, cmp_name))
                     else:  # Points to a component of same package
                         public_deps.append("{}_{}".format(dep_name, r))
-                result[vars_filename] = self._vars_props_file(dep, full_comp_name, comp_info,
-                                                              public_deps, build=build)
+                result[vars_filename] = self._vars_props_file(require, dep, full_comp_name,
+                                                              comp_info, public_deps, build=build)
                 result[activate_filename] = self._activate_props_file(full_comp_name, vars_filename,
                                                                       public_deps, build=build)
                 result[comp_filename] = self._dep_props_file(full_comp_name, comp_filename,
@@ -323,7 +323,7 @@ class MSBuildDeps(object):
             pkg_filename = "conan_%s.props" % dep_name
             public_deps = [self._dep_name(d, build)
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
-            result[vars_filename] = self._vars_props_file(dep, dep_name, cpp_info,
+            result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           public_deps, build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
                                                                   public_deps, build=build)
@@ -336,14 +336,12 @@ class MSBuildDeps(object):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
 
-        host_req = list(self._conanfile.dependencies.host.values())
-        test_req = list(self._conanfile.dependencies.test.values())
-        for dep in host_req + test_req:
-            result.update(self._package_props_files(dep, build=False))
-
-        build_req = list(self._conanfile.dependencies.build.values())
-        for dep in build_req:
-            result.update(self._package_props_files(dep, build=True))
+        for req, dep in self._conanfile.dependencies.host.items():
+            result.update(self._package_props_files(req, dep, build=False))
+        for req, dep in self._conanfile.dependencies.test.items():
+            result.update(self._package_props_files(req, dep, build=False))
+        for req, dep in self._conanfile.dependencies.build.items():
+            result.update(self._package_props_files(req, dep, build=True))
 
         # Include all direct build_requires for host context. This might change
         result.update(self._conandeps())
