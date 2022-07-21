@@ -25,9 +25,12 @@ def get_conan_user_home():
     def _user_home_from_conanrc_file():
         try:
             conanrc_path = _find_conanrc_file()
-            values = {k: str(v) for k, v in
-                      (line.split('=') for line in open(conanrc_path).read().splitlines() if
-                       not line.startswith("#"))}
+
+            with open(conanrc_path) as conanrc_file:
+                values = {k: str(v) for k, v in
+                          (line.split('=') for line in conanrc_file.read().splitlines() if
+                           not line.startswith("#"))}
+
             conan_home = values["conan_home"]
             # check if it's a local folder
             if conan_home[:2] in ("./", ".\\") or conan_home.startswith(".."):
