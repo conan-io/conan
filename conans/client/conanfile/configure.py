@@ -38,6 +38,16 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
             with conanfile_exception_formatter(conanfile, "requirements"):
                 conanfile.requirements()
 
+        set_cpp_info_requires = False
+        for require in conanfile.requires.values():
+            if require.components:
+                set_cpp_info_requires = True
+                break
+
+        if set_cpp_info_requires:
+            print(require.components)
+            print(conanfile.cpp.package)
+
         # TODO: Maybe this could be integrated in one single requirements() method
         if hasattr(conanfile, "build_requirements"):
             with conanfile_exception_formatter(conanfile, "build_requirements"):

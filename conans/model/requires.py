@@ -11,7 +11,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None):
+                 force=None, override=None, direct=None, options=None, components=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -27,6 +27,7 @@ class Requirement:
         self._force = force
         self._override = override
         self._direct = direct
+        self.components = components
         self.options = options
 
     @staticmethod
