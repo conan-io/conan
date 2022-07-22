@@ -4,6 +4,21 @@ from conans.model.requires import BuildRequirements, TestRequirements, ToolRequi
 from conans.util.env import no_op
 
 
+def _get_components_requires_info(requires):
+    components = []
+    requires_with_components = [require for require in requires.values() if require.components]
+
+    if requires_with_components:
+        for require in requires.values():
+            if require.components:
+                for component in require.components:
+                    components.append(f"{require.ref.name}::{component}")
+            else:
+                components.append(f"{require.ref.name}::{require.ref.name}")
+
+    return components
+
+
 def run_configure_method(conanfile, down_options, profile_options, ref):
     """ Run all the config-related functions for the given conanfile object """
 
@@ -38,15 +53,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
             with conanfile_exception_formatter(conanfile, "requirements"):
                 conanfile.requirements()
 
-        set_cpp_info_requires = False
-        for require in conanfile.requires.values():
-            if require.components:
-                set_cpp_info_requires = True
-                break
-
-        if set_cpp_info_requires:
-            print(require.components)
-            print(conanfile.cpp.package)
+        comps = _get_components_requires_info(conanfile.requires)
+        conanfile.cpp.package.requires.extend(comps)
 
         # TODO: Maybe this could be integrated in one single requirements() method
         if hasattr(conanfile, "build_requirements"):
