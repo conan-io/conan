@@ -74,8 +74,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            # Add all dependencies to all targets
            string(REPLACE " " ";" deps_list "${deps}")
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES
-               $<$<CONFIG:${config_suffix}>:"${deps_list}"> APPEND)
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES${config_suffix} "${deps_list}" APPEND)
            endforeach()
 
            set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
