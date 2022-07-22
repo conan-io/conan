@@ -94,10 +94,20 @@ def test_components_cycle_complex():
 
 def test_requires_components_new_syntax():
     """
-    lib_a: has four components cmp1, cmp2, cmp3, cmp4
-    lib_b --> uses libA cmp1 so cpp_info.requires = ["lib_a::cmp1"]
-    lib_c --> uses libA cmp2 so cpp_info.requires = ["lib_a::cmp2"]
-    consumer --> libB, libC
+    Check that the generated files for the current syntax of cpp_info.requires
+    are exactly the same as the syntax with requires(.., components=...)
+
+    def requirements(self):
+        self.requires("lib_a/1.0", components=["cmp1"])
+        self.requires("lib_b/1.0")
+
+    is equivalent to:
+
+    def requirements(self):
+        self.requires("lib_a/1.0")
+        self.requires("lib_b/1.0")
+    def package_info(self):
+        self.cpp_info.requires = ["lib_a::cmp1", "lib_b::lib_b"]
     """
     client = TestClient()
     lib_a = textwrap.dedent("""
@@ -118,14 +128,6 @@ def test_requires_components_new_syntax():
     client.run("create lib_a")
 
     client.run("create lib_b")
-
-    """
-    Check that the generated lib_c files use lib_a::cmp1 and lib_b but not lib_a::cmp2
-    The results must be equivalent to the declaration of
-        def package_info(self):
-            self.cpp_info.requires = ["lib_a::cmp1", "lib_b::lib_b"]
-    in lib_c
-    """
 
     lib_c = textwrap.dedent("""
         from conan import ConanFile
