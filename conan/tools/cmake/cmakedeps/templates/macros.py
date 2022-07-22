@@ -56,15 +56,13 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    # Create a micro-target for each lib/a found
                    # Allow only some characters for the target name
                    string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
-                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
+                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME})
                    if(NOT TARGET ${_LIB_NAME})
                        # Create a micro-target for each lib/a found
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                       set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                       list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
-                   else()
-                       message(VERBOSE "Conan: Skipping already existing target: ${_LIB_NAME}")
                    endif()
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION${config_suffix} ${CONAN_FOUND_LIBRARY})
+                   list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()
@@ -76,7 +74,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            # Add all dependencies to all targets
            string(REPLACE " " ";" deps_list "${deps}")
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${deps_list}" APPEND)
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES
+               $<$<CONFIG:${config_suffix}>:"${deps_list}"> APPEND)
            endforeach()
 
            set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
