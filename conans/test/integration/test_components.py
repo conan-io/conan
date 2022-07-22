@@ -160,11 +160,12 @@ def test_requires_components_new_syntax():
         client.run(f"install --requires=lib_c/1.0 -g {generator} -of=output")
 
         generated_files = {}
+        # remove all info about cache folders that could be different
+        genexp_pick_folder = fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)'
         for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
             for f in files:
-                file_content = client.load(os.path.join(client.current_folder, "output", f))
-                # remove info about cache folders
-                file_content = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", file_content)
+                file_content = re.sub(genexp_pick_folder, "",
+                                      client.load(os.path.join(client.current_folder, "output", f)))
                 generated_files[f] = file_content
 
         client.save({'lib_c/conanfile.py': lib_c.format(rest_of_file=old_syntax)},
@@ -177,6 +178,6 @@ def test_requires_components_new_syntax():
         # the generated files with the old syntax should be exactly the same as the new one
         for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
             for f in files:
-                old_syntax_file = client.load(os.path.join(client.current_folder, "output", f))
-                old_syntax_file = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", old_syntax_file)
+                old_syntax_file = re.sub(genexp_pick_folder, "",
+                                         client.load(os.path.join(client.current_folder, "output", f)))
                 assert generated_files[f] == old_syntax_file
