@@ -144,37 +144,39 @@ def test_requires_components_new_syntax():
 
     old_syntax = """
     def requirements(self):
-        self.requires("lib_a/1.0", components=["cmp1"])
+        self.requires("lib_a/1.0")
         self.requires("lib_b/1.0")
     def package_info(self):
         self.cpp_info.requires = ["lib_a::cmp1", "lib_b::lib_b"]
     """
 
-    client.save({'lib_c/conanfile.py': lib_c.format(rest_of_file=new_syntax)},
-                clean_first=True)
+    for generator in ["CMakeDeps", "XcodeDeps", "PkgConfigDeps", "MSBuildDeps"]:
 
-    client.run("create lib_c")
+        client.save({'lib_c/conanfile.py': lib_c.format(rest_of_file=new_syntax)},
+                    clean_first=True)
 
-    client.run("install --requires=lib_c/1.0 -g CMakeDeps -of=output")
+        client.run("create lib_c")
 
-    generated_files = {}
-    for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
-        for f in files:
-            file_content = client.load(os.path.join(client.current_folder, "output", f))
-            # remove info about cache folders
-            file_content = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", file_content)
-            generated_files[f] = file_content
+        client.run(f"install --requires=lib_c/1.0 -g {generator} -of=output")
 
-    client.save({'lib_c/conanfile.py': lib_c.format(rest_of_file=old_syntax)},
-                clean_first=True)
+        generated_files = {}
+        for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
+            for f in files:
+                file_content = client.load(os.path.join(client.current_folder, "output", f))
+                # remove info about cache folders
+                file_content = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", file_content)
+                generated_files[f] = file_content
 
-    client.run("create lib_c")
+        client.save({'lib_c/conanfile.py': lib_c.format(rest_of_file=old_syntax)},
+                    clean_first=True)
 
-    client.run("install --requires=lib_c/1.0 -g CMakeDeps -of=output")
+        client.run("create lib_c")
 
-    # the generated files with the old syntax should be exactly the same as the new one
-    for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
-        for f in files:
-            old_syntax_file = client.load(os.path.join(client.current_folder, "output", f))
-            old_syntax_file = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", old_syntax_file)
-            assert generated_files[f] == old_syntax_file
+        client.run(f"install --requires=lib_c/1.0 -g {generator} -of=output")
+
+        # the generated files with the old syntax should be exactly the same as the new one
+        for _, _, files in os.walk(os.path.join(client.current_folder, "output")):
+            for f in files:
+                old_syntax_file = client.load(os.path.join(client.current_folder, "output", f))
+                old_syntax_file = re.sub(fr'(?s)(\.conan2{os.path.sep}p)(.*?)(p)', "", old_syntax_file)
+                assert generated_files[f] == old_syntax_file
