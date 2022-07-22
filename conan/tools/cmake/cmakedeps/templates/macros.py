@@ -41,7 +41,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target config_suffix package_name)
+       function(conan_package_library_targets libraries package_libdir deps out_libraries_target config_suffix package_name)
            set(_out_libraries "")
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
@@ -51,7 +51,6 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                if(CONAN_FOUND_LIBRARY)
                    message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-                   list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                    # Create a micro-target for each lib/a found
                    # Allow only some characters for the target name
@@ -74,10 +73,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            # Add all dependencies to all targets
            string(REPLACE " " ";" deps_list "${deps}")
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES${config_suffix} "${deps_list}" APPEND)
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES $<$<CONFIG:${config_suffix}>:"${deps_list}"> APPEND)
            endforeach()
 
-           set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
        endfunction()
 
