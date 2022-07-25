@@ -225,12 +225,13 @@ def _list_packages_json(data):
 @conan_subcommand(formatters={"json": _list_packages_json})
 def list_packages(conan_api, parser, subparser, *args):
     """
-    List all the package IDs for a given recipe reference. If the reference doesn't
-    include the recipe revision, the command will retrieve all the package IDs for
-    the most recent revision.
+    List all the package IDs for a given recipe revision.
     """
-    subparser.add_argument("reference", help="Recipe reference or revision, e.g., libyaml/0.2.5 or "
-                                             "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a")
+    subparser.add_argument(
+        "reference",
+        help="Recipe reference and revision, e.g., libyaml/0.2.5#latest or "
+             "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a"
+        )
     _add_remotes_and_cache_options(subparser)
     args = parser.parse_args(*args)
 
