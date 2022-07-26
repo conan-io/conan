@@ -46,9 +46,17 @@ class _SystemPackageManagerTool(object):
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
                            "pkgutil": ["Solaris"]}
+        # first check exact match of name
         for tool, distros in manager_mapping.items():
             if os_name in distros:
                 return tool
+        # in case we did not detect any exact match, check
+        # if the name is contained inside the returned distro name
+        # like for opensuse, that can have opensuse-version names
+        for tool, distros in manager_mapping.items():
+            for d in distros:
+                if d in os_name:
+                    return tool
 
     def get_package_name(self, package):
         # TODO: should we only add the arch if cross-building?

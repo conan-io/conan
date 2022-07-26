@@ -52,6 +52,11 @@ def test_msys2():
     ("fedora", "dnf"),
     ("arch", "pacman"),
     ("opensuse", "zypper"),
+    ("sles", "zypper"),
+    ("opensuse", "zypper"),
+    ("opensuse-tumbleweed", "zypper"),
+    ("opensuse-leap", "zypper"),
+    ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")

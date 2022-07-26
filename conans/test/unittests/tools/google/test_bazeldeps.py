@@ -48,6 +48,7 @@ def test_bazeldeps_dependency_buildfiles():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+            assert """deps = [\n        # do not sort\n    \n    ":lib1_precompiled",""" in dependency_content
 
 
 def test_bazeldeps_get_lib_file_path_by_basename():
@@ -82,6 +83,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+            assert 'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",' in dependency_content
 
 
 def test_bazeldeps_dependency_transitive():
@@ -134,6 +136,11 @@ def test_bazeldeps_dependency_transitive():
             assert 'linkopts = ["/DEFAULTLIB:system_lib1"],' in dependency_content
         else:
             assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+
+        # Ensure that transitive dependency is referenced by the 'deps' attribute of the direct
+        # dependency
+        assert re.search(r'deps =\s*\[\s*# do not sort\s*":lib1_precompiled",\s*"@TransitiveDepName"',
+                         dependency_content)
 
 
 def test_bazeldeps_interface_buildfiles():
@@ -208,6 +215,7 @@ cc_library(
     includes=["include"],
     visibility=["//visibility:public"],
     deps = [
+        # do not sort
         ":lib1_precompiled",
     ],
 )

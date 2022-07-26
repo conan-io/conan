@@ -4,11 +4,12 @@ import platform
 
 from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.microsoft import is_msvc
 from conans.errors import ConanException
 from conans.util.files import save, load
 
 
-def _add_build_preset(conanfile, multiconfig):
+def _build_preset(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     configure_preset_name = _configure_preset_name(conanfile, multiconfig)
     ret = {"name": _build_preset_name(conanfile),
@@ -42,7 +43,7 @@ def _configure_preset_name(conanfile, multiconfig):
         return str(build_type).lower()
 
 
-def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
+def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     name = _configure_preset_name(conanfile, multiconfig)
     if not multiconfig and build_type:
@@ -53,8 +54,26 @@ def _add_configure_preset(conanfile, generator, cache_variables, toolchain_file,
             "description": "'{}' configure using '{}' generator".format(name, generator),
             "generator": generator,
             "cacheVariables": cache_variables,
-
            }
+    if "Ninja" in generator and is_msvc(conanfile):
+        toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
+        if toolset_arch:
+            toolset_arch = "host={}".format(toolset_arch)
+            ret["toolset"] = {
+                "value": toolset_arch,
+                "strategy": "external"
+            }
+        arch = {"x86": "x86",
+                "x86_64": "x64",
+                "armv7": "ARM",
+                "armv8": "ARM64"}.get(conanfile.settings.get_safe("arch"))
+
+        if arch:
+            ret["architecture"] = {
+                "value": arch,
+                "strategy": "external"
+            }
+
     if not _forced_schema_2(conanfile):
         ret["toolchainFile"] = toolchain_file
     else:
@@ -102,8 +121,8 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
            "testPresets": []
           }
     multiconfig = is_multi_configuration(generator)
-    ret["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
-    _conf = _add_configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
+    ret["buildPresets"].append(_build_preset(conanfile, multiconfig))
+    _conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
     ret["configurePresets"].append(_conf)
     return ret
 
@@ -126,23 +145,22 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
     multiconfig = is_multi_configuration(generator)
 
     if os.path.exists(preset_path):
-        # We append the new configuration making sure that we don't overwrite it
         data = json.loads(load(preset_path))
-        if multiconfig:
-            new_build_preset_name = _build_preset_name(conanfile)
-            already_exist = any([b["name"] for b in data["buildPresets"]
-                                 if b["name"] == new_build_preset_name])
-            if not already_exist:
-                data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
+        build_preset = _build_preset(conanfile, multiconfig)
+        position = _get_already_existing_preset_index(build_preset["name"], data["buildPresets"])
+        if position is not None:
+            data["buildPresets"][position] = build_preset
         else:
-            new_configure_preset_name = _configure_preset_name(conanfile, multiconfig)
-            already_exist = any([c["name"] for c in data["configurePresets"]
-                                 if c["name"] == new_configure_preset_name])
-            if not already_exist:
-                conf_preset = _add_configure_preset(conanfile, generator, cache_variables,
-                                                    toolchain_file, multiconfig)
-                data["configurePresets"].append(conf_preset)
-                data["buildPresets"].append(_add_build_preset(conanfile, multiconfig))
+            data["buildPresets"].append(build_preset)
+
+        configure_preset = _configure_preset(conanfile, generator, cache_variables, toolchain_file,
+                                             multiconfig)
+        position = _get_already_existing_preset_index(configure_preset["name"],
+                                                      data["configurePresets"])
+        if position is not None:
+            data["configurePresets"][position] = configure_preset
+        else:
+            data["configurePresets"].append(configure_preset)
     else:
         data = _contents(conanfile, toolchain_file, cache_variables, generator)
 
@@ -173,7 +191,21 @@ def save_cmake_user_presets(conanfile, preset_path):
             save(user_presets_path, data)
 
 
+def _get_already_existing_preset_index(name, presets):
+    """Get the index of a Preset with a given name, this is used to replace it with updated contents
+    """
+    positions = [index for index, p in enumerate(presets)
+                 if p["name"] == name]
+    if positions:
+        return positions[0]
+    return None
+
+
 def _append_user_preset_path(conanfile, data, preset_path):
+    """ - Appends a 'include' to preset_path if the schema supports it.
+        - Otherwise it merges to "data" all the configurePresets, buildPresets etc from the
+          read preset_path.
+    """
     if not _forced_schema_2(conanfile):
         if "include" not in data:
             data["include"] = []
@@ -189,7 +221,13 @@ def _append_user_preset_path(conanfile, data, preset_path):
             for preset in cmake_preset.get(preset_type, []):
                 if preset_type not in data:
                     data[preset_type] = []
-                data[preset_type].append(preset)
+
+                position = _get_already_existing_preset_index(preset["name"], data[preset_type])
+                if position is not None:
+                    # If the preset already existed, replace the element with the new one
+                    data[preset_type][position] = preset
+                else:
+                    data[preset_type].append(preset)
         return data
 
 
