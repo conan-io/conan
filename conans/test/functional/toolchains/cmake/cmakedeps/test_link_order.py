@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -257,12 +258,19 @@ def _get_link_order_from_cmake(content):
 
 def _get_link_order_from_xcode(content):
     libs = []
-    start_key = '-headerpad_max_install_names",'
+
+    # Find the right Release block in the XCode file
+    results = re.finditer('/\* Release \*/ = {', content)
+    for r in results:
+        release_section = content[r.start():].split("name = Release;", 1)[0]
+        if "-headerpad_max_install_names" in release_section:
+            break
+    else:
+        raise Exception("Cannot find the Release block linking the expected libraries")
+
+    start_key = '-Wl,-headerpad_max_install_names'
     end_key = ');'
-    libs_content = content.split(start_key, 1)[1].split(end_key, 1)[0]
-    if libs_content == '"$(inherited)"':
-        # FIXME: Dirty hack, sometimes the library list is not at the 1 but at 2
-        libs_content = content.split(start_key, 1)[2].split(end_key, 1)[0]
+    libs_content = release_section.split(start_key, 1)[1].split(end_key, 1)[0]
     libs_unstripped = libs_content.split(",")
     for lib in libs_unstripped:
         if ".a" in lib:
@@ -302,7 +310,6 @@ def _create_find_package_project(client):
 def _run_and_get_lib_order(t, generator):
     if generator == "Xcode":
         t.run_command("cmake . -G Xcode -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
-                      " -DCMAKE_CONFIGURATION_TYPES=Release"
                       " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
         t.run_command("cmake --build .", assert_error=True)
         # Get the actual link order from the CMake call

@@ -109,8 +109,8 @@ def test_cpp_info_component_objects():
              ${hello_hello_say_LINK_LIBS_RELEASE}> APPEND)""" in content
         assert """set_property(TARGET hello::hello
              PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:Release>:${hello_OBJECTS_RELEASE}
-             ${hello_LIBRARIES_TARGETS_RELEASE}> APPEND)""" in content
+             $<$<CONFIG:Release>:${hello_OBJECTS_RELEASE}>
+             ${hello_LIBRARIES_TARGETS} APPEND)""" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()

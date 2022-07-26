@@ -60,6 +60,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        # Create a micro-target for each lib/a found
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                    endif()
+                   # Enable configuration only when it is available to avoid missing configs
+                   set_property(TARGET ${_LIB_NAME} APPEND PROPERTY IMPORTED_CONFIGURATIONS ${config})
+                   # Link library file
                    set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION_${config} ${CONAN_FOUND_LIBRARY})
                    list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
@@ -79,7 +82,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            # ONLY FOR DEBUGGING PURPOSES
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
               get_target_property(linked_libs ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES)
-              message(VERBOSE "***********Target Properties: ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
+              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
            endforeach()
 
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
