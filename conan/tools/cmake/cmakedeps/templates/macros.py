@@ -41,7 +41,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir deps out_libraries_target config_suffix package_name)
+       function(conan_package_library_targets libraries package_libdir deps out_libraries_target config package_name)
            set(_out_libraries "")
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
@@ -60,7 +60,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        # Create a micro-target for each lib/a found
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                    endif()
-                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION${config_suffix} ${CONAN_FOUND_LIBRARY})
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION_${config} ${CONAN_FOUND_LIBRARY})
                    list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
@@ -73,7 +73,13 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            # Add all dependencies to all targets
            string(REPLACE " " ";" deps_list "${deps}")
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES $<$<CONFIG:${config_suffix}>:"${deps_list}"> APPEND)
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES $<$<CONFIG:${config}>:${deps_list}> APPEND)
+           endforeach()
+
+           # ONLY FOR DEBUGGING PURPOSES
+           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+              get_target_property(linked_libs ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES)
+              message(VERBOSE "***********Target Properties: ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
            endforeach()
 
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)

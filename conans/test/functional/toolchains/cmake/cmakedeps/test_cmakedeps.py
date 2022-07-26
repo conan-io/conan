@@ -157,8 +157,8 @@ def test_system_libs():
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
 
-        target_libs = "$<$<CONFIG:{}>:;CONAN_LIB::Test_lib1;{};>".format(build_type, library_name)
-        assert "Target libs: %s" % target_libs in client.out
+        target_libs = ";CONAN_LIB::Test_lib1;{}".format(library_name)
+        assert target_libs in client.out
 
 
 @pytest.mark.tool_cmake

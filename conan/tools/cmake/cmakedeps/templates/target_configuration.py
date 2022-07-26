@@ -31,6 +31,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
+                "config": self.configuration.upper(),
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
@@ -66,22 +67,22 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
-                                      {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
-                                      "{{ config_suffix }}"  # config_suffix
+                                      {{ pkg_name }}_LIBRARIES_TARGETS  # out_libraries_targets
+                                      "{{ config }}" # DEBUG, RELEASE ...
                                       "{{ pkg_name }}")    # package_name
 
         foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_FRAMEWORK})
+            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS ${_FRAMEWORK})
         endforeach()
 
         foreach(_SYSTEM_LIB {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_SYSTEM_LIB})
+            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS ${_SYSTEM_LIB})
         endforeach()
 
         # We need to add our requirements too
-        set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} {{ '"${' }}{{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}{{ '};' }}{{ deps_targets_names }}")
+        set({{ pkg_name }}_LIBRARIES_TARGETS {{ '"${' }}{{ pkg_name }}_LIBRARIES_TARGETS{{ '};' }}{{ deps_targets_names }}")
         # This is a copy of the variable above
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ '${' }}{{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}})
+        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ '${' }}{{ pkg_name }}_LIBRARIES_TARGETS})
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
@@ -100,7 +101,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
-                                      "{{ config_suffix }}"
+                                      "{{ config }}" # DEBUG, RELEASE...
                                       "{{ pkg_name }}_{{ comp_variable_name }}")
 
         set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
@@ -111,8 +112,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}
-                     ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}> APPEND)
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}>
+                     ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS} APPEND)
 
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS

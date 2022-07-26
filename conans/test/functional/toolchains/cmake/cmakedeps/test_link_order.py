@@ -302,8 +302,9 @@ def _create_find_package_project(client):
 def _run_and_get_lib_order(t, generator):
     if generator == "Xcode":
         t.run_command("cmake . -G Xcode -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                      " -DCMAKE_CONFIGURATION_TYPES=Release"
                       " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
-        t.run_command("cmake --build .")
+        t.run_command("cmake --build .", assert_error=True)
         # Get the actual link order from the CMake call
         libs = _get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj',
                                                               'project.pbxproj')))
