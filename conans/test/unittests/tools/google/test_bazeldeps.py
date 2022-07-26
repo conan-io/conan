@@ -19,18 +19,20 @@ from conans.util.files import save
 
 def test_bazeldeps_dependency_buildfiles():
     conanfile = ConanFile(Mock())
+    package_folder = temp_folder()
 
     cpp_info = CppInfo()
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
     cpp_info.system_libs = ["system_lib1"]
     cpp_info.libs = ["lib1"]
+    cpp_info.libdirs = [os.path.join(package_folder, "lib")]
 
     conanfile_dep = ConanFile(Mock())
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("depname/1.0")
-    package_folder = temp_folder()
-    save(os.path.join(package_folder, "lib", "liblib1.a"), "")
+
+    save(os.path.join(cpp_info.libdirs[0], "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
@@ -53,18 +55,19 @@ def test_bazeldeps_dependency_buildfiles():
 
 def test_bazeldeps_get_lib_file_path_by_basename():
     conanfile = ConanFile(Mock())
-
+    package_folder = temp_folder()
+        
     cpp_info = CppInfo()
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
     cpp_info.system_libs = ["system_lib1"]
     cpp_info.libs = ["liblib1.a"]
-    cpp_info.libdirs = ["lib"]
+    cpp_info.libdirs = [os.path.join(package_folder, "lib")]
 
     conanfile_dep = ConanFile(Mock())
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
-    package_folder = temp_folder()
+
     save(os.path.join(package_folder, "lib", "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
