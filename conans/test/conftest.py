@@ -86,6 +86,14 @@ tools_locations = {
             "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
         }
     },
+    # This is the non-msys2 mingw, which is 32 bits x86 arch
+    'mingw': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/mingw"}},
+    },
     'mingw32': {
         "platform": "Windows",
         "default": "system",
