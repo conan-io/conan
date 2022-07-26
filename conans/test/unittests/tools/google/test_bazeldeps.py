@@ -56,7 +56,7 @@ def test_bazeldeps_dependency_buildfiles():
 def test_bazeldeps_get_lib_file_path_by_basename():
     conanfile = ConanFile(Mock())
     package_folder = temp_folder()
-        
+
     cpp_info = CppInfo()
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
     cpp_info.system_libs = ["system_lib1"]
