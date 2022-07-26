@@ -2,6 +2,8 @@ import copy
 import os
 from collections import OrderedDict
 
+from conans.errors import ConanException
+
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
@@ -30,7 +32,7 @@ class DefaultOrderedDict(OrderedDict):
 
 class _Component(object):
 
-    def __init__(self):
+    def __init__(self, set_defaults=False):
         # ###### PROPERTIES
         self._generator_properties = None
 
@@ -60,6 +62,34 @@ class _Component(object):
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = {}
         self.filenames = {}
+
+        if set_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.bindirs = ["bin"]
+
+    def serialize(self):
+        return {
+            "includedirs": self._includedirs,
+            "srcdirs": self._srcdirs,
+            "libdirs": self._libdirs,
+            "resdirs": self._resdirs,
+            "bindirs": self._bindirs,
+            "builddirs": self._builddirs,
+            "frameworkdirs": self._frameworkdirs,
+            "system_libs": self._system_libs,
+            "frameworks": self._frameworks,
+            "libs": self._libs,
+            "defines": self._defines,
+            "cflags": self._cflags,
+            "cxxflags": self._cxxflags,
+            "sharedlinkflags": self._sharedlinkflags,
+            "exelinkflags": self._exelinkflags,
+            "objects": self._objects,
+            "sysroot": self._sysroot,
+            "requires": self._requires,
+            "properties": self._generator_properties
+        }
 
     @property
     def includedirs(self):
@@ -272,17 +302,9 @@ class _Component(object):
 class CppInfo(object):
 
     def __init__(self, set_defaults=False):
-        self.components = DefaultOrderedDict(lambda: _Component())
+        self.components = DefaultOrderedDict(lambda: _Component(set_defaults))
         # Main package is a component with None key
-        self.components[None] = _Component()
-        if set_defaults:
-            self.includedirs = ["include"]
-            self.libdirs = ["lib"]
-            self.resdirs = ["res"]
-            self.bindirs = ["bin"]
-            self.builddirs = []
-            self.frameworkdirs = ["Frameworks"]
-
+        self.components[None] = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
@@ -293,6 +315,13 @@ class CppInfo(object):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
+
+    def serialize(self):
+        ret = {}
+        for component_name, info in self.components.items():
+            _name = "root" if component_name is None else component_name
+            ret[_name] = info.serialize()
+        return ret
 
     @property
     def has_components(self):
@@ -380,20 +409,41 @@ class CppInfo(object):
                     origin[:] = new_
                 # TODO: Missing properties
 
+    def _raise_circle_components_requires_error(self):
+        """
+        Raise an exception because of a requirements loop detection in components.
+        The exception message gives some information about the involved components.
+        """
+        deps_set = set()
+        for comp_name, comp in self.components.items():
+            for dep_name, dep in self.components.items():
+                for require in dep.required_component_names:
+                    if require == comp_name:
+                        deps_set.add("   {} requires {}".format(dep_name, comp_name))
+        dep_mesg = "\n".join(deps_set)
+        raise ConanException(f"There is a dependency loop in "
+                             f"'self.cpp_info.components' requires:\n{dep_mesg}")
+
     def get_sorted_components(self):
-        """Order the components taking into account if they depend on another component in the
-        same package (not scoped with ::). First less dependant
-        return:  {component_name: component}
+        """
+        Order the components taking into account if they depend on another component in the
+        same package (not scoped with ::). First less dependant.
+
+        :return: ``OrderedDict`` {component_name: component}
         """
         processed = []  # Names of the components ordered
         # FIXME: Cache the sort
         while (len(self.components) - 1) > len(processed):
+            cached_processed = processed[:]
             for name, c in self.components.items():
                 if name is None:
                     continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
+            # If cached_processed did not change then detected cycle components requirements!
+            if cached_processed == processed:
+                self._raise_circle_components_requires_error()
 
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
 

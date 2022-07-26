@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
+from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save
@@ -84,7 +84,7 @@ class TestValidate(unittest.TestCase):
                    settings = "os"
 
                    def validate(self):
-                       if self.settings.os == "Windows":
+                       if self.info.settings.os == "Windows":
                            raise ConanInvalidConfiguration("Windows not supported")
 
                    def package_id(self):

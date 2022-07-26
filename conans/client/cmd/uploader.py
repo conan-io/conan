@@ -1,10 +1,11 @@
 import os
+import shutil
 import stat
 import tarfile
 import time
 
-from conans.cli.conan_app import ConanApp
-from conans.cli.output import ConanOutput
+from conan.api.conan_app import ConanApp
+from conan.api.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -12,7 +13,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, save)
+                               gzopen_without_timestamps, set_dirty_context_manager, mkdir)
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -147,6 +148,8 @@ class PackagePreparator:
                 self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
             if conanfile.build_policy == "always":
                 recipe.build_always = True
+                for package in recipe.packages:
+                    package.upload = False
             else:
                 recipe.build_always = False
                 for package in recipe.packages:
@@ -187,8 +190,19 @@ class PackagePreparator:
         src_files, src_symlinked_folders = gather_files(export_src_folder)
         src_files.update(src_symlinked_folders)
 
-        result = {CONANFILE: files.pop(CONANFILE),
-                  CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
+        # We do a copy of conanfile and conanmanifest to the download_export_folder
+        # so it is identical as when it is downloaded, and all files are from the same location
+        # to be uploaded
+        mkdir(download_export_folder)
+        shutil.copy2(os.path.join(export_folder, CONANFILE),
+                     os.path.join(download_export_folder, CONANFILE))
+        shutil.copy2(os.path.join(export_folder, CONAN_MANIFEST),
+                     os.path.join(download_export_folder, CONAN_MANIFEST))
+        result = {CONANFILE: os.path.join(download_export_folder, CONANFILE),
+                  CONAN_MANIFEST: os.path.join(download_export_folder, CONAN_MANIFEST)}
+        # Files NOT included in the tgz
+        files.pop(CONANFILE)
+        files.pop(CONAN_MANIFEST)
 
         def add_tgz(tgz_name, tgz_files, msg):
             tgz = os.path.join(download_export_folder, tgz_name)
@@ -234,11 +248,20 @@ class PackagePreparator:
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
+        # Do a copy so the location of CONANINFO and MANIFEST is the "download" folder one
+        mkdir(download_pkg_folder)
+        shutil.copy2(os.path.join(package_folder, CONANINFO),
+                     os.path.join(download_pkg_folder, CONANINFO))
+        shutil.copy2(os.path.join(package_folder, CONAN_MANIFEST),
+                     os.path.join(download_pkg_folder, CONAN_MANIFEST))
+        # Files NOT included in the tgz
+        files.pop(CONANINFO)
+        files.pop(CONAN_MANIFEST)
+
         if not os.path.isfile(package_tgz):
             if self._output and not self._output.is_terminal:
                 self._output.info("Compressing package...")
-            tgz_files = {f: path for f, path in files.items() if
-                         f not in [CONANINFO, CONAN_MANIFEST]}
+            tgz_files = {f: path for f, path in files.items()}
             compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", check_type=int)
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       compresslevel=compresslevel)
@@ -246,8 +269,8 @@ class PackagePreparator:
             assert os.path.exists(package_tgz)
 
         return {PACKAGE_TGZ_NAME: package_tgz,
-                CONANINFO: files[CONANINFO],
-                CONAN_MANIFEST: files[CONAN_MANIFEST]}
+                CONANINFO: os.path.join(download_pkg_folder, CONANINFO),
+                CONAN_MANIFEST: os.path.join(download_pkg_folder, CONAN_MANIFEST)}
 
 
 class UploadExecutor:
@@ -260,7 +283,6 @@ class UploadExecutor:
         self._output = ConanOutput()
 
     def upload(self, upload_data, remote):
-
         if upload_data.any_upload:
             self._output.info("Uploading artifacts")
         for recipe in upload_data.recipes:

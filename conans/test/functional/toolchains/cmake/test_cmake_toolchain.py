@@ -71,13 +71,17 @@ def test_cmake_toolchain_custom_toolchain():
     assert "binaryDir" in presets["configurePresets"][0]
 
 
-@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Darwin",
                     reason="Single config test, Linux CI still without 3.23")
-def test_cmake_user_presets_load():
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
+@pytest.mark.parametrize("schema2", [True, False])
+def test_cmake_user_presets_load(existing_user_presets, schema2):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
-    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake
+    syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
+    a CMakeUserPresets.cmake, leave the file untouched, and only generate or modify the file if
+    the `conan` object exists in the `vendor` field.
     """
     t = TestClient()
     t.run("new -d name=mylib -d version=1.0 -f cmake_lib")
@@ -104,14 +108,35 @@ def test_cmake_user_presets_load():
         project(PackageTest CXX)
         find_package(mylib REQUIRED CONFIG)
         """)
-    t.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelist}, clean_first=True)
+
+    user_presets = None
+    if existing_user_presets == "user_provided":
+        user_presets = "{}"
+    elif existing_user_presets == "conan_generated":
+        user_presets = '{ "vendor": {"conan": {} } }'
+
+    files_to_save = {"conanfile.py": consumer, "CMakeLists.txt": cmakelist}
+
+    if user_presets:
+        files_to_save['CMakeUserPresets.json'] = user_presets
+    t.save(files_to_save, clean_first=True)
     t.run("install . -s:h build_type=Debug -g CMakeToolchain")
     t.run("install . -s:h build_type=Release -g CMakeToolchain")
-    assert os.path.exists(os.path.join(t.current_folder, "CMakeUserPresets.json"))
-    t.run_command("cmake . --preset release")
-    assert 'CMAKE_BUILD_TYPE="Release"' in t.out
-    t.run_command("cmake . --preset debug")
-    assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
+
+    user_presets_path = os.path.join(t.current_folder, "CMakeUserPresets.json")
+    assert os.path.exists(user_presets_path)
+
+    user_presets_data = json.loads(load(user_presets_path))
+    if existing_user_presets == "user_provided":
+        assert not user_presets_data
+    else:
+        assert "include" in user_presets_data.keys()
+
+    if existing_user_presets == None:
+        t.run_command("cmake . --preset release")
+        assert 'CMAKE_BUILD_TYPE="Release"' in t.out
+        t.run_command("cmake . --preset debug")
+        assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
 
 
 def test_cmake_toolchain_user_toolchain_from_dep():
@@ -791,6 +816,51 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert "MSVC_LANG2017" in client.out
 
 
+@pytest.mark.tool("cmake", "3.23")
+def test_user_presets_version2():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
+    # TODO: This line was failing, after being merged from conan 1.x, because the default
+    #  compiler in CI is VS 191, that do not support c++20, and this raises, but apparently
+    #  it does nothing @lasote
+    # client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
+
+    if platform.system() == "Windows":
+        client.run_command("cmake . --preset 14")
+        client.run_command("cmake --build --preset 14-release")
+        client.run_command(r"build\14\Release\hello.exe")
+    else:
+        client.run_command("cmake . --preset 14-release")
+        client.run_command("cmake --build --preset 14-release")
+        client.run_command("./build/14/Release/hello")
+
+    assert "Hello World Release!" in client.out
+
+    if platform.system() != "Windows":
+        assert "__cplusplus2014" in client.out
+    else:
+        assert "MSVC_LANG2014" in client.out
+
+    if platform.system() == "Windows":
+        client.run_command("cmake . --preset 17")
+        client.run_command("cmake --build --preset 17-release")
+        client.run_command(r"build\17\Release\hello.exe")
+    else:
+        client.run_command("cmake . --preset 17-release")
+        client.run_command("cmake --build --preset 17-release")
+        client.run_command("./build/17/Release/hello")
+
+    assert "Hello World Release!" in client.out
+    if platform.system() != "Windows":
+        assert "__cplusplus2017" in client.out
+    else:
+        assert "MSVC_LANG2017" in client.out
+
+
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_sysroot():
     client = TestClient(path_with_spaces=False)
@@ -881,3 +951,104 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
+
+
+def test_cmake_presets_forbidden_build_type():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["options.missing", "settings.build_type"]\''
+    client.run("install . {}".format(settings_layout), assert_error=True)
+    assert "Error, don't include 'settings.build_type' in the " \
+           "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out
+
+
+def test_resdirs_cmake_install():
+    """If resdirs is declared, the CMAKE_INSTALL_DATAROOTDIR folder is set"""
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt", "my_license"
+                name = "foo"
+                version = "1.0"
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def layout(self):
+                    self.cpp.package.resdirs = ["res"]
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+            """)
+
+    cmake = """
+    cmake_minimum_required(VERSION 3.15)
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    project(foo)
+    if(NOT CMAKE_INSTALL_DATAROOTDIR)
+        message(FATAL_ERROR "Cannot install stuff")
+    endif()
+    install(FILES my_license DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses)
+    """
+
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
+    client.run("create .")
+    assert "/res/licenses/my_license" in client.out
+    assert "Packaged 1 file: my_license" in client.out
+
+
+def test_resdirs_none_cmake_install():
+    """If no resdirs are declared, the CMAKE_INSTALL_DATAROOTDIR folder is not set"""
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+            class AppConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "CMakeLists.txt", "my_license"
+                name = "foo"
+                version = "1.0"
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+            """)
+
+    cmake = """
+    cmake_minimum_required(VERSION 3.15)
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    project(foo)
+    if(NOT CMAKE_INSTALL_DATAROOTDIR)
+        message(FATAL_ERROR "Cannot install stuff")
+    endif()
+    """
+
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
+    client.run("create .", assert_error=True)
+    assert "Cannot install stuff" in client.out

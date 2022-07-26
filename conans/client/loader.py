@@ -7,6 +7,8 @@ import uuid
 
 import yaml
 
+from pathlib import Path
+
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
@@ -52,6 +54,7 @@ class ConanFileLoader:
                 self._pyreq_loader.load_py_requires(conanfile, self, graph_lock)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
+            conanfile.recipe_path = Path(conanfile.recipe_folder)
 
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)

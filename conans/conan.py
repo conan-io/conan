@@ -1,6 +1,6 @@
 import sys
 
-from conans.cli.cli import main
+from conan.cli.cli import main
 
 
 def run():

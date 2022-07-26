@@ -3,7 +3,7 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
@@ -14,7 +14,6 @@ from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import ConanFile
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
@@ -94,7 +93,7 @@ class _PackageBuilder(object):
     @staticmethod
     def _copy_sources(conanfile, source_folder, build_folder):
         # Copies the sources to the build-folder, unless no_copy_source is defined
-        _remove_folder_raising(build_folder)
+        rmdir(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
             conanfile.output.info('Copying sources to build folder')
             try:
@@ -106,7 +105,7 @@ class _PackageBuilder(object):
                 raise ConanException("%s\nError copying sources to build folder" % msg)
 
     def _build(self, conanfile, pref):
-        write_generators(conanfile)
+        write_generators(conanfile, self._hook_manager)
 
         try:
             run_build_method(conanfile, self._hook_manager)
@@ -183,19 +182,10 @@ class _PackageBuilder(object):
         return node.pref
 
 
-def _remove_folder_raising(folder):
-    try:
-        rmdir(folder)
-    except OSError as e:
-        raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                             "Close any app using it, and retry" % str(e))
-
-
 def call_system_requirements(conanfile):
-    if type(conanfile).system_requirements == ConanFile.system_requirements:
-        return
-    with conanfile_exception_formatter(conanfile, "system_requirements"):
-        conanfile.system_requirements()
+    if hasattr(conanfile, "system_requirements"):
+        with conanfile_exception_formatter(conanfile, "system_requirements"):
+            conanfile.system_requirements()
 
 
 class BinaryInstaller:
@@ -211,7 +201,7 @@ class BinaryInstaller:
     def install(self, deps_graph):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
-        ConanOutput().info("\nInstalling (downloading, building) binaries...")
+        ConanOutput().title("Installing (downloading, building) binaries...")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
@@ -312,7 +302,7 @@ class BinaryInstaller:
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile)
+        write_generators(conanfile, self._hook_manager)
         call_system_requirements(conanfile)
 
         if node.binary == BINARY_EDITABLE_BUILD:
@@ -363,12 +353,13 @@ class BinaryInstaller:
             with conanfile_exception_formatter(conanfile, "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
-                conanfile.package_info()
+                if hasattr(conanfile, "package_info"):
+                    conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
 
-                if hasattr(conanfile, "layout") and is_editable:
+                if is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
 

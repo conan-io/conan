@@ -1,7 +1,8 @@
 import os
 
 from conan.tools.build import build_jobs
-from conan.tools.meson import MesonToolchain
+from conan.tools.meson.toolchain import MesonToolchain
+from conan.tools.meson.mesondeps import MesonDeps
 
 
 class Meson(object):
@@ -30,10 +31,18 @@ class Meson(object):
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
+        deps_flags = os.path.join(generators_folder, MesonDeps.filename)  # extra machine files layer
+        has_deps_flags = os.path.exists(deps_flags)
+
         if os.path.exists(cross):
             cmd += ' --cross-file "{}"'.format(cross)
+            if has_deps_flags:
+                cmd += ' --cross-file "{}"'.format(deps_flags)
         else:
             cmd += ' --native-file "{}"'.format(native)
+            if has_deps_flags:
+                cmd += ' --native-file "{}"'.format(deps_flags)
+
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
@@ -74,6 +83,8 @@ class Meson(object):
         """
         Runs ``meson test -v -C "."`` in the build folder.
         """
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool):
+            return
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson test -v -C "{}"'.format(meson_build_folder)
         # TODO: Do we need vcvars for test?

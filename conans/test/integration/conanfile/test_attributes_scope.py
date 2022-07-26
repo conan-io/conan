@@ -17,8 +17,38 @@ class TestAttributesScope:
                     self.cpp_info.libs = ["A"]
         """)
         t.save({'conanfile.py': conanfile})
-        t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
+        t.run('create . --name=name --version=version', assert_error=True)
         assert "'self.cpp_info' access in 'package_id()' method is forbidden" in t.out
+
+    def test_settings_not_in_package_id(self):
+        # self.cpp_info is not available in 'package_id'
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+
+               class Recipe(ConanFile):
+
+                   def package_id(self):
+                       self.settings
+           """)
+        t.save({'conanfile.py': conanfile})
+        t.run('create . --name=name --version=version', assert_error=True)
+        assert "'self.settings' access in 'package_id()' method is forbidden" in t.out
+
+    def test_options_not_in_package_id(self):
+        # self.cpp_info is not available in 'package_id'
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+
+               class Recipe(ConanFile):
+
+                   def package_id(self):
+                       self.options
+           """)
+        t.save({'conanfile.py': conanfile})
+        t.run('create . --name=name --version=version', assert_error=True)
+        assert "'self.options' access in 'package_id()' method is forbidden" in t.out
 
     def test_info_not_in_package(self):
         # self.info is not available in 'package'
@@ -29,7 +59,7 @@ class TestAttributesScope:
             class Recipe(ConanFile):
 
                 def package(self):
-                    self.info.header_only()
+                    self.info.clear()
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
@@ -66,3 +96,35 @@ class TestAttributesScope:
         t.save({'conanfile.py': conanfile})
         t.run('create . --name=name --version=version -o shared=False', assert_error=True)
         assert "'self.options' access in 'source()' method is forbidden" in t.out
+
+    def test_validate_no_settings(self):
+        # self.setting is not available in 'validate'
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Recipe(ConanFile):
+                settings = "os",
+
+                def validate(self):
+                    self.settings.os
+           """)
+        t.save({'conanfile.py': conanfile})
+        t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
+        assert "'self.settings' access in 'validate()' method is forbidden" in t.out
+
+    def test_validate_no_options(self):
+        # self.setting is not available in 'validate'
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Recipe(ConanFile):
+                options = {"shared": [True, False]}
+
+                def validate(self):
+                    self.options.shared
+           """)
+        t.save({'conanfile.py': conanfile})
+        t.run('create . --name=name --version=version', assert_error=True)
+        assert "'self.options' access in 'validate()' method is forbidden" in t.out

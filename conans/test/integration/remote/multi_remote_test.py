@@ -106,7 +106,7 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Well, now try to update the package with -r default -u
         client_b.run("install --requires=hello0/0.0@lasote/stable -r default -u --build='*'")
-        self.assertIn("hello0/0.0@lasote/stable: Calling build()",
+        self.assertIn("hello0/0.0@lasote/stable: Forced build from source",
                       str(client_b.out))
         # TODO: cache2.0 conan info not yet implemented with new cache
         client_b.run("graph info --requires=hello0/0.0@lasote/stable -u")

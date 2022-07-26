@@ -1,6 +1,5 @@
 import getpass
 import os
-import platform
 import sys
 
 from conans.errors import ConanException
@@ -20,6 +19,9 @@ def color_enabled(stream):
     presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
     prevents the addition of ANSI color.
     """
+    from conan.api.output import conan_output_logger_format
+    if conan_output_logger_format:
+        return False
     if os.getenv("NO_COLOR") is not None:
         return False
     return is_terminal(stream)
@@ -42,7 +44,7 @@ class UserInput(object):
         """
         self._ins = sys.stdin
         # FIXME: circular include, move "color_enabled" function to better location
-        from conans.cli.output import ConanOutput
+        from conan.api.output import ConanOutput
         self._out = ConanOutput()
         self._interactive = not non_interactive
 

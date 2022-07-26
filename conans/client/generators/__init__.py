@@ -6,7 +6,7 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
 
 _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
-               "MesonToolchain", "MSBuildDeps", "QbsToolchain",
+               "MesonToolchain", "MesonDeps", "MSBuildDeps", "QbsToolchain",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
@@ -37,6 +37,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "MesonToolchain":
         from conan.tools.meson import MesonToolchain
         return MesonToolchain
+    elif generator_name == "MesonDeps":
+        from conan.tools.meson import MesonDeps
+        return MesonDeps
     elif generator_name == "MSBuildDeps":
         from conan.tools.microsoft import MSBuildDeps
         return MSBuildDeps
@@ -75,9 +78,11 @@ def _get_generator_class(generator_name):
                              "not complete".format(generator_name))
 
 
-def write_generators(conanfile):
+def write_generators(conanfile, hook_manager):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
+
+    hook_manager.execute("pre_generate", conanfile=conanfile)
 
     for generator_name in set(conanfile.generators):
         generator_class = _get_generator_class(generator_name)
@@ -116,6 +121,8 @@ def write_generators(conanfile):
 
     conanfile.output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
+
+    hook_manager.execute("post_generate", conanfile=conanfile)
 
 
 def _receive_conf(conanfile):

@@ -1,3 +1,4 @@
+from conan.tools.build import cmd_args_to_string
 from conan.tools.env import Environment
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
@@ -21,7 +22,7 @@ class PkgConfig:
 
     def _parse_output(self, option):
         executable = self._conanfile.conf.get("tools.gnu:pkg_config", default="pkg-config")
-        command = [executable, '--' + option, self._library, '--print-errors']
+        command = cmd_args_to_string([executable, '--' + option, self._library, '--print-errors'])
         env = Environment()
         if self._pkg_config_path:
             env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)

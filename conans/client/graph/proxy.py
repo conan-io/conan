@@ -1,4 +1,4 @@
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
@@ -28,7 +28,7 @@ class ConanProxy(object):
     def _get_recipe(self, reference):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._cache.editable_path(reference)
+        conanfile_path = self._cache.editable_packages.get_path(reference)
         if conanfile_path is not None:
             return conanfile_path, RECIPE_EDITABLE, None, reference
 

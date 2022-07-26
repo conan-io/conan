@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -258,10 +259,11 @@ class ConanFile:
         result["settings"] = self.settings.serialize()
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
-        result.update(self.options.serialize())  # FIXME: The options contain an "options" already
+        result["options"] = self.options.serialize()
         result["source_folder"] = self.source_folder
         result["build_folder"] = self.build_folder
         result["package_folder"] = self.package_folder
+        result["cpp_info"] = self.cpp_info.serialize()
         return result
 
     @property
@@ -324,6 +326,11 @@ class ConanFile:
         return self.folders.source_folder
 
     @property
+    def source_path(self) -> Path:
+        assert self.source_folder is not None, "`source_folder` is `None`"
+        return Path(self.source_folder)
+
+    @property
     def export_sources_folder(self):
         """
         The value depends on the method you access it:
@@ -339,8 +346,18 @@ class ConanFile:
         return self.folders.base_export_sources
 
     @property
+    def export_sources_path(self) -> Path:
+        assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
+        return Path(self.export_sources_folder)
+
+    @property
     def export_folder(self):
         return self.folders.base_export
+
+    @property
+    def export_path(self) -> Path:
+        assert self.export_folder is not None, "`export_folder` is `None`"
+        return Path(self.export_folder)
 
     @property
     def build_folder(self):
@@ -352,6 +369,11 @@ class ConanFile:
         :return: A string with the path to the build folder.
         """
         return self.folders.build_folder
+
+    @property
+    def build_path(self) -> Path:
+        assert self.build_folder is not None, "`build_folder` is `None`"
+        return Path(self.build_folder)
 
     @property
     def package_folder(self):
@@ -367,47 +389,15 @@ class ConanFile:
     def generators_folder(self):
         return self.folders.generators_folder
 
-    def source(self):
-        pass
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
 
-    def system_requirements(self):
-        """ this method can be overwritten to implement logic for system package
-        managers, as apt-get
-        """
-
-    def config_options(self):
-        """
-        Modify options, probably conditioned to some settings. This call is executed
-        before config_settings. E.g.
-        if self.settings.os == 'Windows':
-        del self.options.shared  # shared/static not supported in win
-        """
-
-    def configure(self):
-        """
-        Modify settings, probably conditioned to some options. This call is executed
-        after config_options. E.g.
-        if self.options.header_only:
-        self.settings.clear()
-        This is also the place for conditional requirements
-        """
-
-    def build(self):
-        """
-        Build your project calling the desired build tools as done in the command line.
-        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
-        """
-        self.output.warning("This conanfile has no build step")
-
-    def package(self):
-        """ package the needed files from source and build folders.
-        E.g. copy(self, "\*.h", os.path.join(self.source_folder, "src/includes"), os.path.join(self.package_folder, "includes"))
-        """
-        self.output.warning("This conanfile has no package step")
-
-    def package_info(self):
-        """ define cpp_build_info, flags, etc
-        """
+    @property
+    def generators_path(self) -> Path:
+        assert self.generators_folder is not None, "`generators_folder` is `None`"
+        return Path(self.generators_folder)
 
     def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="conanbuild", quiet=False,
             shell=True):
@@ -424,12 +414,6 @@ class ConanFile:
             raise ConanException("Error %d while executing" % retcode)
 
         return retcode
-
-    def test(self):
-        """ test the generated executable.
-        E.g.  self.run("./example")
-        """
-        raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
         return self.display_name

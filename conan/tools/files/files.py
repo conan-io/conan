@@ -9,14 +9,15 @@ import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
-
+from conan.api.output import ConanOutput
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
-from conans.util.sha import check_with_algorithm_sum
 from conans.util.files import rmdir as _internal_rmdir
+from conans.util.sha import check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -94,6 +95,24 @@ def rmdir(conanfile, path):
     :param path: Path to the folder to be removed.
     """
     _internal_rmdir(path)
+
+
+def rm(conanfile, pattern, folder, recursive=False):
+    """
+    Utility functions to remove files matching a ``pattern`` in a ``folder``.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param pattern: Pattern that the files to be removed have to match (fnmatch).
+    :param folder: Folder to search/remove the files.
+    :param recursive: If ``recursive`` is specified it will search in the subfolders.
+    """
+    for root, _, filenames in os.walk(folder):
+        for filename in filenames:
+            if fnmatch(filename, pattern):
+                fullname = os.path.join(root, filename)
+                os.unlink(fullname)
+        if not recursive:
+            break
 
 
 def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
@@ -209,15 +228,19 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry_wait = config_retry_wait if config_retry_wait is not None \
         else retry_wait if retry_wait is not None else 5
 
-    checksum = sha256 or sha1 or md5
-    download_cache = config["tools.files.download:download_cache"] if checksum else None
+    # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
+    download_cache = False
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, verify=verify, download_cache=download_cache,
-                       url=file_url, overwrite=overwrite,
-                       file_path=filename, retry=retry, retry_wait=retry_wait,
-                       auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+        if file_url.startswith("file:"):
+            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
+                                      sha1=sha1, sha256=sha256)
+        else:
+            run_downloader(requester=requester, verify=verify, download_cache=download_cache,
+                           url=file_url, overwrite=overwrite,
+                           file_path=filename, retry=retry, retry_wait=retry_wait,
+                           auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):
@@ -232,6 +255,23 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                 out.warning(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+
+
+def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):
+    file_origin = _path_from_file_uri(url)
+    shutil.copyfile(file_origin, file_path)
+
+    if md5:
+        check_md5(conanfile, file_path, md5)
+    if sha1:
+        check_sha1(conanfile, file_path, sha1)
+    if sha256:
+        check_sha256(conanfile, file_path, sha256)
+
+
+def _path_from_file_uri(uri):
+    path = urlparse(uri).path
+    return url2pathname(path)
 
 
 def rename(conanfile, src, dst):
@@ -593,7 +633,6 @@ def collect_libs(conanfile, folder=None):
                     result.append(name)
     result.sort()
     return result
-
 
 
 # TODO: Do NOT document this yet. It is unclear the interface, maybe should be split

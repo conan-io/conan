@@ -11,27 +11,53 @@ import os
 
 def pre_export(conanfile):
     conanfile.output.info("Hello")
+    # TODO: To have the export_folder here needs a bit more deep refactoring
+    assert conanfile.export_folder is None
+    assert conanfile.recipe_folder, "recipe_folder not defined"
 
 def post_export(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.export_folder, "export_folder not defined"
+    assert conanfile.export_sources_folder, "export_sources_folder not defined"
+    assert conanfile.recipe_folder, "recipe_folder not defined"
 
 def pre_source(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
 
 def post_source(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+
+def pre_generate(conanfile):
+    conanfile.output.info("Hello")
+    assert conanfile.generators_folder, "generators_folder not defined"
+
+def post_generate(conanfile):
+    conanfile.output.info("Hello")
+    assert conanfile.generators_folder, "generators_folder not defined"
 
 def pre_build(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
 
 def post_build(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
 
 def pre_package(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
+    assert conanfile.package_folder, "package_folder not defined"
 
 def post_package(conanfile):
     conanfile.output.info("Hello")
+    assert conanfile.source_folder, "source_folder not defined"
+    assert conanfile.build_folder, "build_folder not defined"
+    assert conanfile.package_folder, "package_folder not defined"
 
 def pre_package_info(conanfile):
     conanfile.output.info("Hello")
@@ -55,10 +81,14 @@ class TestHooks:
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_source(): Hello" in c.out
 
         c.run("install .")
-        assert "HOOK" not in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
+
         c.run("build .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_build(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_build(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
 
         c.run("export . ")
         assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
@@ -123,3 +153,26 @@ class TestHooks:
 
         c.run("export . ", assert_error=True)
         assert "ERROR: [HOOK - my_hook/hook_my_hook.py] pre_export(): Boom" in c.out
+
+    def test_post_build_fail(self):
+        """ Test the post_build_fail hook
+        """
+        c = TestClient()
+        my_hook = textwrap.dedent("""
+           def post_build_fail(conanfile):
+               conanfile.output.info("Hello")
+           """)
+        hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
+        save(hook_path, my_hook)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    raise Exception("Boom!")
+            """)
+        c.save({"conanfile.py": conanfile})
+
+        c.run("build . ", assert_error=True)
+        assert "conanfile.py: [HOOK - my_hook/hook_my_hook.py] post_build_fail(): Hello" in c.out
+        assert "ERROR: conanfile.py: Error in build() method, line 5" in c.out
+

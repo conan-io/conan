@@ -26,8 +26,8 @@ def build_all():
 
 
 foo_id = "efa83b160a55b033c4ea706ddb980cd708e3ba1b"
-bar_id = "8dcbed6f1d74e477e5cb4c720cabe6c391d59ea0"
-foobar_id = "a9ec6bebb0b06aa725ce41bcc07555b5a0630796"
+bar_id = "7d0bb2b97d4339b0d3ded1418a2593f35b9cf267"
+foobar_id = "af8f885f621ba7baac3f5b1d2c18cfdf5ba2550c"
 
 
 def check_if_build_from_sources(refs_modes, output):

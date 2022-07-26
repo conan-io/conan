@@ -56,14 +56,7 @@ def config_source(export_source_folder, conanfile, hook_manager):
 
     def remove_source():
         conanfile.output.warning("This can take a while for big packages")
-        try:
-            rmdir(conanfile.folders.base_source)
-        except BaseException as e_rm:
-            msg = str(e_rm)
-            conanfile.output.error("Unable to remove source folder %s\n%s"
-                                   % (conanfile.folders.base_source, msg))
-            conanfile.output.warning("**** Please delete it manually ****")
-            raise ConanException("Unable to remove source folder")
+        rmdir(conanfile.folders.base_source)
 
     if is_dirty(conanfile.folders.base_source):
         conanfile.output.warning("Trying to remove corrupted source folder")
@@ -88,8 +81,9 @@ def run_source_method(conanfile, hook_manager):
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
         hook_manager.execute("pre_source", conanfile=conanfile)
-        conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
-        with conanfile_exception_formatter(conanfile, "source"):
-            with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
-                conanfile.source()
+        if hasattr(conanfile, "source"):
+            conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
+            with conanfile_exception_formatter(conanfile, "source"):
+                with conanfile_remove_attr(conanfile, ['settings', "options"], "source"):
+                    conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)

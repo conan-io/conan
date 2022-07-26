@@ -19,12 +19,6 @@ compiler.mode=dpcpp
 compiler.version=2021.3
 compiler.libcxx=libstdc++
 build_type=Release
-[options]
-
-[tool_requires]
-[env]
-CC=dpcpp
-CXX=dpcpp
 
 [conf]
 tools.intel:installation_path=%s

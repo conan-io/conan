@@ -48,11 +48,15 @@ def test_ios():
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsToolchain", "AutotoolsDeps"
 
+            def layout(self):
+                self.cpp.package.resdirs = ["res"]
+
             def build(self):
                 autotools = Autotools(self)
                 autotools.autoreconf()
                 autotools.configure()
                 autotools.make()
+
         """)
 
     client.save({"conanfile.py": conanfile,
@@ -70,9 +74,9 @@ def test_ios():
     configure_args = conanbuild["configure_args"]
     make_args = conanbuild["make_args"]
     autoreconf_args = conanbuild["autoreconf_args"]
-    assert configure_args == "'--prefix=/' '--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' " \
+    assert configure_args == "--prefix=/ '--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' " \
                              "'--libdir=${prefix}/lib' '--includedir=${prefix}/include' " \
                              "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res' " \
-                             "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+                             "--host=aarch64-apple-ios --build=x86_64-apple-darwin"
     assert make_args == ""
-    assert autoreconf_args == "'--force' '--install'"
+    assert autoreconf_args == "--force --install"

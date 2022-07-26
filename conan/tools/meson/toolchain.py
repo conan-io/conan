@@ -29,6 +29,11 @@ class MesonToolchain(object):
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
+    # Constants to be overridden by conan_meson_deps_flags.ini (if exists)
+    deps_c_args = []
+    deps_c_link_args = []
+    deps_cpp_args = []
+    deps_cpp_link_args = []
 
     [project options]
     {% for it, value in project_options.items() -%}
@@ -38,6 +43,10 @@ class MesonToolchain(object):
     [binaries]
     {% if c %}c = '{{c}}'{% endif %}
     {% if cpp %}cpp = '{{cpp}}'{% endif %}
+    {% if is_apple_system %}
+    {% if objc %}objc = '{{objc}}'{% endif %}
+    {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
+    {% endif %}
     {% if c_ld %}c_ld = '{{c_ld}}'{% endif %}
     {% if cpp_ld %}cpp_ld = '{{cpp_ld}}'{% endif %}
     {% if ar %}ar = '{{ar}}'{% endif %}
@@ -55,11 +64,19 @@ class MesonToolchain(object):
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
-    c_args = {{c_args}} + preprocessor_definitions
-    c_link_args = {{c_link_args}}
-    cpp_args = {{cpp_args}} + preprocessor_definitions
-    cpp_link_args = {{cpp_link_args}}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    # C/C++ arguments
+    c_args = {{c_args}} + preprocessor_definitions + deps_c_args
+    c_link_args = {{c_link_args}} + deps_c_link_args
+    cpp_args = {{cpp_args}} + preprocessor_definitions + deps_cpp_args
+    cpp_link_args = {{cpp_link_args}} + deps_cpp_link_args
+    {% if is_apple_system %}
+    # Objective-C/C++ arguments
+    objc_args = {{objc_args}} + preprocessor_definitions + deps_c_args
+    objc_link_args = {{objc_link_args}} + deps_c_link_args
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions + deps_cpp_args
+    objcpp_link_args = {{objcpp_link_args}} + deps_cpp_link_args
+    {% endif %}
 
     {% for context, values in cross_build.items() %}
     [{{context}}_machine]
@@ -77,6 +94,7 @@ class MesonToolchain(object):
         """
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
+        self._is_apple_system = is_apple_os(self._os)
 
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
@@ -115,6 +133,9 @@ class MesonToolchain(object):
         }
         #: Dict-like object that defines Meson ``preprocessor definitions``
         self.preprocessor_definitions = {}
+        # Add all the default dirs
+        self.project_options.update(self._get_default_dirs())
+
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
         #: Dict-like object with the build, host, and target as the Meson machine context
@@ -182,19 +203,70 @@ class MesonToolchain(object):
         #: environment value
         self.cpp_link_args = self._get_env_list(build_env.get("LDFLAGS", []))
 
-        # Apple flags
+        # Apple flags and variables
         #: Apple arch flag as a list, e.g., ``["-arch", "i386"]``
         self.apple_arch_flag = []
         #: Apple sysroot flag as a list, e.g., ``["-isysroot", "./Platforms/MacOSX.platform"]``
         self.apple_isysroot_flag = []
         #: Apple minimum binary version flag as a list, e.g., ``["-mios-version-min", "10.8"]``
         self.apple_min_version_flag = []
+        #: Defines the Meson ``objc`` variable. Defaulted to ``None``, if if any Apple OS ``clang``
+        self.objc = None
+        #: Defines the Meson ``objcpp`` variable. Defaulted to ``None``, if if any Apple OS ``clang++``
+        self.objcpp = None
+        #: Defines the Meson ``objc_args`` variable. Defaulted to ``OBJCFLAGS`` build environment value
+        self.objc_args = []
+        #: Defines the Meson ``objc_link_args`` variable. Defaulted to ``LDFLAGS`` build environment value
+        self.objc_link_args = []
+        #: Defines the Meson ``objcpp_args`` variable. Defaulted to ``OBJCXXFLAGS`` build environment value
+        self.objcpp_args = []
+        #: Defines the Meson ``objcpp_link_args`` variable. Defaulted to ``LDFLAGS`` build environment value
+        self.objcpp_link_args = []
 
-        self._resolve_apple_flags()
+        self._resolve_apple_flags_and_variables(build_env)
         self._resolve_android_cross_compilation()
 
-    def _resolve_apple_flags(self):
-        if not is_apple_os(self._os):
+    def _get_default_dirs(self):
+        """
+        Get all the default directories from cpp.package.
+
+        Issues related:
+            - https://github.com/conan-io/conan/issues/9713
+            - https://github.com/conan-io/conan/issues/11596
+        """
+        def _get_cpp_info_value(name):
+            elements = getattr(self._conanfile.cpp.package, name)
+            return elements[0] if elements else None
+
+        if not self._conanfile.package_folder:
+            return {}
+
+        ret = {}
+        bindir = _get_cpp_info_value("bindirs")
+        datadir = _get_cpp_info_value("resdirs")
+        libdir = _get_cpp_info_value("libdirs")
+        includedir = _get_cpp_info_value("includedirs")
+        if bindir:
+            ret.update({
+                'bindir': bindir,
+                'sbindir': bindir,
+                'libexecdir': bindir
+            })
+        if datadir:
+            ret.update({
+                'datadir': datadir,
+                'localedir': datadir,
+                'mandir': datadir,
+                'infodir': datadir
+            })
+        if includedir:
+            ret["includedir"] = includedir
+        if libdir:
+            ret["libdir"] = libdir
+        return ret
+
+    def _resolve_apple_flags_and_variables(self, build_env):
+        if not self._is_apple_system:
             return
         # SDK path is mandatory for cross-building
         sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
@@ -213,6 +285,13 @@ class MesonToolchain(object):
         os_version = self._conanfile.settings.get_safe("os.version")
         subsystem = self._conanfile.settings.get_safe("os.subsystem")
         self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
+        # Objective C/C++ ones
+        self.objc = "clang"
+        self.objcpp = "clang++"
+        self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
+        self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
+        self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
+        self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
     def _resolve_android_cross_compilation(self):
         if not self.cross_build or not self.cross_build["host"]["system"] == "android":
@@ -264,6 +343,12 @@ class MesonToolchain(object):
         self.cpp_args.extend(apple_flags + extra_flags["cxxflags"])
         self.c_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.cpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+        # Objective C/C++
+        self.objc_args.extend(self.c_args)
+        self.objcpp_args.extend(self.cpp_args)
+        # These link_args have already the LDFLAGS env value so let's add only the new possible ones
+        self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
+        self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
@@ -276,6 +361,8 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
             "c": self.c,
             "cpp": self.cpp,
+            "objc": self.objc,
+            "objcpp": self.objcpp,
             "c_ld": self.c_ld,
             "cpp_ld": self.cpp_ld,
             "ar": self.ar,
@@ -297,9 +384,14 @@ class MesonToolchain(object):
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),
             "cpp_link_args": to_meson_value(self._filter_list_empty_fields(self.cpp_link_args)),
+            "objc_args": to_meson_value(self._filter_list_empty_fields(self.objc_args)),
+            "objc_link_args": to_meson_value(self._filter_list_empty_fields(self.objc_link_args)),
+            "objcpp_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_args)),
+            "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
-            "cross_build": self.cross_build
+            "cross_build": self.cross_build,
+            "is_apple_system": self._is_apple_system
         }
 
     @property

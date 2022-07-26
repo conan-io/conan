@@ -1,10 +1,9 @@
 import copy
-import fnmatch
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement, RECIPE_VIRTUAL
+from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
 from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
@@ -79,8 +78,6 @@ class DepsGraphBuilder(object):
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous)
-                # FIXME: THis will fail if prev_node is None
-                self._conflicting_options(require, node, prev_node, prev_require, base_previous)
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
@@ -130,19 +127,6 @@ class DepsGraphBuilder(object):
             conflict = _conflicting_refs(prev_ref, require.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
-
-    @staticmethod
-    def _conflicting_options(require, node, prev_node, prev_require, base_previous):
-        # Even if the version matches, there still can be a configuration conflict
-        # Only the propagated options can conflict, because profile would have already been asigned
-        is_consumer = node.conanfile._conan_is_consumer
-        upstream_options = node.conanfile.up_options.get(require.ref, is_consumer)
-        for k, v in upstream_options.items():
-            prev_option = prev_node.conanfile.options.get_safe(k)
-            if prev_option is not None:
-                if prev_option != v:
-                    raise GraphError.conflict_config(node, require, prev_node, prev_require,
-                                                     base_previous, k, prev_option, v)
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options):

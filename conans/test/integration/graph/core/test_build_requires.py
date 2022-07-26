@@ -556,6 +556,68 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
 
+    def test_tool_requires(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.1#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+
+    def test_tool_requires_override(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        #  \---(br, override)------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1")
+                                      .with_tool_requirement("protobuf/0.2", override=True))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.2#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+        _check_transitive(libb, [(protobuf_host, True, True, False, False),
+                                 (protobuf_build, False, False, True, True)])
+
     def test_test_require(self):
         # app -(tr)-> gtest/0.1
         # This test should survive in 2.0
@@ -653,3 +715,96 @@ def test_tool_requires():
                                   "tool2/1.0": "Cache",
                                   "tool3/1.0": "Cache",
                                   "tool4/1.0": "Cache"}, build=True)
+
+
+class TestDuplicateBuildRequires:
+    """ what happens when you require and tool_require the same dependency
+    """
+    # https://github.com/conan-io/conan/issues/11179
+
+    @pytest.fixture()
+    def client(self):
+        client = TestClient()
+        msg = "self.output.info('This is the binary for OS={}'.format(self.info.settings.os))"
+        msg2 = "self.output.info('This is in context={}'.format(self.context))"
+        client.save({"conanfile.py": GenConanfile().with_settings("os").with_package_id(msg)
+                                                                       .with_package_id(msg2)})
+        client.run("create . --name=tool1 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool2 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool3 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool4 --version=1.0 -s os=Windows")
+
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                tool_requires = "tool2/1.0"
+                build_requires = "tool3/1.0"
+                def requirements(self):
+                    self.requires("tool4/1.0")
+                def build_requirements(self):
+                    self.build_requires("tool4/1.0")
+                    self.tool_requires("tool1/1.0")
+                def generate(self):
+                    host_deps = sorted([d.ref for d, _ in self.dependencies.host.items()])
+                    build_deps = sorted([d.ref for d, _ in self.dependencies.build.items()])
+                    self.output.info("HOST DEPS: {}".format(host_deps))
+                    self.output.info("BUILD DEPS: {}".format(build_deps))
+                    assert len(host_deps) == 1, host_deps
+                    assert len(build_deps) == 4, build_deps
+            """)
+        client.save({"conanfile.py": consumer})
+        return client
+
+    def test_tool_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.tool_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows -s:h os=Linux")
+        assert "This is the binary for OS=Linux" not in client.out
+        assert "This is in context=host" not in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache"}, build=True)
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
+
+    def test_test_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.test_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache",
+                                      "tool4/1.0": "Cache"})
+        client.assert_listed_binary({"tool4/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270",
+                                                   "Build")})
+
+        assert "tool4/1.0: This is the binary for OS=Linux" in client.out
+        assert "tool4/1.0: This is in context=host" in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out

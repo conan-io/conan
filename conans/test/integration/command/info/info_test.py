@@ -23,6 +23,8 @@ class TestBasicCliOutput:
                 topics = "foo", "bar", "qux"
                 provides = "libjpeg", "libjpg"
                 deprecated = "other-pkg"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
             """)
         client.save({"conanfile.py": conanfile})
         client.run("graph info . -s build_type=Debug -s compiler=gcc -s compiler.version=11")
@@ -33,6 +35,8 @@ class TestBasicCliOutput:
         assert "compiler: gcc" in client.out
         assert "compiler.version: 11" in client.out
         assert "prev: None" in client.out
+        assert "fPIC: True" in client.out
+        assert "shared: False" in client.out
         # Create the package
         client.run("create .")
         pref = client.get_latest_package_reference("pkg/0.2")

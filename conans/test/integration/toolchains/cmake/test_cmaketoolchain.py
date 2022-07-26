@@ -4,6 +4,7 @@ import platform
 import textwrap
 
 import pytest
+from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
@@ -442,3 +443,148 @@ def test_cmake_presets_singleconfig():
                "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["configurePresets"]) == 2
+
+
+def test_toolchain_cache_variables():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.cache_variables["foo"] = True
+                toolchain.cache_variables["foo2"] = False
+                toolchain.cache_variables["var"] = "23"
+                toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS NO PRIORITY"
+                toolchain.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        client.run("install . --name=mylib --version=1.0 "
+                   "-c tools.cmake.cmaketoolchain:generator='MinGW Makefiles' "
+                   "-c tools.gnu:make_program='MyMake'")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["foo"] == 'ON'
+    assert cache_variables["foo2"] == 'OFF'
+    assert cache_variables["var"] == '23'
+    assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
+
+
+def test_android_c_library():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+
+            def configure(self):
+                if self.settings.compiler != "msvc":
+                    del self.settings.compiler.libcxx
+
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=foo --version=1.0 -s os=Android -s os.api_level=23 "
+               "-c tools.android:ndk_path=/foo")
+
+
+def test_user_presets_version2():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                from conan.tools.cmake import cmake_layout
+
+                class Conan(ConanFile):
+                    name = "foo"
+                    version = "1.0"
+                    settings = "os", "arch", "compiler", "build_type"
+                    generators = "CMakeToolchain"
+
+                    def layout(self):
+                        cmake_layout(self)
+
+            """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
+
+    presets = json.loads(client.load("CMakeUserPresets.json"))
+    assert len(presets["configurePresets"]) == 2
+    assert presets["version"] == 2
+    assert "build/14/generators/conan_toolchain.cmake" \
+           in presets["configurePresets"][0]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
+                                                                                               "/")
+    assert "build/17/generators/conan_toolchain.cmake" \
+           in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
+                                                                                               "/")
+
+
+def test_user_presets_version2_no_overwrite_user():
+
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                name = "foo"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    cmake_layout(self)
+
+            """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo",
+                 "CMakeUserPresets.json": '{"from_user": 1}'})
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+
+    presets = json.loads(client.load("CMakeUserPresets.json"))
+    assert presets == {"from_user": 1}
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
+def test_presets_paths_correct():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    cmake_layout(self)
+            """)
+
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
+
+    presets = json.loads(client.load("CMakeUserPresets.json"))
+    assert len(presets["configurePresets"]) == 2
+    assert presets["version"] == 2
+    assert "build/14/generators/conan_toolchain.cmake" \
+           in presets["configurePresets"][0]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
+                                                                                               "/")
+    assert "build/17/generators/conan_toolchain.cmake" \
+           in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
+                                                                                               "/")

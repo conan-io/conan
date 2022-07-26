@@ -236,3 +236,131 @@ class TestDefaultCompat:
               f"-s compiler.runtime={runtime}")
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
+
+    def test_fail_with_options_deleted(self):
+        """
+        This test used to fail with "ConanException: option 'with_fmt_alias' doesn't exist",
+        because it was removed by the package_id()
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "mylib"
+                version = "1.0"
+
+                options = {"with_fmt_alias": [True, False]}
+                default_options = {"with_fmt_alias": False}
+
+                settings = "os", "arch", "compiler", "build_type"
+
+                def package_id(self):
+                    del self.info.options.with_fmt_alias
+
+                def package_info(self):
+                    self.output.warning("WITH_FMT_ALIAS={}".format(self.options.with_fmt_alias))
+            """)
+        c.save({"conanfile.py": conanfile})
+
+        c.run("create . -s compiler.cppstd=14")
+
+        c.run("create . --build=missing -s compiler.cppstd=17")
+        assert "mylib/1.0: Main binary package" in c.out
+        assert " missing. Using compatible package" in c.out
+        assert "Possible options are ['shared', 'header_only']" not in c.out
+        assert "mylib/1.0: WARN: WITH_FMT_ALIAS=False" in c.out
+
+    def test_header_only_build_missing(self):
+        """
+        this test failed with self.settings.compiler setting didn't exist
+        """
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class SumConan(ConanFile):
+                name = "sum"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                def build(self):
+                    self.output.warning("My compiler is '{}'".format(self.settings.compiler))
+                def package_id(self):
+                    self.info.clear()
+        """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . -s compiler.cppstd=17 --build missing")
+        client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Build")})
+        # Just check that it works and doesn't fail
+        assert "Installing (downloading, building) binaries" in client.out
+        client.run("create . -s compiler.cppstd=14 --build missing")
+        # Now it will not build, as package exist
+        client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Cache")})
+        assert "Installing (downloading, building) binaries" in client.out
+
+    def test_check_min_cppstd(self):
+        """ test that the check_min_cppstd works fine wiht compatibility, as it is based
+        on ``conanfile.info.settings`` not ``conanfile.settings``
+        """
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd, valid_min_cppstd
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                def validate(self):
+                    check_min_cppstd(self, "17", False)
+                    self.output.info("valid standard!!")
+                def package_info(self):
+                    self.output.info("CPPSTD: {}".format(self.settings.compiler.cppstd))
+            """)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile})
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        c.run(f"create .  {settings} -s compiler.cppstd=17")
+        assert "pkg/0.1: valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14")
+        assert "valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
+        assert "valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+
+    def test_check_min_cppstd_interface(self):
+        """ test that says that compatible binaries are ok, as long as the user defined
+        cppstd>=14. The syntax is a bit forced, maybe we want to improve ``check_min_cppstd``
+        capabilities to be able to raise ConanErrorConfiguration too
+        """
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanErrorConfiguration
+            from conan.tools.build import check_min_cppstd, valid_min_cppstd
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "arch", "compiler", "build_type"
+                def validate(self):
+                    if int(str(self.info.settings.compiler.cppstd).replace("gnu", "")) <= 14:
+                        raise ConanErrorConfiguration("incompatible cppstd!")
+                    check_min_cppstd(self, "17", False)  # based on self.info
+                    self.output.info("valid standard!!")
+                def package_info(self):
+                    self.output.info("CPPSTD: {}".format(self.settings.compiler.cppstd))
+            """)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile})
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        c.run(f"create .  {settings} -s compiler.cppstd=17")
+        assert "pkg/0.1: valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14", assert_error=True)
+        assert "valid standard!!" not in c.out
+        assert "pkg/0.1: ConfigurationError: incompatible cppstd!" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
+        assert "valid standard!!" in c.out
+        assert "pkg/0.1: CPPSTD: 17" in c.out

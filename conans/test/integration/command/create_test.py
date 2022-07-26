@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import textwrap
 import unittest
 
@@ -325,7 +326,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")})
         client.run("create .")
         client.save({"conanfile.py": GenConanfile().with_name("bye").with_version("0.1")
-                                                   .with_require("hello/0.1")})
+                    .with_require("hello/0.1")})
         client.run("create .")
 
         ref = RecipeReference.loads("bye/0.1")
@@ -384,7 +385,7 @@ def test_create_build_missing():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_settings("os"),
             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")
-                                                          .with_requires("dep/1.0")})
+           .with_requires("dep/1.0")})
     c.run("create dep -s os=Windows")
 
     # Wrong pattern will not build it
@@ -409,3 +410,357 @@ def test_create_build_missing():
     c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
+
+def test_create_format_json():
+    """
+    Tests the ``conan create . -f json`` result
+
+    The result should be something like:
+
+    {
+        'graph': {
+            'nodes': [
+                {'ref': '',  # consumer
+                 'recipe': 'Virtual',
+                 ....
+                },
+                {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
+                 'requires': {'2': 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'},
+                 ....
+                },
+                {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
+                 ....
+                }
+            ],
+            'root': {'0': 'None'}
+        }
+    }
+    """
+    client = TestClient()
+    profile_build = textwrap.dedent("""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    [conf]
+    user.first:value="my value"
+    user.second:value=["my value"]
+    user.second:value+=["other value"]
+    [buildenv]
+    VAR1=myvalue1
+    """)
+    profile_host = textwrap.dedent("""\
+    [settings]
+    arch=x86
+    build_type=Debug
+    compiler=gcc
+    compiler.libcxx=libstdc++
+    compiler.version=12
+    os=Linux
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+            settings = "build_type", "compiler"
+            author = "John Doe"
+            license = "MIT"
+            url = "https://foo.bar.baz"
+            homepage = "https://foo.bar.site"
+            topics = "foo", "bar", "qux"
+            provides = "libjpeg", "libjpg"
+            deprecated = "other-pkg"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "host": profile_host, "build": profile_build})
+    client.run("create . -pr:h host -pr:b build")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                .with_require("pkg/0.2"),
+                 "host": profile_host, "build": profile_build}, clean_first=True)
+    client.run("create . -f json -pr:h host -pr:b build")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]['nodes']
+    consumer_ref = 'conanfile'
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
+    consumer_info = hello_pkg_info = pkg_pkg_info = None
+
+    for n in nodes:
+        ref = n["ref"]
+        if ref == consumer_ref:
+            consumer_info = n
+        elif ref == hello_pkg_ref:
+            hello_pkg_info = n
+        elif ref == pkg_pkg_ref:
+            pkg_pkg_info = n
+        else:
+            raise Exception("Ref not found. Review the revisions hash.")
+
+    # Consumer information
+    assert consumer_info["recipe"] == "Virtual"
+    assert consumer_info["package_id"] is None
+    assert consumer_info["prev"] is None
+    assert consumer_info["options"] == {}
+    assert consumer_info["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
+                                         'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
+                                         'os': 'Linux'}
+    assert consumer_info["requires"] == {'1': hello_pkg_ref}
+    # hello/0.1 pkg information
+    assert hello_pkg_info["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
+    assert hello_pkg_info["prev"] == "d95380a07c35273509dfc36b26f6cec1"
+    assert hello_pkg_info["settings"] == {}
+    assert hello_pkg_info["options"] == {}
+    assert hello_pkg_info["requires"] == {'2': pkg_pkg_ref}
+    # pkg/0.2 pkg information
+    assert pkg_pkg_info["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
+    assert pkg_pkg_info["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
+    assert pkg_pkg_info["author"] == 'John Doe'
+    assert pkg_pkg_info["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
+    assert pkg_pkg_info["options"] == {'fPIC': 'True', 'shared': 'False'}
+    assert pkg_pkg_info["requires"] == {}
+
+
+def test_create_format_json_and_deps_cpp_info():
+    """
+    Tests the ``conan create . -f json`` result, but ``cpp_info`` object only.
+
+    The goal is to get something like:
+
+    ```
+    { ....
+    'cpp_info': {'cmp1': {'bindirs': None,
+                          'builddirs': None,
+                          'cflags': None,
+                          'cxxflags': None,
+                          'defines': None,
+                          'exelinkflags': None,
+                          'frameworkdirs': None,
+                          'frameworks': None,
+                          'includedirs': None,
+                          'libdirs': None,
+                          'libs': ['libcmp1'],
+                          'objects': None,
+                          'properties': {'pkg_config_aliases': ['compo1_alias'],
+                                         'pkg_config_name': 'compo1'},
+                          'requires': None,
+                          'resdirs': None,
+                          'sharedlinkflags': None,
+                          'srcdirs': None,
+                          'sysroot': '/another/sysroot',
+                          'system_libs': None},
+                 'root': {'bindirs': ['bin'],
+                          'builddirs': [],
+                          'cflags': ['pkg_a_c_flag'],
+                          'cxxflags': ['pkg_a_cxx_flag'],
+                          'defines': ['pkg_onedefinition',
+                                      'pkg_twodefinition'],
+                          'exelinkflags': ['pkg_exe_link_flag'],
+                          'frameworkdirs': ['framework/path/pkg'],
+                          'frameworks': ['pkg_oneframework',
+                                         'pkg_twoframework'],
+                          'includedirs': ['path/includes/pkg',
+                                          'include/path/pkg'],
+                          'libdirs': ['lib/path/pkg'],
+                          'libs': ['pkg'],
+                          'objects': None,
+                          'properties': {'pkg_config_aliases': ['pkg_alias1',
+                                                                'pkg_alias2'],
+                                         'pkg_config_name': 'pkg_other_name'},
+                          'requires': None,
+                          'resdirs': ['/path '
+                                      'with '
+                                      'spaces/.conan2/p/d15a235e212166d9/p/res'],
+                          'sharedlinkflags': ['pkg_shared_link_flag'],
+                          'srcdirs': None,
+                          'sysroot': '/path/to/folder/pkg',
+                          'system_libs': ['pkg_onesystemlib',
+                                          'pkg_twosystemlib']}
+    }}
+    ```
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+
+            def package_info(self):
+                self.cpp_info.libs = ["pkg"]
+                self.cpp_info.includedirs = ["path/includes/pkg", "other/include/path/pkg"]
+                self.cpp_info.libdirs = ["one/lib/path/pkg"]
+                self.cpp_info.defines = ["pkg_onedefinition", "pkg_twodefinition"]
+                self.cpp_info.cflags = ["pkg_a_c_flag"]
+                self.cpp_info.cxxflags = ["pkg_a_cxx_flag"]
+                self.cpp_info.sharedlinkflags = ["pkg_shared_link_flag"]
+                self.cpp_info.exelinkflags = ["pkg_exe_link_flag"]
+                self.cpp_info.sysroot = "/path/to/folder/pkg"
+                self.cpp_info.frameworks = ["pkg_oneframework", "pkg_twoframework"]
+                self.cpp_info.system_libs = ["pkg_onesystemlib", "pkg_twosystemlib"]
+                self.cpp_info.frameworkdirs = ["one/framework/path/pkg"]
+                self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
+                self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
+                self.cpp_info.components["cmp1"].sysroot = "/another/sysroot"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                                               .with_require("pkg/0.2")}, clean_first=True)
+    client.run("create . -f json")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]["nodes"]
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
+    hello_cpp_info = pkg_cpp_info = None
+    for n in nodes:
+        ref = n["ref"]
+        if ref == hello_pkg_ref:
+            assert n['binary'] == "Build"
+            hello_cpp_info = n['cpp_info']
+        elif ref == pkg_pkg_ref:
+            assert n['binary'] == "Cache"
+            pkg_cpp_info = n['cpp_info']
+
+    assert hello_cpp_info and pkg_cpp_info
+    # hello/0.1 cpp_info
+    assert hello_cpp_info['root']["libs"] is None
+    assert len(hello_cpp_info['root']["bindirs"]) == 1
+    assert len(hello_cpp_info['root']["libdirs"]) == 1
+    assert hello_cpp_info['root']["sysroot"] is None
+    assert hello_cpp_info['root']["properties"] is None
+    # pkg/0.2 cpp_info
+    # root info
+    assert pkg_cpp_info['root']["libs"] == ['pkg']
+    assert len(pkg_cpp_info['root']["bindirs"]) == 1
+    assert len(pkg_cpp_info['root']["libdirs"]) == 1
+    assert pkg_cpp_info['root']["sysroot"] == '/path/to/folder/pkg'
+    assert pkg_cpp_info['root']["system_libs"] == ['pkg_onesystemlib', 'pkg_twosystemlib']
+    assert pkg_cpp_info['root']['cflags'] == ['pkg_a_c_flag']
+    assert pkg_cpp_info['root']['cxxflags'] == ['pkg_a_cxx_flag']
+    assert pkg_cpp_info['root']['defines'] == ['pkg_onedefinition', 'pkg_twodefinition']
+    assert pkg_cpp_info['root']["properties"] == {'pkg_config_aliases': ['pkg_alias1', 'pkg_alias2'],
+                                                  'pkg_config_name': 'pkg_other_name'}
+    # component info
+    assert pkg_cpp_info['cmp1']["libs"] == ['libcmp1']
+    assert pkg_cpp_info['cmp1']["bindirs"][0].endswith("bin")  # Abs path /bin
+    assert pkg_cpp_info['cmp1']["libdirs"][0].endswith("lib")  # Abs path /lib
+    assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
+    assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
+                                                  'pkg_config_name': 'compo1'}
+
+
+def test_default_framework_dirs():
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def package_info(self):
+            self.output.warning("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out
+
+
+def test_default_framework_dirs_with_layout():
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.output.warning("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out
+
+
+@pytest.mark.parametrize("with_layout", [True, False])
+def test_defaults_in_components(with_layout):
+    """In Conan 2, declaring or not the layout has no influence in how cpp_info behaves. It was
+       only 1.X"""
+    lib_conan_file = textwrap.dedent("""
+    from conan import ConanFile
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.cpp_info.components["foo"].libs = ["foolib"]
+
+    """)
+    if not with_layout:
+        lib_conan_file = lib_conan_file.replace("def layout(", "def potato(")
+    client = TestClient()
+    client.save({"conanfile.py": lib_conan_file})
+    client.run("create . ")
+
+    consumer_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "lib/1.0"
+
+            def layout(self):
+                pass
+
+            def generate(self):
+                cppinfo = self.dependencies["lib"].cpp_info
+                components = cppinfo.components
+                self.output.warning("BINDIRS: {}".format(cppinfo.bindirs))
+                self.output.warning("LIBDIRS: {}".format(cppinfo.libdirs))
+                self.output.warning("INCLUDEDIRS: {}".format(cppinfo.includedirs))
+                self.output.warning("RESDIRS: {}".format(cppinfo.resdirs))
+                self.output.warning("FOO LIBDIRS: {}".format(components["foo"].libdirs))
+                self.output.warning("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
+                self.output.warning("FOO RESDIRS: {}".format(components["foo"].resdirs))
+
+        """)
+
+    if not with_layout:
+        consumer_conanfile = consumer_conanfile.replace("def layout(", "def potato(")
+
+    client.save({"conanfile.py": consumer_conanfile})
+    client.run("create . ")
+
+    # The paths are absolute and the components have defaults
+    # ".+" Check that there is a path, not only "lib"
+    assert re.search(r"BINDIRS: \['.+bin'\]", str(client.out))
+    assert re.search(r"LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search(r"INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: RES DIRS: []"
+    assert re.search(r"WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: FOO RESDIRS: []" in client.out

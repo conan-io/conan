@@ -1,7 +1,5 @@
 import hashlib
 import os
-import shutil
-import uuid
 
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
@@ -13,7 +11,7 @@ from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNot
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir
+from conans.util.files import rmdir, renamedir
 
 
 class DataCache:
@@ -53,8 +51,9 @@ class DataCache:
         return sha_bytes[0:16]
 
     @staticmethod
-    def _get_tmp_path():
-        h = DataCache._short_hash_path(str(uuid.uuid4()))
+    def _get_tmp_path(ref):
+        # The reference will not have revision, but it will be always constant
+        h = DataCache._short_hash_path(ref.repr_notime())
         return os.path.join("tmp", h)
 
     @staticmethod
@@ -66,7 +65,7 @@ class DataCache:
         # computed yet, until it is. The entry is not added to DB, just a temp folder is created
         assert ref.revision is None, "Recipe revision should be None"
         assert ref.timestamp is None
-        reference_path = self._get_tmp_path()
+        reference_path = self._get_tmp_path(ref)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -76,7 +75,7 @@ class DataCache:
         assert pref.package_id, "Package id must be known to get or create the package layout"
         assert pref.revision is None, "Package revision should be None"
         assert pref.timestamp is None
-        package_path = self._get_tmp_path()
+        package_path = self._get_tmp_path(pref)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -129,9 +128,6 @@ class DataCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def update_package_timestamp(self, ref: PkgReference):
-        self._db.update_package_timestamp(ref)
-
     def list_references(self):
         return self._db.list_references()
 
@@ -179,12 +175,9 @@ class DataCache:
         new_path = self._get_path(pref)
 
         full_path = self._full_path(new_path)
-        if os.path.exists(full_path):
-            try:
-                rmdir(full_path)
-            except Exception:
-                raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
-        shutil.move(self._full_path(layout.base_folder), full_path)
+        rmdir(full_path)
+
+        renamedir(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
@@ -217,11 +210,8 @@ class DataCache:
         # TODO: cache2.0 probably we should not check this and move to other place or just
         #  avoid getting here if old and new paths are the same
         full_path = self._full_path(new_path)
-        try:
-            rmdir(full_path)
-        except Exception:
-            raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
-        shutil.move(self._full_path(layout.base_folder), full_path)
+        rmdir(full_path)
+        renamedir(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         # Wait until it finish to really update the DB

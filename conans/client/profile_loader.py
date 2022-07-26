@@ -7,13 +7,13 @@ from jinja2 import Environment, FileSystemLoader
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
+from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
-from conans.util.files import mkdir, save, load_user_encoded
+from conans.util.files import mkdir, load_user_encoded
 
 
 def _unquote(text):
@@ -118,6 +118,9 @@ class ProfileLoader:
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
+        if conf and any(CORE_CONF_PATTERN.match(c) for c in conf):
+            raise ConanException("[conf] 'core.*' configurations are not allowed in profiles.")
+
         result = Profile()
         for p in profiles:
             tmp = self.load_profile(p, cwd)
@@ -298,7 +301,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
-                                                         "settings", "env",
+                                                         "settings",
                                                          "options", "conf", "buildenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc

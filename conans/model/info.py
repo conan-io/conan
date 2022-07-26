@@ -97,31 +97,41 @@ class RequirementInfo:
     def semver_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).stable()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def full_version_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def patch_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).patch()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def minor_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).minor()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def major_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).major()
-        self.user = self.channel = self.package_id = None
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
         self.recipe_revision = None
 
     def full_recipe_mode(self):
@@ -309,7 +319,7 @@ def load_binary_info(text):
     build_requires = parse_list(parser.build_requires)
 
     conan_info_json = {"settings": dict(settings),
-                       "options": dict(options.serialize())["options"],
+                       "options": options.serialize(),
                        "requires": requires,
                        "settings_target": dict(settings_target),
                        "conf": conf,
@@ -387,6 +397,15 @@ class ConanInfo:
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
+    def dump_diff(self, compatible):
+        self_dump = self.dumps()
+        compatible_dump = compatible.dumps()
+        result = []
+        for line in compatible_dump.splitlines():
+            if line not in self_dump:
+                result.append(line)
+        return ', '.join(result)
+
     def package_id(self):
         """
         Get the `package_id` that is the result of applying the has function SHA-1 to the
@@ -397,7 +416,7 @@ class ConanInfo:
         package_id = sha1(text.encode())
         return package_id
 
-    def header_only(self):
+    def clear(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()

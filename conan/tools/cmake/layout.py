@@ -21,13 +21,14 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
         else:
             multi = False
 
-    conanfile.folders.source = src_folder
+    subproject = conanfile.folders.subproject
+    conanfile.folders.source = src_folder if not subproject else os.path.join(subproject, src_folder)
     try:
         build_type = str(conanfile.settings.build_type)
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    build_folder = "build"
+    build_folder = "build" if not subproject else os.path.join(subproject, "build")
     custom_conf = get_build_folder_custom_vars(conanfile)
     if custom_conf:
         build_folder = "{}/{}".format(build_folder, custom_conf)
@@ -58,6 +59,11 @@ def get_build_folder_custom_vars(conanfile):
         tmp = None
         if s.startswith("settings."):
             _, var = s.split("settings.", 1)
+            if var == "build_type":
+                raise ConanException("Error, don't include 'settings.build_type' in the "
+                                     "'tools.cmake.cmake_layout:build_folder_vars' conf. It is "
+                                     "managed by default because 'CMakeToolchain' and 'CMakeDeps' "
+                                     "are multi-config generators.`")
             tmp = conanfile.settings.get_safe(var)
         elif s.startswith("options."):
             _, var = s.split("options.", 1)

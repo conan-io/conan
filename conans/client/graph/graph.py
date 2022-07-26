@@ -61,10 +61,10 @@ class Node(object):
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
 
     def __lt__(self, other):
         """
-
         @type other: Node
         """
         # TODO: Remove this order, shouldn't be necessary
@@ -127,8 +127,11 @@ class Node(object):
         # print("    Transitive deps", self.transitive_deps)
         # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
+        result = None
         if prev and (prev.require is not require or prev.node is not None):
-            return prev.require, prev.node, self
+            result = prev.require, prev.node, self
+            # Do not return yet, keep checking downstream, because downstream overrides or forces
+            # have priority
 
         # Check if need to propagate downstream
         # Then propagate downstream
@@ -136,7 +139,7 @@ class Node(object):
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:
-            return
+            return result
         assert len(self.dependants) == 1
         dependant = self.dependants[0]
 
@@ -147,10 +150,10 @@ class Node(object):
 
         if down_require is None:
             # print("    No need to check downstream more")
-            return
+            return result
 
         source_node = dependant.src
-        return source_node.check_downstream_exists(down_require)
+        return source_node.check_downstream_exists(down_require) or result
 
     def check_loops(self, new_node):
         if self.ref == new_node.ref and self.context == new_node.context:
@@ -206,6 +209,10 @@ class Node(object):
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
+        # TODO: This doesn't match the model, check it
+        result["invalid_build"] = self.cant_build is not False
+        if self.cant_build:
+            result["invalid_build_reason"] = self.cant_build
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
         result["context"] = self.context
@@ -256,7 +263,9 @@ class DepsGraph(object):
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = set(self.nodes)
+        # We make it a dict to preserve insertion order and be deterministic, s
+        # sets are not deterministic order. dict is fast for look up operations
+        opened = dict.fromkeys(self.nodes)
         while opened:
             current_level = []
             for o in opened:
@@ -267,8 +276,9 @@ class DepsGraph(object):
             # TODO: SORTING seems only necessary for test order
             current_level.sort()
             result.append(current_level)
-            # now initialize new level
-            opened = opened.difference(current_level)
+            # now start new level, removing the current level items
+            for item in current_level:
+                opened.pop(item)
 
         return result
 
