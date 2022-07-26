@@ -10,7 +10,7 @@ class PkgConfigDeps(object):
     @property
     def content(self):
         """
-        Get all the \*.pc files content
+        Get all the `*.pc` files content
 
         :return: A dict with file names as keys and contents as values
         """
@@ -36,7 +36,7 @@ class PkgConfigDeps(object):
 
     def generate(self):
         """
-        Save all the \*.pc files
+        Save all the `*.pc` files
         """
 
         # Current directory is the generators_folder

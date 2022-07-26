@@ -314,14 +314,17 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type, non_embed_mode, embed_mode, build_mode,
+    def deduce_package_id_mode(self, pkg_type, dep_node, non_embed_mode, embed_mode, build_mode,
                                unknown_mode):
         # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
         # The "conf" values are defaults, no hard overrides
         if self.package_id_mode:
             return
 
+        dep_conanfile = dep_node.conanfile
+        dep_pkg_type = dep_conanfile.package_type
         if self.build:
+            build_mode = getattr(dep_conanfile, "build_mode", build_mode)
             if build_mode and self.direct:
                 self.package_id_mode = build_mode
             return  # At the moment no defaults
@@ -330,6 +333,10 @@ class Requirement:
             self.package_id_mode = "unrelated_mode"
             return
 
+        # If the dependency defines the mode, that has priority over default
+        embed_mode = getattr(dep_conanfile, "package_id_embed_mode", embed_mode)
+        non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
+        unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:

@@ -65,3 +65,29 @@ def test_autotools_custom_environment():
     client.run("install . -s:b os=Linux -s:h os=Linux")
     content = load(os.path.join(client.current_folder,  "conanautotoolstoolchain.sh"))
     assert 'export FOO="BAR"' in content
+
+
+def test_not_none_values():
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+
+        class Foo(ConanFile):
+            name = "foo"
+            version = "1.0"
+
+            def generate(self):
+                tc = AutotoolsToolchain(self)
+                assert None not in tc.defines
+                assert None not in tc.cxxflags
+                assert None not in tc.cflags
+                assert None not in tc.ldflags
+
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+
+

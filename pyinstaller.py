@@ -97,7 +97,7 @@ def pyinstall(source_folder):
               "--hidden-import=conan.tools.files --hidden-import=conan.tools.gnu "
               "--hidden-import=conan.tools.google --hidden-import=conan.tools.intel "
               "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
-              "--hidden-import=conan.tools.qbs")
+              "--hidden-import=conan.tools.qbs --hidden-import=conan.tools.scm")
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""

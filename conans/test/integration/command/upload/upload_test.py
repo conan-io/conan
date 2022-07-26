@@ -29,7 +29,8 @@ class MyPkg(ConanFile):
     exports_sources = "*"
 
     def package(self):
-        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*.cpp", self.source_folder, self.package_folder)
+        copy(self, "*.h", self.source_folder, self.package_folder)
 """
 
 
@@ -129,8 +130,8 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing#*:{} -c "
                    "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading package 'hello0/1.2.1@user/testing#5dc538bd43d0fd8e2a2089bf64762146"
-                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709#eb264163f8b058326d487ad8aae85a32'",
+        self.assertIn("Uploading package 'hello0/1.2.1@user/testing#e9865516f03b8acbe2bd918d26b1460f"
+                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e'",
                       client.out)
 
     def test_pattern_upload(self):

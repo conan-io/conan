@@ -57,3 +57,10 @@ class ConanAPIV2(object):
 
 
 ConanAPI = ConanAPIV2
+
+
+def set_conan_output_level(level, activate_logger=False):
+    from conan.api import output
+    output.conan_output_level = level
+    output.conan_output_logger_format = activate_logger
+

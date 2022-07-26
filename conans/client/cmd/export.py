@@ -3,7 +3,7 @@ import shutil
 
 from conan.tools.files import copy
 from conan.tools.files.copy_pattern import report_files_copied
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
@@ -44,6 +44,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     # Execute post-export hook before computing the digest
     hook_manager.execute("post_export", conanfile=conanfile)
+    conanfile.folders.set_base_export(None)
+    conanfile.folders.set_base_export_sources(None)
 
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)
@@ -137,7 +139,6 @@ def export_source(conanfile, destination_source_folder):
     report_files_copied(copied, package_output)
     conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources")
-    conanfile.folders.set_base_export_sources(None)
 
 
 def export_recipe(conanfile, destination_folder):
@@ -166,7 +167,6 @@ def export_recipe(conanfile, destination_folder):
 
     conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export")
-    conanfile.folders.set_base_export(None)
 
 
 def _run_method(conanfile, method):

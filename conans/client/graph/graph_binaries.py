@@ -33,7 +33,7 @@ class GraphBinariesAnalyzer(object):
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             conanfile.output.info('Forced build from source')
-            node.binary = BINARY_BUILD
+            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
             node.prev = None
             return True
 
@@ -89,6 +89,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
+            node.pref_timestamp = previous_node.pref_timestamp
 
             # this line fixed the compatible_packages with private case.
             # https://github.com/conan-io/conan/issues/9880
@@ -141,7 +142,7 @@ class GraphBinariesAnalyzer(object):
             self._process_compatible_packages(node)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-            node.binary = BINARY_BUILD
+            node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
@@ -262,8 +263,6 @@ class GraphBinariesAnalyzer(object):
             except NoRemoteAvailable:
                 output.warning("Can't update, there are no remotes configured or enabled")
             else:
-                # TODO: Most likely get_packag_timestamp is no longer necessary
-                # cache_time = self._cache.get_package_timestamp(cache_latest_prev)
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
                 if cache_time < node.pref_timestamp and cache_latest_prev != node.pref:

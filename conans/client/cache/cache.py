@@ -1,4 +1,3 @@
-import copy
 import os
 import platform
 from typing import List
@@ -44,11 +43,14 @@ class ClientCache(object):
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = os.path.join(self.cache_folder, "p")
+        self._store_folder = self.new_config.get("core.cache:storage_path") or \
+                             os.path.join(self.cache_folder, "p")
 
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
+        # The cache is first thing instantiated, we can remove this from env now
+        self._localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
     def closedb(self):
         self._data_cache.closedb()
@@ -94,9 +96,6 @@ class ClientCache(object):
         that would affect its order in our cache """
         return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, pref):
-        return self._data_cache.update_package_timestamp(pref)
-
     def all_refs(self):
         return self._data_cache.list_references()
 
@@ -111,7 +110,8 @@ class ClientCache(object):
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         return self._data_cache.get_package_revisions_references(pref, only_latest_prev)
 
-    def get_package_references(self, ref: RecipeReference, only_latest_prev=True) -> List[PkgReference]:
+    def get_package_references(self, ref: RecipeReference,
+                               only_latest_prev=True) -> List[PkgReference]:
         """Get the latest package references"""
         return self._data_cache.get_package_references(ref, only_latest_prev)
 
@@ -130,20 +130,6 @@ class ClientCache(object):
     @property
     def store(self):
         return self._store_folder
-
-    def editable_path(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        if edited_ref:
-            conanfile_path = edited_ref["path"]
-            return conanfile_path
-
-    def installed_as_editable(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        return bool(edited_ref)
 
     @property
     def remotes_path(self):
@@ -174,8 +160,7 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
-        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
+        return LocalDB.create(localdb_filename, encryption_key=self._localdb_encryption_key)
 
     @property
     def profiles_path(self):

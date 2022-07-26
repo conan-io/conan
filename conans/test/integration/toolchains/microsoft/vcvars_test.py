@@ -29,11 +29,9 @@ def test_vcvars_generator(scope):
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
+    bat_contents = client.load("conanbuild.bat")
     if scope in ("build", None):
-        bat_contents = client.load("conanbuild.bat")
         assert "conanvcvars.bat" in bat_contents
-    else:
-        assert not os.path.exists(os.path.join(client.current_folder, "conanbuild.bat"))
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")

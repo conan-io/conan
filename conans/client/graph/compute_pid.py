@@ -27,7 +27,7 @@ def compute_package_id(node, new_config):
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        require.deduce_package_id_mode(conanfile.package_type, dep_node.conanfile.package_type,
+        require.deduce_package_id_mode(conanfile.package_type, dep_node,
                                        non_embed_mode, embed_mode, build_mode, unknown_mode)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
@@ -48,6 +48,14 @@ def compute_package_id(node, new_config):
                                python_requires=python_requires,
                                conf=conanfile.conf.copy_conaninfo_conf())
     conanfile.original_info = conanfile.info.clone()
+
+    if hasattr(conanfile, "validate_build"):
+        with conanfile_exception_formatter(conanfile, "validate_build"):
+            try:
+                conanfile.validate_build()
+            except ConanInvalidConfiguration as e:
+                # This 'cant_build' will be ignored if we don't have to build the node.
+                node.cant_build = str(e)
 
     run_validate_package_id(conanfile)
 

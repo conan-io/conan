@@ -12,7 +12,7 @@ from conans.util.files import save
 
 
 def test_profile_parser():
-    txt = textwrap.dedent("""
+    txt = textwrap.dedent(r"""
         include(a/path/to\profile.txt)
         VAR=2
         include(other/path/to/file.txt)
@@ -23,7 +23,7 @@ def test_profile_parser():
         """)
     a = _ProfileParser(txt)
     assert a.vars == {"VAR": "2", "OTHERVAR": "thing"}
-    assert a.includes == ["a/path/to\profile.txt", "other/path/to/file.txt"]
+    assert a.includes == [r"a/path/to\profile.txt", "other/path/to/file.txt"]
     assert a.profile_text == textwrap.dedent("""[settings]
 os=2""")
 
@@ -33,7 +33,7 @@ os=2""")
     assert a.includes == []
     assert a.profile_text == ""
 
-    txt = textwrap.dedent("""
+    txt = textwrap.dedent(r"""
         include(a/path/to\profile.txt)
         VAR=$REPLACE_VAR
         include(other/path/to/$FILE)
@@ -48,11 +48,11 @@ os=2""")
     a.apply_vars()
     assert a.vars == {"VAR": "22", "OTHERVAR": "thing",
                       "REPLACE_VAR": "22", "FILE": "MyFile",}
-    assert [i for i in a.get_includes()] == ["a/path/to\profile.txt", "other/path/to/MyFile"]
+    assert [i for i in a.get_includes()] == [r"a/path/to\profile.txt", "other/path/to/MyFile"]
     assert a.profile_text == textwrap.dedent("""[settings]
 os=thing""")
 
-    txt = textwrap.dedent("""
+    txt = textwrap.dedent(r"""
         includes(a/path/to\profile.txt)
         """)
 
@@ -216,3 +216,19 @@ def test_profile_buildenv():
     assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
     # Mock is never Windows path
     assert env_vars.get("MyPath1") == "/some/path11:/other path/path12"
+
+
+@pytest.mark.parametrize("conf_name", [
+    "core.doesnotexist:never",
+    "core:doesnotexist"
+])
+def test_profile_core_confs_error(conf_name):
+    tmp = temp_folder()
+    current_profile_path = os.path.join(tmp, "default")
+    save(current_profile_path, "")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+
+    with pytest.raises(ConanException) as exc:
+        profile_loader.from_cli_args([], [], [], [], [conf_name], None)
+    assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)

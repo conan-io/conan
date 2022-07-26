@@ -39,15 +39,15 @@ class OptionsTest(unittest.TestCase):
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=False", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
-        self.assertIn("pkg/0.1@user/testing (test package): Calling build()", client.out)
+        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
+        self.assertIn("Testing the package: Building", client.out)
 
     def test_general_scope_priorities(self):
         client = TestClient()
@@ -335,3 +335,170 @@ equal/1.0.0@user/testing:opt=a=b
         c.run("install .", assert_error=True)
         assert "Error while initializing options. 'b=c' is not a valid 'options.opt' value." in c.out
         assert "Possible values are ['A', 'N', 'Y']" in c.out
+
+
+class TestOptionsPriorities:
+    # https://github.com/conan-io/conan/issues/11571
+
+    @pytest.fixture
+    def _client(self):
+        lib1 = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Lib1Conan(ConanFile):
+                name = "lib1"
+                version = "1.0"
+                options = {"foobar": [True, False]}
+                default_options = {"foobar": False}
+            """)
+        lib2 = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Lib2Conan(ConanFile):
+                name = "lib2"
+                version = "1.0"
+                options = {"logic_for_foobar": [True, False]}
+                default_options = {"logic_for_foobar": False}
+
+                def requirements(self):
+                    self.requires("lib1/1.0")
+
+                def configure(self):
+                    self.options["lib1/*"].foobar = self.options.logic_for_foobar
+            """)
+        c = TestClient()
+
+        c.save({"lib1/conanfile.py": lib1,
+                "lib2/conanfile.py": lib2})
+
+        c.run("create lib1 -o lib1/*:foobar=True")
+        c.run("create lib1 -o lib1/*:foobar=False")
+        c.run("create lib2 -o lib2/*:logic_for_foobar=True")
+        c.run("create lib2 -o lib2/*:logic_for_foobar=False")
+        return c
+
+    @staticmethod
+    def _app(lib1, lib2, configure):
+        app = textwrap.dedent("""
+           from conan import ConanFile
+
+           class App(ConanFile):
+
+              def requirements(self):
+                  self.requires("{}/1.0")
+                  self.requires("{}/1.0")
+
+              def {}(self):
+                  self.options["lib2/*"].logic_for_foobar = True
+                  self.options["lib1/*"].foobar = False
+
+              def generate(self):
+                  self.output.info("LIB1 FOOBAR: {{}}".format(
+                                                 self.dependencies["lib1"].options.foobar))
+                  self.output.info("LIB2 LOGIC: {{}}".format(
+                                              self.dependencies["lib2"].options.logic_for_foobar))
+           """)
+        return app.format(lib1, lib2, configure)
+
+    def test_profile_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+        # Now swap order
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_lib1_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_lib2_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
+        # This order works, because lib1 is expanded first, it takes foobar=False
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib1*:foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        c.run("install app -o lib2*:logic_for_foobar=True")
+        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+    def test_consumer_configure_priority(self, _client):
+        c = _client
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+        # Now swap order
+        c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
+        c.run("install app")
+        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
+        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+
+
+def test_configurable_default_options():
+    # https://github.com/conan-io/conan/issues/11487
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os"
+            options = {"backend": [1, 2, 3]}
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    self.options.backend = 2
+                else:
+                    self.options.backend = 3
+            def package_info(self):
+                self.output.info("Package with option:{}!".format(self.options.backend))
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create . -s os=Windows")
+    assert "pkg/0.1: Package with option:2!" in c.out
+    c.run("create . -s os=Windows -o pkg*:backend=3")
+    assert "pkg/0.1: Package with option:3!" in c.out
+    c.run("create . -s os=Linux")
+    assert "pkg/0.1: Package with option:3!" in c.out
+    c.run("create . -s os=Windows -o pkg*:backend=1")
+    assert "pkg/0.1: Package with option:1!" in c.out
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "pkg/0.1"
+            def configure(self):
+                self.options["pkg"].backend = 1
+        """)
+    c.save({"conanfile.py": consumer})
+    c.run("install . -s os=Windows")
+    assert "pkg/0.1: Package with option:1!" in c.out
+    c.run("create . -s os=Windows")
+    assert "pkg/0.1: Package with option:1!" in c.out
+
+    # This fails in Conan 1.X
+    c.run("create . -s os=Windows -o pkg*:backend=3")
+    assert "pkg/0.1: Package with option:3!" in c.out

@@ -61,10 +61,10 @@ class Node(object):
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
 
     def __lt__(self, other):
         """
-
         @type other: Node
         """
         # TODO: Remove this order, shouldn't be necessary
@@ -209,6 +209,10 @@ class Node(object):
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
+        # TODO: This doesn't match the model, check it
+        result["invalid_build"] = self.cant_build is not False
+        if self.cant_build:
+            result["invalid_build_reason"] = self.cant_build
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
         result["context"] = self.context
@@ -259,7 +263,9 @@ class DepsGraph(object):
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = set(self.nodes)
+        # We make it a dict to preserve insertion order and be deterministic, s
+        # sets are not deterministic order. dict is fast for look up operations
+        opened = dict.fromkeys(self.nodes)
         while opened:
             current_level = []
             for o in opened:
@@ -270,8 +276,9 @@ class DepsGraph(object):
             # TODO: SORTING seems only necessary for test order
             current_level.sort()
             result.append(current_level)
-            # now initialize new level
-            opened = opened.difference(current_level)
+            # now start new level, removing the current level items
+            for item in current_level:
+                opened.pop(item)
 
         return result
 

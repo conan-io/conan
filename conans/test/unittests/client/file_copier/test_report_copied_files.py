@@ -3,7 +3,7 @@
 import unittest
 
 from conan.tools.files.copy_pattern import report_files_copied
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 

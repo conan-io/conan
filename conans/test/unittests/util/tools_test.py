@@ -138,7 +138,7 @@ class ToolsTest(unittest.TestCase):
         original_temp = temp_folder()
         patched_temp = os.path.join(original_temp, "dir with spaces")
         payload = "hello world"
-        output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+        output = check_output_runner("echo {}".format(payload), stderr=subprocess.STDOUT)
         self.assertIn(payload, str(output))
 
 

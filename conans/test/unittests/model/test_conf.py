@@ -25,18 +25,30 @@ def test_conf_definition(conf_definition):
     # access
     assert c["tools.microsoft.msbuild:verbosity"] == "minimal"
     assert c["user.company.toolchain:flags"] == "someflags"
-    assert c["tools.microsoft.msbuild:nonexist"] is None
-    assert c["nonexist:nonexist"] is None
+    assert c["user.microsoft.msbuild:nonexist"] is None
+    assert c["user:nonexist"] is None
     # bool
     assert bool(c)
     assert not bool(ConfDefinition())
+
+
+@pytest.mark.parametrize("conf_name", [
+    "tools.doesnotexist:never",
+    "tools:doesnotexist",
+    "core.doesnotexist:never",
+    "core:doesnotexist"
+])
+def test_conf_definition_error(conf_definition, conf_name):
+    c, text = conf_definition
+    with pytest.raises(ConanException):
+        a = c[conf_name]
 
 
 def test_conf_update(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
         user.company.toolchain:flags=newvalue
-        another.something:key=value
+        user.something:key=value
     """)
     c2 = ConfDefinition()
     c2.loads(text)
@@ -44,7 +56,7 @@ def test_conf_update(conf_definition):
     result = textwrap.dedent("""\
         tools.microsoft.msbuild:verbosity=minimal
         user.company.toolchain:flags=newvalue
-        another.something:key=value
+        user.something:key=value
     """)
     assert c.dumps() == result
 
@@ -53,7 +65,7 @@ def test_conf_rebase(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
        user.company.toolchain:flags=newvalue
-       another.something:key=value""")
+       tools.microsoft.msbuild:verbosity=Diagnostic""")
     c2 = ConfDefinition()
     c2.loads(text)
     c.rebase_conf_definition(c2)
@@ -66,10 +78,10 @@ def test_conf_rebase(conf_definition):
 
 
 def test_conf_error_per_package():
-    text = "*:core:verbosity=minimal"
+    text = "*:core:non_interactive=minimal"
     c = ConfDefinition()
     with pytest.raises(ConanException,
-                       match=r"Conf '\*:core:verbosity' cannot have a package pattern"):
+                       match=r"Conf '\*:core:non_interactive' cannot have a package pattern"):
         c.loads(text)
 
 
@@ -86,10 +98,10 @@ def test_conf_error_uppercase():
 
 
 def test_parse_spaces():
-    text = "core:verbosity = minimal"
+    text = "core:non_interactive = minimal"
     c = ConfDefinition()
     c.loads(text)
-    assert c["core:verbosity"] == "minimal"
+    assert c["core:non_interactive"] == "minimal"
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -210,7 +222,7 @@ def test_conf_get_check_type_and_default():
         c.get("user.company.cpu:jobs", check_type=list)
         assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
     # Check type does not affect to default value
-    assert c.get("non:existing:conf", default=0, check_type=dict) == 0
+    assert c.get("user.non:existing", default=0, check_type=dict) == 0
     assert c.get("zlib:user.company.check:shared") is None  # unset value
     assert c.get("zlib:user.company.check:shared", default=[]) == []  # returning default
     assert c.get("zlib:user.company.check:shared", default=[], check_type=list) == []  # not raising exception
@@ -234,6 +246,6 @@ def test_conf_pop():
     c.loads(text)
 
     assert c.pop("user.company.network:proxies") == {'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
-    assert c.pop("tools.microsoft.msbuild:missing") is None
-    assert c.pop("tools.microsoft.msbuild:missing", default="fake") == "fake"
+    assert c.pop("user.microsoft.msbuild:missing") is None
+    assert c.pop("user.microsoft.msbuild:missing", default="fake") == "fake"
     assert c.pop("zlib:user.company.check:shared_str") == '"False"'

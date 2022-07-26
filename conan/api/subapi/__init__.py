@@ -1,7 +1,7 @@
 import functools
 import os
 
-from conans.util.tracer import log_command
+from conans.util.tracer import log_conan_api_call
 
 
 def api_method(f):
@@ -17,7 +17,7 @@ def api_method(f):
         try:
             # FIXME: Fix this hack if we want to keep the action recorder
             subapi_name = str(subapi.__class__.__name__).replace("API", "").lower()
-            log_command("{}.{}".format(subapi_name, f.__name__), kwargs)
+            log_conan_api_call("{}.{}".format(subapi_name, f.__name__), kwargs)
             return f(subapi, *args, **kwargs)
         finally:
             if old_curdir:

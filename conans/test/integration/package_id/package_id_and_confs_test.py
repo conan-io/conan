@@ -12,7 +12,7 @@ PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
 
 @pytest.mark.parametrize("package_id_confs, package_id", [
     ('[]', PKG_ID_NO_CONF),
-    ('["tools.fake:no_existing_conf"]', PKG_ID_NO_CONF),
+    ('["user.fake:no_existing_conf"]', PKG_ID_NO_CONF),
     ('["tools.build:cxxflags", "tools.build:cflags"]', PKG_ID_1),
     ('["tools.build:defines"]', PKG_ID_2),
     ('["tools.build:cxxflags", "tools.build:sharedlinkflags"]', PKG_ID_3),

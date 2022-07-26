@@ -26,6 +26,9 @@ class Remote:
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
                                                              not self.disabled)
 
+    def __repr__(self):
+        return str(self)
+
 
 class _RecipeUploadData:
     def __init__(self, ref, prefs=None):

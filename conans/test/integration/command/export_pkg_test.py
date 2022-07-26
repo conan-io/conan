@@ -480,3 +480,109 @@ def test_build_policy_never_missing():
 
     client.run("install --requires=pkg/1.0@ --build=missing", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out
+
+
+def test_export_pkg_json_formatter():
+    """
+    Tests the ``conan export-pkg . -f json`` result
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+
+            def package_info(self):
+                self.cpp_info.libs = ["pkg"]
+                self.cpp_info.includedirs = ["path/includes/pkg", "other/include/path/pkg"]
+                self.cpp_info.libdirs = ["one/lib/path/pkg"]
+                self.cpp_info.defines = ["pkg_onedefinition", "pkg_twodefinition"]
+                self.cpp_info.cflags = ["pkg_a_c_flag"]
+                self.cpp_info.cxxflags = ["pkg_a_cxx_flag"]
+                self.cpp_info.sharedlinkflags = ["pkg_shared_link_flag"]
+                self.cpp_info.exelinkflags = ["pkg_exe_link_flag"]
+                self.cpp_info.sysroot = "/path/to/folder/pkg"
+                self.cpp_info.frameworks = ["pkg_oneframework", "pkg_twoframework"]
+                self.cpp_info.system_libs = ["pkg_onesystemlib", "pkg_twosystemlib"]
+                self.cpp_info.frameworkdirs = ["one/framework/path/pkg"]
+                self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
+                self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
+                self.cpp_info.components["cmp1"].sysroot = "/another/sysroot"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")
+                .with_require("pkg/0.2")}, clean_first=True)
+    client.run("export-pkg . -f json")
+    info = json.loads(client.stdout)
+    nodes = info["graph"]["nodes"]
+    hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
+    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
+    hello_cpp_info = pkg_cpp_info = None
+    for n in nodes:
+        ref = n["ref"]
+        if ref == hello_pkg_ref:
+            assert n['binary'] == "Missing"
+            hello_cpp_info = n['cpp_info']
+        elif ref == pkg_pkg_ref:
+            assert n['binary'] == "Cache"
+            pkg_cpp_info = n['cpp_info']
+    assert hello_cpp_info and pkg_cpp_info
+    # hello/0.1 cpp_info
+    assert hello_cpp_info['root']["libs"] is None
+    assert len(hello_cpp_info['root']["bindirs"]) == 1
+    assert len(hello_cpp_info['root']["libdirs"]) == 1
+    assert hello_cpp_info['root']["sysroot"] is None
+    assert hello_cpp_info['root']["properties"] is None
+    # pkg/0.2 cpp_info
+    # root info
+    assert pkg_cpp_info['root']["libs"] is None
+    assert len(pkg_cpp_info['root']["bindirs"]) == 1
+    assert len(pkg_cpp_info['root']["libdirs"]) == 1
+    assert pkg_cpp_info['root']["sysroot"] is None
+    assert pkg_cpp_info['root']["system_libs"] is None
+    assert pkg_cpp_info['root']['cflags'] is None
+    assert pkg_cpp_info['root']['cxxflags'] is None
+    assert pkg_cpp_info['root']['defines'] is None
+    assert pkg_cpp_info['root']["properties"] is None
+    # component info
+    assert pkg_cpp_info.get('cmp1') is None
+
+
+def test_export_pkg_dont_update_src():
+    """
+    There was a bug in 1.X and sources were not updated correctly in export-pkg
+    close https://github.com/conan-io/conan/issues/6041
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import load
+        class Hello(ConanFile):
+            name = "hello"
+            version = "0.1"
+            exports_sources = "*.cpp"
+            def build(self):
+                content = load(self, "src/hello.cpp")
+                self.output.info("CONTENT: {}".format(content))
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "src/hello.cpp": "old code!"})
+    c.run("install .")
+    c.run("build .")
+    c.run("export-pkg .")
+    c.run("install --requires=hello/0.1@ --build=hello*")
+    assert "hello/0.1: CONTENT: old code!" in c.out
+    # Now locally change the source code
+    c.save({"src/hello.cpp": "updated code!"})
+    c.run("install .")
+    c.run("build .")
+    c.run("export-pkg .")
+    c.run("install --requires=hello/0.1@ --build=hello*")
+    assert "hello/0.1: CONTENT: updated code!" in c.out

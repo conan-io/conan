@@ -120,7 +120,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         {%- endfor %}
 
 
-
+        {% if not components_names %}
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
@@ -147,6 +147,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_LINK_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
         {%- endif %}
+
+        {%- else %}
+
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
         {%- for comp_variable_name, comp_target_name in components_names %}
@@ -175,6 +178,15 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         {%- endif %}
         {%- endfor %}
 
+
+        ########## AGGREGATED GLOBAL TARGET WITH THE COMPONENTS #####################
+        {%- for comp_variable_name, comp_target_name in components_names %}
+
+        target_link_libraries({{root_target_name}} INTERFACE {{ comp_target_name }})
+
+        {%- endfor %}
+
+        {%- endif %}
 
         """)
 

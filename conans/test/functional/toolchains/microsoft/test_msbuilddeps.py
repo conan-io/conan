@@ -1004,7 +1004,7 @@ def test_build_requires_transitives():
     """
     # https://github.com/conan-io/conan/issues/10222
     c = TestClient()
-    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("dep/0.1"),
             "consumer/conanfile.py":
                 GenConanfile().with_settings("os", "compiler", "build_type", "arch")
@@ -1013,6 +1013,7 @@ def test_build_requires_transitives():
     c.run("create tool")
     c.run("install consumer -g MSBuildDeps -of=.")
     tool = c.load("conan_tool_build_release_x64.props")
-    assert "conan_dep" not in tool
+    assert "conan_dep_build.props" in tool
+    assert "conan_dep.props" not in tool
     tool_vars = c.load("conan_tool_build_vars_release_x64.props")
-    assert "<Conantool_buildDependencies></Conantool_buildDependencies>" in tool_vars
+    assert "<Conantool_buildDependencies>dep_build</Conantool_buildDependencies>" in tool_vars

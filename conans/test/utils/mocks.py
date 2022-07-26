@@ -4,7 +4,7 @@ from io import StringIO
 
 
 from conan import ConanFile
-from conans.cli.conan_app import ConanFileHelpers
+from conan.api.conan_app import ConanFileHelpers
 from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
@@ -93,7 +93,7 @@ class MockConanfile(ConanFile):
         class MockConanInfo:
             pass
         self.info = MockConanInfo()
-        self.info.settings = settings  # Incomplete, only settings for CppstdMinCheck tests
+        self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -137,6 +137,7 @@ class ConanFileMock(ConanFile):
         self._commands.append(command)
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+        return 0
 
     @property
     def commands(self):

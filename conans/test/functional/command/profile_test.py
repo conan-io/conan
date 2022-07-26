@@ -102,7 +102,7 @@ class DetectCompilersTest(unittest.TestCase):
         Test if gcc in Mac OS X is using apple-clang as frontend
         """
         # See: https://github.com/conan-io/conan/issues/2231
-        output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
+        output = check_output_runner("gcc --version", stderr=subprocess.STDOUT)
 
         if "clang" not in output:
             # Not test scenario gcc should display clang in output

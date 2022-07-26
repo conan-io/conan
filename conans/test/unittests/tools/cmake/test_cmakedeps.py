@@ -65,9 +65,9 @@ def test_cpp_info_name_cmakedeps_components():
 
     cpp_info = CppInfo()
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1::GlobakPkgName1")
+    cpp_info.set_property("cmake_target_name", "GlobalPkgName1::GlobalPkgName1")
     cpp_info.components["mycomp"].includedirs = ["include"]
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobakPkgName1::MySuperPkg1")
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobalPkgName1::MySuperPkg1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
@@ -79,7 +79,6 @@ def test_cpp_info_name_cmakedeps_components():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
-
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
     #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -88,11 +87,13 @@ def test_cpp_info_name_cmakedeps_components():
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        assert "TARGET GlobalPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        # No global variables for the packages
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
-               in files["ComplexFileName1-debug-x64-data.cmake"]
-        assert 'set(OriginalDepName_GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+               not in files["ComplexFileName1-debug-x64-data.cmake"]
+        # But components
+        assert 'set(OriginalDepName_GlobalPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
 

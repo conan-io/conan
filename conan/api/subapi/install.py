@@ -1,7 +1,7 @@
 import os
 
 from conan.api.subapi import api_method
-from conans.cli.conan_app import ConanApp
+from conan.api.conan_app import ConanApp
 from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements
@@ -50,7 +50,8 @@ class InstallAPI:
         _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
-        write_generators(conanfile)
+        app = ConanApp(self.conan_api.cache_folder)
+        write_generators(conanfile, app.hook_manager)
         call_system_requirements(conanfile)
 
 
@@ -113,8 +114,7 @@ def full_deploy(conanfile, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
-        if os.path.isdir(new_folder):
-            rmdir(new_folder)
+        rmdir(new_folder)
         shutil.copytree(dep.package_folder, new_folder)
         dep.set_deploy_folder(new_folder)
 
@@ -134,7 +134,6 @@ def direct_deploy(conanfile, output_folder):
     # dependencies
     for dep in conanfile.dependencies.filter({"direct": True}).values():
         new_folder = os.path.join(output_folder, dep.ref.name)
-        if os.path.isdir(new_folder):
-            rmdir(new_folder)
+        rmdir(new_folder)
         shutil.copytree(dep.package_folder, new_folder)
         dep.set_deploy_folder(new_folder)
