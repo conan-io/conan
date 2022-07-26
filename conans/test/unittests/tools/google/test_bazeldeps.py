@@ -35,6 +35,8 @@ def test_bazeldeps_dependency_buildfiles():
     save(os.path.join(cpp_info.libdirs[0], "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
+    cpp_info.libdirs = [str(os.path.join(package_folder, "lib"))]
+
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
     #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -71,6 +73,8 @@ def test_bazeldeps_get_lib_file_path_by_basename():
     save(os.path.join(package_folder, "lib", "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
+    cpp_info.libdirs = [str(os.path.join(package_folder, "lib"))]
+    
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
     #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -108,6 +112,8 @@ def test_bazeldeps_dependency_transitive():
     save(os.path.join(package_folder, "lib", "liblib1.a"), "")
     conanfile_dep.folders.set_base_package(package_folder)
 
+    cpp_info.libdirs = [str(os.path.join(package_folder, "lib"))]
+
     # Add dependency on the direct dependency
     req = Requirement(RecipeReference.loads("depname/1.0"))
     conanfile._conan_dependencies = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -142,7 +148,7 @@ def test_bazeldeps_dependency_transitive():
 
         # Ensure that transitive dependency is referenced by the 'deps' attribute of the direct
         # dependency
-        assert re.search(r'deps =\s*\[\s*# do not sort\s*":lib1_precompiled",\s*"@TransitiveDepName"',
+        assert re.search(r'deps =\s*\[\s*# do not sort\s*":lib1_precompiled",\s*"@transitive_depname"',
                          dependency_content)
 
 
