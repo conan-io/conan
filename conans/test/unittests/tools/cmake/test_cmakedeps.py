@@ -61,8 +61,8 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1::GlobakPkgName1")
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobakPkgName1::MySuperPkg1")
+    cpp_info.set_property("cmake_target_name", "GlobalPkgName1::GlobalPkgName1")
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobalPkgName1::MySuperPkg1")
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
     conanfile_dep = ConanFile(Mock(), None)
@@ -81,11 +81,13 @@ def test_cpp_info_name_cmakedeps_components():
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        assert "TARGET GlobalPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        # No global variables for the packages
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
-               in files["ComplexFileName1-debug-x64-data.cmake"]
-        assert 'set(OriginalDepName_GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+               not in files["ComplexFileName1-debug-x64-data.cmake"]
+        # But components
+        assert 'set(OriginalDepName_GlobalPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
 

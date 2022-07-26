@@ -113,7 +113,7 @@ def _process_file(directory, filename, config, cache, output, folder):
         raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
     else:
         # This is ugly, should be removed in Conan 2.0
-        if filename in ("README.md", "LICENSE.txt"):
+        if filename in ("README.md", "LICENSE.txt") and not directory.startswith("templates"):
             output.info("Skip %s" % filename)
         else:
             relpath = os.path.relpath(directory, folder)
