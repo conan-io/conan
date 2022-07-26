@@ -61,8 +61,8 @@ class TestDepDefinedMode:
             class Dep(ConanFile):
                 name = "dep"
                 package_type = "static-library"
-                embed_mode = "major_mode"
-                non_embed_mode = "major_mode"
+                package_id_embed_mode = "major_mode"
+                package_id_non_embed_mode = "major_mode"
             """)
         c.save({"dep/conanfile.py": dep,
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")

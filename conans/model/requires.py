@@ -334,9 +334,9 @@ class Requirement:
             return
 
         # If the dependency defines the mode, that has priority over default
-        embed_mode = getattr(dep_conanfile, "embed_mode", embed_mode)
-        non_embed_mode = getattr(dep_conanfile, "non_embed_mode", non_embed_mode)
-        unknown_mode = getattr(dep_conanfile, "unknown_mode", unknown_mode)
+        embed_mode = getattr(dep_conanfile, "package_id_embed_mode", embed_mode)
+        non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
+        unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:
