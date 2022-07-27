@@ -117,7 +117,6 @@ class _SystemPackageManagerTool(object):
                                                                                      self.mode_check,
                                                                                      self.mode_install))
         elif packages:
-
             if update:
                 self.update()
 
