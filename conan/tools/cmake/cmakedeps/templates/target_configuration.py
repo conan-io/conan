@@ -82,6 +82,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         endforeach()
 
         # We need to add our requirements too
+        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "")
         list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ deps_targets_names }})
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
