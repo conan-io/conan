@@ -311,7 +311,10 @@ def _run_and_get_lib_order(t, generator):
     if generator == "Xcode":
         t.run_command("cmake . -G Xcode -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                       " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
-        t.run_command("cmake --build .", assert_error=True)
+        # This is building by default the Debug configuration that contains nothing, so it works
+        t.run_command("cmake --build .")
+        # This is building the release and fails because invented system libraries are missing
+        t.run_command("cmake --build . --config Release", assert_error=True)
         # Get the actual link order from the CMake call
         libs = _get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj',
                                                               'project.pbxproj')))
