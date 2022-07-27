@@ -103,9 +103,6 @@ class _SystemPackageManagerTool(object):
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, **kwargs):
-        if update:
-            self.update()
-
         if check:
             packages = self.check(packages)
 
@@ -120,6 +117,10 @@ class _SystemPackageManagerTool(object):
                                                                                      self.mode_check,
                                                                                      self.mode_install))
         elif packages:
+
+            if update:
+                self.update()
+
             packages_arch = [self.get_package_name(package) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
@@ -133,7 +134,7 @@ class _SystemPackageManagerTool(object):
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
-        # in case we are in check mode warn about that but don't fail
+        # in case we are in check mode just ignore
         if self._mode == self.mode_install:
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
             return self._conanfile_run(command, self.accepted_update_codes)
