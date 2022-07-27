@@ -157,7 +157,7 @@ def test_tools_update_mode_install(tool_class, result):
                 assert tool._conanfile.command == result
             else:
                 # does not run the update when mode check
-                assert tool._conanfile.command == None
+                assert tool._conanfile.command is None
 
 
 @pytest.mark.parametrize("tool_class, result", [
