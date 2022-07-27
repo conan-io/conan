@@ -132,16 +132,15 @@ class _SystemPackageManagerTool(object):
                                         "installed".format(" ".join(packages)))
 
     def _update(self):
-        if self._mode == self.mode_check:
-            raise ConanException("Can't update because tools.system.package_manager:mode is '{0}'."
-                                 "Please update packages manually or set "
-                                 "'tools.system.package_manager:mode' "
-                                 "to '{1}' in the [conf] section of the profile, "
-                                 "or in the command line using "
-                                 "'-c tools.system.package_manager:mode={1}'".format(self.mode_check,
-                                                                                     self.mode_install))
-        command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-        return self._conanfile_run(command, self.accepted_update_codes)
+        # we just update the package manager database in case we are in 'install mode'
+        # in case we are in check mode warn about that but don't fail
+        if self._mode == self.mode_install:
+            command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
+            return self._conanfile_run(command, self.accepted_update_codes)
+        else:
+            self._conanfile.output.info(f"Did not update '{str(self.__class__.__name__)}'. "
+                                        f"To run the update operation set the 'tools.system.package_manager:mode' "
+                                        f"configuration to 'install'")
 
     def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]

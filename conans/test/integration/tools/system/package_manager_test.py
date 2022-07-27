@@ -11,6 +11,7 @@ from conans import Settings
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.tools import redirect_output
 
 
 @pytest.mark.parametrize("platform, tool", [
@@ -130,27 +131,8 @@ def test_tools_install_mode_check(tool_class):
                                          "'-c tools.system.package_manager:mode=install'"
 
 
-@pytest.mark.parametrize("tool_class",
-                         [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
-def test_tools_update_mode_check(tool_class):
-    conanfile = ConanFileMock()
-    conanfile.conf = Conf()
-    conanfile.settings = Settings()
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "check"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
-        context_mock.return_value = "host"
-        tool = tool_class(conanfile)
-        with pytest.raises(ConanException) as exc_info:
-            tool.update()
-        assert exc_info.value.args[0] == "Can't update because tools.system.package_manager:mode is " \
-                                         "'check'.Please update packages manually or set " \
-                                         "'tools.system.package_manager:mode' to 'install' in the [conf] " \
-                                         "section of the profile, or in the command line using " \
-                                         "'-c tools.system.package_manager:mode=install'"
-
-
-@pytest.mark.parametrize("tool_class, result", [
+@pytest.mark.parametrize("tool_class, result",
+[
     (Apt, "apt-get update"),
     (Yum, "yum check-update -y"),
     (Dnf, "dnf check-update -y"),
@@ -166,12 +148,18 @@ def test_tools_update_mode_install(tool_class, result):
     conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "install"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
-        context_mock.return_value = "host"
-        tool = tool_class(conanfile)
-        tool.update()
-    assert tool._conanfile.command == result
+    for mode in ["check", "install"]:
+        conanfile.conf["tools.system.package_manager:mode"] = mode
+        with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+            context_mock.return_value = "host"
+            tool = tool_class(conanfile)
+            tool.update()
+            if mode == "check":
+                assert f"Did not update '{str(tool_class.__name__)}'. To run the update operation " \
+                       "set the 'tools.system.package_manager:mode' configuration " \
+                       "to 'install'" in tool._conanfile.output
+            else:
+                assert tool._conanfile.command == result
 
 
 @pytest.mark.parametrize("tool_class, result", [
