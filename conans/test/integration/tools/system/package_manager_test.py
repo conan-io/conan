@@ -154,12 +154,11 @@ def test_tools_update_mode_install(tool_class, result):
             context_mock.return_value = "host"
             tool = tool_class(conanfile)
             tool.update()
-            if mode == "check":
-                assert f"Did not update '{str(tool_class.__name__)}'. To run the update operation " \
-                       "set the 'tools.system.package_manager:mode' configuration " \
-                       "to 'install'" in tool._conanfile.output
-            else:
+            if mode == "install":
                 assert tool._conanfile.command == result
+            else:
+                # does not run the update when mode check
+                assert tool._conanfile.command == None
 
 
 @pytest.mark.parametrize("tool_class, result", [

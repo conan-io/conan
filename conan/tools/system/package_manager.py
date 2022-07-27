@@ -137,10 +137,6 @@ class _SystemPackageManagerTool(object):
         if self._mode == self.mode_install:
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
             return self._conanfile_run(command, self.accepted_update_codes)
-        else:
-            self._conanfile.output.info(f"Did not update '{str(self.__class__.__name__)}'. "
-                                        f"To run the update operation set the 'tools.system.package_manager:mode' "
-                                        f"configuration to 'install'")
 
     def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
