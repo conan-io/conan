@@ -61,7 +61,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         conan_find_apple_frameworks({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS{{ config_suffix }}}" "{{ '${' }}{{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }}}")
 
         # Gather all the libraries that should be linked to the targets (do not touch existing variables)
-        set(_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}} {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}} {{ deps_targets_names }}")
+        # FIXME: Why is needed to pass all the dependencies to link with the micro-targets?
+        set(_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }} "{{ deps_targets_names }}")
 
         set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
@@ -71,49 +72,32 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ config }}" # DEBUG, RELEASE ...
                                       "{{ pkg_name }}")    # package_name
 
+        # The XXXX_LIBRARIES_RELEASE/DEBUG is used for the module (FindXXX.cmake)
         foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS ${_FRAMEWORK})
+            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_FRAMEWORK})
         endforeach()
 
         foreach(_SYSTEM_LIB {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS ${_SYSTEM_LIB})
+            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_SYSTEM_LIB})
         endforeach()
 
         # We need to add our requirements too
-        set({{ pkg_name }}_LIBRARIES_TARGETS {{ '"${' }}{{ pkg_name }}_LIBRARIES_TARGETS{{ '};' }}{{ deps_targets_names }}")
-        # This is a copy of the variable above
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ '${' }}{{ pkg_name }}_LIBRARIES_TARGETS})
+        list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ deps_targets_names }})
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_PREFIX_PATH})
 
-        {%- for comp_variable_name, comp_target_name in components_names %}
-
-        ########## COMPONENT {{ comp_target_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
-        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }} "")
-        set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }})
-        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
-                                      {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
-                                      "{{ config }}" # DEBUG, RELEASE...
-                                      "{{ pkg_name }}_{{ comp_variable_name }}")
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
-        {%- endfor %}
-
-
         {% if not components_names %}
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}
-                     ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}> APPEND)
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}>
+                     ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}_{{pkg_name}}_DEPENDENCIES{{config_suffix}}}>
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_FRAMEWORKS_FOUND{{config_suffix}}}>
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_SYSTEM_LIBS{{config_suffix}}}>
+                     APPEND)
 
         set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS
@@ -142,10 +126,30 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         {%- for comp_variable_name, comp_target_name in components_names %}
 
-        ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES ######################################
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'OBJECTS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_variable_name, 'LINK_LIBS', config_suffix)}}> APPEND)
+        ########## COMPONENT {{ comp_target_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
+
+        set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
+
+        set({{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS "")
+
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }}"
+                                      {{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS
+                                      "{{ config }}" # DEBUG, RELEASE...
+                                      "{{ pkg_name }}_{{ comp_variable_name }}")
+
+        ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES #####################################
+        set_property(TARGET {{comp_target_name}}
+                     PROPERTY INTERFACE_LINK_LIBRARIES
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_OBJECTS{{config_suffix}}}>
+                     ${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_DEPENDENCIES{{config_suffix}}}>
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_FRAMEWORKS_FOUND{{config_suffix}}}>
+                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_SYSTEM_LIBS{{config_suffix}}}>
+                     APPEND)
+
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_OPTIONS
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES

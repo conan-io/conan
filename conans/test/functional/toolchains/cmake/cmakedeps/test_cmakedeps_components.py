@@ -204,7 +204,9 @@ def test_components_system_libs():
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    assert 'component libs: $<$<CONFIG:Release>:;system_lib_component>' in t.out
+    # FIXME: This assert is ugly, empty configs comes from empty _OBJECTS, FRAMEWORKS etc
+    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>' \
+           ';$<$<CONFIG:Release>:system_lib_component>' in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
