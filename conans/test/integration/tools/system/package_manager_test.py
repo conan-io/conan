@@ -11,7 +11,6 @@ from conans import Settings
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import redirect_output
 
 
 @pytest.mark.parametrize("platform, tool", [
