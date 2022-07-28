@@ -351,24 +351,29 @@ def collect_libs(conanfile, folder=None):
     else:
         lib_folders = [os.path.join(conanfile.package_folder, folder)
                        for folder in conanfile.cpp_info.libdirs]
-    result = []
+
+    ref_libs = {}
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
             conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
                                   "{0}".format(lib_folder))
             continue
+        # In case of symlinks, only keep shortest file name in the same "group"
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
             if ext in VALID_LIB_EXTENSIONS:
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                if name in result:
-                    conanfile.output.warn("Library '%s' was either already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder or appears several "
-                                          "times with a different file extension" % name)
-                else:
-                    result.append(name)
+                real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
+                if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
+                    ref_libs[real_lib] = f
+
+    result = []
+    for f in ref_libs.values():
+        name, ext = os.path.splitext(f)
+        if ext != ".lib" and name.startswith("lib"):
+            name = name[3:]
+        if name not in result:
+            result.append(name)
     result.sort()
     return result
 
