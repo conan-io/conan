@@ -153,13 +153,14 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = "$<$<CONFIG:Release>:;CONAN_LIB::Test_lib1_RELEASE;sys1;>"
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = "$<$<CONFIG:Debug>:;CONAN_LIB::Test_lib1_DEBUG;sys1d;>"
 
-        assert "Target libs: %s" % target_libs in client.out
+        # FIXME: This assert is ugly, empty configs comes from empty _OBJECTS, FRAMEWORKS etc
+        target_libs = f"$<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1;$<$<CONFIG:{build_type}>" \
+                      f":>;$<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>"
+        assert target_libs in client.out
 
 
 @pytest.mark.tool_cmake
