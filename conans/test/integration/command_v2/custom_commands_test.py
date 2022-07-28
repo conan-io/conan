@@ -16,7 +16,7 @@ class TestCustomCommands:
                                          'commands', 'cmd_mycommand.py')
         client.save({f"{command_file_path}": mycommand})
         # Call to any other command, it will fail loading the custom command
-        client.run("search '*'", assert_error=True)
+        client.run("list recipes '*'")
         assert "ERROR: Error loading custom command 'cmd_mycommand.py': " \
                "No module named 'this_doesnt_exist'" in client.out
 

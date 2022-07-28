@@ -50,8 +50,8 @@ class Cli:
                 try:
                     self._add_command(module_name, module_name.replace("cmd_", ""))
                 except Exception as e:
-                    raise ConanException("Error loading custom command "
-                                         "'{}.py': {}".format(module_name, e))
+                    ConanOutput().error("Error loading custom command "
+                                        "'{}.py': {}".format(module_name, e))
         # layers
         for folder in os.listdir(custom_commands_path):
             layer_folder = os.path.join(custom_commands_path, folder)
