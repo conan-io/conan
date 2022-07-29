@@ -188,7 +188,9 @@ def env():
     env.append("MYVAR1", "MyValue1B")
     env.define("MyVar2", "MyNewValue2")
 
-    env = env.vars(ConanFileMock())
+    conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Windows", "arch": "x86_64"})
+    env = env.vars(conanfile)
     env._subsystem = WINDOWS
 
     return env

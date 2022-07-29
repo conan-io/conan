@@ -135,6 +135,7 @@ def test_ndebug():
     conanfile = ConanFileMock()
     for bt in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
         conanfile.settings = MockSettings({"build_type": bt})
+        conanfile.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
         be = AutotoolsToolchain(conanfile)
         assert be.ndebug == "NDEBUG"
         env = be.vars()
@@ -166,8 +167,10 @@ def test_ndebug():
 def test_libcxx(config):
     compiler, libcxx, expected_flag = config
     conanfile = ConanFileMock()
+    the_os = "Linux" if compiler != "apple-clang" else "Macos"
     conanfile.settings = MockSettings(
-        {"build_type": "Release",
+        {"os": the_os,
+         "build_type": "Release",
          "arch": "x86",
          "compiler": compiler,
          "compiler.libcxx": libcxx,
@@ -184,7 +187,8 @@ def test_libcxx(config):
 def test_cxx11_abi_define():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings(
-        {"build_type": "Release",
+        {"os": "Linux",
+         "build_type": "Release",
          "arch": "x86",
          "compiler": "gcc",
          "compiler.libcxx": "libstdc++",
@@ -197,7 +201,8 @@ def test_cxx11_abi_define():
     assert "-D_GLIBCXX_USE_CXX11_ABI=0" in env["CPPFLAGS"]
 
     conanfile.settings = MockSettings(
-        {"build_type": "Release",
+        {"os": "Linux",
+         "build_type": "Release",
          "arch": "x86",
          "compiler": "gcc",
          "compiler.libcxx": "libstdc++11",
