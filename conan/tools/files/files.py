@@ -203,7 +203,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
-                the follow URLs will be used as mirror in case of download error.
+                the follow URLs will be used as mirror in case of download error.  Files accessible 
+                in the local filesystem can be referenced with a URL starting with ``file:///`` 
+                followed by an absolute path to a file (where the third ``/`` implies ``localhost``).
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param retry: Number of retries in case of failure. Default is overridden by
