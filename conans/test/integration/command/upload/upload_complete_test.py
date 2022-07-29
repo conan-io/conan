@@ -97,7 +97,6 @@ class UploadTest(unittest.TestCase):
         servers["default"] = self.test_server
         test_client = TestClient(servers=servers, inputs=["lasote", "mypass"],
                                  requester_class=requester)
-        save(test_client.cache.default_profile_path, "")
         return test_client
 
     def test_upload_error(self):
