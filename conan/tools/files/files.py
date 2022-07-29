@@ -1,6 +1,7 @@
 import configparser
 import errno
 import gzip
+import hashlib
 import os
 import platform
 import shutil
@@ -87,13 +88,6 @@ def mkdir(conanfile, path):
 
 
 def rmdir(conanfile, path):
-    """
-    Utility functions to remove a directory. The existence of the specified directory is checked,
-    so rmdir() will do nothing if the directory doesn’t exists.
-
-    :param conanfile: The current recipe object. Always use ``self``.
-    :param path: Path to the folder to be removed.
-    """
     _internal_rmdir(path)
 
 
@@ -267,7 +261,6 @@ def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sh
         check_sha1(conanfile, file_path, sha1)
     if sha256:
         check_sha256(conanfile, file_path, sha256)
-
 
 def _path_from_file_uri(uri):
     path = urlparse(uri).path
@@ -613,24 +606,28 @@ def collect_libs(conanfile, folder=None):
     else:
         lib_folders = [os.path.join(conanfile.package_folder, folder)
                        for folder in conanfile.cpp_info.libdirs]
-    result = []
+
+    ref_libs = {}
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
             conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
                                      "{0}".format(lib_folder))
             continue
+        # In case of symlinks, only keep shortest file name in the same "group"
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
             if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                if name in result:
-                    conanfile.output.warning("Library '%s' was either already found in a previous "
-                                             "'conanfile.cpp_info.libdirs' folder or appears several "
-                                             "times with a different file extension" % name)
-                else:
-                    result.append(name)
+                real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
+                if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
+                    ref_libs[real_lib] = f
+
+    result = []
+    for f in ref_libs.values():
+        name, ext = os.path.splitext(f)
+        if ext != ".lib" and name.startswith("lib"):
+            name = name[3:]
+        result.append(name)
     result.sort()
     return result
 

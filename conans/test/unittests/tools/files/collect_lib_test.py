@@ -1,4 +1,7 @@
 import os
+import platform
+
+import pytest
 
 from conan.tools.files import collect_libs
 from conans.model.build_info import CppInfo
@@ -47,25 +50,6 @@ def test_collect_libs():
     result = collect_libs(conanfile, folder="custom_folder")
     assert ["customlib"] == result
 
-    # Warn same lib different folders
-    conanfile = ConanFileMock()
-    conanfile.folders.set_base_package(temp_folder())
-    conanfile.cpp_info = CppInfo(set_defaults=True)
-    custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
-    lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-    save(custom_mylib_path, "")
-    save(lib_mylib_path, "")
-    conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-
-    stdout = RedirectedTestOutput()  # Initialize each command
-    stderr = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        result = collect_libs(conanfile)
-        assert ["mylib"] == result
-        assert "Library 'mylib' was either already found in a previous "\
-               "'conanfile.cpp_info.libdirs' folder or appears several times with a "\
-               "different file extension" in stderr
-
     # Warn lib folder does not exist with correct result
     conanfile = ConanFileMock()
     conanfile.folders.set_base_package(temp_folder())
@@ -81,3 +65,24 @@ def test_collect_libs():
         assert ["mylib"] == result
         assert "WARN: Lib folder doesn't exist, can't collect libraries: %s" % no_folder_path \
                in stderr
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Needs symlinks support")
+def test_collect_libs_symlinks():
+    # Keep only the shortest lib name per group of symlinks
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_package(temp_folder())
+    conanfile.cpp_info = CppInfo(set_defaults=True)
+    version_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.0.0.dylib")
+    soversion_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.1.dylib")
+    lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "libmylib.dylib")
+    lib_mylib2_path = os.path.join(conanfile.package_folder, "lib", "libmylib.2.dylib")
+    lib_mylib3_path = os.path.join(conanfile.package_folder, "custom_folder", "libmylib.3.dylib")
+    save(version_mylib_path, "")
+    os.symlink(version_mylib_path, soversion_mylib_path)
+    os.symlink(soversion_mylib_path, lib_mylib_path)
+    save(lib_mylib2_path, "")
+    save(lib_mylib3_path, "")
+    conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+    result = collect_libs(conanfile)
+    assert ["mylib", "mylib.2", "mylib.3"] == result
