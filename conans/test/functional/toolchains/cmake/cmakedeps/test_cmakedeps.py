@@ -161,7 +161,7 @@ def test_system_libs():
             assert "Libraries to Link debug: lib1" in client.out
 
         # FIXME: This assert is ugly, empty configs comes from empty _OBJECTS, FRAMEWORKS etc
-        target_libs = f"$<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1;$<$<CONFIG:{build_type}>" \
+        target_libs = f"$<$<CONFIG:{build_type}>:>;CONAN_LIB::test_lib1;$<$<CONFIG:{build_type}>" \
                       f":>;$<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>"
         assert target_libs in client.out
 
