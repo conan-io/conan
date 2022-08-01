@@ -86,7 +86,7 @@ void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
     std::cout << "  {{name}}/{{version}}: _M_IX86 defined\n";
     #endif
 
-    #idef _M_ARM64
+    #ifdef _M_ARM64
     std::cout << "  {{name}}/{{version}}: _M_ARM64 defined\n";
     #endif
 
