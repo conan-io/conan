@@ -155,7 +155,10 @@ def test_xcodedeps_aggregate_components():
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
     assert '#include "conan_liba_liba.xcconfig"' in component7_entry
 
-    component7_vars = client.load("conan_libb_libb_comp7_release_x86_64.xcconfig")
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    component7_vars = client.load(f"conan_libb_libb_comp7_release_{arch}.xcconfig")
 
     # all of the transitive required components and the component itself are added
     for index in range(1, 8):
@@ -163,7 +166,7 @@ def test_xcodedeps_aggregate_components():
 
     assert "mylibdir" in component7_vars
 
-    component4_vars = client.load("conan_libb_libb_comp4_release_x86_64.xcconfig")
+    component4_vars = client.load(f"conan_libb_libb_comp4_release_{arch}.xcconfig")
 
     # all of the transitive required components and the component itself are added
     for index in range(1, 5):
@@ -229,8 +232,11 @@ def test_xcodedeps_traits():
 
     client.run("install lib_b.py -g XcodeDeps")
 
-    comp1_info = client.load("conan_lib_a_cmp1_release_x86_64.xcconfig")
-    comp2_info = client.load("conan_lib_a_cmp2_release_x86_64.xcconfig")
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    comp1_info = client.load(f"conan_lib_a_cmp1_release_{arch}.xcconfig")
+    comp2_info = client.load(f"conan_lib_a_cmp2_release_{arch}.xcconfig")
 
     assert "cmp1_include" not in comp1_info
     assert "cmp2_include" not in comp2_info
@@ -244,8 +250,8 @@ def test_xcodedeps_traits():
                 clean_first=True)
     client.run("install lib_b.py -g XcodeDeps")
 
-    comp1_info = client.load("conan_lib_a_cmp1_release_x86_64.xcconfig")
-    comp2_info = client.load("conan_lib_a_cmp2_release_x86_64.xcconfig")
+    comp1_info = client.load(f"conan_lib_a_cmp1_release_{arch}.xcconfig")
+    comp2_info = client.load(f"conan_lib_a_cmp2_release_{arch}.xcconfig")
 
     assert "cmp1_frameworkdir" not in comp1_info
     assert "cmp2_frameworkdir" not in comp2_info
@@ -262,8 +268,8 @@ def test_xcodedeps_traits():
                 clean_first=True)
     client.run("install lib_b.py -g XcodeDeps")
 
-    not_existing = ["conan_lib_a_cmp1_release_x86_64.xcconfig", "conan_lib_a_cmp1.xcconfig",
-                    "conan_lib_a_cmp2_release_x86_64.xcconfig", "conan_lib_a_cmp2.xcconfig",
+    not_existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
+                    f"conan_lib_a_cmp2_release_{arch}.xcconfig", "conan_lib_a_cmp2.xcconfig",
                     "conan_lib_a.xcconfig"]
 
     for file in not_existing:
@@ -281,8 +287,8 @@ def test_xcodedeps_traits():
 
     client.run("install lib_b.py -g XcodeDeps")
 
-    comp1_info = client.load("conan_lib_a_cmp1_release_x86_64.xcconfig")
-    comp2_info = client.load("conan_lib_a_cmp2_release_x86_64.xcconfig")
+    comp1_info = client.load(f"conan_lib_a_cmp1_release_{arch}.xcconfig")
+    comp2_info = client.load(f"conan_lib_a_cmp2_release_{arch}.xcconfig")
 
     assert "cmp1_define" not in comp1_info
     assert "cmp2_define" not in comp2_info
@@ -313,9 +319,12 @@ def test_xcodedeps_frameworkdirs():
     client.save({"conanfile.py": conanfile_py})
     client.run("create .")
 
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
     client.run("install --requires=lib_a/1.0 -g XcodeDeps")
 
-    lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
+    lib_a_xcconfig = client.load(f"conan_lib_a_lib_a_release_{arch}.xcconfig")
 
     assert "lib_a_frameworkdir" in lib_a_xcconfig
 
