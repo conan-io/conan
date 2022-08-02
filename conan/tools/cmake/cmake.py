@@ -57,10 +57,7 @@ class CMake(object):
 
         self._generator = configure_preset["generator"]
         self._cache_variables = configure_preset["cacheVariables"]
-        if "toolchainFile" in configure_preset:
-            self._toolchain_file = configure_preset["toolchainFile"]
-        else:
-            self._toolchain_file = self._cache_variables["CMAKE_TOOLCHAIN_FILE"]
+       self._toolchain_file = configure_preset.get("toolchainFile")
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
