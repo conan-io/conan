@@ -56,8 +56,8 @@ class CMake(object):
         configure_preset = get_configure_preset(cmake_presets, conanfile)
 
         self._generator = configure_preset["generator"]
+        self._toolchain_file = configure_preset.get("toolchainFile")
         self._cache_variables = configure_preset["cacheVariables"]
-       self._toolchain_file = configure_preset.get("toolchainFile")
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
