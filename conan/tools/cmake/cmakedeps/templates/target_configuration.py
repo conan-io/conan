@@ -65,25 +65,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set(_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }} "{{ deps_targets_names }}")
 
         set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
+        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "") # Will be filled later
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
                                       "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
                                       {{ pkg_name }}_LIBRARIES_TARGETS  # out_libraries_targets
                                       "{{ config }}" # DEBUG, RELEASE ...
                                       "{{ pkg_name }}")    # package_name
-
-        # The XXXX_LIBRARIES_RELEASE/DEBUG is used for the module (FindXXX.cmake)
-        foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_FRAMEWORK})
-        endforeach()
-
-        foreach(_SYSTEM_LIB {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_SYSTEM_LIB})
-        endforeach()
-
-        # We need to add our requirements too
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "")
-        list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ deps_targets_names }})
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
@@ -120,6 +108,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_LINK_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
         {%- endif %}
+
+        # For the modules (FindXXX)
+        list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} {{root_target_name}})
 
         {%- else %}
 
@@ -163,6 +154,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
         set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
 
+        # For the modules (FindXXX)
+        list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} {{comp_target_name}})
+
         {%- if set_interface_link_directories %}
         # This is only used for '#pragma comment(lib, "foo")' (automatic link)
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
@@ -174,9 +168,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ########## AGGREGATED GLOBAL TARGET WITH THE COMPONENTS #####################
         {%- for comp_variable_name, comp_target_name in components_names %}
-
-        target_link_libraries({{root_target_name}} INTERFACE {{ comp_target_name }})
-
+        set_property(TARGET {{root_target_name}} PROPERTY INTERFACE_LINK_LIBRARIES {{ comp_target_name }} APPEND)
         {%- endfor %}
 
         {%- endif %}
