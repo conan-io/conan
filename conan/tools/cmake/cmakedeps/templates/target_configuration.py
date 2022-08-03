@@ -168,7 +168,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ########## AGGREGATED GLOBAL TARGET WITH THE COMPONENTS #####################
         {%- for comp_variable_name, comp_target_name in components_names %}
+
         set_property(TARGET {{root_target_name}} PROPERTY INTERFACE_LINK_LIBRARIES {{ comp_target_name }} APPEND)
+
         {%- endfor %}
 
         {%- endif %}

@@ -364,7 +364,7 @@ def test_cmake_add_subdirectory():
         """)
 
     cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.16)
+            cmake_minimum_required(VERSION 3.15)
             project(hello CXX)
             find_package(Boost CONFIG)
             add_subdirectory(src)
