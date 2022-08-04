@@ -163,6 +163,8 @@ tools_locations = {
 
 
 # TODO: Make this match the default tools (compilers) above automatically
+arch = platform.machine()
+arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -173,19 +175,19 @@ default_profiles = {
         compiler.runtime=dynamic
         build_type=Release
         """),
-    "Linux": textwrap.dedent("""\
+    "Linux": textwrap.dedent(f"""\
         [settings]
         os=Linux
-        arch=x86_64
+        arch={arch_setting}
         compiler=gcc
         compiler.version=8
         compiler.libcxx=libstdc++11
         build_type=Release
         """),
-    "Darwin": textwrap.dedent("""\
+    "Darwin": textwrap.dedent(f"""\
         [settings]
         os=Macos
-        arch=x86_64
+        arch={arch_setting}
         compiler=apple-clang
         compiler.version=12.0
         compiler.libcxx=libc++

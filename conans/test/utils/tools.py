@@ -649,6 +649,10 @@ class TestClient(object):
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
+    def get_default_host_profile(self):
+        api = ConanAPIV2(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_host()])
+
     def recipe_exists(self, ref):
         rrev = self.cache.get_recipe_revisions_references(ref)
         return True if rrev else False
