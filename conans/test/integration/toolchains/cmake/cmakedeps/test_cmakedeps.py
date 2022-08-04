@@ -114,7 +114,8 @@ def test_cpp_info_component_objects():
              $<$<CONFIG:Release>:${hello_OBJECTS_RELEASE}>
              ${hello_LIBRARIES_TARGETS}""" not in content
         # But the global target is linked with the targets from the components
-        assert "target_link_libraries(hello::hello INTERFACE hello::say)" in content
+        assert "set_property(TARGET hello::hello PROPERTY " \
+               "INTERFACE_LINK_LIBRARIES hello::say APPEND)" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
