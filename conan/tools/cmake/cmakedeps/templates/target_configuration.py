@@ -96,7 +96,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_LINK_LIBRARIES
                          $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_OBJECTS'+config_suffix+'}' }}>
-                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}x
+                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}
                          APPEND)
 
             if("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}" STREQUAL "")
