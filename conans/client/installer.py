@@ -681,7 +681,7 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         # Note: Remember that this is not needed for Conan 2.x
-                        # Let's avoid losing this information already processed before.
+                        # Let's avoid losing this information.
                         conanfile.cpp_info.version = conanfile.version
                         conanfile.cpp_info.description = conanfile.description
                         conanfile.cpp_info.public_deps = public_deps
