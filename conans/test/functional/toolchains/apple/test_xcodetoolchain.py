@@ -9,13 +9,13 @@ from conans.test.utils.tools import TestClient
 test = textwrap.dedent("""
     import os
     from conan import ConanFile, tools
-    from conan.tools.build import cross_building
+    from conan.tools.build import can_run
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         def requirements(self):
             self.requires(self.tested_reference_str)
         def test(self):
-            if not cross_building(self):
+            if can_run(self):
                 self.run("app", env="conanrun")
     """)
 
@@ -83,6 +83,7 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     sdk_version = "11.3"
     settings = "-s arch=x86_64 -s os.sdk_version={} -s compiler.cppstd={} " \
                "-s compiler.libcxx=libc++ -s os.version={} " \
+               "-c tools.build.cross_building:can_run=True " \
                "-c 'tools.build:cflags=[\"-fstack-protector-strong\"]'".format(sdk_version, cppstd,
                                                                                min_version)
 
