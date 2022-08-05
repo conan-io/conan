@@ -375,6 +375,21 @@ def test_cmake_add_subdirectory():
             find_package(Boost REQUIRED COMPONENTS exception headers)
 
             message("AGGREGATED LIBS: ${Boost_LIBRARIES}")
+            get_target_property(tmp boost::boost INTERFACE_LINK_LIBRARIES)
+            message("AGGREGATED LINKED: ${tmp}")
+
+            get_target_property(tmp boost::B INTERFACE_LINK_LIBRARIES)
+            message("BOOST_B LINKED: ${tmp}")
+
+            get_target_property(tmp boost::A INTERFACE_LINK_LIBRARIES)
+            message("BOOST_A LINKED: ${tmp}")
+
+            get_target_property(tmp boost_boost_B_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+            message("BOOST_B_DEPS LINKED: ${tmp}")
+
+            get_target_property(tmp boost_boost_A_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+            message("BOOST_A_DEPS LINKED: ${tmp}")
+
     """)
 
     t.save({"conanfile.py": conanfile,
@@ -382,4 +397,10 @@ def test_cmake_add_subdirectory():
     t.run("install .")
     # only doing the configure failed before #11743 fix
     t.run("build .")
-    assert "AGGREGATED LIBS: boost::B;boost::A" in t.out
+    # The boost::boost target has linked the two components
+    assert "AGGREGATED LIBS: boost::boost" in t.out
+    assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
+    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
+    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
+    assert "BOOST_B_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:B_1;B_2>" in t.out
+    assert "BOOST_A_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:A_1;A_2>;" in t.out

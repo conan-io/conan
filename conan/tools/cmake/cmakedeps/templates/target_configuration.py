@@ -40,6 +40,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
     @property
     def template(self):
         return textwrap.dedent("""\
+        # Avoid multiple calls to find_package to append duplicated properties to the targets
+        include_guard()
 
         {%- macro tvalue(pkg_name, comp_name, var, config_suffix) -%}
             {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
@@ -93,8 +95,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_LINK_LIBRARIES
-                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}
                          $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_OBJECTS'+config_suffix+'}' }}>
+                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}x
                          APPEND)
 
             if("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}" STREQUAL "")
@@ -167,8 +169,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 ########## TARGET PROPERTIES #####################################
                 set_property(TARGET {{comp_target_name}}
                              PROPERTY INTERFACE_LINK_LIBRARIES
-                             ${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}
                              $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_OBJECTS'+config_suffix+'}' }}>
+                             ${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}
                              APPEND)
 
                 if("{{ '${' }}{{ pkg_name }}_{{comp_variable_name}}_LIBS{{ config_suffix }}}" STREQUAL "")
