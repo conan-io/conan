@@ -34,7 +34,8 @@ def test_install_deploy():
     c.run("install . --deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
     c.run("remove * -f")  # Make sure the cache is clean, no deps there
     cwd = c.current_folder.replace("\\", "/")
-    deps = c.load("mydeploy/hello-release-x86_64-data.cmake")
+    arch = c.get_default_host_profile().settings['arch']
+    deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
     assert f'set(hello_PACKAGE_FOLDER_RELEASE "{cwd}/mydeploy/hello")' in deps
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
@@ -104,13 +105,15 @@ def test_builtin_deploy():
     assert "Conan built-in full deployer" in c.out
     c.run("install . --deploy=full_deploy -of=output -g CMakeDeps "
           "-s build_type=Debug -s arch=x86")
-    release = c.load("output/host/dep/0.1/Release/x86_64/include/hello.h")
-    assert "Release-x86_64" in release
+
+    host_arch = c.get_default_host_profile().settings['arch']
+    release = c.load(f"output/host/dep/0.1/Release/{host_arch}/include/hello.h")
+    assert f"Release-{host_arch}" in release
     debug = c.load("output/host/dep/0.1/Debug/x86/include/hello.h")
     assert "Debug-x86" in debug
-    cmake_release = c.load("output/dep-release-x86_64-data.cmake")
+    cmake_release = c.load(f"output/dep-release-{host_arch}-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in cmake_release
-    assert "output/host/dep/0.1/Release/x86_64" in cmake_release
+    assert f"output/host/dep/0.1/Release/{host_arch}" in cmake_release
     cmake_debug = c.load("output/dep-debug-x86-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_DEBUG "${dep_PACKAGE_FOLDER_DEBUG}/include")' in cmake_debug
     assert "output/host/dep/0.1/Debug/x86" in cmake_debug
