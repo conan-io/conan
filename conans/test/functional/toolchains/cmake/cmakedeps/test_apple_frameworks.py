@@ -559,3 +559,6 @@ def test_iphoneos_crossbuild():
     client.run_command("lipo -info {}".format(main_path))
     assert "Non-fat file" in client.out
     assert "is architecture: arm64" in client.out
+    client.run_command(f"vtool -show-build {main_path}")
+    assert "platform IOS" in client.out
+    assert "minos 12.0" in client.out
