@@ -198,15 +198,16 @@ def test_components_system_libs():
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
         message("component libs: ${tmp_libs}")
         message("component options: ${tmp_options}")
+        message("component deps: ${tmp_deps}")
     """)
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    # FIXME: This assert is ugly, empty configs comes from empty _OBJECTS, FRAMEWORKS etc
-    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>' \
-           ';$<$<CONFIG:Release>:system_lib_component>' in t.out
+    assert 'component libs: $<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
+    assert 'component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:system_lib_component>;' in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
