@@ -7,6 +7,7 @@ import pytest
 from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
+from conan.tools.files import load
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
@@ -491,7 +492,16 @@ def test_android_c_library():
 
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@ -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo")
+    # Settings
+    settings = "-s arch=x86_64 -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo"
+    # Checking the Android variables created
+    # Issue: https://github.com/conan-io/conan/issues/11798
+    client.run("install . " + settings)
+    conan_toolchain = load(None, os.path.join(client.current_folder, "conan_toolchain.cmake"))
+    assert "set(ANDROID_PLATFORM android-23)" in conan_toolchain
+    assert "set(ANDROID_ABI x86_64)" in conan_toolchain
+    assert "include(/foo/build/cmake/android.toolchain.cmake)" in conan_toolchain
+    client.run("create . foo/1.0@ " + settings)
 
 
 def test_user_presets_version2():
