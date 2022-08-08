@@ -57,8 +57,8 @@ class TestValidate(unittest.TestCase):
 
                 def validate(self):
                     if self.info.options.get_safe("header_only") == "False":
-                        if self.info.settings.get_safe("os") == "Linux":
-                          raise ConanInvalidConfiguration("This package cannot exist in Linux")
+                        if self.info.settings.get_safe("compiler.version") == "12":
+                          raise ConanInvalidConfiguration("This package cannot exist in gcc 12")
                         check_min_cppstd(self, 11)
                         # These configurations are impossible
                         if self.info.settings.os != "Windows" and self.info.options.shared:
@@ -71,16 +71,16 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc "
-                   "-s compiler.version=12 -s compiler.libcxx=libstdc++11")
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11")
         assert re.search(r"Package '(.*)' created", str(client.out))
 
         client.run("create . pkg/0.1@ -o header_only=False -s os=Linux -s compiler=gcc "
                    "-s compiler.version=12 -s compiler.libcxx=libstdc++11", assert_error=True)
 
-        assert "Invalid ID: This package cannot exist in Linux" in client.out
+        assert "Invalid ID: This package cannot exist in gcc 12" in client.out
 
         client.run("create . pkg/0.1@ -o header_only=False -s os=Macos -s compiler=gcc "
-                   "-s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=98",
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=98",
                    assert_error=True)
 
         assert "Invalid ID: Current cppstd (98) is lower than the required C++ " \
@@ -88,7 +88,7 @@ class TestValidate(unittest.TestCase):
 
         client.run("create . pkg/0.1@ -o header_only=False -o shared=True "
                    "-s os=Macos -s compiler=gcc "
-                   "-s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=11",
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=11",
                    assert_error=True)
 
         assert "Invalid ID: shared is only supported under windows" in client.out
