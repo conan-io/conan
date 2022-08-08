@@ -8,6 +8,9 @@ class Values(object):
         self._dict = {}  # {key: Values()}
         self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
 
+    def get_safe(self, attr):
+        return getattr(self, attr)
+
     def __getattr__(self, attr):
         if attr not in self._dict:
             return None

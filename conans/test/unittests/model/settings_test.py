@@ -428,6 +428,15 @@ os: [Windows, Linux]
                                                 ("compiler.version", "10"),
                                                 ("os", "Windows")])
 
+    def test_get_safe(self):
+        self.sut.os = "Windows"
+        self.sut.compiler = "Visual Studio"
+        self.sut.compiler.version = 10
+
+        assert self.sut.get_safe("missing") is None
+        assert self.sut.get_safe("os") == "Windows"
+        assert self.sut.get_safe("compiler.version") == "10"
+
     def test_basic(self):
         s = Settings({"os": ["Windows", "Linux"]})
         s.os = "Windows"
