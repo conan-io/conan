@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 import pytest
 
@@ -21,3 +22,22 @@ def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
     toolchain = client.load(os.path.join("conan", "conantoolchain.props"))
     expected_import = f"""<Import Condition="'$(Configuration)' == 'Release' And '$(Platform)' == '{exp_platform}'" Project="conantoolchain_release_{exp_platform.lower()}.props"/>"""
     assert expected_import in toolchain
+
+
+def test_msbuilddeps_format_names():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "pkg"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.components["libmpdecimal++"].libs = ["libmp++"]
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    # Issue: https://github.com/conan-io/conan/issues/11822
+    # Checking that MSBuildDeps builds correctly the XML file
+    c.run("install pkg/1.0@ -g MSBuildDeps")

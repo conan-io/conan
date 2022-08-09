@@ -6,7 +6,6 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.util.files import load, save
 
