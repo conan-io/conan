@@ -440,9 +440,8 @@ class AppleTest(Base):
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
-        host_arch = self.client.get_default_host_profile()
-
-        if host_arch == "x86_64":
+        host_profile = self.client.get_default_host_profile()
+        if host_profile.settings.get("arch") == "x86_64":
             vals.update({
                 "CMAKE_C_FLAGS": "-m64",
                 "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
