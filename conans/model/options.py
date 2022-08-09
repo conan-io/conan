@@ -226,6 +226,11 @@ class OptionsValues(object):
     def __contains__(self, item):
         return item in self._package_values
 
+    def get_safe(self, attr):
+        if attr not in self._package_values:
+            return None
+        return getattr(self._package_values, attr)
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
