@@ -653,6 +653,10 @@ class TestClient(object):
         api = ConanAPIV2(cache_folder=self.cache_folder)
         return api.profiles.get_profile([api.profiles.get_default_host()])
 
+    def get_default_build_profile(self):
+        api = ConanAPIV2(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_build()])
+
     def recipe_exists(self, ref):
         rrev = self.cache.get_recipe_revisions_references(ref)
         return True if rrev else False
