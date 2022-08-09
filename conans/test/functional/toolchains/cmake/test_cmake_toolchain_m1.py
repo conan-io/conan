@@ -64,8 +64,13 @@ def test_m1(op_system):
     assert "CMAKE_SYSTEM_PROCESSOR: arm64" in client.out
     main_path = "./build/Release/main.app/main" if op_system == "iOS" \
         else "./build/Release/main"
-    client.run_command(main_path, assert_error=True)
-    assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info {}".format(main_path))
     assert "Non-fat file" in client.out
     assert "is architecture: arm64" in client.out
+    client.run_command(f"vtool -show-build {main_path}")
+
+    if op_system == "Macos":
+        assert "platform MACOS"
+    elif op_system == "iOS":
+        assert "platform IOS"
+        assert "minos 12.0"

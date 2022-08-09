@@ -64,7 +64,8 @@ def test_transitive_multi(client):
         # to skip finding first possible FindBye somewhere
         assert "find_dependency(${_DEPENDENCY} REQUIRED ${${_DEPENDENCY}_FIND_MODE})" \
                in client.load("libb-config.cmake")
-        assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load("libb-release-x86_64-data.cmake")
+        arch = client.get_default_host_profile().settings['arch']
+        assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load(f"libb-release-{arch}-data.cmake")
 
         if platform.system() == "Windows":
             client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
@@ -227,13 +228,13 @@ def test_custom_configuration(client):
                cmake.build_context_suffix["liba"] = "_build"
                cmake.generate()
        """)
-
+    host_arch = client.get_default_host_profile().settings['arch']
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h default -s:b build_type=RelWithDebInfo"
                " -pr:b default -s:b arch=x86 --build missing")
     curdir = client.current_folder
     data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
-    data_name_context_host = "liba-debug-x86_64-data.cmake"
+    data_name_context_host = f"liba-debug-{host_arch}-data.cmake"
     assert os.path.exists(os.path.join(curdir, data_name_context_build))
     assert os.path.exists(os.path.join(curdir, data_name_context_host))
 
@@ -376,7 +377,8 @@ def test_system_dep():
 
     client.run("install consumer")
     if platform.system() != "Windows":
-        data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
+        host_arch = client.get_default_host_profile().settings['arch']
+        data = os.path.join(f"consumer/build/generators/mylib-release-{host_arch}-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
 

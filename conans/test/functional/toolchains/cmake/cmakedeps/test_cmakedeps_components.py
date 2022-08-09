@@ -67,8 +67,8 @@ class PropagateSpecificComponents(unittest.TestCase):
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g CMakeDeps')
-
-        content = t.load('middle-release-x86_64-data.cmake')
+        arch = t.get_default_host_profile().settings['arch']
+        content = t.load(f'middle-release-{arch}-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-Target-release.cmake')

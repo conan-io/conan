@@ -37,7 +37,8 @@ def test_package_from_system():
     assert os.path.exists(os.path.join(client.current_folder, "dep1-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "dep2-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "custom_dep2-config.cmake"))
-    dep1_contents = client.load("dep1-release-x86_64-data.cmake")
+    host_arch = client.get_default_host_profile().settings['arch']
+    dep1_contents = client.load(f"dep1-release-{host_arch}-data.cmake")
     assert 'list(APPEND dep1_FIND_DEPENDENCY_NAMES custom_dep2)' in dep1_contents
     assert 'set(custom_dep2_FIND_MODE "")' in dep1_contents
 
@@ -61,7 +62,7 @@ def test_test_package():
             requires = "pkg/1.0"
         """)
     client.save({"conanfile.py": consumer})
-    client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    client.run("install . -s:b os=Windows -s:h os=Linux -s:h arch=x86_64 --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
 
@@ -180,7 +181,8 @@ def test_cmakedeps_cppinfo_complex_strings():
     client.run("export . hello/1.0@")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g CMakeDeps")
-    deps = client.load("hello-release-x86_64-data.cmake")
+    arch = client.get_default_host_profile().settings['arch']
+    deps = client.load(f"hello-release-{arch}-data.cmake")
     assert r"escape=partially \"escaped\"" in deps
     assert r"spaces=me you" in deps
     assert r"foobar=bazbuz" in deps

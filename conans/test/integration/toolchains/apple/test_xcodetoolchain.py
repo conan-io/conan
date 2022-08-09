@@ -34,11 +34,12 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_na
     cmd = "install . -s build_type={}".format(configuration)
     cmd = cmd + " -s os.version={}".format(os_version) if os_version else cmd
     cmd = cmd + " -s compiler.cppstd={}".format(cppstd) if cppstd else cmd
-    cmd = cmd + " -s os.sdk={}".format(sdk_name) if sdk_name else cmd
     cmd = cmd + " -s os.sdk_version={}".format(sdk_version) if sdk_version else cmd
+    cmd = cmd + " -s arch={}".format(arch) if arch else cmd
     client.run(cmd)
-    filename = _get_filename(configuration, arch, sdk_name, sdk_version)
-    condition = _condition(configuration, arch, sdk_name, sdk_version)
+    arch_name = "arm64" if arch == "armv8" else arch
+    filename = _get_filename(configuration, arch_name, sdk_name, sdk_version)
+    condition = _condition(configuration, arch_name, sdk_name, sdk_version)
 
     toolchain_all = client.load("conantoolchain.xcconfig")
     toolchain_vars = client.load("conantoolchain{}.xcconfig".format(filename))
