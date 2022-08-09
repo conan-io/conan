@@ -280,3 +280,48 @@ def test_xcodedeps_cppinfo_requires():
     assert "cmp2" in lib_c
     assert "cmp3" not in lib_c
     assert "cmp4" not in lib_c
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_dependency_of_dependency_components():
+    # testing: https://github.com/conan-io/conan/pull/11772
+
+    """
+    When a dependency of a dependency would have components, only the default
+    name conan_dep_dep.xconfig would be included. However, this file was never
+    generated, as they are in the form conan_dep_component.xconfig.
+
+    lib_a -> lib_b -> lib_c (with components)
+    """
+    client = TestClient()
+    lib_a = GenConanfile("lib_a", "1.0").with_require("lib_b/1.0").with_settings("os", "arch", "build_type", "compiler")
+    lib_b = GenConanfile("lib_b", "1.0").with_require("lib_c/1.0").with_settings("os", "arch", "build_type", "compiler")
+
+    lib_c = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_aConan(ConanFile):
+            name = "lib_c"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
+                self.cpp_info.components["cmp2"].includedirs = ["include_cmp2"]
+        """)
+
+    client.save({
+        'lib_a/conanfile.py': lib_a,
+        'lib_b/conanfile.py': lib_b,
+        'lib_c/conanfile.py': lib_c,
+    })
+
+    client.run("create lib_c")
+
+    client.run("create lib_b")
+
+    client.run("install lib_a -g XcodeDeps")
+
+    lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
+
+    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
