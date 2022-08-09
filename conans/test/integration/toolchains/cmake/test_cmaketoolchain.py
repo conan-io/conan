@@ -585,6 +585,29 @@ def test_presets_paths_correct():
                                                                                                "/")
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
+def test_presets_paths_normalization():
+    # https://github.com/conan-io/conan/issues/11795
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    cmake_layout(self)
+            """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
+    client.run("install .")
+
+    presets = json.loads(client.load("CMakeUserPresets.json"))
+
+    assert "/" not in presets["include"]
+
+
 def test_presets_updated():
     """If a preset file is generated more than once, the values are always added and, in case the
     configurePreset or buildPreset already exist, the new preset is updated """

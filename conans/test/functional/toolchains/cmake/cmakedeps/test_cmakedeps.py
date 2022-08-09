@@ -141,6 +141,10 @@ def test_system_libs():
         message("Libraries to Link debug: ${Test_LIBS_DEBUG}")
         get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
         message("Target libs: ${tmp}")
+        get_target_property(tmp CONAN_LIB::Test_lib1 INTERFACE_LINK_LIBRARIES)
+        message("Micro-target libs: ${tmp}")
+        get_target_property(tmp Test_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        message("Micro-target deps: ${tmp}")
         """)
 
     for build_type in ["Release", "Debug"]:
@@ -157,10 +161,136 @@ def test_system_libs():
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
 
-        # FIXME: This assert is ugly, empty configs comes from empty _OBJECTS, FRAMEWORKS etc
-        target_libs = f"$<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1;$<$<CONFIG:{build_type}>" \
-                      f":>;$<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>"
-        assert target_libs in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1" in client.out
+        assert "Micro-target libs: Test_DEPS_TARGET" in client.out
+        micro_target_deps = f"Micro-target deps: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>;" \
+                            f"$<$<CONFIG:{build_type}>:>"
+        assert micro_target_deps in client.out
+
+
+@pytest.mark.tool_cmake
+def test_system_libs_no_libs():
+    """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
+       and transitive deps has to be linked to the global target"""
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conans.tools import save
+        import os
+
+        class Test(ConanFile):
+            name = "Test"
+            version = "0.1"
+            settings = "build_type"
+
+            def package_info(self):
+                if self.settings.build_type == "Debug":
+                    self.cpp_info.system_libs.append("sys1d")
+                else:
+                    self.cpp_info.system_libs.append("sys1")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        Test/0.1
+
+        [generators]
+        CMakeDeps
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+        find_package(Test)
+        message("System libs Release: ${Test_SYSTEM_LIBS_RELEASE}")
+        message("Libraries to Link release: ${Test_LIBS_RELEASE}")
+        message("System libs Debug: ${Test_SYSTEM_LIBS_DEBUG}")
+        message("Libraries to Link debug: ${Test_LIBS_DEBUG}")
+        get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+        message("Target libs: ${tmp}")
+        get_target_property(tmp Test_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        message("DEPS TARGET: ${tmp}")
+
+        """)
+
+    for build_type in ["Release", "Debug"]:
+        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+        client.run("install conanfile.txt -s build_type=%s" % build_type)
+        client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
+
+        library_name = "sys1d" if build_type == "Debug" else "sys1"
+
+        assert f"System libs {build_type}: {library_name}" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_DEPS_TARGET" in client.out
+        assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
+               f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_system_libs_components_no_libs():
+    """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
+       and transitive deps has to be linked to the component target"""
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conans.tools import save
+        import os
+
+        class Test(ConanFile):
+            name = "Test"
+            version = "0.1"
+            settings = "build_type"
+
+            def package_info(self):
+                if self.settings.build_type == "Debug":
+                    self.cpp_info.components["foo"].system_libs.append("sys1d")
+                else:
+                    self.cpp_info.components["foo"].system_libs.append("sys1")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        Test/0.1
+
+        [generators]
+        CMakeDeps
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+        find_package(Test)
+        message("System libs Release: ${Test_Test_foo_SYSTEM_LIBS_RELEASE}")
+        message("Libraries to Link release: ${Test_Test_foo_LIBS_RELEASE}")
+        message("System libs Debug: ${Test_Test_foo_SYSTEM_LIBS_DEBUG}")
+        message("Libraries to Link debug: ${Test_Test_foo_LIBS_DEBUG}")
+
+        get_target_property(tmp Test::foo INTERFACE_LINK_LIBRARIES)
+        message("Target libs: ${tmp}")
+        get_target_property(tmp Test_Test_foo_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        message("DEPS TARGET: ${tmp}")
+
+        """)
+
+    for build_type in ["Release", "Debug"]:
+        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+        client.run("install conanfile.txt -s build_type=%s" % build_type)
+        client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
+
+        library_name = "sys1d" if build_type == "Debug" else "sys1"
+
+        assert f"System libs {build_type}: {library_name}" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_Test_foo_DEPS_TARGET" in client.out
+        assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
+               f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
 
 @pytest.mark.tool_cmake

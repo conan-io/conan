@@ -583,8 +583,6 @@ def test_default_framework_dirs_with_layout():
     assert "FRAMEWORKS: []" in client.out
 
 
-import pytest
-import re
 @pytest.mark.parametrize("with_layout", [True, False])
 def test_defaults_in_components_without_layout(with_layout):
     lib_conan_file = textwrap.dedent("""
@@ -659,3 +657,30 @@ def test_defaults_in_components_without_layout(with_layout):
         assert "FOO LIBDIRS: ['lib']" in client.out
         assert "FOO INCLUDEDIRS: ['include']" in client.out
         assert "FOO RESDIRS: ['res']" in client.out
+
+
+def test_create_keep_build_sets_generators_folder_even_with_cmake_layout_defined():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/11785
+    """
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+
+    class LibConan(ConanFile):
+        settings = 'os', 'arch', 'compiler', 'build_type'
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def package(self):
+            self.output.info("GENERATORS FOLDER: {}".format(self.generators_folder))
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s build_type=Release")
+    client.run("create -kb . -s build_type=Release")
+    # self.generators_folder should be not None when -kb is used
+    assert re.search(r"GENERATORS FOLDER: .*generators", str(client.out))

@@ -167,6 +167,13 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
         message("MYPKGB_INCLUDE_DIRS: ${{MYPKGB_INCLUDE_DIRS}}")
         message("MYPKGB_INCLUDE_DIR: ${{MYPKGB_INCLUDE_DIR}}")
         message("MYPKGB_LIBRARIES: ${{MYPKGB_LIBRARIES}}")
+
+        get_target_property(linked_libs pkgb::pkgb INTERFACE_LINK_LIBRARIES)
+        message("MYPKGB_LINKED_LIBRARIES: '${{linked_libs}}'")
+
+        get_target_property(linked_deps pkgb_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        message("MYPKGB_DEPS_LIBRARIES: '${{linked_deps}}'")
+
         message("MYPKGB_DEFINITIONS: ${{MYPKGB_DEFINITIONS}}")
         """)
 
@@ -183,9 +190,16 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
     assert "MYPKGB_VERSION_STRING: 1.0" in client.out
     assert "MYPKGB_INCLUDE_DIRS:" in client.out
     assert "MYPKGB_INCLUDE_DIR:" in client.out
-    assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
+    # The MYPKG_LIBRARIES contains the target for the current package, but the target is linked
+    # with the dependencies also:
+    assert "MYPKGB_LIBRARIES: pkgb::pkgb" in client.out
+    assert "MYPKGB_LINKED_LIBRARIES: '$<$<CONFIG:Release>:>;pkgb_DEPS_TARGET'" in client.out
+    assert "MYPKGB_DEPS_LIBRARIES: '$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;" \
+           "$<$<CONFIG:Release>:pkga::pkga>'" in client.out
+
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
 
     if find_mode_PKGA == "module":
         assert 'Found unicorns: 1.0 (found version "1.0")' in client.out
+

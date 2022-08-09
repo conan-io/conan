@@ -24,14 +24,14 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     build_folder = "build" if not subproject else os.path.join(subproject, "build")
     custom_conf = get_build_folder_custom_vars(conanfile)
     if custom_conf:
-        build_folder = "{}/{}".format(build_folder, custom_conf)
+        build_folder = os.path.join(build_folder, custom_conf)
 
     if multi:
         conanfile.folders.build = build_folder
     else:
-        conanfile.folders.build = "{}/{}".format(build_folder, build_type)
+        conanfile.folders.build = os.path.join(build_folder, build_type)
 
-    conanfile.folders.generators = "{}/{}".format(build_folder, "generators")
+    conanfile.folders.generators = os.path.join(build_folder, "generators")
 
     conanfile.cpp.source.includedirs = ["include"]
 
