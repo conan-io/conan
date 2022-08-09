@@ -12,6 +12,7 @@ test = textwrap.dedent("""
     from conan.tools.build import can_run
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
+        generators = "VirtualRunEnv"
         def requirements(self):
             self.requires(self.tested_reference_str)
         def test(self):
