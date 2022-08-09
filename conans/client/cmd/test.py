@@ -25,6 +25,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
         delete_after_build = False
         test_build_folder = base_folder
         # Don't mess the test_package folder with the conaninfo.txt and others
+        # We don't have the conanfile loaded yet so we cannot know the generators_folder
         install_folder = os.path.join(base_folder, "install")
     else:
         test_build_folder, delete_after_build = _build_folder(test_build_folder,
