@@ -168,7 +168,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_BIN_DIRS'+config_suffix+'}' }}" # package_bindir
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBRARY_TYPE'+config_suffix+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_IS_HOST_WINDOWS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }}"
                                       {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS
                                       "{{ config }}" # DEBUG, RELEASE...

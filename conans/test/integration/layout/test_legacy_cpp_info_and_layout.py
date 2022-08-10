@@ -24,8 +24,11 @@ def test_legacy_deps_cpp_info_deps_version_using_or_not_layout(declare_layout):
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
 
-        def build(self):
-            self.output.info(self.deps_cpp_info["hello"].version)
+        def requirements(self):
+            self.requires(self.tested_reference_str)
+
+        def generate(self):
+            self.output.info(self.dependencies["hello"].ref.version)
 
         def test(self):
             pass

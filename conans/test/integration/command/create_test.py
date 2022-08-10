@@ -766,6 +766,6 @@ def test_defaults_in_components():
     assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
     assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
     assert "WARN: RES DIRS: []"
-    assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
-    assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
+    assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out)))
+    assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out)))
     assert "WARN: FOO RESDIRS: []" in client.out
