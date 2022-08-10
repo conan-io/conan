@@ -17,7 +17,13 @@ class TestMesonBase(unittest.TestCase):
 
     @property
     def _settings(self):
-        host_arch = "armv8" if platform.machine() in ["arm64", "aarch64", "ARM64"] else platform.machine()
+        interpreter_arch = platform.machine()
+        if interpreter_arch in ["x86_64", "AMD64"]:
+            host_arch = "x86_64"
+        elif interpreter_arch in ["arm64", "aarch64", "ARM64"]:
+            host_arch = "armv8"
+        else:
+            host_ach = interpreter_arch
         settings_macosx = {"compiler": "apple-clang",
                            "compiler.libcxx": "libc++",
                            "compiler.version": "13",
