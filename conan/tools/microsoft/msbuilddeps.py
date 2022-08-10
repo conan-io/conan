@@ -11,7 +11,7 @@ from conans.errors import ConanException
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
-EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[\.+]")
+EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[\.+\-]")
 
 
 class MSBuildDeps(object):
