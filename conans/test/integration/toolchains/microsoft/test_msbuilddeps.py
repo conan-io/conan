@@ -39,5 +39,11 @@ def test_msbuilddeps_format_names():
     c.save({"conanfile.py": conanfile})
     c.run("create .")
     # Issue: https://github.com/conan-io/conan/issues/11822
+    c.run("install pkg/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
-    c.run("install pkg/1.0@ -g MSBuildDeps")
+    props = c.load("conan_pkg_libmpdecimal__.props")
+    assert "<conan_pkg_libmpdecimal___props_imported>" in props
+    props = c.load("conan_pkg_libmpdecimal___release_x64.props")
+    assert "Conanpkg_libmpdecimal__IncludeDirectories" in props
+    props = c.load("conan_pkg_libmpdecimal___vars_release_x64.props")
+    assert "<Conanpkg_libmpdecimal__RootFolder>" in props
