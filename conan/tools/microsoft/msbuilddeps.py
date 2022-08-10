@@ -11,7 +11,7 @@ from conans.errors import ConanException
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
-NON_DIGIT_PATTERN = re.compile(r"\D")
+EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[\.+]")
 
 
 class MSBuildDeps(object):
@@ -133,7 +133,7 @@ class MSBuildDeps(object):
 
     @staticmethod
     def _get_valid_xml_format(name):
-        return NON_DIGIT_PATTERN.sub("_", name)
+        return EXCLUDED_SYMBOLS_PATTERN.sub("_", name)
 
     def _vars_props_file(self, dep, name, cpp_info, deps, build):
         """
