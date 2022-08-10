@@ -437,6 +437,14 @@ class OptionsValuesTest(unittest.TestCase):
         Boost:thread.multi=off
         """)
 
+    def test_get_safe(self):
+        option_values = OptionsValues(self.sut.as_list())
+        assert option_values.get_safe("missing") is None
+        assert option_values.get_safe("optimized") == 3
+        with pytest.raises(ConanException):
+            # This is not supported at the moment
+            option_values["Boost"].get_safe("thread")
+
     def test_from_list(self):
         option_values = OptionsValues(self.sut.as_list())
         self.assertEqual(option_values.dumps(), self.sut.dumps())

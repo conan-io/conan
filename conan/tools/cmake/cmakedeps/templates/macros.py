@@ -43,7 +43,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
 
        function(conan_package_library_targets libraries package_libdir package_bindir library_type
-                is_host_windows deps out_libraries_target config package_name no_soname_mode)
+                is_host_windows deps_target out_libraries_target config package_name no_soname_mode)
            set(_out_libraries_target "")
            set(_CONAN_ACTUAL_TARGETS "")
 
@@ -98,10 +98,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                unset(CONAN_FOUND_LIBRARY CACHE)
            endforeach()
 
-           # Add all dependencies to all targets
-           string(REPLACE " " ";" deps_list "${deps}")
+           # Add the dependencies target for all the imported libraries
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES $<$<CONFIG:${config}>:${deps_list}> APPEND)
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
            endforeach()
 
            # ONLY FOR DEBUGGING PURPOSES

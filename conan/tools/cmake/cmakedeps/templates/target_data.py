@@ -123,7 +123,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
-              ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
+
+              ########### COMPONENT {{ comp_target_name }} VARIABLES ############################################
+
               set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_BIN_DIRS{{ config_suffix }} {{ cpp.bin_paths }})
