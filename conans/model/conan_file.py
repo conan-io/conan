@@ -311,7 +311,8 @@ class ConanFile(object):
     @property
     def generators_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.generators_folder if self.folders.generators else self.install_folder
+        return self.folders.generators_folder \
+            if self.folders.generators is not None else self.install_folder
 
     @property
     def generators_path(self) -> Path:
