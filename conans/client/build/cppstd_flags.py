@@ -50,14 +50,10 @@ def cppstd_flag_new(settings):
 
 
 def cppstd_default(settings):
-    if getattr(settings, "get_safe", None):
-        compiler = settings.get_safe("compiler")
-        compiler_version = settings.get_safe("compiler.version")
-        compiler_base = settings.get_safe("compiler.base")
-    else:
-        compiler = str(settings.compiler)
-        compiler_version = str(settings.compiler.version)
-        compiler_base = str(settings.compiler.base)
+
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    compiler_base = settings.get_safe("compiler.base")
     intel_cppstd_default = _intel_visual_cppstd_default if compiler_base == "Visual Studio" \
         else _intel_gcc_cppstd_default
     default = {"gcc": _gcc_cppstd_default(compiler_version),

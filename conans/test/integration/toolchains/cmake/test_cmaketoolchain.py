@@ -491,7 +491,16 @@ def test_android_c_library():
 
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@ -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo")
+    # Settings
+    settings = "-s arch=x86_64 -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo"
+    # Checking the Android variables created
+    # Issue: https://github.com/conan-io/conan/issues/11798
+    client.run("install . " + settings)
+    conan_toolchain = client.load(os.path.join(client.current_folder, "conan_toolchain.cmake"))
+    assert "set(ANDROID_PLATFORM android-23)" in conan_toolchain
+    assert "set(ANDROID_ABI x86_64)" in conan_toolchain
+    assert "include(/foo/build/cmake/android.toolchain.cmake)" in conan_toolchain
+    client.run("create . foo/1.0@ " + settings)
 
 
 def test_user_presets_version2():
@@ -583,6 +592,29 @@ def test_presets_paths_correct():
     assert "build/17/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
+def test_presets_paths_normalization():
+    # https://github.com/conan-io/conan/issues/11795
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    cmake_layout(self)
+            """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
+    client.run("install .")
+
+    presets = json.loads(client.load("CMakeUserPresets.json"))
+
+    assert "/" not in presets["include"]
 
 
 def test_presets_updated():
