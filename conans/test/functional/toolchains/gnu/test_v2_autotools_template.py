@@ -93,7 +93,7 @@ def test_autotools_relocatable_libs_darwin():
     shutil.move(os.path.join(package_folder, "lib"), os.path.join(client.current_folder, "tempfolder"))
     # will fail because rpath does not exist
     client.run_command("test_package/build-release/main", assert_error=True)
-    assert "Library not loaded: @rpath/libhello.0.dylib" in client.out
+    assert "Library not loaded: @rpath/libhello.0.dylib" in str(client.out).replace("'", "")
 
     # Use DYLD_LIBRARY_PATH and should run
     client.run_command("DYLD_LIBRARY_PATH={} test_package/build-release/main".format(os.path.join(client.current_folder, "tempfolder")))

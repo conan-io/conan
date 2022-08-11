@@ -27,4 +27,4 @@ class ConanTestTest(unittest.TestCase):
                    "--build missing")
         self.assertIn('hello/0.1: Hello World Debug!', client.out)
         assert os.path.exists(os.path.join(client.current_folder, "test_package",
-                                           "install", "conaninfo.txt"))
+                                           "build", "generators", "conaninfo.txt"))
