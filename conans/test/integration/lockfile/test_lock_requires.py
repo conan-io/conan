@@ -349,3 +349,33 @@ def test_ux_defaults():
     c.save({"conanfile.txt": ""})
     c.run("install . --lockfile=conan.lock", assert_error=True)
     assert "ERROR: Lockfile doesn't exist" in c.out
+
+
+def test_lock_tool_requires_test():
+    # https://github.com/conan-io/conan/issues/11763
+
+    c = TestClient()
+    cmake = GenConanfile("cmake", "1.0")
+    libsodium = GenConanfile("libsodium", "1.0")
+
+    test_package = textwrap.dedent("""
+        from conan import ConanFile
+
+        class TestPackageConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def build_requirements(self):
+                self.tool_requires("cmake/1.0")
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                print("package tested")
+    """)
+
+    c.save({"cmake.py": cmake,
+            "conanfile.py": libsodium,
+            "test_package/conanfile.py": test_package})
+
+    c.run("create cmake.py")
+    c.run("lock create .")
+    c.run("create . --lockfile=conan.lock")
+    assert "package tested" in c.out
