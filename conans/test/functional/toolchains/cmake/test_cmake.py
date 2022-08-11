@@ -443,7 +443,7 @@ class AppleTest(Base):
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
-        host_arch = self.client.get_default_host_profile()
+        host_arch = self.client.get_default_host_profile().settings['arch']
 
         if host_arch == "x86_64":
             vals.update({
