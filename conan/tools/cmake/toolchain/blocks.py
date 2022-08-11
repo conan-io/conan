@@ -313,7 +313,7 @@ class AndroidSystemBlock(Block):
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'android_platform': self._conanfile.settings.os.api_level,
+            'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
             'android_abi': android_abi,
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
