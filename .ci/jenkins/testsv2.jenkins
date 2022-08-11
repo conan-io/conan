@@ -20,7 +20,7 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
     if (branchName =~ /(^PR-.*)/) {
         //configs.add([node: "Linux", pyvers: ["PY36"]])
         if (moduleName=="conans/test/functional") {
-            #configs.add([node: "Windows", pyvers: ["PY36"]])
+            //configs.add([node: "Windows", pyvers: ["PY36"]])
             configs.add([node: "Potato", pyvers: ["PY36"]])
         }
     }
