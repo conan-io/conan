@@ -84,8 +84,8 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         conanfile.folders.set_base_imports(install_folder)
         conanfile.folders.set_base_generators(base_folder)
 
-        if test:
-            install_folder = conanfile.generators_folder
+    if hasattr(conanfile, "layout") and test:
+        install_folder = conanfile.generators_folder
 
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
