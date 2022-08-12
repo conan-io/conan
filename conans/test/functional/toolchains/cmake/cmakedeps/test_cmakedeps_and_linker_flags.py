@@ -144,4 +144,4 @@ def test_not_mixed_configurations():
     client.run("build .")
 
     # But we inspect the output for Macos/Linux to check the the library is not linked
-    assert "foo_d" not in client.out
+    assert "libfoo_d.a" not in client.out

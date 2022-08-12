@@ -80,6 +80,12 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
            # ONLY FOR DEBUGGING PURPOSES
            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+              get_target_property(imported_location ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_DEBUG)
+              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_DEBUG ='${imported_location}'")
+
+              get_target_property(imported_location ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_RELEASE)
+              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_RELEASE ='${imported_location}'")
+
               get_target_property(linked_libs ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES)
               message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
            endforeach()

@@ -62,7 +62,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "") # Will be filled later
         conan_find_apple_frameworks({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS{{ config_suffix }}}" "{{ '${' }}{{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }}}")
 
-        set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
+        set({{ pkg_name }}_LIBRARIES_TARGETS "") # Will be filled later
 
 
         ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
