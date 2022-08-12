@@ -48,7 +48,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                if(CONAN_FOUND_LIBRARY)
-                   message("Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+                   message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
 
                    # Create a micro-target for each lib/a found
                    # Allow only some characters for the target name
@@ -70,7 +70,6 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
            # Add the dependencies target for all the imported libraries
            foreach(_T ${_out_libraries_target})
-                message("LINK A ${_T}")
                set_property(TARGET ${_T} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
            endforeach()
 

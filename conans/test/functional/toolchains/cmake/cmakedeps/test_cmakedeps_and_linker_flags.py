@@ -128,9 +128,6 @@ def test_not_mixed_configurations():
             target_include_directories(consumer PUBLIC include)
             target_link_libraries(consumer foo::foo)
 
-            get_target_property(linked_libs foo::foo INTERFACE_LINK_LIBRARIES)
-            message("===> foo::foo INTERFACE_LINK_LIBRARIES='${linked_libs}'")
-
             set_target_properties(consumer PROPERTIES PUBLIC_HEADER "include/consumer.h")""")
     consumer_cpp = gen_function_cpp(name="main", includes=["foo"], calls=["foo"])
     consumer_h = gen_function_h(name="consumer")
@@ -146,3 +143,4 @@ def test_not_mixed_configurations():
     # But we inspect the output for Macos/Linux to check that the library is not linked
     if platform.system() != "Windows":
         assert "libfoo_d.a" not in client.out
+        assert "libfoo.a" in client.out
