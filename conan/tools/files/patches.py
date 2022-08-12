@@ -110,8 +110,9 @@ def apply_conandata_patches(conanfile):
     for it in entries:
         if "patch_file" in it:
             # The patch files are located in the root src
-            patch_file = os.path.join(conanfile.folders.base_source, it.pop("patch_file"))
-            patch(conanfile, patch_file=patch_file, **it)
+            patch_file = os.path.join(conanfile.folders.base_source, it.get("patch_file"))
+            patch(conanfile, patch_file=patch_file, patch_type=it.get("patch_type"), 
+                  patch_description=it.get("patch_description"))
         elif "patch_string" in it:
             patch(conanfile, **it)
         else:

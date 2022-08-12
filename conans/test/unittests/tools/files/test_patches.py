@@ -202,3 +202,8 @@ def test_multiple_with_version(mock_patch_ng):
     apply_conandata_patches(conanfile)
     assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
            == str(conanfile.output)
+    
+    # Ensure the function is not mutating the `conan_data` structure
+    assert len(conanfile.conan_data['patches']) == 2
+    assert conanfile.conan_data['patches']['1.11.0'][0]['patch_file'] == 'patches/0001-buildflatbuffers-cmake.patch'
+    assert conanfile.conan_data['patches']['1.11.0'][1]['patch_file'] == 'patches/0002-implicit-copy-constructor.patch'
