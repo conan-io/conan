@@ -83,7 +83,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
                                       {{ pkg_name + '_DEPS_TARGET'}}
                                       {{ pkg_name }}_LIBRARIES_TARGETS  # out_libraries_targets
-                                      "{{ config }}" # DEBUG, RELEASE ...
                                       "{{ pkg_name }}")    # package_name
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
@@ -96,7 +95,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_LINK_LIBRARIES
                          $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_OBJECTS'+config_suffix+'}' }}>
-                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}>
                          APPEND)
 
             if("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}" STREQUAL "")
@@ -163,14 +162,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                               "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
                                               {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
                                               {{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS
-                                              "{{ config }}" # DEBUG, RELEASE...
                                               "{{ pkg_name }}_{{ comp_variable_name }}")
 
                 ########## TARGET PROPERTIES #####################################
                 set_property(TARGET {{comp_target_name}}
                              PROPERTY INTERFACE_LINK_LIBRARIES
                              $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_OBJECTS'+config_suffix+'}' }}>
-                             ${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}
+                             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}>
                              APPEND)
 
                 if("{{ '${' }}{{ pkg_name }}_{{comp_variable_name}}_LIBS{{ config_suffix }}}" STREQUAL "")

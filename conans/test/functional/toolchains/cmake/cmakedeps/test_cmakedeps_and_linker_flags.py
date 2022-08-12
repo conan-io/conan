@@ -129,7 +129,7 @@ def test_not_mixed_configurations():
             target_link_libraries(consumer foo::foo)
 
             get_target_property(linked_libs foo::foo INTERFACE_LINK_LIBRARIES)
-            message("Target Properties: foo::foo INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
+            message("===> foo::foo INTERFACE_LINK_LIBRARIES='${linked_libs}'")
 
             set_target_properties(consumer PROPERTIES PUBLIC_HEADER "include/consumer.h")""")
     consumer_cpp = gen_function_cpp(name="main", includes=["foo"], calls=["foo"])

@@ -41,10 +41,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-       function(conan_package_library_targets libraries package_libdir deps_target out_libraries_target config package_name)
-           set(_out_libraries "")
+       function(conan_package_library_targets libraries package_libdir deps_target out_libraries_target package_name)
            set(_out_libraries_target "")
-           set(_CONAN_ACTUAL_TARGETS "")
 
            foreach(_LIBRARY_NAME ${libraries})
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
@@ -60,11 +58,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        # Create a micro-target for each lib/a found
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                    endif()
-                   # Enable configuration only when it is available to avoid missing configs
-                   set_property(TARGET ${_LIB_NAME} APPEND PROPERTY IMPORTED_CONFIGURATIONS ${config})
                    # Link library file
-                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION_${config} ${CONAN_FOUND_LIBRARY})
-                   list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()
@@ -74,20 +69,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endforeach()
 
            # Add the dependencies target for all the imported libraries
-           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
-           endforeach()
-
-           # ONLY FOR DEBUGGING PURPOSES
-           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-              get_target_property(imported_location ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_DEBUG)
-              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_DEBUG ='${imported_location}'")
-
-              get_target_property(imported_location ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_RELEASE)
-              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} IMPORTED_LOCATION_RELEASE ='${imported_location}'")
-
-              get_target_property(linked_libs ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES)
-              message(VERBOSE "Target Properties: ${_CONAN_ACTUAL_TARGET} INTERFACE_LINK_LIBRARIES ='${linked_libs}'")
+           foreach(_T ${_out_libraries_target})
+               set_property(TARGET ${_T} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
            endforeach()
 
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
