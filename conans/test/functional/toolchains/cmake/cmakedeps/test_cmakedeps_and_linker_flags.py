@@ -143,5 +143,6 @@ def test_not_mixed_configurations():
     # With the bug, this build only fail on windows
     client.run("build .")
 
-    # But we inspect the output for Macos/Linux to check the the library is not linked
-    assert "libfoo_d.a" not in client.out
+    # But we inspect the output for Macos/Linux to check that the library is not linked
+    if platform.system() != "Windows":
+        assert "libfoo_d.a" not in client.out
