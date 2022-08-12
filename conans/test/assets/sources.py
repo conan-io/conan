@@ -27,12 +27,20 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} _M_IX86 defined\n";
     #endif
 
+    #ifdef _M_ARM64
+    std::cout << "   {{ msg or name }} _M_ARM64 defined\n";
+    #endif
+
     #if __i386__
     std::cout << "  {{ msg or name }} __i386__ defined\n";
     #endif
 
     #if __x86_64__
     std::cout << "  {{ msg or name }} __x86_64__ defined\n";
+    #endif
+  
+    #if __aarch64__
+    std::cout << "  {{ msg or name }} __aarch64__ defined\n";
     #endif
 
     // Libstdc++

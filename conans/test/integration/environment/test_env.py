@@ -676,10 +676,8 @@ def test_files_always_created():
     c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv")
     ext = "bat" if platform.system() == "Windows" else "sh"
 
-    assert os.path.isfile(os.path.join(c.current_folder, "conanbuild.{}".format(ext)))
-    assert os.path.isfile(os.path.join(c.current_folder, "conanrun.{}".format(ext)))
-    assert os.path.isfile(os.path.join(c.current_folder,
-                                       "conanbuildenv-release-x86_64.{}".format(ext)))
-    assert os.path.isfile(os.path.join(c.current_folder,
-                                       "conanbuildenv-release-x86_64.{}".format(ext)))
-
+    arch = c.get_default_host_profile().settings['arch']
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuild.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanrun.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))

@@ -242,7 +242,7 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=Windows --build missing")
+        client.run("install . -s os=Windows -s arch=x86_64 --build missing")
         conan_info = ConanInfo.loads(client.load(CONANINFO))
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
