@@ -76,13 +76,13 @@ def test_not_mixed_configurations():
             cmake_minimum_required(VERSION 3.15)
             project(foo CXX)
 
-            add_library(foo src/foo.cpp)
+            add_library(foo "src/foo.cpp")
             target_include_directories(foo PUBLIC include)
             set_target_properties(foo PROPERTIES PUBLIC_HEADER "include/foo.h")
 
             # Different name for Release or Debug
-            set_target_properties(foo PROPERTIES OUTPUT_NAME "$<$<CONFIG:Debug>:foo_d>$<$<CONFIG:Release>:foo>")
-
+            set_target_properties(foo PROPERTIES OUTPUT_NAME_DEBUG foo_d)
+            set_target_properties(foo PROPERTIES OUTPUT_NAME_RELEASE foo)
             install(TARGETS foo)
     """)
 
@@ -140,6 +140,8 @@ def test_not_mixed_configurations():
 
     client.run("install . -s build_type=Debug")
     client.run("install . -s build_type=Release")
+    # With the bug, this build only fail on windows
     client.run("build .")
-    # Check that foo_d is not being linked
+
+    # But we inspect the output for Macos/Linux to check the the library is not linked
     assert "foo_d" not in client.out
