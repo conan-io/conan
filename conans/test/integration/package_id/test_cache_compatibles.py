@@ -143,7 +143,7 @@ class TestDefaultCompat:
                 package_type = "application"
                 settings = "os", "arch", "compiler", "build_type"
             """)
-        c.save({"conanfile.py": conanfile})
+        c.save({"conanfile.py": conanfile, "profile_build": "[settings]\nos=Windows\narch=x86_64"})
         os_ = "Windows"
         build_type = "Release"
         arch = "x86_64"
@@ -155,9 +155,9 @@ class TestDefaultCompat:
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} -pr:b=profile_build")
         package_id = c.created_package_id("app/1.0")
-        c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
+        c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch} -pr:b=profile_build")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id}'"
 
@@ -178,7 +178,7 @@ class TestDefaultCompat:
                     except:
                         pass
             """)
-        c.save({"conanfile.py": conanfile})
+        c.save({"conanfile.py": conanfile, "profile_build": "[settings]\nos=Windows\narch=x86_64"})
         os_ = "Windows"
         build_type = "Release"
         arch = "x86_64"
@@ -189,16 +189,16 @@ class TestDefaultCompat:
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} -pr:b=profile_build")
         package_id1 = c.created_package_id("app/1.0")
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd=17 "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} -pr:b=profile_build")
         package_id2 = c.created_package_id("app/1.0")
         assert package_id1 == package_id2  # It does not depend on 'compiler.cppstd'
 
-        c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch}")
+        c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch} -pr:b=profile_build")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
 
@@ -215,7 +215,7 @@ class TestDefaultCompat:
                 default_options = {"shared": False}
                 settings = "os", "arch", "compiler", "build_type"
             """)
-        c.save({"conanfile.py": conanfile})
+        c.save({"conanfile.py": conanfile, "profile_build": "[settings]\nos=Windows\narch=x86_64"})
         os_ = "Windows"
         build_type = "Release"
         arch = "x86_64"
@@ -226,14 +226,14 @@ class TestDefaultCompat:
         c.run(f"create . -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} -pr:b=profile_build")
         package_id1 = c.created_package_id("mylib/1.0")
 
         # Try to install with cppstd 14, it will find cppstd 17 as compatible
         c.run(f"install --requires=mylib/1.0@ -s os={os_} -s arch={arch} -s build_type={build_type} "
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd=14 "
-              f"-s compiler.runtime={runtime}")
+              f"-s compiler.runtime={runtime} -pr:b=profile_build")
         assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
                f"Using compatible package '{package_id1}'"
 

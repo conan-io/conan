@@ -368,8 +368,6 @@ def test_mixed_user_channel():
 
 def test_remote_version_ranges():
     t = TestClient(default_server_user=True)
-    save(t.cache.default_profile_path, "")
-    save(t.cache.settings_path, "")
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
@@ -406,8 +404,6 @@ def test_different_user_channel_resolved_correctly():
     servers = OrderedDict([("server1", server1), ("server2", server2)])
 
     client = TestClient(servers=servers, inputs=2*["admin", "password"])
-    save(client.cache.default_profile_path, "")
-    save(client.cache.settings_path, "")
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
