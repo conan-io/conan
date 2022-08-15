@@ -27,6 +27,10 @@ class ConanFileInterface:
         return not self.__eq__(other)
 
     @property
+    def recipe_folder(self):
+        return self._conanfile.recipe_folder
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
 
@@ -82,3 +86,23 @@ class ConanFileInterface:
     @property
     def is_build_context(self):
         return self._conanfile.context == CONTEXT_BUILD
+
+    @property
+    def conan_data(self):
+        return self._conanfile.conan_data
+
+    @property
+    def license(self):
+        return self._conanfile.license
+
+    @property
+    def description(self):
+        return self._conanfile.description
+
+    @property
+    def homepage(self):
+        return self._conanfile.homepage
+
+    @property
+    def url(self):
+        return self._conanfile.url
