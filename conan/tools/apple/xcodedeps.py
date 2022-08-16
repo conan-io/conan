@@ -230,6 +230,7 @@ class XcodeDeps(object):
 
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
+                    comp_name = _format_name(comp_name)
 
                     # returns: ("list of cpp infos from required components in same package",
                     #           "list of names from required components from other packages")
@@ -266,8 +267,17 @@ class XcodeDeps(object):
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
-                               dep.dependencies.direct_host.items() if r.visible]
+                public_deps = []
+                for r, d in dep.dependencies.direct_host.items():
+                    if not r.visible:
+                        continue
+                    if d.cpp_info.has_components:
+                        sorted_components = d.cpp_info.get_sorted_components().items()
+                        for comp_name, comp_cpp_info in sorted_components:
+                            public_deps.append((_format_name(d.ref.name), _format_name(comp_name)))
+                    else:
+                        public_deps.append((_format_name(d.ref.name),) * 2)
+
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
                 root_content = self.get_content_for_component(dep_name, dep_name, [dep.cpp_info],
                                                               required_components)
