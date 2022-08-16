@@ -175,7 +175,7 @@ def test_multiple_no_version(mock_patch_ng):
 def test_multiple_with_version(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    conanfile.conan_data = {'patches': {
+    conandata_contents = {'patches': {
         "1.11.0": [
             {'patch_file': 'patches/0001-buildflatbuffers-cmake.patch',
              'base_path': 'source_subfolder', },
@@ -189,6 +189,8 @@ def test_multiple_with_version(mock_patch_ng):
             {'patch_file': 'patches/0001-buildflatbuffers-cmake.patch',
              'base_path': 'source_subfolder', },
         ]}}
+
+    conanfile.conan_data = conandata_contents.copy()
 
     with pytest.raises(AssertionError) as excinfo:
         apply_conandata_patches(conanfile)
@@ -204,6 +206,4 @@ def test_multiple_with_version(mock_patch_ng):
            == str(conanfile.output)
     
     # Ensure the function is not mutating the `conan_data` structure
-    assert len(conanfile.conan_data['patches']) == 2
-    assert conanfile.conan_data['patches']['1.11.0'][0]['patch_file'] == 'patches/0001-buildflatbuffers-cmake.patch'
-    assert conanfile.conan_data['patches']['1.11.0'][1]['patch_file'] == 'patches/0002-implicit-copy-constructor.patch'
+    assert conanfile.conan_data == conandata_contents
