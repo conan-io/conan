@@ -117,9 +117,10 @@ def test_cpp_info_component_objects():
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
-        # Not global variables
+        # https://github.com/conan-io/conan/issues/11862
+        # Global variables
         assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' \
-               not in content
+               in content
         # But component variables
         assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/' \
                'mycomponent.o")' in content

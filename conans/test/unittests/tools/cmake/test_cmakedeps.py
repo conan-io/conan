@@ -82,11 +82,12 @@ def test_cpp_info_name_cmakedeps_components():
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         assert "TARGET GlobalPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
-        # No global variables for the packages
+        # Global variables for the packages
+        # https://github.com/conan-io/conan/issues/11862
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
-               not in files["ComplexFileName1-debug-x64-data.cmake"]
-        # But components
+               in files["ComplexFileName1-debug-x64-data.cmake"]
+        # AND components
         assert 'set(OriginalDepName_GlobalPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
