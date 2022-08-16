@@ -276,3 +276,22 @@ def test_basic_layout_no_external_sources(with_build_type):
     assert contents == "exported_contents"
     client.run("export-pkg . foo/1.0@ --force")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
+
+
+def test_cmake_layout_custom_build_folder():
+    # https://github.com/conan-io/conan/issues/11838
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self, src_folder="src", build_folder="mybuild")
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "mybuild/generators/conan_toolchain.cmake"))
