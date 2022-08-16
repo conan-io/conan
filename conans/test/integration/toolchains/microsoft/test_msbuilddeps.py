@@ -37,7 +37,7 @@ def test_msbuilddeps_format_names():
                 self.cpp_info.components["libmpdecimal++"].libs = ["libmp++"]
         """)
     c.save({"conanfile.py": conanfile})
-    c.run("create .")
+    c.run("create . -s arch=x86_64")
     # Issue: https://github.com/conan-io/conan/issues/11822
     c.run("install pkg/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
