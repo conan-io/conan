@@ -1,6 +1,5 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.model import Generator
-import filecmp
 
 
 class CMakePathsGenerator(Generator):
