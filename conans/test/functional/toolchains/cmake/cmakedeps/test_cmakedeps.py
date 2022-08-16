@@ -141,14 +141,15 @@ def test_system_libs():
         message("Libraries to Link debug: ${Test_LIBS_DEBUG}")
         get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
         message("Target libs: ${tmp}")
-        get_target_property(tmp CONAN_LIB::Test_lib1 INTERFACE_LINK_LIBRARIES)
+        get_target_property(tmp CONAN_LIB::Test_lib1_%s INTERFACE_LINK_LIBRARIES)
         message("Micro-target libs: ${tmp}")
         get_target_property(tmp Test_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
         message("Micro-target deps: ${tmp}")
         """)
 
     for build_type in ["Release", "Debug"]:
-        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+        client.save({"conanfile.txt": conanfile,
+                     "CMakeLists.txt": cmakelists % build_type.upper()}, clean_first=True)
         client.run("install conanfile.txt -s build_type=%s" % build_type)
         client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
 
@@ -161,7 +162,7 @@ def test_system_libs():
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
 
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:CONAN_LIB::Test_lib1_{build_type.upper()}>" in client.out
         assert "Micro-target libs: Test_DEPS_TARGET" in client.out
         micro_target_deps = f"Micro-target deps: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>;" \
                             f"$<$<CONFIG:{build_type}>:>"
@@ -225,7 +226,7 @@ def test_system_libs_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_DEPS_TARGET" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;Test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
@@ -288,7 +289,7 @@ def test_system_libs_components_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_Test_foo_DEPS_TARGET" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;Test_Test_foo_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
