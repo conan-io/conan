@@ -9,11 +9,10 @@ from conans.errors import ConanException
 @conan_command(group=COMMAND_GROUPS['creator'])
 def download(conan_api: ConanAPIV2, parser, *args):
     """
-    Uploads a recipe and binary packages to a remote.
-    By default, all the matching references are uploaded (all revisions).
-    By default, if a recipe reference is specified, it will upload all the revisions for all the
-    binary packages, unless --only-recipe is specified. You can use the "latest" placeholder at the
-    "reference" argument to specify the latest revision of the recipe or the package.
+    Download a conan package from a remote server, by its reference. It downloads just the package,
+    but not it transitive dependencies, and it will not call any generate, generators or deployers.
+    It can download multiple packages if patterns are used, and also queries over the package
+    binaries can be provided.
     """
     _not_specified_ = object()
 
