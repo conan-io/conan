@@ -10,7 +10,7 @@ from conans.errors import ConanException
 def download(conan_api: ConanAPIV2, parser, *args):
     """
     Download a conan package from a remote server, by its reference. It downloads just the package,
-    but not it transitive dependencies, and it will not call any generate, generators or deployers.
+    but not its transitive dependencies, and it will not call any generate, generators or deployers.
     It can download multiple packages if patterns are used, and also queries over the package
     binaries can be provided.
     """
