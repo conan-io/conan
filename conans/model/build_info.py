@@ -144,7 +144,7 @@ class _CppInfo(object):
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+                     if not os.path.isabs(p) else p for p in paths if p is not None]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:

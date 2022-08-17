@@ -504,3 +504,15 @@ class HelloConan(ConanFile):
         self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
         self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
 
+    def test_none_folders(self):
+        # https://github.com/conan-io/conan/issues/11856
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class pkgConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.resdirs = [None]
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/1.0@")
+        assert "Created package revision" in client.out
