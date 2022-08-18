@@ -193,7 +193,7 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
     # The MYPKG_LIBRARIES contains the target for the current package, but the target is linked
     # with the dependencies also:
     assert "MYPKGB_LIBRARIES: pkgb::pkgb" in client.out
-    assert "MYPKGB_LINKED_LIBRARIES: '$<$<CONFIG:Release>:>;pkgb_DEPS_TARGET'" in client.out
+    assert "MYPKGB_LINKED_LIBRARIES: '$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;pkgb_DEPS_TARGET'" in client.out
     assert "MYPKGB_DEPS_LIBRARIES: '$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;" \
            "$<$<CONFIG:Release>:pkga::pkga>'" in client.out
 
