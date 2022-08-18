@@ -118,3 +118,27 @@ def apply_conandata_patches(conanfile):
         else:
             raise ConanException("The 'conandata.yml' file needs a 'patch_file' or 'patch_string'"
                                  " entry for every patch to be applied")
+
+
+def export_conandata_patches(conanfile):
+    """
+    Exports patches stored in 'conanfile.conan_data' (read from 'conandata.yml' file). It will export
+    all the patches under 'patches' entry that matches the given 'conanfile.version'. If versions are
+    not defined in 'conandata.yml' it will export all the patches directly under 'patches' keyword.
+    """
+
+    patches = conanfile.conan_data.get('patches')
+
+    if isinstance(patches, dict):
+        assert conanfile.version, "Can only be exported if conanfile.version is already defined"
+        entries = patches.get(conanfile.version, [])
+    elif isinstance(patches, Iterable):
+        entries = patches
+    else:
+        return
+    for it in entries:
+        if "patch_file" in it:
+            # The patch files are located in the root src
+            entry = it.copy()
+            patch_file = os.path.join(conanfile.folders.base_source, entry.pop("patch_file"))
+            conanfile.copy(patch_file)
