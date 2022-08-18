@@ -2,6 +2,7 @@ import fnmatch
 import imp
 import inspect
 import os
+import re
 import sys
 import types
 import uuid
@@ -433,6 +434,10 @@ def _parse_conanfile(conan_file_path):
     current_dir = os.path.dirname(conan_file_path)
     sys.path.insert(0, current_dir)
     try:
+        version_txt = get_required_conan_version_without_loading(conan_file_path)
+        if version_txt:
+            validate_conan_version(version_txt)
+
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
@@ -475,3 +480,20 @@ def _parse_conanfile(conan_file_path):
         sys.path.pop(0)
 
     return loaded, module_id
+
+
+def get_required_conan_version_without_loading(conan_file_path):
+    # First, try to detect the required_conan_version in "text" mode
+    # https://github.com/conan-io/conan/issues/11239
+    contents = load(conan_file_path)
+
+    txt_version = None
+
+    try:
+        found = re.search("required_conan_version\s*=\s*(.*)", contents)
+        if found:
+            txt_version = found.group(1).replace('"', "")
+    except:
+        pass
+
+    return txt_version
