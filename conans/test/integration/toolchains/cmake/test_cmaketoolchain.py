@@ -8,6 +8,7 @@ from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
@@ -784,3 +785,42 @@ def test_pkg_config_block():
     pkg_config_path_set = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
                           (client.current_folder.replace("\\", "/") + pathsep)
     assert pkg_config_path_set in toolchain
+
+
+def test_user_presets_custom_location():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+                import os
+                from conan import ConanFile
+                from conan.tools.cmake import cmake_layout, CMakeToolchain
+
+                class Conan(ConanFile):
+                    settings = "os", "arch", "compiler", "build_type"
+
+                    def generate(self):
+                        t = CMakeToolchain(self)
+                        t.user_presets_path = os.path.join(self.source_folder, "subproject")
+                        t.generate()
+
+                    def layout(self):
+                        cmake_layout(self)
+                """)
+    client.save({"CMakeLists.txt": "",
+                 "subproject/CMakeLists.txt": "",
+                 "subproject2/foo.txt": "",
+                 "conanfile.py": conanfile})
+
+    # We want to generate it to build the subproject
+    client.run("install . ")
+    assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+    assert os.path.exists(os.path.join(client.current_folder, "subproject", "CMakeUserPresets.json"))
+
+    # Prioritize the command line, it doesn't matter if there isn't CMakeLists.txt there
+    client.run("install . -c tools.cmake.cmaketoolchain.presets:user_presets_path=subproject2")
+    assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+    assert os.path.exists(os.path.join(client.current_folder, "subproject2", "CMakeUserPresets.json"))
+
+    # We can input an absolute path for the presets
+    tmp = temp_folder()
+    client.run("install . -c tools.cmake.cmaketoolchain.presets:user_presets_path='{}'".format(tmp))
+    assert os.path.exists(os.path.join(tmp, "CMakeUserPresets.json"))

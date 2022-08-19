@@ -122,7 +122,7 @@ def test_cmake_user_presets_load(existing_user_presets, schema2):
     if user_presets:
         files_to_save['CMakeUserPresets.json'] = user_presets
     t.save(files_to_save, clean_first=True)
-    t.run("install . -s:h build_type=Debug -g CMakeToolchain -c tools.cmake.cmaketoolchain.presets:user_presets_location=.")
+    t.run("install . -s:h build_type=Debug -g CMakeToolchain")
     t.run("install . -s:h build_type=Release -g CMakeToolchain")
 
     user_presets_path = os.path.join(t.current_folder, "CMakeUserPresets.json")

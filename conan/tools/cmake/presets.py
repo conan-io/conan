@@ -142,7 +142,8 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
     return ret
 
 
-def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
+def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
+                        user_presets_path=None):
     cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         if "CMAKE_SH" not in cache_variables:
@@ -186,17 +187,22 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
 
     data = json.dumps(data, indent=4)
     save(preset_path, data)
-    save_cmake_user_presets(conanfile, preset_path)
+    save_cmake_user_presets(conanfile, preset_path, user_presets_path)
 
 
-def save_cmake_user_presets(conanfile, preset_path):
+def save_cmake_user_presets(conanfile, preset_path, user_presets_path=None):
+    custom = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:user_presets_path") \
+             or user_presets_path
+
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
     if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
-        custom = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:user_presets_location")
-        output_dir = os.path.join(conanfile.source_folder, custom) \
-            if custom else conanfile.source_folder
+        if custom:
+            output_dir = os.path.join(conanfile.source_folder, custom) \
+                if not os.path.isabs(custom) else custom
+        else:
+            output_dir = conanfile.source_folder
 
-        if os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
+        if custom or os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
             """
                 Contents for the CMakeUserPresets.json
                 It uses schema version 4 unless it is forced to 2
