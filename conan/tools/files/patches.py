@@ -1,7 +1,7 @@
 import logging
 import os
 
-import patch_ng
+import patch_ng, copy
 
 from conans.errors import ConanException
 
@@ -141,4 +141,4 @@ def export_conandata_patches(conanfile):
             # The patch files are located in the root src
             entry = it.copy()
             patch_file = os.path.join(conanfile.folders.base_source, entry.pop("patch_file"))
-            conanfile.copy(patch_file)
+            copy(conanfile, patch_file, conanfile.recipe_folder, conanfile.export_sources_folder)
