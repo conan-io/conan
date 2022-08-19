@@ -192,12 +192,16 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
 def save_cmake_user_presets(conanfile, preset_path):
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
     if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
-        if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
+        custom = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:user_presets_location")
+        output_dir = os.path.join(conanfile.source_folder, custom) \
+            if custom else conanfile.source_folder
+
+        if os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
             """
                 Contents for the CMakeUserPresets.json
                 It uses schema version 4 unless it is forced to 2
             """
-            user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
+            user_presets_path = os.path.join(output_dir, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
                 data = {"version": _schema_version(conanfile, default=4),
                         "vendor": {"conan": dict()}}
