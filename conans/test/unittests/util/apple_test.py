@@ -10,6 +10,7 @@ import pytest
 from conan.tools.apple.apple import to_apple_arch, apple_min_version_flag, \
     is_apple_os
 from conans.test.utils.apple import XCRun
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 class FakeSettings(object):
@@ -55,14 +56,20 @@ class TestApple:
 
 
 class AppleTest(unittest.TestCase):
+
     def test_is_apple_os(self):
-        self.assertTrue(is_apple_os('iOS'))
-        self.assertTrue(is_apple_os('tvOS'))
-        self.assertTrue(is_apple_os('watchOS'))
-        self.assertTrue(is_apple_os('Macos'))
-        self.assertFalse(is_apple_os('Windows'))
-        self.assertFalse(is_apple_os('Linux'))
-        self.assertFalse(is_apple_os('Android'))
+        # FIXME: parametrize!
+        apple_os = ['iOS', 'tvOS', 'watchOS', 'Macos']
+        non_apple_os = ['Windows', 'Linux', 'Android']
+        conanfile = ConanFileMock()
+        for os_ in apple_os:
+            settings = MockSettings({"os": os_})
+            conanfile.settings = settings
+            self.assertTrue(is_apple_os(conanfile))
+        for os_ in non_apple_os:
+            settings = MockSettings({"os": os_})
+            conanfile.settings = settings
+            self.assertFalse(is_apple_os(conanfile))
 
     def test_to_apple_arch(self):
         self.assertEqual(to_apple_arch('x86'), 'i386')
