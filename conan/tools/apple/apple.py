@@ -37,7 +37,7 @@ def get_apple_sdk_fullname(conanfile):
         return "{}{}".format(os_sdk, os_sdk_version)
     elif os_ == "Macos":  # it has only a single value for all the architectures
         return "{}{}".format("macosx", os_sdk_version)
-    elif is_apple_os(os_):
+    elif is_apple_os(conanfile):
         raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
