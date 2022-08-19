@@ -65,7 +65,7 @@ def test_not_mixed_configurations():
     # https://github.com/conan-io/conan/issues/11852
 
     client = TestClient()
-    client.run("new foo/1.0 -m cmake_lib")
+    client.run("new cmake_lib -d name=foo  -d version=1.0")
 
     conanfile = client.load("conanfile.py")
     conanfile.replace("package_info(self)", "invalid(self)")
