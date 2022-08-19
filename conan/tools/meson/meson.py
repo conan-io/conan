@@ -48,7 +48,6 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
-        self.configure(reconfigure=True)  # To re-do the destination package-folder
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson install -C "{}"'.format(meson_build_folder)
         self._conanfile.run(cmd)
