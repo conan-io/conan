@@ -244,7 +244,7 @@ class MesonToolchain(object):
             raise ConanException("Please, specify a suitable value for os.sdk.")
 
         # Calculating the main Apple flags
-        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+        arch = to_apple_arch(self._conanfile)
         self.apple_arch_flag = ["-arch", arch] if arch else []
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]

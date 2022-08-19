@@ -405,8 +405,7 @@ class AppleSystemBlock(Block):
         if not is_apple_os(self._conanfile):
             return None
 
-        arch = self._conanfile.settings.get_safe("arch")
-        host_architecture = to_apple_arch(arch)
+        host_architecture = to_apple_arch(self._conanfile)
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
         is_debug = self._conanfile.settings.get_safe('build_type') == "Debug"
@@ -808,7 +807,7 @@ class GenericSystemBlock(Block):
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
                     _system_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    _system_processor = to_apple_arch(arch_host)
+                    _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")
