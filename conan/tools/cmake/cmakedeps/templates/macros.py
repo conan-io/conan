@@ -55,7 +55,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    # Create a micro-target for each lib/a found
                    # Allow only some characters for the target name
                    string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
-                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME})
+                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
 
                    if(is_host_windows AND library_type STREQUAL "SHARED")
                      set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
