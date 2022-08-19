@@ -3,7 +3,6 @@
 # from conan.tools.apple.apple import apple_dot_clean
 # from conan.tools.apple.apple import apple_sdk_name
 # from conan.tools.apple.apple import apple_deployment_target_flag
-# from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.apple import fix_apple_shared_install_name, is_apple_os, to_apple_arch
 from conan.tools.apple.xcodedeps import XcodeDeps
 from conan.tools.apple.xcodebuild import XcodeBuild
