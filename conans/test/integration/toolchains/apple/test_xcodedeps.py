@@ -440,7 +440,7 @@ def test_dependency_of_dependency_components():
         """)
 
     client.save({
-        'lib_a/conanfile.py': lib_a,
+        'conanfile.py': lib_a,
         'lib_b/conanfile.py': lib_b,
         'lib_c/conanfile.py': lib_c,
     })
@@ -449,7 +449,7 @@ def test_dependency_of_dependency_components():
 
     client.run("create lib_b")
 
-    client.run("install lib_a -g XcodeDeps")
+    client.run("install . -g XcodeDeps")
 
     lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
 

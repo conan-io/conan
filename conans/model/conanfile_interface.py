@@ -28,6 +28,10 @@ class ConanFileInterface:
         return self._conanfile.options
 
     @property
+    def recipe_folder(self):
+        return self._conanfile.recipe_folder
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
 
