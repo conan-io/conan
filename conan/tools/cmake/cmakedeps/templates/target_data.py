@@ -159,8 +159,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return _TargetDataContext(global_cppinfo, pfolder_var_name,
-                                  self.conanfile.package_folder)
+        # TODO: Read a property to discard this is shared
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
+                                  self.require, self.cmake_package_type, self.is_host_windows)
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
