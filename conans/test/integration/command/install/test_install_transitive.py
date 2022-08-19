@@ -13,7 +13,7 @@ from conans.util.files import save, load
 @pytest.fixture()
 def client():
     c = TestClient()
-    save(c.cache.settings_path, "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]")
+    save(c.cache.settings_path, "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]\narch_build: [x86_64]")
     save(c.cache.default_profile_path, "[settings]\nos=Windows")
 
     def base_conanfile(name):

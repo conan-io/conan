@@ -67,3 +67,10 @@ def test_m1(op_system):
     client.run_command("lipo -info {}".format(main_path))
     assert "Non-fat file" in client.out
     assert "is architecture: arm64" in client.out
+    client.run_command(f"vtool -show-build {main_path}")
+
+    if op_system == "Macos":
+        assert "platform MACOS"
+    elif op_system == "iOS":
+        assert "platform IOS"
+        assert "minos 12.0"

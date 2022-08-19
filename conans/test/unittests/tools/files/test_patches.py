@@ -182,7 +182,7 @@ def test_multiple_with_version(mock_patch_ng):
     with redirect_output(output):
         conanfile = ConanFileMock()
         conanfile.display_name = 'mocked/ref'
-        conanfile.conan_data = {'patches': {
+        conandata_contents = {'patches': {
             "1.11.0": [
                 {'patch_file': 'patches/0001-buildflatbuffers-cmake.patch',
                  'base_path': 'source_subfolder', },
@@ -197,6 +197,8 @@ def test_multiple_with_version(mock_patch_ng):
                  'base_path': 'source_subfolder', },
             ]}}
 
+        conanfile.conan_data = conandata_contents.copy()
+
         with pytest.raises(AssertionError) as excinfo:
             apply_conandata_patches(conanfile)
         assert 'Can only be applied if conanfile.version is already defined' == str(excinfo.value)
@@ -210,3 +212,6 @@ def test_multiple_with_version(mock_patch_ng):
         apply_conandata_patches(conanfile)
         assert 'mocked/ref: Apply patch (backport): Needed to build with modern clang compilers.\n' \
                == output.getvalue()
+
+        # Ensure the function is not mutating the `conan_data` structure
+        assert conanfile.conan_data == conandata_contents

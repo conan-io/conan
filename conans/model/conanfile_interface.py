@@ -94,3 +94,23 @@ class ConanFileInterface:
 
     def set_deploy_folder(self, deploy_folder):
         self._conanfile.set_deploy_folder(deploy_folder)
+
+    @property
+    def conan_data(self):
+        return self._conanfile.conan_data
+
+    @property
+    def license(self):
+        return self._conanfile.license
+
+    @property
+    def description(self):
+        return self._conanfile.description
+
+    @property
+    def homepage(self):
+        return self._conanfile.homepage
+
+    @property
+    def url(self):
+        return self._conanfile.url

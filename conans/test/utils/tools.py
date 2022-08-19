@@ -467,6 +467,12 @@ class TestClient(object):
                 with mock.patch("getpass.getpass", mock_get_pass):
                     yield
 
+    def get_default_host_profile(self):
+        return self.cache.default_profile
+
+    def get_default_build_profile(self):
+        return self.cache.default_profile
+
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
