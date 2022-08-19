@@ -434,20 +434,23 @@ def _parse_conanfile(conan_file_path):
     current_dir = os.path.dirname(conan_file_path)
     sys.path.insert(0, current_dir)
     try:
-        version_txt = get_required_conan_version_without_loading(conan_file_path)
-        if version_txt:
-            validate_conan_version(version_txt)
-
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
-            sys.dont_write_bytecode = old_dont_write_bytecode
+            try:
+                # FIXME: imp is deprecated in favour of implib
+                loaded = imp.load_source(module_id, conan_file_path)
+            except ImportError:
+                version_txt = get_required_conan_version_without_loading(conan_file_path)
+                if version_txt:
+                    validate_conan_version(version_txt)
+                raise
 
-        required_conan_version = getattr(loaded, "required_conan_version", None)
-        if required_conan_version:
-            validate_conan_version(required_conan_version)
+            required_conan_version = getattr(loaded, "required_conan_version", None)
+            if required_conan_version:
+                validate_conan_version(required_conan_version)
+            sys.dont_write_bytecode = old_dont_write_bytecode
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
