@@ -340,3 +340,28 @@ def test_relate_base_path_all_versions(mock_patch_ng):
 
     assert mock_patch_ng.apply_args[0].endswith(os.path.join('source_subfolder', "relative_dir"))
     assert mock_patch_ng.apply_args[1:] == (0, False)
+
+def test_export_conandata_patches(mock_patch_ng):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import export_conandata_patches, get
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
+            def export_sources(self):
+                export_conandata_patches(self)
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
+            base_path: "relative_dir"
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
