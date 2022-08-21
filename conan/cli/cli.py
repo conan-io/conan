@@ -32,12 +32,14 @@ class Cli:
         self._conan_api = conan_api
         self._groups = defaultdict(list)
         self._commands = {}
+
+    def _add_commands(self):
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
         for module in pkgutil.iter_modules([conan_commands_path]):
             module_name = module[1]
             self._add_command("conan.cli.commands.{}".format(module_name), module_name)
 
-        custom_commands_path = ClientCache(conan_api.cache_folder).custom_commands_path
+        custom_commands_path = ClientCache(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
             return
 
@@ -45,7 +47,11 @@ class Cli:
         for module in pkgutil.iter_modules([custom_commands_path]):
             module_name = module[1]
             if module_name.startswith("cmd_"):
-                self._add_command(module_name, module_name.replace("cmd_", ""))
+                try:
+                    self._add_command(module_name, module_name.replace("cmd_", ""))
+                except Exception as e:
+                    ConanOutput().error("Error loading custom command "
+                                        "'{}.py': {}".format(module_name, e))
         # layers
         for folder in os.listdir(custom_commands_path):
             layer_folder = os.path.join(custom_commands_path, folder)
@@ -135,6 +141,7 @@ class Cli:
         """
         output = ConanOutput()
         try:
+            self._add_commands()
             try:
                 command_argument = args[0][0]
             except IndexError:  # No parameters

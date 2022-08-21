@@ -46,7 +46,7 @@ class GnuDepsFlags(object):
         or an empty array, if Apple Frameworks aren't supported by the given compiler
         """
         os_ = self._conanfile.settings.get_safe("os")
-        if not frameworks or not is_apple_os(os_):
+        if not frameworks or not is_apple_os(self._conanfile):
             return []
         compiler = self._conanfile.settings.get_safe("compiler")
         if str(compiler) not in self._GCC_LIKE:

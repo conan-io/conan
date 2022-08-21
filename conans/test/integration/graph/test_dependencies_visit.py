@@ -213,3 +213,41 @@ def test_dependencies_package_type():
     assert "APP: True!!" in c.out
     assert "conanfile.py: Error in generate() method, line 9" in c.out
     assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out
+
+
+def test_dependency_interface():
+    """
+    Quick test for the ConanFileInterface exposed
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            homepage = "myhome"
+            url = "myurl"
+            license = "MIT"
+        """)
+    user = textwrap.dedent("""
+        from conan import ConanFile
+        class User(ConanFile):
+            requires = "dep/1.0"
+            def generate(self):
+                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
+                self.output.info("URL: {}".format(self.dependencies["dep"].url))
+                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
+                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
+                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "dep/conandata.yml": "",
+            "user/conanfile.py": user})
+    c.run("create dep")
+    c.run("install user")
+    assert "conanfile.py: HOME: myhome" in c.out
+    assert "conanfile.py: URL: myurl" in c.out
+    assert "conanfile.py: LICENSE: MIT" in c.out
+    assert "conanfile.py: RECIPE:" in c.out
+    assert "conanfile.py: CONANDATA: {}" in c.out

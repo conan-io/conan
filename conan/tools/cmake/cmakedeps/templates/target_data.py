@@ -97,7 +97,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
 
-              {% if not has_components %}
 
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
@@ -119,7 +118,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
               set({{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }} {{ global_cpp.no_soname }})
 
-              {% else %}
+
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
@@ -151,16 +150,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
-              {%- endfor %}
 
-              {%- endif %}
+
+              {%- endfor %}
           """)
         return ret
 
     def _get_global_cpp_cmake(self):
+        global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         # TODO: Read a property to discard this is shared
-        return _TargetDataContext(self.conanfile.cpp_info, pfolder_var_name, self.conanfile.package_folder,
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
                                   self.require, self.cmake_package_type, self.is_host_windows)
 
     def _get_required_components_cpp(self):

@@ -103,14 +103,14 @@ class MockConanfile(ConanFile):
 
 class ConanFileMock(ConanFile):
 
-    def __init__(self, shared=None, ):
+    def __init__(self, shared=None):
         self.display_name = ""
         self._conan_node = None
         self.command = None
         self._commands = []
         self.path = None
         self.settings = None
-        self.settings_build = MockSettings({})
+        self.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
         self.options = Options()
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)

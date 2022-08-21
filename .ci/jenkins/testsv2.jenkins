@@ -22,17 +22,20 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         if (moduleName=="conans/test/functional") {
             configs.add([node: "Windows", pyvers: ["PY36"]])
             configs.add([node: "Macos", pyvers: ["PY36"]])
+            configs.add([node: "M1Macos", pyvers: ["PY36"]])
         }
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M1Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
         configs.add([node: "Linux", pyvers: ["PY36"]])
         configs.add([node: "Windows", pyvers: ["PY36"]])
         configs.add([node: "Macos", pyvers: ["PY36"]])
+        configs.add([node: "M1Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -93,10 +96,10 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     }
                     finally {}
                 }
-                else if (nodeName=="Macos") {
+                else if (nodeName=="Macos" || nodeName=="M1Macos") {
                     def localDir = "/Users/jenkins"
-                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.13", "PY38=3.8.6", "PY39=3.9.0",
-                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
+                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.6", "PY39=3.9.0",
+                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
                                 def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"

@@ -5,6 +5,21 @@ from conans.test.utils.tools import TestClient
 
 
 class TestCustomCommands:
+
+    def test_import_error_custom_command(self):
+        mycommand = textwrap.dedent("""
+            import this_doesnt_exist
+            """)
+
+        client = TestClient()
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        client.save({f"{command_file_path}": mycommand})
+        # Call to any other command, it will fail loading the custom command
+        client.run("list recipes '*'")
+        assert "ERROR: Error loading custom command 'cmd_mycommand.py': " \
+               "No module named 'this_doesnt_exist'" in client.out
+
     def test_simple_custom_command(self):
         mycommand = textwrap.dedent("""
             import json

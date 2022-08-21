@@ -104,6 +104,8 @@ def deduce_subsystem(conanfile, scope):
     if scope.startswith("build"):
         if hasattr(conanfile, "settings_build"):
             the_os = conanfile.settings_build.get_safe("os")
+            if the_os is None:
+                raise ConanException("The 'build' profile must have a 'os' declared")
             subsystem = conanfile.settings_build.get_safe("os.subsystem")
         else:
             the_os = platform.system()  # FIXME: Temporary fallback until 2.0

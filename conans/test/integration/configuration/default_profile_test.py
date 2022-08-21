@@ -19,7 +19,6 @@ class DefaultProfileTest(unittest.TestCase):
         conanfile = GenConanfile()
 
         client = TestClient()
-        save(client.cache.default_profile_path, "")
 
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
@@ -165,7 +164,7 @@ class MyConanfile(ConanFile):
 
         # Test with the 'default' profile
         env_variable = "env_variable=profile_default"
-        save(client.cache.default_profile_path, "[buildenv]\n" + env_variable)
+        save(client.cache.default_profile_path, "[settings]\nos=Windows\n[buildenv]\n" + env_variable)
         client.run("create . --name=name --version=version --user=user --channel=channel")
         self.assertIn(">>> " + env_variable, client.out)
 
@@ -173,7 +172,7 @@ class MyConanfile(ConanFile):
         tmp = temp_folder()
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
-        save(default_profile_path, "[buildenv]\n" + env_variable)
+        save(default_profile_path, "[settings]\nos=Windows\n[buildenv]\n" + env_variable)
         with environment_update({'CONAN_DEFAULT_PROFILE': default_profile_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)
@@ -184,7 +183,7 @@ class MyConanfile(ConanFile):
         self.assertFalse(os.path.isabs(rel_path))
         default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
-        save(default_profile_path, "[buildenv]\n" + env_variable)
+        save(default_profile_path, "[settings]\nos=Windows\n[buildenv]\n" + env_variable)
         with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)

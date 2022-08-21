@@ -62,7 +62,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "") # Will be filled later
         conan_find_apple_frameworks({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS{{ config_suffix }}}" "{{ '${' }}{{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }}}")
 
-        set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
+        set({{ pkg_name }}_LIBRARIES_TARGETS "") # Will be filled later
 
 
         ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
@@ -86,7 +86,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${' }}{{ pkg_name }}_IS_HOST_WINDOWS{{ config_suffix }}}"
                                       {{ pkg_name + '_DEPS_TARGET'}}
                                       {{ pkg_name }}_LIBRARIES_TARGETS  # out_libraries_targets
-                                      "{{ config }}"  # config_suffix
+                                      "{{ config_suffix }}"
                                       "{{ pkg_name }}"    # package_name
                                       "{{ '${' }}{{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }}}")  # soname
 
@@ -100,7 +100,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_LINK_LIBRARIES
                          $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_OBJECTS'+config_suffix+'}' }}>
-                         ${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}>
                          APPEND)
 
             if("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}" STREQUAL "")
@@ -170,7 +170,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_IS_HOST_WINDOWS'+config_suffix+'}' }}"
                                       {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
                                       {{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS
-                                      "{{ config }}" # DEBUG, RELEASE...
+                                      "{{ config_suffix }}"
                                       "{{ pkg_name }}_{{ comp_variable_name }}"
                                       "{{ '${'+pkg_name+'_'+comp_variable_name+'_NO_SONAME_MODE'+config_suffix+'}' }}")
 
@@ -179,7 +179,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 set_property(TARGET {{comp_target_name}}
                              PROPERTY INTERFACE_LINK_LIBRARIES
                              $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_OBJECTS'+config_suffix+'}' }}>
-                             ${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}
+                             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}>
                              APPEND)
 
                 if("{{ '${' }}{{ pkg_name }}_{{comp_variable_name}}_LIBS{{ config_suffix }}}" STREQUAL "")

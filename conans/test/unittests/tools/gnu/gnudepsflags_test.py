@@ -26,7 +26,7 @@ def test_framework_flags_only_for_apple_os(os_):
     gnudepsflags = GnuDepsFlags(conanfile, cpp_info)
     expected_framework = []
     expected_framework_path = []
-    if is_apple_os(os_):
+    if is_apple_os(conanfile):
         expected_framework = ["-framework Foundation"]
         expected_framework_path = ["-F Framework"]
     assert gnudepsflags.frameworks == expected_framework

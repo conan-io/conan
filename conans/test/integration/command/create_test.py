@@ -15,8 +15,6 @@ class CreateTest(unittest.TestCase):
 
     def test_dependencies_order_matches_requires(self):
         client = TestClient()
-        save(client.cache.default_profile_path, "")
-        save(client.cache.settings_path, "build_type: [Release, Debug]\narch: [x86]")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkga --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": GenConanfile()})
