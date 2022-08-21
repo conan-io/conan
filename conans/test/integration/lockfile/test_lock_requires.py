@@ -355,7 +355,7 @@ def test_lock_tool_requires_test():
     # https://github.com/conan-io/conan/issues/11763
 
     c = TestClient()
-    cmake = GenConanfile("cmake", "1.0")
+    cmake = GenConanfile("cmake")
     libsodium = GenConanfile("libsodium", "1.0")
 
     test_package = textwrap.dedent("""
@@ -364,7 +364,7 @@ def test_lock_tool_requires_test():
         class TestPackageConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             def build_requirements(self):
-                self.tool_requires("cmake/1.0")
+                self.tool_requires("cmake/[*]")
             def requirements(self):
                 self.requires(self.tested_reference_str)
             def test(self):
@@ -375,7 +375,14 @@ def test_lock_tool_requires_test():
             "conanfile.py": libsodium,
             "test_package/conanfile.py": test_package})
 
-    c.run("create cmake.py")
+    c.run("create cmake.py --version=1.0")
     c.run("lock create .")
+    assert "cmake/1.0" not in c.load("conan.lock")
+    c.run("lock create test_package --lockfile=conan.lock --lockfile-out=conan.lock")
+    assert "cmake/1.0" in c.load("conan.lock")
+
+    c.run("create cmake.py --version=2.0")
     c.run("create . --lockfile=conan.lock")
+    assert "cmake/1.0" in c.out
+    assert "cmake/2.0" not in c.out
     assert "package tested" in c.out
