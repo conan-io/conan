@@ -110,12 +110,13 @@ def editable_cmake_exe(generator):
         build_dep()
 
     def run_pkg(msg):
+        host_arch = c.get_default_host_profile().settings['arch']
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command("conanrunenv-release-x86_64", c.current_folder,
+        cmd_release = environment_wrap_command(f"conanrunenv-release-{host_arch}", c.current_folder,
                                                "dep_app",)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command("conanrunenv-debug-x86_64", c.current_folder,
+        cmd_release = environment_wrap_command(f"conanrunenv-debug-{host_arch}", c.current_folder,
                                                "dep_app", )
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out

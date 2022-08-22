@@ -495,9 +495,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
             self.assertIn("./configure  --build=x86_64-linux-gnu --host=x86_64-w64-mingw32",
                           runner.command_called)
         else:
+            build_arch = "aarch64" if platform.machine() == "arm64" else platform.machine()
             self.assertIn("x86_64-w64-mingw32", ab.host)
-            self.assertIn("x86_64-apple-darwin", ab.build)
-            self.assertIn("./configure  --build=x86_64-apple-darwin --host=x86_64-w64-mingw32",
+            self.assertIn(f"{build_arch}-apple-darwin", ab.build)
+            self.assertIn(f"./configure  --build={build_arch}-apple-darwin --host=x86_64-w64-mingw32",
                           runner.command_called)
 
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")

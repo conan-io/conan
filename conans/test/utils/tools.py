@@ -532,6 +532,12 @@ class TestClient(object):
         else:
             return self.get_conan_api_v1()
 
+    def get_default_host_profile(self):
+        return self.cache.default_profile
+
+    def get_default_build_profile(self):
+        return self.cache.default_profile
+
     def run_cli(self, command_line, assert_error=False):
         conan = self.get_conan_api()
         self.api = conan

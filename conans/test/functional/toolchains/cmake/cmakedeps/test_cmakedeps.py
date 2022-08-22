@@ -64,7 +64,8 @@ def test_transitive_multi(client):
         # to skip finding first possible FindBye somewhere
         assert "find_dependency(${_DEPENDENCY} REQUIRED ${${_DEPENDENCY}_FIND_MODE})" \
                in client.load("libb-config.cmake")
-        assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load("libb-release-x86_64-data.cmake")
+        arch = client.get_default_host_profile().settings['arch']
+        assert 'set(liba_FIND_MODE "NO_MODULE")' in client.load(f"libb-release-{arch}-data.cmake")
 
         if platform.system() == "Windows":
             client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
@@ -141,14 +142,15 @@ def test_system_libs():
         message("Libraries to Link debug: ${Test_LIBS_DEBUG}")
         get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
         message("Target libs: ${tmp}")
-        get_target_property(tmp CONAN_LIB::Test_lib1 INTERFACE_LINK_LIBRARIES)
+        get_target_property(tmp CONAN_LIB::Test_lib1_%s INTERFACE_LINK_LIBRARIES)
         message("Micro-target libs: ${tmp}")
         get_target_property(tmp Test_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
         message("Micro-target deps: ${tmp}")
         """)
 
     for build_type in ["Release", "Debug"]:
-        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+        client.save({"conanfile.txt": conanfile,
+                     "CMakeLists.txt": cmakelists % build_type.upper()}, clean_first=True)
         client.run("install conanfile.txt -s build_type=%s" % build_type)
         client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
 
@@ -161,7 +163,7 @@ def test_system_libs():
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
 
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;CONAN_LIB::Test_lib1" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:CONAN_LIB::Test_lib1_{build_type.upper()}>" in client.out
         assert "Micro-target libs: Test_DEPS_TARGET" in client.out
         micro_target_deps = f"Micro-target deps: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:{library_name}>;" \
                             f"$<$<CONFIG:{build_type}>:>"
@@ -225,7 +227,7 @@ def test_system_libs_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_DEPS_TARGET" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;Test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
@@ -288,7 +290,7 @@ def test_system_libs_components_no_libs():
         library_name = "sys1d" if build_type == "Debug" else "sys1"
 
         assert f"System libs {build_type}: {library_name}" in client.out
-        assert f"Target libs: $<$<CONFIG:{build_type}>:>;Test_Test_foo_DEPS_TARGET" in client.out
+        assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;Test_Test_foo_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
 
@@ -357,13 +359,13 @@ def test_custom_configuration(client):
                cmake.build_context_suffix["liba"] = "_build"
                cmake.generate()
        """)
-
+    host_arch = client.get_default_host_profile().settings['arch']
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h default -s:b build_type=RelWithDebInfo"
                " -pr:b default -s:b arch=x86 --build missing")
     curdir = client.current_folder
     data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
-    data_name_context_host = "liba-debug-x86_64-data.cmake"
+    data_name_context_host = f"liba-debug-{host_arch}-data.cmake"
     assert os.path.exists(os.path.join(curdir, data_name_context_build))
     assert os.path.exists(os.path.join(curdir, data_name_context_host))
 
@@ -506,7 +508,8 @@ def test_system_dep():
 
     client.run("install consumer")
     if platform.system() != "Windows":
-        data = os.path.join("consumer/build/generators/mylib-release-x86_64-data.cmake")
+        host_arch = client.get_default_host_profile().settings['arch']
+        data = os.path.join(f"consumer/build/generators/mylib-release-{host_arch}-data.cmake")
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
 

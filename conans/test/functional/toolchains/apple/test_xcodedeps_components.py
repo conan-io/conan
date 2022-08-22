@@ -187,9 +187,11 @@ def test_xcodedeps_components():
     assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
+    host_arch = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if host_arch == "armv8" else host_arch
     client.run_command("xcodegen generate")
-    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Release -arch x86_64")
-    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Debug -arch x86_64")
+    client.run_command(f"xcodebuild -project ChatApp.xcodeproj -configuration Release -arch {arch}")
+    client.run_command(f"xcodebuild -project ChatApp.xcodeproj -configuration Debug -arch {arch}")
     client.run_command("build/Debug/chat")
     assert "core/1.0: Hello World Debug!" in client.out
     assert "tcp/1.0: Hello World Debug!" in client.out
@@ -220,7 +222,10 @@ def test_xcodedeps_test_require():
         ''')
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g XcodeDeps")
+    host_arch = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if host_arch == "armv8" else host_arch
     assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest.xcconfig"))
     assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest_gtest.xcconfig"))
-    assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest_gtest_release_x86_64.xcconfig"))
+    assert os.path.isfile(os.path.join(client.current_folder,
+                                       f"conan_gtest_gtest_release_{arch}.xcconfig"))
     assert '#include "conan_gtest.xcconfig"' in client.load("conandeps.xcconfig")

@@ -313,7 +313,7 @@ class AndroidSystemBlock(Block):
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'android_platform': self._conanfile.settings.os.api_level,
+            'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
             'android_abi': android_abi,
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
@@ -402,7 +402,7 @@ class AppleSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
+        if not is_apple_os(self._conanfile):
             return None
 
         arch = self._conanfile.settings.get_safe("arch")
@@ -522,7 +522,7 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        is_apple_ = is_apple_os(os_)
+        is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()

@@ -155,7 +155,10 @@ def test_xcodedeps_aggregate_components():
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
     assert '#include "conan_liba_liba.xcconfig"' in component7_entry
 
-    component7_vars = client.load("conan_libb_libb_comp7_release_x86_64.xcconfig")
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    component7_vars = client.load(f"conan_libb_libb_comp7_release_{arch}.xcconfig")
 
     # all of the transitive required components and the component itself are added
     for index in range(1, 8):
@@ -163,7 +166,7 @@ def test_xcodedeps_aggregate_components():
 
     assert "mylibdir" in component7_vars
 
-    component4_vars = client.load("conan_libb_libb_comp4_release_x86_64.xcconfig")
+    component4_vars = client.load(f"conan_libb_libb_comp4_release_{arch}.xcconfig")
 
     # all of the transitive required components and the component itself are added
     for index in range(1, 5):
@@ -193,7 +196,10 @@ def test_xcodedeps_frameworkdirs():
 
     client.run("install lib_a/1.0@ -g XcodeDeps")
 
-    lib_a_xcconfig = client.load("conan_lib_a_lib_a_release_x86_64.xcconfig")
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    lib_a_xcconfig = client.load(f"conan_lib_a_lib_a_release_{arch}.xcconfig")
 
     assert "lib_a_frameworkdir" in lib_a_xcconfig
 
@@ -280,3 +286,48 @@ def test_xcodedeps_cppinfo_requires():
     assert "cmp2" in lib_c
     assert "cmp3" not in lib_c
     assert "cmp4" not in lib_c
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_dependency_of_dependency_components():
+    # testing: https://github.com/conan-io/conan/pull/11772
+
+    """
+    When a dependency of a dependency would have components, only the default
+    name conan_dep_dep.xconfig would be included. However, this file was never
+    generated, as they are in the form conan_dep_component.xconfig.
+
+    lib_a -> lib_b -> lib_c (with components)
+    """
+    client = TestClient()
+    lib_a = GenConanfile("lib_a", "1.0").with_require("lib_b/1.0").with_settings("os", "arch", "build_type", "compiler")
+    lib_b = GenConanfile("lib_b", "1.0").with_require("lib_c/1.0").with_settings("os", "arch", "build_type", "compiler")
+
+    lib_c = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_aConan(ConanFile):
+            name = "lib_c"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
+                self.cpp_info.components["cmp2"].includedirs = ["include_cmp2"]
+        """)
+
+    client.save({
+        'lib_a/conanfile.py': lib_a,
+        'lib_b/conanfile.py': lib_b,
+        'lib_c/conanfile.py': lib_c,
+    })
+
+    client.run("create lib_c")
+
+    client.run("create lib_b")
+
+    client.run("install lib_a -g XcodeDeps")
+
+    lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
+
+    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig

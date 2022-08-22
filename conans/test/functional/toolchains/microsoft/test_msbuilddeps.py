@@ -672,6 +672,7 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         """)
     profile = textwrap.dedent("""
         include(default)
+        [settings]
         build_type=Release
         arch=x86_64
         [conf]

@@ -436,16 +436,26 @@ class AppleTest(Base):
         vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
-                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
                 "CMAKE_CXX_FLAGS_DEBUG": "-g",
                 "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_C_FLAGS": "-m64",
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "-m64",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
+
+        host_arch = self.client.get_default_host_profile().settings['arch']
+
+        if host_arch == "x86_64":
+            vals.update({
+                "CMAKE_C_FLAGS": "-m64",
+                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                "CMAKE_EXE_LINKER_FLAGS": "-m64",
+            })
+        else:
+            vals.update({
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+            })
 
         def _verify_out(marker=">>"):
             if shared:

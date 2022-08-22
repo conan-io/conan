@@ -1,16 +1,17 @@
 import fnmatch
 import os
+import re
 import textwrap
 from xml.dom import minidom
 
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
+EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[\.+\-]")
 
 
 class MSBuildDeps(object):
@@ -126,10 +127,13 @@ class MSBuildDeps(object):
     @staticmethod
     def _dep_name(dep, build):
         dep_name = dep.ref.name
-        dep_name = dep_name.replace(".", "_")
         if build:  # dep.context == CONTEXT_BUILD:
             dep_name += "_build"
-        return dep_name
+        return MSBuildDeps._get_valid_xml_format(dep_name)
+
+    @staticmethod
+    def _get_valid_xml_format(name):
+        return EXCLUDED_SYMBOLS_PATTERN.sub("_", name)
 
     def _vars_props_file(self, dep, name, cpp_info, deps, build):
         """
@@ -224,7 +228,6 @@ class MSBuildDeps(object):
             </Project>
             """)
             content_multi = Template(content_multi).render({"name": dep_name})
-
         # parse the multi_file and add new import statement if needed
         dom = minidom.parseString(content_multi)
         import_vars = dom.getElementsByTagName('ImportGroup')[0]
@@ -283,7 +286,7 @@ class MSBuildDeps(object):
             for comp_name, comp_info in dep.cpp_info.components.items():
                 if comp_name is None:
                     continue
-                full_comp_name = "{}_{}".format(dep_name, comp_name)
+                full_comp_name = "{}_{}".format(dep_name, self._get_valid_xml_format(comp_name))
                 vars_filename = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
                 activate_filename = "conan_%s%s.props" % (full_comp_name, conf_name)
                 comp_filename = "conan_%s.props" % full_comp_name

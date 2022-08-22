@@ -67,8 +67,8 @@ class PropagateSpecificComponents(unittest.TestCase):
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g CMakeDeps')
-
-        content = t.load('middle-release-x86_64-data.cmake')
+        arch = t.get_default_host_profile().settings['arch']
+        content = t.load(f'middle-release-{arch}-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-Target-release.cmake')
@@ -206,7 +206,7 @@ def test_components_system_libs():
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    assert 'component libs: $<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
+    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
     assert 'component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:system_lib_component>;' in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
@@ -400,7 +400,7 @@ def test_cmake_add_subdirectory():
     # The boost::boost target has linked the two components
     assert "AGGREGATED LIBS: boost::boost" in t.out
     assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
-    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
-    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
+    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
+    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
     assert "BOOST_B_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:B_1;B_2>" in t.out
     assert "BOOST_A_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:A_1;A_2>;" in t.out
