@@ -50,7 +50,7 @@ class Meson(object):
     def install(self):
         # To fix the destination package-folder
         if self._conanfile.package_folder:
-            cmd = f'meson configure --prefix "{self._conanfile.package_folder}"'
+            cmd = f'meson configure "{self._conanfile.build_folder}" -Dprefix="{self._conanfile.package_folder}"'
             self._conanfile.run(cmd)
             self._conanfile.output.info(f"Meson configure (prefix) cmd: {cmd}")
         meson_build_folder = self._conanfile.build_folder
