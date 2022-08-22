@@ -34,6 +34,7 @@ tools_locations = {
 }
 """
 
+MacOS_M1 = all([platform.system() == "Darwin", platform.machine() == "arm64"])
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -47,7 +48,9 @@ tools_locations = {
         "0.28": {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Darwin': "/opt/homebrew/bin/pkg-config" if MacOS_M1 else "/usr/local/bin/pkg-config",
+                'Linux': "/usr/bin/pkg-config"
             }
         }},
     'autotools': {"exe": "autoconf"},
@@ -174,7 +177,7 @@ try:
 except ImportError as e:
     user_tool_locations = None
 
-if platform.machine() == "arm64":
+if MacOS_M1:
     android_ndk_path = "/opt/homebrew/share/android-ndk"
 else:
     android_ndk_path = "/usr/local/share/android-ndk"
