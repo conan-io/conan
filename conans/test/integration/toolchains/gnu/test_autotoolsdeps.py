@@ -24,6 +24,50 @@ def test_link_lib_correct_order():
     # check the libs are added in the correct order with this regex
     assert re.search("export LDFLAGS.*libc.*libb.*liba", deps)
 
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
+def test_link_cppinfo_libs_with_filename():
+    libhello = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Dep(ConanFile):
+        name = "hello"
+        version = "0.1"
+        settings = "os", "arch", "compiler", "build_type"
+        options = {"my_option": ["shared_object", "archive", "just_lib"]}
+        default_options = {"my_option": "shared_object"}
+
+        def package_info(self):
+            if self.options.my_option == "shared_object":
+                self.cpp_info.libs = ["libhello.so"]
+            elif self.options.my_option == "archive":
+                self.cpp_info.libs = ["libhello.a"]
+            else:
+                self.cpp_info.libs = ["hello"]
+    """)
+
+    conanfile_consumer = textwrap.dedent("""
+    [requires]
+    hello/0.1
+    """)
+
+    client = TestClient()
+    client.save({"libhello.py": libhello, "conanfile.txt": conanfile_consumer})
+    client.run("create libhello.py -ohello:my_option=shared_object")
+    client.run("create libhello.py -ohello:my_option=archive")
+    client.run("create libhello.py -ohello:my_option=just_lib")
+
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=shared_object")
+    deps_file = client.load("conanautotoolsdeps.sh")
+    assert "-l:libhello.so" in deps_file
+
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=archive")
+    deps_file = client.load("conanautotoolsdeps.sh")
+    assert "-l:libhello.a" in deps_file
+
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=just_lib")
+    deps_file = client.load("conanautotoolsdeps.sh")
+    assert "-lhello" in deps_file   
+
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
 def test_cpp_info_aggregation():

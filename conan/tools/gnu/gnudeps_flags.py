@@ -81,7 +81,8 @@ class GnuDepsFlags(object):
                     library += ".lib"
                 result.append(library)
             else:
-                result.append("-l%s" % library)
+                namespec = f":{library}" if any(x in library for x in [".a", ".so"]) else library
+                result.append("-l%s" % namespec)
         return result
 
     def _adjust_path(self, path):
