@@ -16,10 +16,17 @@ from conans.util.files import touch
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+@pytest.mark.parametrize("lib_with_extension", 
+                        [pytest.param(True, marks=pytest.mark.skipif(platform.system() == "Darwin", reason="macos linker")),
+                        False])
 @pytest.mark.tool_autotools()
-def test_autotools():
+def test_autotools(lib_with_extension):
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=cmake_lib")
+    if lib_with_extension:
+        conanfile_hello = client.load("conanfile.py")
+        conanfile_hello = conanfile_hello.replace('["hello"]', '["libhello.a"]')
+        client.save({"conanfile.py": conanfile_hello})
     client.run("create .")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
