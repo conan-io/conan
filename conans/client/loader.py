@@ -437,12 +437,13 @@ def _parse_conanfile(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
-            sys.dont_write_bytecode = True
             try:
+                sys.dont_write_bytecode = True
                 # FIXME: imp is deprecated in favour of implib
                 loaded = imp.load_source(module_id, conan_file_path)
+                sys.dont_write_bytecode = old_dont_write_bytecode
             except ImportError:
-                version_txt = get_required_conan_version_without_loading(conan_file_path)
+                version_txt = _get_required_conan_version_without_loading(conan_file_path)
                 if version_txt:
                     validate_conan_version(version_txt)
                 raise
@@ -450,7 +451,6 @@ def _parse_conanfile(conan_file_path):
             required_conan_version = getattr(loaded, "required_conan_version", None)
             if required_conan_version:
                 validate_conan_version(required_conan_version)
-            sys.dont_write_bytecode = old_dont_write_bytecode
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
@@ -485,7 +485,7 @@ def _parse_conanfile(conan_file_path):
     return loaded, module_id
 
 
-def get_required_conan_version_without_loading(conan_file_path):
+def _get_required_conan_version_without_loading(conan_file_path):
     # First, try to detect the required_conan_version in "text" mode
     # https://github.com/conan-io/conan/issues/11239
     contents = load(conan_file_path)
@@ -493,7 +493,7 @@ def get_required_conan_version_without_loading(conan_file_path):
     txt_version = None
 
     try:
-        found = re.search("required_conan_version\s*=\s*(.*)", contents)
+        found = re.search(r"required_conan_version\s*=\s*(.*)", contents)
         if found:
             txt_version = found.group(1).replace('"', "")
     except:
