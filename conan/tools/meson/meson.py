@@ -48,9 +48,11 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
-        # To re-do the destination package-folder
+        # To fix the destination package-folder
         if self._conanfile.package_folder:
-            self._conanfile.run(f"meson configure --prefix {self._conanfile.package_folder}")
+            cmd = f'meson configure --prefix "{self._conanfile.package_folder}"'
+            self._conanfile.run(cmd)
+            self._conanfile.output.info(f"Meson configure (prefix) cmd: {cmd}")
         meson_build_folder = self._conanfile.build_folder
         cmd = f'meson install -C "{meson_build_folder}"'
         self._conanfile.run(cmd)
