@@ -59,7 +59,7 @@ def test_link_cppinfo_libs_with_filename():
     client.run("create libhello.py -ohello:my_option=archive")
     client.run("create libhello.py -ohello:my_option=just_lib")
 
-    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=shared_object")
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello*:my_option=shared_object")
     deps_file = client.load("conanautotoolsdeps.sh")
     assert "-l:libhello.so -l:libz.so" in deps_file
 
