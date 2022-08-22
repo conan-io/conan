@@ -56,18 +56,18 @@ def test_link_cppinfo_libs_with_filename():
     client = TestClient()
     client.save({"libhello.py": libhello, "conanfile.txt": conanfile_consumer})
     client.run("create libhello.py -ohello*:my_option=shared_object")
-    client.run("create libhello.py -ohello:my_option=archive")
-    client.run("create libhello.py -ohello:my_option=just_lib")
+    client.run("create libhello.py -ohello*:my_option=archive")
+    client.run("create libhello.py -ohello*:my_option=just_lib")
 
     client.run("install conanfile.txt -g AutotoolsDeps -ohello*:my_option=shared_object")
     deps_file = client.load("conanautotoolsdeps.sh")
     assert "-l:libhello.so -l:libz.so" in deps_file
 
-    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=archive")
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello*:my_option=archive")
     deps_file = client.load("conanautotoolsdeps.sh")
     assert "-l:libhello.a -l:libz.a" in deps_file
 
-    client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=just_lib")
+    client.run("install conanfile.txt -g AutotoolsDeps -ohello*:my_option=just_lib")
     deps_file = client.load("conanautotoolsdeps.sh")
     assert "-lhello -lz" in deps_file   
 
