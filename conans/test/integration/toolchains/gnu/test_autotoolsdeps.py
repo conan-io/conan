@@ -55,7 +55,7 @@ def test_link_cppinfo_libs_with_filename():
 
     client = TestClient()
     client.save({"libhello.py": libhello, "conanfile.txt": conanfile_consumer})
-    client.run("create libhello.py -ohello:my_option=shared_object")
+    client.run("create libhello.py -ohello*:my_option=shared_object")
     client.run("create libhello.py -ohello:my_option=archive")
     client.run("create libhello.py -ohello:my_option=just_lib")
 
