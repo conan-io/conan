@@ -108,7 +108,7 @@ def test_cpp_info_component_objects():
         assert """set_property(TARGET hello::say
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:Release>:${hello_hello_say_OBJECTS_RELEASE}>
-                     ${hello_hello_say_LIBRARIES_TARGETS}
+                     $<$<CONFIG:Release>:${hello_hello_say_LIBRARIES_TARGETS}>
                      APPEND)""" in content
         # If there are componets, there is not a global cpp so this is not generated
         assert "hello_OBJECTS_RELEASE" not in content
@@ -118,9 +118,10 @@ def test_cpp_info_component_objects():
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
-        # Not global variables
+        # https://github.com/conan-io/conan/issues/11862
+        # Global variables
         assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' \
-               not in content
+               in content
         # But component variables
         assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/' \
                'mycomponent.o")' in content

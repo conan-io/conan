@@ -5,8 +5,9 @@ import os
 from conans.util.runners import check_output_runner
 
 
-def is_apple_os(os_):
+def is_apple_os(conanfile):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    os_ = conanfile.settings.get_safe("os")
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
@@ -176,7 +177,7 @@ def fix_apple_shared_install_name(conanfile):
 
     substitutions = {}
 
-    if is_apple_os(conanfile.settings.get_safe("os")) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
