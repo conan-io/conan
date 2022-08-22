@@ -39,10 +39,13 @@ def test_link_cppinfo_libs_with_filename():
         def package_info(self):
             if self.options.my_option == "shared_object":
                 self.cpp_info.libs = ["libhello.so"]
+                self.cpp_info.system_libs = ["libz.so"]
             elif self.options.my_option == "archive":
                 self.cpp_info.libs = ["libhello.a"]
+                self.cpp_info.system_libs = ["libz.a"]
             else:
                 self.cpp_info.libs = ["hello"]
+                self.cpp_info.system_libs = ["z"]
     """)
 
     conanfile_consumer = textwrap.dedent("""
@@ -58,15 +61,15 @@ def test_link_cppinfo_libs_with_filename():
 
     client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=shared_object")
     deps_file = client.load("conanautotoolsdeps.sh")
-    assert "-l:libhello.so" in deps_file
+    assert "-l:libhello.so -l:libz.so" in deps_file
 
     client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=archive")
     deps_file = client.load("conanautotoolsdeps.sh")
-    assert "-l:libhello.a" in deps_file
+    assert "-l:libhello.a -l:libz.a" in deps_file
 
     client.run("install conanfile.txt -g AutotoolsDeps -ohello:my_option=just_lib")
     deps_file = client.load("conanautotoolsdeps.sh")
-    assert "-lhello" in deps_file   
+    assert "-lhello -lz" in deps_file   
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
