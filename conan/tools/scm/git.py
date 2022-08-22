@@ -76,7 +76,8 @@ class Git(object):
         folder = self._run("rev-parse --show-toplevel")
         return folder.replace("\\", "/")
 
-    def clone(self, url, target="", args=[]):
+    def clone(self, url, target="", args=None):
+        args = args or []
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
