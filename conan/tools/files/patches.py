@@ -1,14 +1,11 @@
 import logging
 import os
+import shutil
 
-import patch_ng, copy
+import patch_ng
 
 from conans.errors import ConanException
-
-try:
-    from collections.abc import Iterable
-except ImportError:
-    from collections import Iterable
+from conans.util.files import mkdir
 
 
 class PatchLogHandler(logging.Handler):
@@ -97,16 +94,20 @@ def apply_conandata_patches(conanfile):
         - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
     ```
     """
+    if conanfile.conan_data is None:
+        raise ConanException("conandata.yml not defined")
 
     patches = conanfile.conan_data.get('patches')
+    if not patches:
+        raise ConanException("No patches defined in conandata")
 
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
         entries = patches.get(conanfile.version, [])
-    elif isinstance(patches, Iterable):
+    elif isinstance(patches, list):
         entries = patches
     else:
-        return
+        raise ConanException("conandata.yml 'patches' should be a list or a dict {version: list}")
     for it in entries:
         if "patch_file" in it:
             # The patch files are located in the root src
@@ -126,19 +127,24 @@ def export_conandata_patches(conanfile):
     all the patches under 'patches' entry that matches the given 'conanfile.version'. If versions are
     not defined in 'conandata.yml' it will export all the patches directly under 'patches' keyword.
     """
+    if conanfile.conan_data is None:
+        raise ConanException("conandata.yml not defined")
 
     patches = conanfile.conan_data.get('patches')
+    if not patches:
+        raise ConanException("No patches defined in conandata")
 
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be exported if conanfile.version is already defined"
         entries = patches.get(conanfile.version, [])
-    elif isinstance(patches, Iterable):
+    elif isinstance(patches, list):
         entries = patches
     else:
-        return
+        raise ConanException("conandata.yml 'patches' should be a list or a dict {version: list}")
     for it in entries:
-        if "patch_file" in it:
-            # The patch files are located in the root src
-            entry = it.copy()
-            patch_file = os.path.join(conanfile.folders.base_source, entry.pop("patch_file"))
-            copy(conanfile, patch_file, conanfile.recipe_folder, conanfile.export_sources_folder)
+        patch_file = it.get("patch_file")
+        if patch_file:
+            src = os.path.join(conanfile.recipe_folder, patch_file)
+            dst = os.path.join(conanfile.export_sources_folder, patch_file)
+            mkdir(os.path.dirname(dst))
+            shutil.copy2(src, dst)
