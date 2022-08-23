@@ -34,7 +34,9 @@ tools_locations = {
 }
 """
 
-MacOS_M1 = all([platform.system() == "Darwin", platform.machine() == "arm64"])
+MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
+homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
+
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -49,7 +51,7 @@ tools_locations = {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
                 'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
-                'Darwin': "/opt/homebrew/bin/pkg-config" if MacOS_M1 else "/usr/local/bin/pkg-config",
+                'Darwin': f"{homebrew_root}/bin/pkg-config",
                 'Linux': "/usr/bin/pkg-config"
             }
         }},
@@ -177,16 +179,13 @@ try:
 except ImportError as e:
     user_tool_locations = None
 
-if MacOS_M1:
-    android_ndk_path = "/opt/homebrew/share/android-ndk"
-else:
-    android_ndk_path = "/usr/local/share/android-ndk"
+
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
     'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
     'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}},
-    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': android_ndk_path}}
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': f"{homebrew_root}/share/android-ndk"}}
 }
 
 
