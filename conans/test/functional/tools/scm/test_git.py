@@ -209,6 +209,60 @@ class TestGitBasicClone:
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
 
+class TestGitCloneWithArgs:
+    """ Git cloning passing additional arguments
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def layout(self):
+                self.folders.source = "source"
+
+            def source(self):
+                git = Git(self)
+                git.clone(url="{url}", target=".", args={args})
+                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
+        """)
+
+    def test_clone_specify_branch_or_tag(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder,
+                                                   commits=3, branch="main", tags=["v1.2.3"])
+
+        c = TestClient()
+        git_args = ['--branch', 'main']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+        git_args = ['--branch', 'v1.2.3']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+    def test_clone_invalid_branch_argument(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder,
+                                                   commits=3, branch="main", tags=["v1.2.3"])
+        c = TestClient()
+        git_args = ['--branch', 'foobar']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        with pytest.raises(Exception):
+            c.run("create .")
+            assert "Remote branch foobar not found" in c.out
+
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlow:
     """ Build the full new SCM approach:

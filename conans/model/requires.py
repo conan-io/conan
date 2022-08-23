@@ -180,7 +180,7 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, reference, private=False, override=False):
+    def __call__(self, reference, private=False, override=False, **kwargs):
         self.add(reference, private, override)
 
     def __repr__(self):
