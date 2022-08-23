@@ -98,7 +98,7 @@ def apply_conandata_patches(conanfile):
         raise ConanException("conandata.yml not defined")
 
     patches = conanfile.conan_data.get('patches')
-    if not patches:
+    if patches is None:
         raise ConanException("No patches defined in conandata")
 
     if isinstance(patches, dict):
@@ -131,7 +131,7 @@ def export_conandata_patches(conanfile):
         raise ConanException("conandata.yml not defined")
 
     patches = conanfile.conan_data.get('patches')
-    if not patches:
+    if patches is None:
         raise ConanException("No patches defined in conandata")
 
     if isinstance(patches, dict):
