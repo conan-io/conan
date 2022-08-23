@@ -23,12 +23,12 @@ tools_locations = {
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
-        # To explicitly skip one tool for one version, define the path as None
+        # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
         "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
-                          "Darwin": None}},
+                          "Darwin": "skip-tests"}},
     },
     'ninja': {
         "1.10.2": {}
@@ -83,7 +83,7 @@ tools_locations = {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      # Not available in Linux
-                     'Linux': None}
+                     'Linux': "skip-tests"}
         }
     },
     'ninja': {
@@ -149,7 +149,6 @@ tools_locations = {
             "path": {'Linux': '/usr/local/bin/premake5'}
         }
     },
-    'premake': {},
     'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
@@ -228,14 +227,14 @@ def _get_individual_tool(name, version):
             if vswhere():  # TODO: Missing version detection
                 return None, None
 
-        tool_path = tool_version.get("path", {}).get(tool_platform, "undefined")
+        tool_path = tool_version.get("path", {}).get(tool_platform)
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
         #                        'Linux': None}}
         #          }
-        if tool_path is None:
+        if tool_path is "skip-tests":
             return False
     else:
         if version is not None:  # if the version is specified, it should be in the conf
@@ -258,9 +257,10 @@ def _get_individual_tool(name, version):
     exe_found = which(exe)  # TODO: This which doesn't detect version either
     if not exe_found:
         cached = True
-        if tool_path == "undefined":
-            return True # will fail the test, not exe found and path undefined
-    elif tool_path == "undefined":
+        if tool_path is None:
+            # will fail the test, not exe found and path None
+            return True
+    elif tool_path is None:
         cached = exe_found, tool_env
 
     if old_environ is not None:
