@@ -69,3 +69,16 @@ def test_special_chars():
     save(os.path.join(tmp_dir, "conanmanifest.txt"), "1478122267\nsome: file.py: 123\n")
     read_manifest = FileTreeManifest.load(tmp_dir)
     assert read_manifest.file_sums["some: file.py"] == "123"
+
+
+def test_pycache_included():
+    tmp_dir = temp_folder()
+    files = {"__pycache__/damn.py": "binarythings",
+             "pythonfile.pyc": "binarythings3"}
+    for filename, content in files.items():
+        save(os.path.join(tmp_dir, filename), content)
+
+    manifest = FileTreeManifest.create(tmp_dir)
+    manifest = repr(manifest)
+    assert "pythonfile.pyc" in manifest
+    assert "__pycache__/damn.py" in manifest

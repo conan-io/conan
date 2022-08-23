@@ -36,6 +36,9 @@ tools_locations = {
 }
 """
 
+MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
+homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
+
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -48,8 +51,10 @@ tools_locations = {
         "default": "0.28",
         "0.28": {
             "path": {
-                # Using chocolatey in Windows -> choco install --requires=pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Darwin': f"{homebrew_root}/bin/pkg-config",
+                'Linux': "/usr/bin/pkg-config"
             }
         }},
     'autotools': {"exe": "autoconf"},
@@ -210,6 +215,7 @@ try:
 except ImportError as e:
     user_tool_locations = None
 
+
 try:
     from conans.test.conftest_user import default_profiles as user_default_profiles
     default_profiles.update(user_default_profiles)
@@ -217,6 +223,7 @@ except ImportError as e:
     user_default_profiles = None
 
 homebrew_root = "/opt/homebrew" if platform.machine() == "arm64" else "/usr/local"
+
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},

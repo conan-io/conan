@@ -109,7 +109,7 @@ def rm(conanfile, pattern, folder, recursive=False):
             break
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """
@@ -186,7 +186,7 @@ def ftp_download(conanfile, host, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None):
     """
     Retrieves a file from a given URL into a file with a given filename. It uses certificates from
     a list of known verifiers for https downloads, but this can be optionally disabled.
@@ -197,8 +197,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
-                the follow URLs will be used as mirror in case of download error.  Files accessible 
-                in the local filesystem can be referenced with a URL starting with ``file:///`` 
+                the follow URLs will be used as mirror in case of download error.  Files accessible
+                in the local filesystem can be referenced with a URL starting with ``file:///``
                 followed by an absolute path to a file (where the third ``/`` implies ``localhost``).
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
@@ -257,12 +257,13 @@ def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sh
     file_origin = _path_from_file_uri(url)
     shutil.copyfile(file_origin, file_path)
 
-    if md5:
+    if md5 is not None:
         check_md5(conanfile, file_path, md5)
-    if sha1:
+    if sha1 is not None:
         check_sha1(conanfile, file_path, sha1)
-    if sha256:
+    if sha256 is not None:
         check_sha256(conanfile, file_path, sha256)
+
 
 def _path_from_file_uri(uri):
     path = urlparse(uri).path

@@ -76,7 +76,7 @@ def _process_file(directory, filename, config, cache, folder):
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
     elif filename == "remotes.json":
-        output.info("Installing remotes.json")
+        output.info("Defining remotes from remotes.json")
         _filecopy(directory, filename, cache.cache_folder)
     else:
         relpath = os.path.relpath(directory, folder)

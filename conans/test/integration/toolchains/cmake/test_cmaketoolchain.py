@@ -470,7 +470,8 @@ def test_toolchain_cache_variables():
     with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
         client.run("install . --name=mylib --version=1.0 "
                    "-c tools.cmake.cmaketoolchain:generator='MinGW Makefiles' "
-                   "-c tools.gnu:make_program='MyMake'")
+                   "-c tools.gnu:make_program='MyMake' -c tools.build:skip_test=True")
+
     presets = json.loads(client.load("CMakePresets.json"))
     cache_variables = presets["configurePresets"][0]["cacheVariables"]
     assert cache_variables["foo"] == 'ON'
@@ -479,6 +480,7 @@ def test_toolchain_cache_variables():
     assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
+    assert cache_variables["BUILD_TESTING"] == 'OFF'
 
 
 def test_android_c_library():

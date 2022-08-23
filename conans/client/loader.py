@@ -1,6 +1,7 @@
 from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
+import re
 import sys
 import types
 import uuid
@@ -287,15 +288,21 @@ def load_python_file(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
-            sys.dont_write_bytecode = True
-            spec = imp_util.spec_from_file_location(module_id, conan_file_path)
-            loaded = imp_util.module_from_spec(spec)
-            spec.loader.exec_module(loaded)
-            sys.dont_write_bytecode = old_dont_write_bytecode
+            try:
+                sys.dont_write_bytecode = True
+                spec = imp_util.spec_from_file_location(module_id, conan_file_path)
+                loaded = imp_util.module_from_spec(spec)
+                spec.loader.exec_module(loaded)
+                sys.dont_write_bytecode = old_dont_write_bytecode
+            except ImportError:
+                version_txt = _get_required_conan_version_without_loading(conan_file_path)
+                if version_txt:
+                    validate_conan_version(version_txt)
+                raise
 
-        required_conan_version = getattr(loaded, "required_conan_version", None)
-        if required_conan_version:
-            validate_conan_version(required_conan_version)
+            required_conan_version = getattr(loaded, "required_conan_version", None)
+            if required_conan_version:
+                validate_conan_version(required_conan_version)
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
@@ -328,3 +335,20 @@ def load_python_file(conan_file_path):
         sys.path.pop(0)
 
     return loaded, module_id
+
+
+def _get_required_conan_version_without_loading(conan_file_path):
+    # First, try to detect the required_conan_version in "text" mode
+    # https://github.com/conan-io/conan/issues/11239
+    contents = load(conan_file_path)
+
+    txt_version = None
+
+    try:
+        found = re.search(r"required_conan_version\s*=\s*(.*)", contents)
+        if found:
+            txt_version = found.group(1).replace('"', "")
+    except:
+        pass
+
+    return txt_version
