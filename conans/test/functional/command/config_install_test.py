@@ -350,12 +350,14 @@ class Pkg(ConanFile):
             repotxt2 https://repotxt2.com True
         """)
 
-        # remotes.txt and json not allowed at the same time
+        # remotes.txt and json try to define both the remotes,
+        # could lead to unpredictable results
         save_files(folder, {"remotes.json": remotes_json,
                             "remotes.txt": remotes_txt})
 
-        self.client.run(f'config install "{folder}"', assert_error=True)
-        assert "'remotes.txt' and 'remotes.json' are not supported at the same time." in self.client.out
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+        assert "Defining remotes from remotes.txt" in self.client.out
 
         # If there's only a remotes.txt it's the one installed
         folder = temp_folder()

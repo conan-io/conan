@@ -139,23 +139,10 @@ def _process_folder(config, folder, cache, output):
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
 
-    all_filenames = []
-    walk_result = []
-
     for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
-            all_filenames.append(f)
-            walk_result.append((root, f, folder))
-
-    # FIXME: remove in Conan 2.0
-    if "remotes.json" in all_filenames and "remotes.txt" in all_filenames:
-        raise ConanException(
-            "'remotes.txt' and 'remotes.json' are not supported at the same time. "
-            "Please remove one of them and try to 'config install' again")
-
-    for root, f, folder in walk_result:
-        _process_file(root, f, config, cache, output, folder)
+            _process_file(root, f, config, cache, output, folder)
 
 
 def _process_download(config, cache, output, requester):
