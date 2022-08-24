@@ -270,7 +270,7 @@ def _get_individual_tool(name, version):
         # finds the exe in a path that is not the one set in the conf -> fail
         cached = True
     elif tool_path is None:
-        cached = exe_found, tool_env
+        cached = os.path.dirname(exe_found), tool_env
 
     if old_environ is not None:
         os.environ.clear()
