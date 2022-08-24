@@ -54,7 +54,6 @@ tools_locations = {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
                 'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
-                'Linux': "/usr/bin/",
             }
         }},
     'autotools': {"exe": "autoconf"},
