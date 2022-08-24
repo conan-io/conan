@@ -260,6 +260,7 @@ def _get_individual_tool(name, version):
         os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
+    exe_path = os.path.dirname(exe_found.replace(exe, ""))
     print("exe_found --> ", exe_found)
     if not exe_found:
         cached = True
@@ -270,7 +271,7 @@ def _get_individual_tool(name, version):
         # finds the exe in a path that is not the one set in the conf -> fail
         cached = True
     elif tool_path is None:
-        cached = os.path.dirname(exe_found), tool_env
+        cached = exe_path, tool_env
 
     if old_environ is not None:
         os.environ.clear()
