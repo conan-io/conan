@@ -389,3 +389,12 @@ def test_export_conandata_patches(mock_patch_ng):
     client.save({"patches/mypatch.patch": "mypatch!!!"})
     client.run("create .")
     assert "mypkg/1.0: mypatch!!!" in client.out
+
+    conandata_yml = textwrap.dedent("""
+        patches:
+            "1.0":
+                - patch_file: "patches/mypatch.patch"
+    """)
+    client.save({"conandata.yml": conandata_yml})
+    client.run("create .")
+    assert "mypkg/1.0: mypatch!!!" in client.out
