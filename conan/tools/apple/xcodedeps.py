@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.util.files import load, save
-from conan.tools.apple.apple import to_apple_arch
+from conans.client.tools.apple import to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
     // Includes both the toolchain and the dependencies

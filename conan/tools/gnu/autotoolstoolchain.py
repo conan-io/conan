@@ -63,7 +63,7 @@ class AutotoolsToolchain:
             # Apple Stuff
             if os_build == "Macos":
                 sdk_path = apple_sdk_path(conanfile)
-                apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+                apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
