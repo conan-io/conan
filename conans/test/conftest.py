@@ -291,6 +291,13 @@ def add_tool(request):
             result = _get_tool(tool_name, tool_version)
             if result is True:
                 version_msg = "Any" if tool_version is None else tool_version
+
+                # remove, just for debugging
+                tool = tools_locations.get(tool_name, {})
+                exe = tool.get("exe", tool_name)
+                exe_found = which(exe)  # TODO: This which doesn't detect version either
+                print("exe_found2 --> ", exe_found)
+
                 pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
                                                                                       version_msg))
             if result is False:
