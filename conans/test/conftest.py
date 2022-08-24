@@ -164,20 +164,20 @@ tools_locations = {
     # }
 }
 
-# try:
-#     from conans.test.conftest_user import tools_locations as user_tool_locations
-#
-#     def update(d, u):
-#         for k, v in u.items():
-#             if isinstance(v, dict):
-#                 d[k] = update(d.get(k, {}), v)
-#             else:
-#                 d[k] = v
-#         return d
-#
-#     update(tools_locations, user_tool_locations)
-# except ImportError as e:
-#     user_tool_locations = None
+try:
+    from conans.test.conftest_user import tools_locations as user_tool_locations
+
+    def update(d, u):
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = update(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+
+    update(tools_locations, user_tool_locations)
+except ImportError as e:
+    user_tool_locations = None
 
 if platform.machine() == "arm64":
     android_ndk_path = "/opt/homebrew/share/android-ndk"
@@ -240,6 +240,8 @@ def _get_individual_tool(name, version):
             return False
         elif tool_path is not None and not os.path.isdir(tool_path):
             # specified path not existing -> fail the test
+            print("cached tools --> ", _cached_tools)
+            print("tools_locations --> ", tools_locations)
             print("path not dir --> ", tool_path)
             return True
     else:
