@@ -1,5 +1,6 @@
 import os
 import platform
+import time
 
 import pytest
 
@@ -127,6 +128,8 @@ def editable_cmake_exe(generator):
     # Do a source change in the editable!
     with c.chdir("dep"):
         c.save({"src/dep.cpp": gen_function_cpp(name="dep", msg="SUPERDEP")})
+        # Set timestamp 2 seconds into the future so that `make` rebuilds the file
+        os.utime("src/dep.cpp", (time.time() + 2, time.time() + 2))
         build_dep()
 
     with c.chdir("pkg"):
