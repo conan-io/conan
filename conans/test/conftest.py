@@ -219,7 +219,6 @@ def _get_individual_tool(name, version):
 
     version = version or tool.get("default")
     tool_version = tool.get(version)
-    print("tool_version -->", tool_version)
     if tool_version is not None:
         assert isinstance(tool_version, dict)
         if tool_version.get("disabled"):
@@ -229,7 +228,6 @@ def _get_individual_tool(name, version):
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
-        print("tool_path --> ", tool_path)
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
@@ -239,10 +237,6 @@ def _get_individual_tool(name, version):
         if tool_path == "skip-tests":
             return False
         elif tool_path is not None and not os.path.isdir(tool_path):
-            # specified path not existing -> fail the test
-            print("cached tools --> ", _cached_tools)
-            print("tools_locations --> ", tools_locations)
-            print("path not dir --> ", tool_path)
             return True
     else:
         if version is not None:  # if the version is specified, it should be in the conf
@@ -264,7 +258,6 @@ def _get_individual_tool(name, version):
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
     exe_path = os.path.dirname(exe_found.replace(exe, ""))
-    print("exe_found --> ", exe_found)
     if not exe_found:
         cached = True
         if tool_path is None:
@@ -294,13 +287,6 @@ def add_tool(request):
             result = _get_tool(tool_name, tool_version)
             if result is True:
                 version_msg = "Any" if tool_version is None else tool_version
-
-                # remove, just for debugging
-                tool = tools_locations.get(tool_name, {})
-                exe = tool.get("exe", tool_name)
-                exe_found = which(exe)  # TODO: This which doesn't detect version either
-                print("exe_found2 --> ", exe_found)
-
                 pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
                                                                                       version_msg))
             if result is False:
