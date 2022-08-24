@@ -65,27 +65,27 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.15.7-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
         "3.16": {
-            "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.16.9-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
                      'Linux': '/usr/share/cmake-3.16.9/bin'}
         },
         "3.17": {
-            "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.17.5-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
                      'Linux': '/usr/share/cmake-3.17.5/bin'}
         },
         "3.19": {
-            "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.19.7-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
                      'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
         "3.23": {
-            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.23.1-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      # Not available in Linux
                      'Linux': "skip-tests"}
@@ -103,56 +103,56 @@ tools_locations = {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/mingw"}},
+        "system": {"path": {'Windows': "C:\\mingw"}},
     },
     'mingw32': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\mingw32\\bin"}},
     },
     'ucrt64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/ucrt64/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\ucrt64\\bin"}},
     },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\mingw64\\bin"}},
     },
     'msys2': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\usr\\bin"}},
     },
     'msys2_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\clang64\\bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+        "system": {"path": {'Windows': "C:\\msys64\\mingw64\\bin"}},
     },
     'cygwin': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
-        "system": {"path": {'Windows': "C:/cygwin64/bin"}},
+        "system": {"path": {'Windows': "C:\\cygwin64\\bin"}},
     },
     'bazel': {
         "default": "system",
-        "system": {"path": {'Windows': 'C:/bazel/bin',
+        "system": {"path": {'Windows': 'C:\\bazel\\bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
     'premake': {
@@ -264,7 +264,7 @@ def _get_individual_tool(name, version):
     old_environ = None
     if tool_path is not None:
         old_environ = dict(os.environ)
-        os.environ["PATH"] = os.path.normpath(tool_path) + os.pathsep + os.environ["PATH"]
+        os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
     exe_path = os.path.dirname(exe_found.replace(exe, ""))
