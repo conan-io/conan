@@ -233,29 +233,19 @@ class ConfigInstallTest(unittest.TestCase):
             repotxt2 https://repotxt2.com True
         """)
 
-        # remotes.txt and json try to define both the remotes,
-        # could lead to unpredictable results
+        # remotes.txt is ignored
         save_files(folder, {"remotes.json": remotes_json,
                             "remotes.txt": remotes_txt})
 
         self.client.run(f'config install "{folder}"')
         assert "Defining remotes from remotes.json" in self.client.out
-        assert "Defining remotes from remotes.txt" in self.client.out
-
-        # If there's only a remotes.txt it's the one installed
-        folder = temp_folder()
-        save_files(folder, {"remotes.txt": remotes_txt})
-
-        self.client.run(f'config install "{folder}"')
-
-        assert "Defining remotes from remotes.txt" in self.client.out
 
         self.client.run('remote list')
 
-        assert "repotxt1: https://repotxt1.net [Verify SSL: False]" in self.client.out
-        assert "repotxt2: https://repotxt2.com [Verify SSL: True]" in self.client.out
+        assert "repojson1: https://repojson1.net [Verify SSL: False, Enabled: True]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
 
-        # If there's only a remotes.json it's the one installed
+        # We only install remotes.json
         folder = temp_folder()
         save_files(folder, {"remotes.json": remotes_json})
 
@@ -264,8 +254,8 @@ class ConfigInstallTest(unittest.TestCase):
 
         self.client.run('remote list')
 
-        assert "repojson1: https://repojson1.net [Verify SSL: False]" in self.client.out
-        assert "repojson2: https://repojson2.com [Verify SSL: True]" in self.client.out
+        assert "repojson1: https://repojson1.net [Verify SSL: False, Enabled: True]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)
