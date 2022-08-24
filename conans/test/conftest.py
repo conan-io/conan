@@ -65,7 +65,7 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+            "path": {'Windows': 'C:\\cmake\\cmake-3.15.7-win64-x64\\bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
