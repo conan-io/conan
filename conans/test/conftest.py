@@ -22,12 +22,12 @@ tools_locations = {
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
-        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
+        "3.19": {"path": {"Windows": "C:\\ws\\cmake\\cmake-3.19.7-win64-x64\\bin"}},
         # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
-        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
+        "3.23": {"path": {"Windows": "C:\\ws\\cmake\\cmake-3.19.7-win64-x64\\bin",
                           "Darwin": "skip-tests"}},
     },
     'ninja': {
@@ -35,7 +35,7 @@ tools_locations = {
     },
     'meson': {"disabled": True},
     'bazel':  {
-        "system": {"path": {'Windows': 'C:/ws/bazel/4.2.0'}},
+        "system": {"path": {'Windows': 'C:\\ws\\bazel\\4.2.0'}},
     }
 }
 """
@@ -56,7 +56,7 @@ tools_locations = {
         "0.28": {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Windows': "C:\\ProgramData\\chocolatey\\lib\\pkgconfiglite\\tools\\pkg-config-lite-0.28-1\\bin",
                 'Darwin': f"{homebrew_root}/bin",
                 'Linux': "/usr/bin"
             }
@@ -94,7 +94,7 @@ tools_locations = {
     'ninja': {
         "default": "1.10.2",
         "1.10.2": {
-            "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
+            "path": {'Windows': 'C:\\Tools\\ninja\\1.10.2'}
         }
     },
     # This is the non-msys2 mingw, which is 32 bits x86 arch
