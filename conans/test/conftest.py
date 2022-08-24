@@ -240,6 +240,7 @@ def _get_individual_tool(name, version):
             return False
         elif tool_path is not None and not os.path.isdir(tool_path):
             # specified path not existing -> fail the test
+            print("path not dir --> ", tool_path)
             return True
     else:
         if version is not None:  # if the version is specified, it should be in the conf
