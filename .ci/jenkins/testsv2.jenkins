@@ -75,7 +75,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                      + "conan --version && conan --help && "
 
 
-                def launchTests = "python -m pytest --count 25 conans/test/functional/layout/test_editable_cmake.py -k 'test_editable_cmake_osx_exe' -n=4 --durations=20"
+                def launchTests = "python -m pytest --count 35 conans/test/functional/layout/test_editable_cmake.py -k 'test_editable_cmake_osx' -n=4 --durations=20"
 
                 if (nodeName=="Linux") {
                     try {
