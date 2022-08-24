@@ -462,7 +462,7 @@ def test_pkg_config_name_full_aliases():
     assert "Requires: compo1" == get_requires_from_content(pc_content)
 
 
-# FIXME: Is it really useful all those warning messages?
+# FIXME: Are they really useful all those warning messages?
 @pytest.mark.skip
 def test_duplicated_names_warnings():
     """
