@@ -61,6 +61,7 @@ class XcodeDeps(object):
     general_name = "conandeps.xcconfig"
 
     _conf_xconfig = textwrap.dedent("""\
+        PACKAGE_ROOT_{{pkg_name}}{{condition}} = {{root}}
         // Compiler options for {{pkg_name}}::{{comp_name}}
         HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
         GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}}{{condition}} = {{definitions}}
@@ -122,7 +123,7 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, transitive_cpp_infos):
+    def _conf_xconfig_file(self, pkg_name, comp_name, package_folder, transitive_cpp_infos):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
@@ -133,6 +134,7 @@ class XcodeDeps(object):
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
+            'root': package_folder,
             'include_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("includedirs")),
             'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
             'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
@@ -197,13 +199,13 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
-    def get_content_for_component(self, pkg_name, component_name, transitive_internal, transitive_external):
+    def get_content_for_component(self, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, transitive_internal)
+        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, package_folder, transitive_internal)
 
         # The entry point for each package
         file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
@@ -262,6 +264,7 @@ class XcodeDeps(object):
                     transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
                     component_content = self.get_content_for_component(dep_name, comp_name,
+                                                                       dep.package_folder,
                                                                        transitive_internal,
                                                                        transitive_external)
                     include_components_names.append((dep_name, comp_name))
@@ -279,7 +282,7 @@ class XcodeDeps(object):
                         public_deps.append((_format_name(d.ref.name),) * 2)
 
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                root_content = self.get_content_for_component(dep_name, dep_name, [dep.cpp_info],
+                root_content = self.get_content_for_component(dep_name, dep_name, dep.package_folder, [dep.cpp_info],
                                                               required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
