@@ -234,7 +234,7 @@ def _get_individual_tool(name, version):
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
         #                        'Linux': None}}
         #          }
-        if tool_path is "skip-tests":
+        if tool_path == "skip-tests":
             return False
         elif tool_path is not None and not os.path.isdir(tool_path):
             # specified path not existing -> fail the test
