@@ -85,12 +85,12 @@ class TestSubsystems:
 class TestSubsystemsBuild:
 
     @staticmethod
-    def _build(client, static_runtime=None):
+    def _build(client, static_runtime=None, make="make"):
         makefile = gen_makefile(apps=["app"], static_runtime=static_runtime)
         main_cpp = gen_function_cpp(name="main")
         client.save({"Makefile": makefile,
                      "app.cpp": main_cpp})
-        client.run_command("make")
+        client.run_command(make)
         client.run_command("app")
 
     @pytest.mark.parametrize("static", [True, False])
@@ -110,6 +110,22 @@ class TestSubsystemsBuild:
         # TODO: Do not hardcode the visual version
         check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
                          subsystem="msys2")
+
+    @pytest.mark.parametrize("static", [True, False])
+    @pytest.mark.tool_mingw
+    def test_mingw(self, static):
+        """
+        This will work if you installed the Mingw toolchain outside msys2, from
+        https://sourceforge.net/projects/mingw/, and installed gcc, autotools, mingw32-make, etc
+
+        But this doesn't contain "make", only "mingw32-make"
+        """
+        client = TestClient()
+        self._build(client, static_runtime=static, make="mingw32-make")
+
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
+        check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
+                         subsystem="mingw64")
 
     @pytest.mark.parametrize("static", [True, False])
     @pytest.mark.tool_msys2
