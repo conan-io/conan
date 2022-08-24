@@ -108,9 +108,10 @@ def _process_file(directory, filename, config, cache, output, folder):
         finally:
             _filecopy(directory, filename, cache.cache_folder)
             migrate_registry_file(cache, output)
+    # FIXME: remove in 2.0
     elif filename == "remotes.json":
-        # Fix for Conan 2.0
-        raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
+        output.info("Defining remotes from remotes.json")
+        _filecopy(directory, filename, cache.cache_folder)
     else:
         # This is ugly, should be removed in Conan 2.0
         if filename in ("README.md", "LICENSE.txt") and not directory.startswith("templates"):
@@ -137,6 +138,7 @@ def _process_folder(config, folder, cache, output):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
+
     for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:

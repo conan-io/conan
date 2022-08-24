@@ -6,7 +6,7 @@ from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
 
 
-def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
+def get(url, md5=None, sha1=None, sha256=None, destination=".", filename="", keep_permissions=False,
         pattern=None, requester=None, output=None, verify=True, retry=None, retry_wait=None,
         overwrite=False, auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
@@ -51,7 +51,7 @@ def ftp_download(ip, filename, login='', password=''):
 
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
-             auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, requester=None, md5=None, sha1=None, sha256=None):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.

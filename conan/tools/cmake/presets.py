@@ -133,13 +133,18 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
         if "CMAKE_SH" not in cache_variables:
             cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
 
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
+                                                default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
         if cmake_make_program:
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
     if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
         cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
+
+    if "BUILD_TESTING" not in cache_variables:
+        if conanfile.conf.get("tools.build:skip_test", check_type=bool):
+            cache_variables["BUILD_TESTING"] = "OFF"
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)

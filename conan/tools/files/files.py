@@ -78,7 +78,7 @@ def rm(conanfile, pattern, folder, recursive=False):
             break
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
@@ -124,7 +124,7 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
@@ -167,7 +167,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if file_url.startswith("file:"):
-            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5, sha1=sha1, sha256=sha256)
+            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
+                                      sha1=sha1, sha256=sha256)
         else:
             run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
                         user_download=True, url=file_url,
@@ -188,16 +189,18 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
 
+
 def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):
     file_origin = _path_from_file_uri(url)
     shutil.copyfile(file_origin, file_path)
 
-    if md5:
+    if md5 is not None:
         check_md5(conanfile, file_path, md5)
-    if sha1:
+    if sha1 is not None:
         check_sha1(conanfile, file_path, sha1)
-    if sha256:
+    if sha256 is not None:
         check_sha256(conanfile, file_path, sha256)
+
 
 def _path_from_file_uri(uri):
     path = urlparse(uri).path

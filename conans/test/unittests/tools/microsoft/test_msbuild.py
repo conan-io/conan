@@ -197,6 +197,21 @@ def test_is_msvc(compiler, expected):
     assert is_msvc(conanfile) == expected
 
 
+def test_is_msvc_build():
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": ["gcc", "msvc"],
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.compiler = "gcc"
+    conanfile.settings_build = conanfile.settings.copy()
+    conanfile.settings_build.compiler = "msvc"
+    assert is_msvc(conanfile) is False
+    assert is_msvc(conanfile, build_context=True) is True
+
+
 @pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
     ("Visual Studio", True, "MT", "Release", True),
     ("msvc", True, "static", "Release", True),

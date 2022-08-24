@@ -226,12 +226,17 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     return vcvars_ver
 
 
-def is_msvc(conanfile):
+def is_msvc(conanfile, build_context=False):
     """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
     :param conanfile: ConanFile instance
+    :param build_context: If True, will use the settings from the build context, not host ones
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
-    settings = conanfile.settings
+    # FIXME: 2.0: remove "hasattr()" condition
+    if not build_context or not hasattr(conanfile, "settings_build"):
+        settings = conanfile.settings
+    else:
+        settings = conanfile.settings_build
     return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
 
 
