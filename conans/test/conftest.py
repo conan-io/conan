@@ -65,7 +65,7 @@ tools_locations = {
     'cmake': {
         "default": "3.15",
         "3.15": {
-            "path": {'Windows': 'C:\\cmake\\cmake-3.15.7-win64-x64\\bin',
+            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
@@ -264,7 +264,7 @@ def _get_individual_tool(name, version):
     old_environ = None
     if tool_path is not None:
         old_environ = dict(os.environ)
-        os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
+        os.environ["PATH"] = os.path.normpath(tool_path) + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
     exe_path = os.path.dirname(exe_found.replace(exe, ""))
