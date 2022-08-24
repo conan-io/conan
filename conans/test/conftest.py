@@ -219,6 +219,7 @@ def _get_individual_tool(name, version):
 
     version = version or tool.get("default")
     tool_version = tool.get(version)
+    print("tool_version -->", tool_version)
     if tool_version is not None:
         assert isinstance(tool_version, dict)
         if tool_version.get("disabled"):
@@ -228,6 +229,7 @@ def _get_individual_tool(name, version):
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
+        print("tool_path --> ", tool_path)
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
@@ -258,6 +260,7 @@ def _get_individual_tool(name, version):
         os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
+    print("exe_found --> ", exe_found)
     if not exe_found:
         cached = True
         if tool_path is None:
