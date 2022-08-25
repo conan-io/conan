@@ -53,6 +53,12 @@ def _get_component_name(dep, comp_name):
     return comp_name
 
 
+def suffix(pkgconfigdeps, dep):
+    if not dep.is_build_context:
+        return ""
+    return pkgconfigdeps.build_context_suffix.get(dep.ref.name, "")
+
+
 def _get_formatted_dirs(folders, prefix_path_):
     ret = []
     for i, directory in enumerate(folders):
@@ -184,7 +190,8 @@ class PCContentGenerator:
 
 class PCGenerator:
 
-    def __init__(self, conanfile, dep):
+    def __init__(self, pkgconfigdeps, conanfile, dep):
+        self._pkgconfigdeps = pkgconfigdeps
         self._conanfile = conanfile
         self._dep = dep
         self._content_generator = PCContentGenerator(self._conanfile, self._dep)
@@ -335,6 +342,29 @@ class PkgConfigDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        # Activate the build config files for the specified libraries
+        self.build_context_activated = []
+        # If specified, the files/targets/variables for the build context will be renamed appending
+        # a suffix. It is necessary in case of same require and build_require and will cause an error
+        self.build_context_suffix = {}
+
+    def _validate_build_requires(self, host_req, build_req):
+        """
+        Check if any package exists at host and build context at the same time, and
+        it doesn't have any suffix to avoid any name collisions
+
+        :param host_req: list of host requires
+        :param build_req: list of build requires
+        """
+        activated_br = {r.ref.name for r in build_req.values()
+                        if r.ref.name in self.build_context_activated}
+        common_names = {r.ref.name for r in host_req.values()}.intersection(activated_br)
+        without_suffixes = [common_name for common_name in common_names
+                            if self.build_context_suffix.get(common_name) is None]
+        if without_suffixes:
+            raise ConanException(f"The packages '{without_suffixes}' exist both as 'require' and as"
+                                 f" 'build require'. You need to specify a suffix using the "
+                                 f"'build_context_suffix' attribute at the PkgConfigDeps generator.")
 
     @property
     def content(self):
@@ -342,17 +372,32 @@ class PkgConfigDeps:
         pc_files = {}
         # Get all the dependencies
         host_req = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
-        for require, dep in list(host_req.items()) + list(test_req.items()):
+        # Check if it exists both as require and as build require without a suffix
+        self._validate_build_requires(host_req, build_req)
+
+        for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
-            pc_generator = PCGenerator(self._conanfile, dep)
+            # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
+            if dep.is_build_context and dep.ref.name not in self.build_context_activated:
+                continue
+
+            pc_generator = PCGenerator(self, self._conanfile, dep)
             pc_files.update(pc_generator.pc_files)
         return pc_files
 
     def generate(self):
         """Save all the *.pc files"""
+        # FIXME: Remove this in 2.0
+        if not hasattr(self._conanfile, "settings_build") and \
+                      (self.build_context_activated or self.build_context_suffix):
+            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
+                                 " the PkgConfigDeps generator cannot be used without specifying"
+                                 " a build profile. e.g: -pr:b=default")
+
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
