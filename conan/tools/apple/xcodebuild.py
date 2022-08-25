@@ -1,6 +1,6 @@
 import os
 
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple import to_apple_arch
 from conans.errors import ConanException
 
 
@@ -8,7 +8,7 @@ class XcodeBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")
-        self._arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        self._arch = to_apple_arch(self._conanfile)
         self._sdk = conanfile.settings.get_safe("os.sdk") or ""
         self._sdk_version = conanfile.settings.get_safe("os.sdk_version") or ""
 

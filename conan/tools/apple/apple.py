@@ -3,23 +3,19 @@
 import os
 
 from conans.util.runners import check_output_runner
+from conans.client.tools.apple import to_apple_arch as _to_apple_arch
 
 
-def is_apple_os(os_):
+def is_apple_os(conanfile):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    os_ = conanfile.settings.get_safe("os")
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch):
+def to_apple_arch(conanfile):
     """converts conan-style architecture into Apple-style arch"""
-    return {'x86': 'i386',
-            'x86_64': 'x86_64',
-            'armv7': 'armv7',
-            'armv8': 'arm64',
-            'armv8_32': 'arm64_32',
-            'armv8.3': 'arm64e',
-            'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(str(arch))
+    arch_ = conanfile.settings.get_safe("arch")
+    return _to_apple_arch(arch_)
 
 
 def _guess_apple_sdk_name(os_, arch):
@@ -176,7 +172,7 @@ def fix_apple_shared_install_name(conanfile):
 
     substitutions = {}
 
-    if is_apple_os(conanfile.settings.get_safe("os")) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)

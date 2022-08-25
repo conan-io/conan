@@ -297,7 +297,9 @@ class AndroidSystemBlock(Block):
     template = textwrap.dedent("""
         # New toolchain things
         set(ANDROID_PLATFORM {{ android_platform }})
+        {% if android_stl %}
         set(ANDROID_STL {{ android_stl }})
+        {% endif %}
         set(ANDROID_ABI {{ android_abi }})
         include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
         """)
@@ -314,7 +316,7 @@ class AndroidSystemBlock(Block):
 
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
-        libcxx_str = str(self._conanfile.settings.compiler.libcxx)
+        libcxx_str = self._conanfile.settings.get_safe("compiler.libcxx")
 
         android_ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
         if not android_ndk_path:
@@ -322,7 +324,7 @@ class AndroidSystemBlock(Block):
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'android_platform': self._conanfile.settings.os.api_level,
+            'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
             'android_abi': android_abi,
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
@@ -411,11 +413,10 @@ class AppleSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
+        if not is_apple_os(self._conanfile):
             return None
 
-        arch = self._conanfile.settings.get_safe("arch")
-        host_architecture = to_apple_arch(arch)
+        host_architecture = to_apple_arch(self._conanfile)
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
         is_debug = self._conanfile.settings.get_safe('build_type') == "Debug"
@@ -531,7 +532,7 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        is_apple_ = is_apple_os(os_)
+        is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
@@ -817,7 +818,7 @@ class GenericSystemBlock(Block):
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
                     _system_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    _system_processor = to_apple_arch(arch_host)
+                    _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")
@@ -863,13 +864,21 @@ class OutputDirsBlock(Block):
 
         return textwrap.dedent("""
            set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
+           {% if default_bin %}
            set(CMAKE_INSTALL_BINDIR "{{default_bin}}")
            set(CMAKE_INSTALL_SBINDIR "{{default_bin}}")
            set(CMAKE_INSTALL_LIBEXECDIR "{{default_bin}}")
+           {% endif %}
+           {% if default_lib %}
            set(CMAKE_INSTALL_LIBDIR "{{default_lib}}")
+           {% endif %}
+           {% if default_include %}
            set(CMAKE_INSTALL_INCLUDEDIR "{{default_include}}")
            set(CMAKE_INSTALL_OLDINCLUDEDIR "{{default_include}}")
+           {% endif %}
+           {% if default_res %}
            set(CMAKE_INSTALL_DATAROOTDIR "{{default_res}}")
+           {% endif %}
         """)
 
     def _get_cpp_info_value(self, name):

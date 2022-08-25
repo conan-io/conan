@@ -6,15 +6,17 @@ import pytest
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
-
 test = textwrap.dedent("""
     import os
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
+    from conan.tools.build import can_run
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         generators = "VirtualRunEnv"
+        def requirements(self):
+            self.requires(self.tested_reference_str)
         def test(self):
-            if not tools.cross_building(self):
+            if can_run(self):
                 self.run("app", env="conanrun")
     """)
 
@@ -35,8 +37,8 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
-        from conan.tools.files import copy
         from conan.tools.apple import XcodeBuild
+        from conan.tools.files import copy
         class MyApplicationConan(ConanFile):
             name = "myapplication"
             version = "1.0"
@@ -44,6 +46,7 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
             settings = "os", "compiler", "build_type", "arch"
             generators = "XcodeDeps", "XcodeToolchain"
             exports_sources = "app.xcodeproj/*", "app/*"
+            package_type = "application"
             def build(self):
                 xcode = XcodeBuild(self)
                 xcode.build("app.xcodeproj")

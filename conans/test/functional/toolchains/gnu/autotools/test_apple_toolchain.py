@@ -4,7 +4,7 @@ import platform
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conans.client.tools.apple import to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient

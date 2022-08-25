@@ -197,6 +197,7 @@ class ConanFileMock(ConanFile):
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+        return 0
 
 
 MockOptions = MockSettings

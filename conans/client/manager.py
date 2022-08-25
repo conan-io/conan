@@ -77,6 +77,16 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     except ConanException:  # Setting os doesn't exist
         pass
 
+    if hasattr(conanfile, "layout") and not test:
+        conanfile.folders.set_base_folders(conanfile_path, output_folder)
+    else:
+        conanfile.folders.set_base_install(install_folder)
+        conanfile.folders.set_base_imports(install_folder)
+        conanfile.folders.set_base_generators(base_folder)
+
+    if hasattr(conanfile, "layout") and test:
+        install_folder = conanfile.generators_folder
+
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
@@ -94,13 +104,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         manifest_manager.check_graph(deps_graph, verify=manifest_verify,
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
-
-    if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_folders(conanfile_path, output_folder)
-    else:
-        conanfile.folders.set_base_install(install_folder)
-        conanfile.folders.set_base_imports(install_folder)
-        conanfile.folders.set_base_generators(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 
@@ -142,3 +145,5 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)
+
+    return install_folder

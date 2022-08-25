@@ -36,6 +36,7 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_na
     cmd = cmd + " -s compiler.cppstd={}".format(cppstd) if cppstd else cmd
     cmd = cmd + " -s os.sdk={}".format(sdk_name) if sdk_name else cmd
     cmd = cmd + " -s os.sdk_version={}".format(sdk_version) if sdk_version else cmd
+    cmd = cmd + " -s arch={}".format(arch) if arch else cmd
     client.run(cmd)
     filename = _get_filename(configuration, arch, sdk_name, sdk_version)
     condition = _condition(configuration, arch, sdk_name, sdk_version)
