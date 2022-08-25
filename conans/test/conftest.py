@@ -1,4 +1,5 @@
 import os
+import pathlib
 import platform
 import uuid
 
@@ -267,7 +268,7 @@ def _get_individual_tool(name, version):
         os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
-    exe_path = os.path.dirname(exe_found.replace(exe, ""))
+    exe_path = str(pathlib.Path(exe_found).parent)
     if not exe_found:
         cached = True
         if tool_path is None:
