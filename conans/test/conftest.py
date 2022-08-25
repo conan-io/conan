@@ -1,4 +1,5 @@
 import os
+import pathlib
 import platform
 import uuid
 
@@ -23,6 +24,12 @@ tools_locations = {
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
+        # To explicitly skip one tool for one version, define the path as 'skip-tests'
+        # if you don't define the path for one platform it will run the test with the
+        # tool in the path. For example here it will skip the test with CMake in Darwin but
+        # in Linux it will run with the version found in the path if it's not specified
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
+                          "Darwin": "skip-tests"}},
     },
     'ninja': {
         "1.10.2": {}
@@ -51,8 +58,8 @@ tools_locations = {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
                 'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
-                'Darwin': f"{homebrew_root}/bin/pkg-config",
-                'Linux': "/usr/bin/pkg-config"
+                'Darwin': f"{homebrew_root}/bin",
+                'Linux': "/usr/bin"
             }
         }},
     'autotools': {"exe": "autoconf"},
@@ -82,7 +89,7 @@ tools_locations = {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      # Not available in Linux
-                     'Linux': None}
+                     'Linux': "skip-tests"}
         }
     },
     'ninja': {
@@ -156,7 +163,6 @@ tools_locations = {
             "path": {'Linux': '/usr/local/bin/premake5'}
         }
     },
-    'premake': {},
     'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
@@ -233,14 +239,17 @@ def _get_individual_tool(name, version):
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
+        tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
         #                        'Linux': None}}
         #          }
-        if tool_path is None:
+        if tool_path == "skip-tests":
             return False
+        elif tool_path is not None and not os.path.isdir(tool_path):
+            return True
     else:
         if version is not None:  # if the version is specified, it should be in the conf
             return True
@@ -260,8 +269,18 @@ def _get_individual_tool(name, version):
         os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
+    exe_path = str(pathlib.Path(exe_found).parent)
     if not exe_found:
         cached = True
+        if tool_path is None:
+            # will fail the test, not exe found and path None
+            cached = True
+    elif tool_path is not None and tool_path not in exe_found:
+        # finds the exe in a path that is not the one set in the conf -> fail
+        cached = True
+    elif tool_path is None:
+        cached = exe_path, tool_env
+
     if old_environ is not None:
         os.environ.clear()
         os.environ.update(old_environ)
