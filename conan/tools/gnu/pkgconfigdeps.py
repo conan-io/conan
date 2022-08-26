@@ -184,11 +184,17 @@ class PCContentGenerator:
 
 class PCGenerator:
 
-    def __init__(self, conanfile, dep, dep_suffix=""):
+    def __init__(self, conanfile, dep, build_context_suffix=None):
         self._conanfile = conanfile
         self._dep = dep
-        self._dep_suffix = dep_suffix
+        self._build_context_suffix = build_context_suffix or {}
+        self._dep_suffix = self._build_require_suffix(dep)
         self._content_generator = PCContentGenerator(self._conanfile, self._dep)
+
+    def _build_require_suffix(self, req):
+        if not req.is_build_context:
+            return ""
+        return self._build_context_suffix.get(req.ref.name, "")
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
@@ -226,7 +232,7 @@ class PCGenerator:
                 req_conanfile = self._dep
             comp_name = _get_component_name(req_conanfile, comp_ref_name)
             if not comp_name:
-                pkg_name = _get_package_name(req_conanfile, suffix=self._dep_suffix)
+                pkg_name = _get_package_name(req_conanfile, suffix=self._build_require_suffix(req_conanfile))
                 # Creating a component name with namespace, e.g., dep-comp1
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
             ret.append(comp_name)
@@ -270,7 +276,7 @@ class PCGenerator:
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [_get_package_name(req, suffix=self._dep_suffix)
+            requires = [_get_package_name(req, suffix=self._build_require_suffix(req))
                         for req in self._dep.dependencies.direct_host.values()]
         description = "Conan package: %s" % pkg_name
         aliases = _get_package_aliases(self._dep)
@@ -367,7 +373,7 @@ class PkgConfigDeps:
         pc_files = {}
         # Get all the dependencies
         host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.direct_build  # tool_requires
+        build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
         # Check if it exists both as require and as build require without a suffix
@@ -380,8 +386,7 @@ class PkgConfigDeps:
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            dep_suffix = self.build_context_suffix.get(dep.ref.name, "")
-            pc_generator = PCGenerator(self._conanfile, dep, dep_suffix=dep_suffix)
+            pc_generator = PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
             pc_files.update(pc_generator.pc_files)
         return pc_files
 

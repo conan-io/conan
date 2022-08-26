@@ -2,8 +2,6 @@ import glob
 import os
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -595,17 +593,6 @@ def test_tool_requires():
         class PkgConfigConan(ConanFile):
 
             def package_info(self):
-                self.cpp_info.set_property("pkg_config_name", "OpenCL")
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . opencl/1.0@")
-
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-
-        class PkgConfigConan(ConanFile):
-
-            def package_info(self):
                 self.cpp_info.libs = ["libtool"]
         """)
     client.save({"conanfile.py": conanfile})
@@ -615,9 +602,6 @@ def test_tool_requires():
         from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
-
-            def requirements(self):
-                self.requires("opencl/1.0")
 
             def package_info(self):
                 self.cpp_info.set_property("pkg_config_name", "other")
@@ -641,18 +625,16 @@ def test_tool_requires():
             def generate(self):
                 tc = PkgConfigDeps(self)
                 tc.build_context_activated = ["other", "tool"]
-                tc.build_context_suffix = {"tool": "mysuffix", "other": "mysuffix2"}
+                tc.build_context_suffix = {"tool": "_mysuffix", "other": "_mysuffix2"}
                 tc.generate()
+
+            def package_info(self):
+                pass
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
-    assert pc_files == ['other.pc', 'toolmysuffix.pc', 'OpenCL.pc']
+    assert pc_files == ['other_mysuffix2.pc', 'tool_mysuffix.pc']
     # pc_content = client.load("OpenCL.pc")
-    # assert "Name: OpenCL" in pc_content
-    # assert "Description: Conan component: OpenCL" in pc_content
-    # assert "Requires:" not in pc_content
-    # pc_content = client.load("pkgb.pc")
-    # assert "Requires: OpenCL" in get_requires_from_content(pc_content)
