@@ -524,22 +524,28 @@ def test_pkgconfigdeps_with_test_requires():
     Related issue: https://github.com/conan-io/conan/issues/11376
     """
     client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.cpp_info.libs = ["lib%s"]
+        """)
     with client.chdir("app"):
-        client.run("new app/1.0 -m cmake_lib")
-        # client.run("new cmake_lib -d name=app -d version=1.0")
-        client.run("create .")
+        client.save({"conanfile.py": conanfile % "app"})
+        # client.run("create . --name=app --version=1.0")
+        client.run("create . app/1.0@")
     with client.chdir("test"):
-        client.run("new test/1.0 -m cmake_lib")
-        # client.run("new cmake_lib -d name=test -d version=1.0")
-        client.run("create .")
+        client.save({"conanfile.py": conanfile % "test"})
+        # client.run("create . --name=test --version=1.0")
+        client.run("create . test/1.0@")
     # Create library having build and test requires
-    conanfile = textwrap.dedent(r'''
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
         class HelloLib(ConanFile):
             def build_requirements(self):
                 self.test_requires('app/1.0')
                 self.test_requires('test/1.0')
-        ''')
+        """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g PkgConfigDeps")
     assert "Description: Conan package: test" in client.load("test.pc")
@@ -573,3 +579,80 @@ def test_with_editable_layout():
         assert "Libs: -lmylib" in pc
         assert 'includedir1=' in pc
         assert 'Cflags: -I"${includedir1}"' in pc
+
+
+def test_tool_requires():
+    """
+    Testing if the root package PC file name matches with any of the components one, the first one
+    is not going to be created. Components have more priority than root package.
+
+    Issue related: https://github.com/conan-io/conan/issues/10341
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "OpenCL")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . opencl/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.libs = ["libtool"]
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . tool/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def requirements(self):
+                self.requires("opencl/1.0")
+
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "other")
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . other/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import PkgConfigDeps
+
+        class PkgConfigConan(ConanFile):
+            name = "demo"
+            version = "1.0"
+            generators = "PkgConfigDeps"
+
+            def build_requirements(self):
+                self.build_requires("tool/1.0")
+                self.build_requires("other/1.0")
+
+            def generate(self):
+                tc = PkgConfigDeps(self)
+                tc.build_context_activated = ["other", "tool"]
+                tc.build_context_suffix = {"tool": "mysuffix", "other": "mysuffix2"}
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -pr:h default -pr:b default")
+    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
+    pc_files.sort()
+    # Let's check all the PC file names created just in case
+    assert pc_files == ['other.pc', 'toolmysuffix.pc', 'OpenCL.pc']
+    # pc_content = client.load("OpenCL.pc")
+    # assert "Name: OpenCL" in pc_content
+    # assert "Description: Conan component: OpenCL" in pc_content
+    # assert "Requires:" not in pc_content
+    # pc_content = client.load("pkgb.pc")
+    # assert "Requires: OpenCL" in get_requires_from_content(pc_content)
