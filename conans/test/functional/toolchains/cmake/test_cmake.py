@@ -36,13 +36,10 @@ def test_simple_cmake_mingw():
     client.run("create . --profile=mingw")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
-    assert "hello/1.0: __GNUC__" in client.out
-    assert "hello/1.0: __MINGW" in client.out
-    assert "hello/1.0: _M_X64 defined" in client.out
-    assert "hello/1.0: __cplusplus2017" in client.out
-    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, subsystem="msys2")
+    check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
+                  subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
     check_vs_runtime("test_package/build/Release/example.exe", client, "16", build_type="Release",
-                     static_runtime=True, subsystem="msys2")
+                     static_runtime=False, subsystem="mingw64")
 
 
 @pytest.mark.tool_cmake

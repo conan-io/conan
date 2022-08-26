@@ -75,12 +75,15 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
 
 
 def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,
-                  cxx11_abi=None, subsystem=None):
+                  cxx11_abi=None, subsystem=None, extra_msg=""):
     output = str(output)
     names = names if isinstance(names, list) else [names]
 
     for name in names:
-        assert "{}: {}".format(name, build_type) in output
+        if extra_msg:  # For ``conan new`` templates
+            assert "{} {} {}".format(name, extra_msg, build_type) in output
+        else:
+            assert "{}: {}".format(name, extra_msg, build_type) in output
         if compiler == "msvc":
             if arch == "x86":
                 assert "{} _M_IX86 defined".format(name) in output
