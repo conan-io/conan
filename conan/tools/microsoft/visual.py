@@ -73,6 +73,7 @@ class VCVars:
             return
 
         if compiler == "clang":
+            # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
             if not conanfile.settings.get_safe("compiler.runtime"):
                 # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
                 return

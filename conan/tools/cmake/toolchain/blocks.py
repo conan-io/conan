@@ -109,6 +109,10 @@ class VSRuntimeBlock(Block):
         if compiler not in ("Visual Studio", "msvc", "clang", "intel-cc"):
             return
 
+        runtime = settings.get_safe("compiler.runtime")
+        if runtime is None:
+            return
+
         config_dict = {}
         if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
             existing_include = load(CONAN_TOOLCHAIN_FILENAME)
@@ -122,13 +126,13 @@ class VSRuntimeBlock(Block):
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
         if build_type is None:
             return None
-        runtime = settings.get_safe("compiler.runtime")
+
         if compiler == "Visual Studio":
             config_dict[build_type] = {"MT": "MultiThreaded",
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
+        elif compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
@@ -734,7 +738,7 @@ class GenericSystemBlock(Block):
                 if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
                     toolset = "ClangCL"
                 else:
-                    raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
+                    raise ConanException("CMakeToolchain compiler=clang only supported VS >=16")
         toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
@@ -768,7 +772,8 @@ class GenericSystemBlock(Block):
         # TODO: Check if really necessary now that conanvcvars is used
         if "Ninja" in str(generator) and is_msvc(self._conanfile):
             compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang":
+        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
+            # definition of compiler only if not using the VS Clang toolset
             compiler_rc = "clang"
             compiler_c = "clang"
             compiler_cpp = "clang++"

@@ -40,10 +40,9 @@ def test_simple_cmake_mingw():
     assert "hello/1.0: __MINGW" in client.out
     assert "hello/1.0: _M_X64 defined" in client.out
     assert "hello/1.0: __cplusplus2017" in client.out
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, subsystem="msys2")
     check_vs_runtime("test_package/build/Release/example.exe", client, "16", build_type="Release",
-                     static_runtime=True)
-    assert "libstdc++-6.dll" in client.out
-    assert "msvcrt.dll" in client.out
+                     static_runtime=True, subsystem="msys2")
 
 
 @pytest.mark.tool_cmake

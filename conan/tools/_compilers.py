@@ -19,12 +19,13 @@ def architecture_flag(settings):
         return ""
 
     if compiler == "clang" and the_os == "Windows":
-        # Clang in Windows (VS) shouldn't add arch flags
-        runtime = settings.get_safe("compiler.runtime")
+        # LLVM/Clang and VS/Clang must define runtime. msys2 clang won't
+        runtime = settings.get_safe("compiler.runtime")  # runtime is Windows only
         if runtime is not None:
             return ""
         # TODO: Maybe Clang-Mingw runtime does, but with C++ is impossible to test
-        return "-m64" if arch == "x86_64" else "-m32"
+        return {"x86_64": "-m64",
+                "x86": "-m32"}.get(arch, "")
     elif str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg

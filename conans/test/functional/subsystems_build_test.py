@@ -25,7 +25,6 @@ class TestSubsystems:
         """
         client = TestClient()
         client.run_command('uname')
-        print(client.out)
         assert "MSYS" in client.out
 
     @pytest.mark.tool_cygwin
@@ -37,7 +36,6 @@ class TestSubsystems:
         """
         client = TestClient()
         client.run_command('uname')
-        print(client.out)
         assert "CYGWIN" in client.out
 
     @pytest.mark.tool_msys2
@@ -48,7 +46,6 @@ class TestSubsystems:
         """
         client = TestClient()
         client.run_command('uname')
-        print(client.out)
         assert "MINGW32_NT" in client.out
 
     @pytest.mark.tool_msys2
