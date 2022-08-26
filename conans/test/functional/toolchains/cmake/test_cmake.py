@@ -41,6 +41,8 @@ def test_simple_cmake_mingw():
     check_vs_runtime("test_package/build/Release/example.exe", client, "16", build_type="Release",
                      static_runtime=False, subsystem="mingw64")
 
+# TODO: How to link with mingw statically?
+
 
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):

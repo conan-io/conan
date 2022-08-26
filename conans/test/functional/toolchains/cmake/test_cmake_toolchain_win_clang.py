@@ -8,7 +8,7 @@ import pytest
 from conans.client.tools import environment_append
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_c
-from conans.test.functional.utils import check_vs_runtime
+from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -115,9 +115,11 @@ class TestClangExternalVSRuntime:
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
         assert "main __x86_64__ defined" in client.out
+
+        check_exe_run(client.out, "main", "clang", None, "Release", "x86_64", "14")
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        static_runtime = True if runtime == "static" else False
+        static_runtime = (runtime == "static")
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=static_runtime)
 
     @pytest.mark.tool_visual_studio(version="17")
@@ -188,7 +190,7 @@ class TestClangInternalClangCL:
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestClangMingw:
-    @pytest.mark.tool_mingw64_clang
+    @pytest.mark.tool_msys2_mingw64_clang64
     def test_clang_mingw(self, client):
         """ compiling with the clang INSIDE mingw, which uses the
         MinGW runtime, not the MSVC one
@@ -211,7 +213,8 @@ class TestClangMingw:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=True)
+        check_vs_runtime(cmd, client, "16", build_type="Release", architecture="x86_64",
+                         static_runtime=False, runtime="mingw64")
         print(client.out)
         assert "libstdc++-6.dll" in client.out
         assert "msvcrt.dll" in client.out
