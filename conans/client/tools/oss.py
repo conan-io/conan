@@ -217,7 +217,7 @@ class OSInfo(object):
     @property
     def with_pacman(self):
         if self.is_linux:
-            return self.linux_distro in ["arch", "manjaro"]
+            return self.linux_distro in ["arch", "manjaro", "endeavouros"]
         elif self.is_windows and which('uname.exe'):
             uname = check_output_runner(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
