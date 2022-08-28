@@ -126,18 +126,6 @@ tools_locations = {
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
-    'mingw64_clang': {
-        "disabled": True,
-        "default": "system",  # TODO use real clang 13 version
-        "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
-    },
-    'mingw32_clang': {
-        "disabled": True,
-        "default": "system",  # TODO use real clang 13 version
-        "exe": "clang",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
-    },
     'msys2': {
         "platform": "Windows",
         "default": "system",
@@ -148,14 +136,14 @@ tools_locations = {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {

@@ -56,44 +56,12 @@ def client():
     return c
 
 
-@pytest.mark.tool_cmake(version="3.23")
-def test_vs(client):
-    runtime = "static"
-    client.run("create . pkg/0.1@ -s compiler.runtime=MT")
-    print(client.out)
-    cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
-    cmd = cmd + ".exe"
-    static_runtime = True if runtime == "static" else False
-    check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=static_runtime)
-    print(client.out)
-    """
-    VISUAL STUDIO
-    dynamic
-    MSVCP140.dll
-    VCRUNTIME140.dll
-    VCRUNTIME140_1.dll
-    api-ms-win-crt-runtime-l1-1-0.dll
-    api-ms-win-crt-math-l1-1-0.dll
-    api-ms-win-crt-stdio-l1-1-0.dll
-    api-ms-win-crt-locale-l1-1-0.dll
-    api-ms-win-crt-heap-l1-1-0.dll
-    KERNEL32.dll
-
-    static
-    KERNEL32.dll
-
-    MSYS
-    msys-2.0.dll
-    msys-stdc++-6.dll
-    KERNEL32.dll
-    """
-
-
 @pytest.mark.tool_cmake
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-class TestClangExternalVSRuntime:
+class TestLLVMClang:
     """ External LLVM/clang, with different CMake generators
+    This links always with the VS runtime, it is built-in
     """
 
     @pytest.mark.tool_mingw64
@@ -164,7 +132,10 @@ class TestClangExternalVSRuntime:
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-class TestClangInternalClangCL:
+class TestVSClangCL:
+    """
+    This is also LLVM/Clang, but distributed with the VS installation
+    """
     @pytest.mark.tool_cmake(version="3.23")
     @pytest.mark.tool_visual_studio(version="17")
     def test_clang_visual_studio_generator(self, client):
@@ -189,19 +160,22 @@ class TestClangInternalClangCL:
 
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-class TestClangMingw:
-    @pytest.mark.tool_msys2_mingw64_clang64
-    def test_clang_mingw(self, client):
-        """ compiling with the clang INSIDE mingw, which uses the
-        MinGW runtime, not the MSVC one
-        For 32 bits, it doesn't seem possible to install the toolchain
-        For 64 bits require "pacman -S mingw-w64-x86-clang++"
+class TestMsysClang:
+    @pytest.mark.tool_msys2_clang64
+    def test_msys2_clang(self, client):
+        """ Using the msys2 clang64 subsystem
+        We are not really injecting the msys2 root with make, so using
+        MinGW Makefiles
         """
-        client.run(f"create . pkg/0.1@ -pr=clang")
+        client.run('create . pkg/0.1@ -pr=clang -s os.subsystem=msys2 '
+                   '-s compiler.libcxx=libc++ '
+                   '-c tools.cmake.cmaketoolchain:generator="MinGW Makefiles"')
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
-        assert "main __clang_major__13" in client.out
-        assert "main _GLIBCXX_USE_CXX11_ABI 1" in client.out
+        # TODO: Version is still not controlled
+        assert "main __clang_major__14" in client.out
+        # Not using libstdc++
+        assert "_GLIBCXX_USE_CXX11_ABI" not in client.out
         assert "main __cplusplus2014" in client.out
         assert "main __GNUC__" in client.out
         assert "main __MINGW32__1" in client.out
@@ -213,14 +187,39 @@ class TestClangMingw:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "16", build_type="Release", architecture="x86_64",
-                         static_runtime=False, runtime="mingw64")
-        print(client.out)
-        assert "libstdc++-6.dll" in client.out
-        assert "msvcrt.dll" in client.out
+        check_vs_runtime(cmd, client, "16", build_type="Release",
+                         static_runtime=False, subsystem="clang64")
 
-    @pytest.mark.tool_mingw32_clang
-    def test_clang_mingw_pure_c(self, client):
+    @pytest.mark.tool_msys2_mingw64_clang64
+    def test_msys2_clang_mingw(self, client):
+        """ compiling with the clang INSIDE mingw, which uses the
+        MinGW runtime, not the MSVC one
+        For 32 bits, it doesn't seem possible to install the toolchain
+        For 64 bits require "pacman -S mingw-w64-x86-clang++"
+        """
+        client.run('create . pkg/0.1@ -pr=clang -s os.subsystem=mingw64 '
+                   '-s compiler.libcxx=libstdc++')
+        # clang compilations in Windows will use MinGW Makefiles by default
+        assert 'cmake -G "MinGW Makefiles"' in client.out
+        # TODO: Version is still not controlled
+        assert "main __clang_major__14" in client.out
+        assert "main _GLIBCXX_USE_CXX11_ABI 0" in client.out
+        assert "main __cplusplus2014" in client.out
+        assert "main __GNUC__" in client.out
+        assert "main __MINGW32__1" in client.out
+        assert "main __MINGW64__1" in client.out
+        assert "main _MSC_" not in client.out
+        assert "main _MSVC_" not in client.out
+        assert "main _M_X64 defined" in client.out
+        assert "main __x86_64__ defined" in client.out
+
+        cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
+        cmd = cmd + ".exe"
+        check_vs_runtime(cmd, client, "16", build_type="Release",
+                         static_runtime=False, subsystem="mingw64")
+
+    @pytest.mark.tool_msys2_clang64
+    def test_clang_pure_c(self, client):
         """ compiling with the clang INSIDE mingw, which uses the
         MinGW runtime, not the MSVC one
         For 32 bits, it doesn't seem possible to install the toolchain
@@ -229,10 +228,10 @@ class TestClangMingw:
         client.save({"CMakeLists.txt": gen_cmakelists(verify=False, language="C", appname="my_app",
                                                       appsources=["src/main.c"]),
                      "src/main.c": gen_function_c(name="main")})
-        client.run(f"create . pkg/0.1@ -pr=clang -s arch=x86")
+        client.run(f"create . pkg/0.1@ -pr=clang")
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
-        assert "main __clang_major__13" in client.out
+        assert "main __clang_major__14" in client.out
         assert "GLIBCXX" not in client.out
         assert "cplusplus" not in client.out
         assert "main __GNUC__" in client.out
@@ -245,10 +244,9 @@ class TestClangMingw:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=True)
-        print(client.out)
-        assert "libstdc++-6.dll" not in client.out
-        assert "msvcrt.dll" in client.out
+        # static_runtime equivalent to C, for checking, no dep on libc++
+        check_vs_runtime(cmd, client, "16", build_type="Release", static_runtime=True,
+                         subsystem="clang64")
 
 
 @pytest.mark.tool_cmake

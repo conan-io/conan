@@ -131,7 +131,7 @@ def subsystem_path(subsystem, path):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!
     """
-    if subsystem is None or subsystem == WINDOWS:
+    if subsystem is None or subsystem in (WINDOWS, "mingw32", "mingw64"):
         return path
 
     if os.path.exists(path):
