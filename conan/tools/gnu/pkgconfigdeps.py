@@ -37,8 +37,8 @@ def _get_component_aliases(dep, comp_name):
 
 
 def _get_package_name(dep, suffix=""):
-    pkg_name = dep.cpp_info.get_property("pkg_config_name")
-    return pkg_name or f"{_get_package_reference_name(dep)}{suffix}"
+    pkg_name = dep.cpp_info.get_property("pkg_config_name") or _get_package_reference_name(dep)
+    return f"{pkg_name}{suffix}"
 
 
 def _get_component_name(dep, comp_name, suffix=""):
@@ -50,7 +50,7 @@ def _get_component_name(dep, comp_name, suffix=""):
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_name))
     comp_name = dep.cpp_info.components[comp_name].get_property("pkg_config_name")
-    return comp_name
+    return f"{comp_name}{suffix}" if comp_name else None
 
 
 def _get_formatted_dirs(folders, prefix_path_):
@@ -230,9 +230,10 @@ class PCGenerator:
                 req_conanfile = self._dep.dependencies.host[pkg_ref_name]
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
-            comp_name = _get_component_name(req_conanfile, comp_ref_name)
+            suffix = self._build_require_suffix(req_conanfile)
+            comp_name = _get_component_name(req_conanfile, comp_ref_name, suffix=suffix)
             if not comp_name:
-                pkg_name = _get_package_name(req_conanfile, suffix=self._build_require_suffix(req_conanfile))
+                pkg_name = _get_package_name(req_conanfile, suffix=suffix)
                 # Creating a component name with namespace, e.g., dep-comp1
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
             ret.append(comp_name)
@@ -252,7 +253,7 @@ class PCGenerator:
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = _get_component_name(self._dep, comp_ref_name)
+            comp_name = _get_component_name(self._dep, comp_ref_name, suffix=self._dep_suffix)
             if not comp_name:
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
             comp_description = "Conan component: %s-%s" % (pkg_name, comp_name)
