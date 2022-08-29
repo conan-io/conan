@@ -13,6 +13,23 @@ from conans.tools import load
 from conans import ConanFile, Settings
 
 
+def test_msbuild_targets():
+    c = ConfDefinition()
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "7",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.conf = c.get_conanfile_conf(None)
+
+    msbuild = MSBuild(conanfile)
+    cmd = msbuild.command('project.sln', targets=["static", "shared"])
+
+    assert '/target:static;shared' in cmd
+
+
 def test_msbuild_cpu_count():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
