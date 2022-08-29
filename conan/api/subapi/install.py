@@ -7,7 +7,7 @@ from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.loader import load_python_file
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.util.files import rmdir
+from conans.util.files import rmdir, mkdir
 
 
 class InstallAPI:
@@ -46,8 +46,10 @@ class InstallAPI:
         conanfile.folders.set_base_folders(source_folder, output_folder)
 
         # The previous .set_base_folders has already decided between the source_folder and output
-        base_folder = conanfile.folders.base_build
-        _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
+        if deploy:
+            base_folder = conanfile.folders.base_build
+            mkdir(base_folder)
+            _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         app = ConanApp(self.conan_api.cache_folder)
