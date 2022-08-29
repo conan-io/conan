@@ -38,7 +38,7 @@ def test_simple_cmake_mingw():
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
     check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
                   subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
-    check_vs_runtime("test_package/build/Release/example.exe", client, "16", build_type="Release",
+    check_vs_runtime("test_package/build/Release/example.exe", client, "15", build_type="Release",
                      static_runtime=False, subsystem="mingw64")
 
 # TODO: How to link with mingw statically?
