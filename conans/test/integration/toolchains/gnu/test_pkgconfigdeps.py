@@ -2,8 +2,6 @@ import glob
 import os
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -725,6 +723,5 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    with pytest.raises(Exception) as e:
-        client.run("install . -pr:h default -pr:b default")
-    assert "The packages ['tool'] exist both as 'require' and as 'build require'" in str(e.value)
+    client.run("install . -pr:h default -pr:b default", assert_error=True)
+    assert "The packages ['tool'] exist both as 'require' and as 'build require'" in client.out

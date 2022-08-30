@@ -188,10 +188,16 @@ class PCGenerator:
         self._conanfile = conanfile
         self._build_context_suffix = build_context_suffix or {}
         self._dep = dep
-        self._dep_suffix = self._build_require_suffix(dep)
         self._content_generator = PCContentGenerator(self._conanfile, self._dep)
 
-    def _build_require_suffix(self, req):
+    def _get_suffix(self, req):
+        """
+        Get the suffix coming from PkgConfigDeps.build_context_suffix attribute, but only for
+        requirements declared as build requirement.
+
+        :param req: requirement ConanFile
+        :return: `str` with the suffix
+        """
         if not req.is_build_context:
             return ""
         return self._build_context_suffix.get(req.ref.name, "")
@@ -230,10 +236,10 @@ class PCGenerator:
                 req_conanfile = self._dep.dependencies.host[pkg_ref_name]
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
-            suffix = self._build_require_suffix(req_conanfile)
-            comp_name = _get_component_name(req_conanfile, comp_ref_name, suffix=suffix)
+            req_suffix = self._get_suffix(req_conanfile)
+            comp_name = _get_component_name(req_conanfile, comp_ref_name, suffix=req_suffix)
             if not comp_name:
-                pkg_name = _get_package_name(req_conanfile, suffix=suffix)
+                pkg_name = _get_package_name(req_conanfile, suffix=req_suffix)
                 # Creating a component name with namespace, e.g., dep-comp1
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
             ret.append(comp_name)
@@ -247,13 +253,14 @@ class PCGenerator:
 
         :return: `list` of `_PCInfo` objects with all the components information
         """
-        pkg_name = _get_package_name(self._dep, suffix=self._dep_suffix)
+        pkg_name_suffix = self._get_suffix(self._dep)
+        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
         components_info = []
         # Loop through all the package's components
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = _get_component_name(self._dep, comp_ref_name, suffix=self._dep_suffix)
+            comp_name = _get_component_name(self._dep, comp_ref_name, suffix=pkg_name_suffix)
             if not comp_name:
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
                 comp_description = f"Conan component: {comp_name}"
@@ -272,14 +279,15 @@ class PCGenerator:
 
         :return: `_PCInfo` object with the package information
         """
-        pkg_name = _get_package_name(self._dep, suffix=self._dep_suffix)
+        pkg_name_suffix = self._get_suffix(self._dep)
+        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [_get_package_name(req, suffix=self._build_require_suffix(req))
+            requires = [_get_package_name(req, suffix=self._get_suffix(req))
                         for req in self._dep.dependencies.direct_host.values()]
         description = "Conan package: %s" % pkg_name
         aliases = _get_package_aliases(self._dep)
@@ -328,7 +336,8 @@ class PCGenerator:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        pkg_name = _get_package_name(self._dep, suffix=self._dep_suffix)
+        pkg_name_suffix = self._get_suffix(self._dep)
+        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
         if f"{pkg_name}.pc" not in pc_files:
             package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}", None,
                                    _get_package_aliases(self._dep))
