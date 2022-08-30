@@ -338,7 +338,9 @@ class PkgConfigDeps:
 
     @property
     def content(self):
-        """Get all the *.pc files content"""
+        """
+        Get all the .pc files content
+        """
         pc_files = {}
         # Get all the dependencies
         host_req = self._conanfile.dependencies.host
@@ -352,7 +354,9 @@ class PkgConfigDeps:
         return pc_files
 
     def generate(self):
-        """Save all the *.pc files"""
+        """
+        Save all the .pc files
+        """
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
