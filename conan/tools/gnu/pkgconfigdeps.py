@@ -186,8 +186,8 @@ class PCGenerator:
 
     def __init__(self, conanfile, dep, build_context_suffix=None):
         self._conanfile = conanfile
-        self._dep = dep
         self._build_context_suffix = build_context_suffix or {}
+        self._dep = dep
         self._dep_suffix = self._build_require_suffix(dep)
         self._content_generator = PCContentGenerator(self._conanfile, self._dep)
 
