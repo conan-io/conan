@@ -61,6 +61,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        msys2_mode_env.prepend_path("PATH", os.path.dirname(shell_path))
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
         env.append(path)
