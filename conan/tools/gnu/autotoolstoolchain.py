@@ -82,7 +82,7 @@ class AutotoolsToolchain:
                 sdk_path = conanfile.conf["tools.apple:sdk_path"]
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
-                apple_arch = to_apple_arch(arch_host)
+                apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
