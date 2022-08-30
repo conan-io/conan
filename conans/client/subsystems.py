@@ -72,6 +72,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
     # first and there could be commands that we want to skip
     wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command,
+                                                subsystem=subsystem,
                                                 accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
