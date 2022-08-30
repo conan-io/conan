@@ -256,7 +256,9 @@ class PCGenerator:
             comp_name = _get_component_name(self._dep, comp_ref_name, suffix=self._dep_suffix)
             if not comp_name:
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
-            comp_description = "Conan component: %s-%s" % (pkg_name, comp_name)
+                comp_description = f"Conan component: {comp_name}"
+            else:
+                comp_description = f"Conan component: {pkg_name}-{comp_name}"
             comp_aliases = _get_component_aliases(self._dep, comp_ref_name)
             # Save each component information
             components_info.append(_PCInfo(comp_name, comp_requires_names, comp_description,

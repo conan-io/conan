@@ -604,7 +604,12 @@ def test_tool_requires():
         class PkgConfigConan(ConanFile):
 
             def package_info(self):
-                self.cpp_info.set_property("pkg_config_name", "other")
+                self.cpp_info.set_property("pkg_config_name", "libother")
+                self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "component1")
+                self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
+                self.cpp_info.components["cmp3"].requires.append("cmp1")
+                self.cpp_info.components["cmp3"].set_property("pkg_config_name", "component3")
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("create . other/1.0@")
@@ -625,16 +630,25 @@ def test_tool_requires():
             def generate(self):
                 tc = PkgConfigDeps(self)
                 tc.build_context_activated = ["other", "tool"]
-                tc.build_context_suffix = {"tool": "_mysuffix", "other": "_mysuffix2"}
+                tc.build_context_suffix = {"tool": "_bt", "other": "_bo"}
                 tc.generate()
-
-            def package_info(self):
-                pass
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
-    assert pc_files == ['other_mysuffix2.pc', 'tool_mysuffix.pc']
-    # pc_content = client.load("OpenCL.pc")
+    assert pc_files == ['component1_bo.pc', 'component3_bo.pc',
+                        'libother_bo-cmp2.pc', 'libother_bo.pc', 'tool_bt.pc']
+    pc_content = client.load("tool_bt.pc")
+    assert "Name: tool_bt" in pc_content
+    pc_content = client.load("libother_bo.pc")
+    assert "Name: libother_bo" in pc_content
+    assert "Requires: component1_bo libother_bo-cmp2 component3_bo" == get_requires_from_content(pc_content)
+    pc_content = client.load("component1_bo.pc")
+    assert "Name: component1_bo" in pc_content
+    pc_content = client.load("libother_bo-cmp2.pc")
+    assert "Name: libother_bo-cmp2" in pc_content
+    pc_content = client.load("component3_bo.pc")
+    assert "Name: component3_bo" in pc_content
+    assert "Requires: component1_bo" == get_requires_from_content(pc_content)
