@@ -2,6 +2,8 @@ import glob
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -581,10 +583,9 @@ def test_with_editable_layout():
 
 def test_tool_requires():
     """
-    Testing if the root package PC file name matches with any of the components one, the first one
-    is not going to be created. Components have more priority than root package.
+    Testing if PC files are created for tool requires if build_context_activated/_suffix is used.
 
-    Issue related: https://github.com/conan-io/conan/issues/10341
+    Issue related: https://github.com/conan-io/conan/issues/11710
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -621,7 +622,6 @@ def test_tool_requires():
         class PkgConfigConan(ConanFile):
             name = "demo"
             version = "1.0"
-            generators = "PkgConfigDeps"
 
             def build_requirements(self):
                 self.build_requires("tool/1.0")
@@ -652,3 +652,79 @@ def test_tool_requires():
     pc_content = client.load("component3_bo.pc")
     assert "Name: component3_bo" in pc_content
     assert "Requires: component1_bo" == get_requires_from_content(pc_content)
+
+
+def test_tool_requires_not_created_if_no_activated():
+    """
+    Testing if there are no PC files created in no context are activated
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.libs = ["libtool"]
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . tool/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            name = "demo"
+            version = "1.0"
+            generators = "PkgConfigDeps"
+
+            def build_requirements(self):
+                self.build_requires("tool/1.0")
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -pr:h default -pr:b default")
+    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
+    pc_files.sort()
+    assert pc_files == []
+
+
+def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
+    """
+    Testing if same dependency exists in both require and build require (without suffix)
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.libs = ["libtool"]
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . tool/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import PkgConfigDeps
+
+        class PkgConfigConan(ConanFile):
+            name = "demo"
+            version = "1.0"
+
+            def requirements(self):
+                self.requires("tool/1.0")
+
+            def build_requirements(self):
+                self.build_requires("tool/1.0")
+
+            def generate(self):
+                tc = PkgConfigDeps(self)
+                tc.build_context_activated = ["tool"]
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    with pytest.raises(Exception) as e:
+        client.run("install . -pr:h default -pr:b default")
+    assert "The packages ['tool'] exist both as 'require' and as 'build require'" in str(e.value)

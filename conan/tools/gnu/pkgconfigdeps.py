@@ -366,7 +366,7 @@ class PkgConfigDeps:
         without_suffixes = [common_name for common_name in common_names
                             if self.build_context_suffix.get(common_name) is None]
         if without_suffixes:
-            raise ConanException(f"The packages '{without_suffixes}' exist both as 'require' and as"
+            raise ConanException(f"The packages {without_suffixes} exist both as 'require' and as"
                                  f" 'build require'. You need to specify a suffix using the "
                                  f"'build_context_suffix' attribute at the PkgConfigDeps generator.")
 
