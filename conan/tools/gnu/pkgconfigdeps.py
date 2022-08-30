@@ -36,21 +36,37 @@ def _get_component_aliases(dep, comp_name):
     return comp_aliases or []
 
 
-def _get_package_name(dep, suffix=""):
+def _get_package_name(dep, build_context_suffix):
     pkg_name = dep.cpp_info.get_property("pkg_config_name") or _get_package_reference_name(dep)
+    suffix = _get_suffix(dep, build_context_suffix)
     return f"{pkg_name}{suffix}"
 
 
-def _get_component_name(dep, comp_name, suffix=""):
+def _get_component_name(dep, comp_name, build_context_suffix):
     if comp_name not in dep.cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if _get_package_reference_name(dep) == comp_name:
-            return _get_package_name(dep, suffix=suffix)
+            return _get_package_name(dep, build_context_suffix)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_name))
     comp_name = dep.cpp_info.components[comp_name].get_property("pkg_config_name")
+    suffix = _get_suffix(dep, build_context_suffix)
     return f"{comp_name}{suffix}" if comp_name else None
+
+
+def _get_suffix(req, build_context_suffix):
+    """
+    Get the package name suffix coming from PkgConfigDeps.build_context_suffix attribute, but only
+    for requirements declared as build requirement.
+
+    :param req: requirement ConanFile instance
+    :param build_context_suffix: `dict` with all the suffixes
+    :return: `str` with the suffix
+    """
+    if not req.is_build_context:
+        return ""
+    return build_context_suffix.get(req.ref.name, "")
 
 
 def _get_formatted_dirs(folders, prefix_path_):
@@ -190,18 +206,6 @@ class PCGenerator:
         self._dep = dep
         self._content_generator = PCContentGenerator(self._conanfile, self._dep)
 
-    def _get_suffix(self, req):
-        """
-        Get the suffix coming from PkgConfigDeps.build_context_suffix attribute, but only for
-        requirements declared as build requirement.
-
-        :param req: requirement ConanFile
-        :return: `str` with the suffix
-        """
-        if not req.is_build_context:
-            return ""
-        return self._build_context_suffix.get(req.ref.name, "")
-
     def _get_cpp_info_requires_names(self, cpp_info):
         """
         Get all the pkg-config valid names from the requires ones given a CppInfo object.
@@ -236,10 +240,9 @@ class PCGenerator:
                 req_conanfile = self._dep.dependencies.host[pkg_ref_name]
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
-            req_suffix = self._get_suffix(req_conanfile)
-            comp_name = _get_component_name(req_conanfile, comp_ref_name, suffix=req_suffix)
+            comp_name = _get_component_name(req_conanfile, comp_ref_name, self._build_context_suffix)
             if not comp_name:
-                pkg_name = _get_package_name(req_conanfile, suffix=req_suffix)
+                pkg_name = _get_package_name(req_conanfile, self._build_context_suffix)
                 # Creating a component name with namespace, e.g., dep-comp1
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
             ret.append(comp_name)
@@ -253,14 +256,13 @@ class PCGenerator:
 
         :return: `list` of `_PCInfo` objects with all the components information
         """
-        pkg_name_suffix = self._get_suffix(self._dep)
-        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
+        pkg_name = _get_package_name(self._dep, self._build_context_suffix)
         components_info = []
         # Loop through all the package's components
         for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
             # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = _get_component_name(self._dep, comp_ref_name, suffix=pkg_name_suffix)
+            comp_name = _get_component_name(self._dep, comp_ref_name, self._build_context_suffix)
             if not comp_name:
                 comp_name = _get_name_with_namespace(pkg_name, comp_ref_name)
                 comp_description = f"Conan component: {comp_name}"
@@ -279,15 +281,14 @@ class PCGenerator:
 
         :return: `_PCInfo` object with the package information
         """
-        pkg_name_suffix = self._get_suffix(self._dep)
-        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
+        pkg_name = _get_package_name(self._dep, self._build_context_suffix)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [_get_package_name(req, suffix=self._get_suffix(req))
+            requires = [_get_package_name(req, self._build_context_suffix)
                         for req in self._dep.dependencies.direct_host.values()]
         description = "Conan package: %s" % pkg_name
         aliases = _get_package_aliases(self._dep)
@@ -336,8 +337,7 @@ class PCGenerator:
         # Second, let's load the root package's PC file ONLY
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
-        pkg_name_suffix = self._get_suffix(self._dep)
-        pkg_name = _get_package_name(self._dep, suffix=pkg_name_suffix)
+        pkg_name = _get_package_name(self._dep, self._build_context_suffix)
         if f"{pkg_name}.pc" not in pc_files:
             package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}", None,
                                    _get_package_aliases(self._dep))
