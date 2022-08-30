@@ -1,24 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
 from conans.util.runners import check_output_runner
+from conans.client.tools.apple import to_apple_arch as _to_apple_arch
 
 
-def is_apple_os(os_):
+def is_apple_os(conanfile):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    os_ = conanfile.settings.get_safe("os")
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch):
+def to_apple_arch(conanfile):
     """converts conan-style architecture into Apple-style arch"""
-    return {'x86': 'i386',
-            'x86_64': 'x86_64',
-            'armv7': 'armv7',
-            'armv8': 'arm64',
-            'armv8_32': 'arm64_32',
-            'armv8.3': 'arm64e',
-            'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(str(arch))
+    arch_ = conanfile.settings.get_safe("arch")
+    return _to_apple_arch(arch_)
 
 
 def _guess_apple_sdk_name(os_, arch):
@@ -152,3 +149,42 @@ class XCRun(object):
     def libtool(self):
         """path to libtool"""
         return self.find('libtool')
+
+
+def fix_apple_shared_install_name(conanfile):
+
+    def _get_install_name(path_to_dylib):
+        command = "otool -D {}".format(path_to_dylib)
+        install_name = check_output_runner(command).strip().split(":")[1].strip()
+        return install_name
+
+    def _osx_collect_dylibs(lib_folder):
+        return [os.path.join(full_folder, f) for f in os.listdir(lib_folder) if f.endswith(".dylib")
+                and not os.path.islink(os.path.join(lib_folder, f))]
+
+    def _fix_install_name(dylib_path, new_name):
+        command = f"install_name_tool {dylib_path} -id {new_name}"
+        conanfile.run(command)
+
+    def _fix_dep_name(dylib_path, old_name, new_name):
+        command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
+        conanfile.run(command)
+
+    substitutions = {}
+
+    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+        libdirs = getattr(conanfile.cpp.package, "libdirs")
+        for libdir in libdirs:
+            full_folder = os.path.join(conanfile.package_folder, libdir)
+            shared_libs = _osx_collect_dylibs(full_folder)
+            # fix LC_ID_DYLIB in first pass
+            for shared_lib in shared_libs:
+                install_name = _get_install_name(shared_lib)
+                rpath_name = f"@rpath/{os.path.basename(install_name)}"
+                _fix_install_name(shared_lib, rpath_name)
+                substitutions[install_name] = rpath_name
+
+            # fix dependencies in second pass
+            for shared_lib in shared_libs:
+                for old, new in substitutions.items():
+                    _fix_dep_name(shared_lib, old, new)

@@ -48,7 +48,10 @@ class GraphBinariesAnalyzer(object):
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             conanfile.output.info('Forced build from source')
-            node.binary = BINARY_BUILD
+            if node.cant_build:
+                node.binary = BINARY_INVALID
+            else:
+                node.binary = BINARY_BUILD
             node.prev = None
             return True
 
@@ -178,7 +181,10 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                node.binary = BINARY_BUILD
+                if node.cant_build:
+                    node.binary = BINARY_INVALID
+                else:
+                    node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD:
                 locked.unlock_prev()
 
@@ -231,7 +237,10 @@ class GraphBinariesAnalyzer(object):
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                    node.binary = BINARY_BUILD
+                    if node.cant_build:
+                        node.binary = BINARY_INVALID
+                    else:
+                        node.binary = BINARY_BUILD
 
             if locked:
                 # package_id was not locked, this means a base lockfile that is being completed
@@ -252,6 +261,8 @@ class GraphBinariesAnalyzer(object):
             build_mode.forced(node.conanfile, node.ref)
             node.binary = BINARY_INVALID
             return
+
+
 
         if self._evaluate_build(node, build_mode):
             return
@@ -293,7 +304,10 @@ class GraphBinariesAnalyzer(object):
                 local_recipe_hash = package_layout.recipe_manifest().summary_hash
                 if local_recipe_hash != recipe_hash:
                     conanfile.output.info("Outdated package!")
-                    node.binary = BINARY_BUILD
+                    if node.cant_build:
+                        node.binary = BINARY_INVALID
+                    else:
+                        node.binary = BINARY_BUILD
                     node.prev = None
                 else:
                     conanfile.output.info("Package is up to date")
@@ -399,6 +413,14 @@ class GraphBinariesAnalyzer(object):
                     conanfile._conan_dependencies = None
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
+
+        if hasattr(conanfile, "validate_build") and callable(conanfile.validate_build):
+            with conanfile_exception_formatter(str(conanfile), "validate_build"):
+                try:
+                    conanfile.validate_build()
+                except ConanInvalidConfiguration as e:
+                    # This 'cant_build' will be ignored if we don't have to build the node.
+                    node.cant_build = str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()

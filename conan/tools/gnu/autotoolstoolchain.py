@@ -2,7 +2,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path, is_apple_os
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
@@ -22,10 +22,10 @@ class AutotoolsToolchain:
         self.make_args = []
 
         # Flags
-        self.cxxflags = []
-        self.cflags = []
-        self.ldflags = []
-        self.defines = []
+        self.extra_cxxflags = []
+        self.extra_cflags = []
+        self.extra_ldflags = []
+        self.extra_defines = []
 
         # Defines
         self.gcc_cxx11_abi = self._get_cxx11_abi_define()
@@ -63,7 +63,7 @@ class AutotoolsToolchain:
             # Apple Stuff
             if os_build == "Macos":
                 sdk_path = apple_sdk_path(conanfile)
-                apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+                apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
@@ -122,46 +122,52 @@ class AutotoolsToolchain:
     def _filter_list_empty_fields(v):
         return list(filter(bool, v))
 
-    def _get_extra_flags(self):
-        # Now, it's time to get all the flags defined by the user
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        return {
-            "cxxflags": cxxflags,
-            "cflags": cflags,
-            "defines": defines,
-            "ldflags": sharedlinkflags + exelinkflags
-        }
+    @property
+    def cxxflags(self):
+        fpic = "-fPIC" if self.fpic else None
+        ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
+               self.sysroot_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        ret = ret + self.build_type_flags + apple_flags + conf_flags + self.extra_cxxflags
+        return self._filter_list_empty_fields(ret)
+
+    @property
+    def cflags(self):
+        fpic = "-fPIC" if self.fpic else None
+        ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        ret = ret + self.build_type_flags + apple_flags + conf_flags + self.extra_cflags
+        return self._filter_list_empty_fields(ret)
+
+    @property
+    def ldflags(self):
+        ret = [self.arch_flag, self.sysroot_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                              check_type=list)
+        conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
+                                                   check_type=list))
+        ret = ret + apple_flags + conf_flags + self.build_type_link_flags + self.extra_ldflags
+        return self._filter_list_empty_fields(ret)
+
+    @property
+    def defines(self):
+        conf_flags = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
+        return self._filter_list_empty_fields(ret)
 
     def environment(self):
         env = Environment()
-
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
-        fpic = "-fPIC" if self.fpic else None
-        extra_flags = self._get_extra_flags()
-
-        self.cxxflags.extend([self.libcxx, self.cppstd,
-                              self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
-                             + self.build_type_flags + apple_flags + extra_flags["cxxflags"])
-        self.cflags.extend([self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
-                           + self.build_type_flags + apple_flags + extra_flags["cflags"])
-        self.ldflags.extend([self.arch_flag, self.sysroot_flag] + self.build_type_link_flags
-                            + apple_flags + extra_flags["ldflags"])
-        self.defines.extend([self.ndebug, self.gcc_cxx11_abi] + extra_flags["defines"])
-
         if is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
-
-        env.append("CPPFLAGS", ["-D{}".format(d) for d in self._filter_list_empty_fields(self.defines)])
-        env.append("CXXFLAGS", self._filter_list_empty_fields(self.cxxflags))
-        env.append("CFLAGS", self._filter_list_empty_fields(self.cflags))
-        env.append("LDFLAGS", self._filter_list_empty_fields(self.ldflags))
+        env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
+        env.append("CXXFLAGS", self.cxxflags)
+        env.append("CFLAGS", self.cflags)
+        env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
-
         return env
 
     def vars(self):
@@ -203,7 +209,7 @@ class AutotoolsToolchain:
                                        _get_argument("includedir", "includedirs"),
                                        _get_argument("oldincludedir", "includedirs"),
                                        _get_argument("datarootdir", "resdirs")])
-        return configure_install_flags
+        return [el for el in configure_install_flags if el]
 
     def _default_autoreconf_flags(self):
         return ["--force", "--install"]

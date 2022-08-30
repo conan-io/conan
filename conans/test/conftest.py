@@ -1,4 +1,5 @@
 import os
+import pathlib
 import platform
 import uuid
 
@@ -23,6 +24,12 @@ tools_locations = {
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
+        # To explicitly skip one tool for one version, define the path as 'skip-tests'
+        # if you don't define the path for one platform it will run the test with the
+        # tool in the path. For example here it will skip the test with CMake in Darwin but
+        # in Linux it will run with the version found in the path if it's not specified
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
+                          "Darwin": "skip-tests"}},
     },
     'ninja': {
         "1.10.2": {}
@@ -33,6 +40,9 @@ tools_locations = {
     }
 }
 """
+
+MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
+homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
 
 
 tools_locations = {
@@ -47,7 +57,9 @@ tools_locations = {
         "0.28": {
             "path": {
                 # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Darwin': f"{homebrew_root}/bin",
+                'Linux': "/usr/bin"
             }
         }},
     'autotools': {"exe": "autoconf"},
@@ -75,8 +87,10 @@ tools_locations = {
         },
         "3.23": {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
-                     'Linux': '/usr/share/cmake-3.23.1/bin'}
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin'
+                               if not MacOS_arm else "skip-tests",
+                     # Not available in Linux
+                     'Linux': "skip-tests"}
         }
     },
     'ninja': {
@@ -85,11 +99,26 @@ tools_locations = {
             "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
         }
     },
+    # This is the non-msys2 mingw, which is 32 bits x86 arch
+    'mingw': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/mingw"}},
+    },
     'mingw32': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+    },
+    'ucrt64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/ucrt64/bin"}},
     },
     'mingw64': {
         "platform": "Windows",
@@ -102,6 +131,20 @@ tools_locations = {
         "default": "system",
         "exe": "make",
         "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+    },
+    'msys2_clang64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
+    },
+    'msys2_mingw64_clang64': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {
         "platform": "Windows",
@@ -121,7 +164,6 @@ tools_locations = {
             "path": {'Linux': '/usr/local/bin/premake5'}
         }
     },
-    'premake': {},
     'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
@@ -152,10 +194,13 @@ try:
 except ImportError as e:
     user_tool_locations = None
 
+
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
-    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': '/usr/local/share/android-ndk'}}
+    'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
+    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}},
+    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': f"{homebrew_root}/share/android-ndk"}}
 }
 
 
@@ -168,55 +213,78 @@ def _get_tool(name, version):
     # True = tool not available, test error
     # (path, env) = tool available
     cached = _cached_tools.setdefault(name, {}).get(version)
-    if cached is None:
-        tool = tools_locations.get(name, {})
-        if tool.get("disabled"):
-            _cached_tools[name][version] = False
+    if cached is not None:
+        return cached
+    result = _get_individual_tool(name, version)
+    _cached_tools[name][version] = result
+    return result
+
+
+def _get_individual_tool(name, version):
+    tool = tools_locations.get(name, {})
+    if tool.get("disabled"):
+        return False
+
+    tool_platform = platform.system()
+    if tool.get("platform", tool_platform) != tool_platform:
+        return None, None
+
+    version = version or tool.get("default")
+    tool_version = tool.get(version)
+    if tool_version is not None:
+        assert isinstance(tool_version, dict)
+        if tool_version.get("disabled"):
             return False
-
-        tool_platform = platform.system()
-        if tool.get("platform", tool_platform) != tool_platform:
-            _cached_tools[name][version] = None, None
-            return None, None
-
-        exe = tool.get("exe", name)
-        version = version or tool.get("default")
-        tool_version = tool.get(version)
-        if tool_version is not None:
-            assert isinstance(tool_version, dict)
-            if tool_version.get("disabled"):
-                _cached_tools[name][version] = False
-                return False
-            tool_path = tool_version.get("path", {}).get(tool_platform)
-        else:
-            if version is not None:  # if the version is specified, it should be in the conf
-                _cached_tools[name][version] = True
-                return True
-            tool_path = None
-
-        try:
-            tool_env = tools_environments[name][tool_platform]
-        except KeyError:
-            tool_env = None
-
-        cached = tool_path, tool_env
-
-        # Check this particular tool is installed
         if name == "visual_studio":
-            if not vswhere():  # TODO: Missing version detection
-                cached = True
-        else:  # which based detection
-            old_environ = None
-            if tool_path is not None:
-                old_environ = dict(os.environ)
-                os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
-            if not which(exe):  # TODO: This which doesn't detect version either
-                cached = True
-            if old_environ is not None:
-                os.environ.clear()
-                os.environ.update(old_environ)
+            if vswhere():  # TODO: Missing version detection
+                return None, None
 
-        _cached_tools[name][version] = cached
+        tool_path = tool_version.get("path", {}).get(tool_platform)
+        tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
+        # To allow to skip for a platform, we can put the path to None
+        # "cmake": { "3.23": {
+        #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
+        #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+        #                        'Linux': None}}
+        #          }
+        if tool_path == "skip-tests":
+            return False
+        elif tool_path is not None and not os.path.isdir(tool_path):
+            return True
+    else:
+        if version is not None:  # if the version is specified, it should be in the conf
+            return True
+        tool_path = None
+
+    try:
+        tool_env = tools_environments[name][tool_platform]
+    except KeyError:
+        tool_env = None
+
+    cached = tool_path, tool_env
+
+    # Check this particular tool is installed
+    old_environ = None
+    if tool_path is not None:
+        old_environ = dict(os.environ)
+        os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
+    exe = tool.get("exe", name)
+    exe_found = which(exe)  # TODO: This which doesn't detect version either
+    exe_path = str(pathlib.Path(exe_found).parent)
+    if not exe_found:
+        cached = True
+        if tool_path is None:
+            # will fail the test, not exe found and path None
+            cached = True
+    elif tool_path is not None and tool_path not in exe_found:
+        # finds the exe in a path that is not the one set in the conf -> fail
+        cached = True
+    elif tool_path is None:
+        cached = exe_path, tool_env
+
+    if old_environ is not None:
+        os.environ.clear()
+        os.environ.update(old_environ)
 
     return cached
 

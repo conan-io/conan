@@ -16,6 +16,7 @@ class CrossBuildingTest(unittest.TestCase):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "FreeBSD"
         settings.arch = "x86_64"
+        settings.arch_build = "x86_64"
         self.assertFalse(cross_building(settings, self_os="FreeBSD", self_arch="x86_64"))
 
         with mock.patch("platform.system", mock.MagicMock(return_value='FreeBSD')),\

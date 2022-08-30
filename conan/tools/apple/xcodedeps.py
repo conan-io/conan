@@ -1,12 +1,13 @@
 import os
 import textwrap
+from collections import OrderedDict
 
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.util.files import load, save
-from conan.tools.apple.apple import to_apple_arch
+from conans.client.tools.apple import to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
     // Includes both the toolchain and the dependencies
@@ -59,36 +60,18 @@ def _add_includes_to_file_or_create(filename, template, files_to_include):
 class XcodeDeps(object):
     general_name = "conandeps.xcconfig"
 
-    _vars_xconfig = textwrap.dedent("""\
-        // Definition of Conan variables for {{pkg_name}}::{{comp_name}}
-        CONAN_{{pkg_name}}_{{comp_name}}_BINARY_DIRECTORIES{{condition}} = {{bin_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_C_COMPILER_FLAGS{{condition}} = {{c_compiler_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_CXX_COMPILER_FLAGS{{condition}} = {{cxx_compiler_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LINKER_FLAGS{{condition}} = {{linker_flags}}
-        CONAN_{{pkg_name}}_{{comp_name}}_PREPROCESSOR_DEFINITIONS{{condition}} = {{definitions}}
-        CONAN_{{pkg_name}}_{{comp_name}}_INCLUDE_DIRECTORIES{{condition}} = {{include_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_RESOURCE_DIRECTORIES{{condition}} = {{res_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LIBRARY_DIRECTORIES{{condition}} = {{lib_dirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_LIBRARIES{{condition}} = {{libs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_SYSTEM_LIBS{{condition}} = {{system_libs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS_DIRECTORIES{{condition}} = {{frameworkdirs}}
-        CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS{{condition}} = {{frameworks}}
-        """)
-
     _conf_xconfig = textwrap.dedent("""\
-        // Include {{pkg_name}}::{{comp_name}} vars
-        #include "{{vars_filename}}"
+        PACKAGE_ROOT_{{pkg_name}}{{condition}} = {{root}}
+        // Compiler options for {{pkg_name}}::{{comp_name}}
+        HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
+        GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}}{{condition}} = {{definitions}}
+        OTHER_CFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{c_compiler_flags}}
+        OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{cxx_compiler_flags}}
+        FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{frameworkdirs}}
 
-        // Compiler options for {{pkg_name}}::{{pkg_name}}
-        HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_INCLUDE_DIRECTORIES)
-        GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_PREPROCESSOR_DEFINITIONS)
-        OTHER_CFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_C_COMPILER_FLAGS)
-        OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_CXX_COMPILER_FLAGS)
-        FRAMEWORK_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS_DIRECTORIES)
-
-        // Link options for {{name}}
-        LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_LIBRARY_DIRECTORIES)
-        OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}} = $(CONAN_{{pkg_name}}_{{comp_name}}_LINKER_FLAGS) $(CONAN_{{pkg_name}}_{{comp_name}}_LIBRARIES) $(CONAN_{{pkg_name}}_{{comp_name}}_SYSTEM_LIBS) $(CONAN_{{pkg_name}}_{{comp_name}}_FRAMEWORKS)
+        // Link options for {{pkg_name}}::{{comp_name}}
+        LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{lib_dirs}}
+        OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{linker_flags}} {{libs}} {{system_libs}} {{frameworks}}
         """)
 
     _dep_xconfig = textwrap.dedent("""\
@@ -140,39 +123,34 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _vars_xconfig_file(self, pkg_name, comp_name, cpp_info):
+    def _conf_xconfig_file(self, pkg_name, comp_name, package_folder, transitive_cpp_infos):
         """
-        returns a .xcconfig file with the variables definition for one package for one configuration
+        content for conan_poco_x86_release.xcconfig, containing the activation
         """
+        def _merged_vars(name):
+            merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
+            return list(OrderedDict.fromkeys(merged).keys())
 
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
-            'bin_dirs': " ".join('"{}"'.format(p) for p in cpp_info.bindirs),
-            'res_dirs': " ".join('"{}"'.format(p) for p in cpp_info.resdirs),
-            'include_dirs': " ".join('"{}"'.format(p) for p in cpp_info.includedirs),
-            'lib_dirs': " ".join('"{}"'.format(p) for p in cpp_info.libdirs),
-            'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
-            'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
-            'frameworksdirs': " ".join('"{}"'.format(p) for p in cpp_info.frameworkdirs),
-            'frameworks': " ".join("-framework {}".format(framework) for framework in cpp_info.frameworks),
-            'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.defines),
-            'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cflags),
-            'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.cxxflags),
-            'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.sharedlinkflags),
-            'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in cpp_info.exelinkflags),
+            'root': package_folder,
+            'include_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("includedirs")),
+            'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
+            'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
+            'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in _merged_vars("system_libs")),
+            'frameworkdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
+            'frameworks': " ".join("-framework {}".format(framework) for framework in _merged_vars("frameworks")),
+            'definitions': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("defines")),
+            'c_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cflags")),
+            'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cxxflags")),
+            'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("sharedlinkflags")),
+            'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
             'condition': _xcconfig_conditional(self._conanfile.settings)
         }
-        formatted_template = Template(self._vars_xconfig).render(**fields)
-        return formatted_template
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, vars_xconfig_name):
-        """
-        content for conan_poco_x86_release.xcconfig, containing the activation
-        """
         template = Template(self._conf_xconfig)
-        content_multi = template.render(pkg_name=pkg_name, comp_name=comp_name,
-                                        vars_filename=vars_xconfig_name)
+        content_multi = template.render(**fields)
         return content_multi
 
     def _dep_xconfig_file(self, pkg_name, comp_name, name_general, dep_xconfig_filename, reqs):
@@ -221,20 +199,17 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
-    def get_content_for_component(self, pkg_name, component_name, cpp_info, reqs):
+    def get_content_for_component(self, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
         conf_name = _xcconfig_settings_filename(self._conanfile.settings)
-        # One file per configuration, with just the variables
-        vars_xconfig_name = "conan_{}_{}_vars{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[vars_xconfig_name] = self._vars_xconfig_file(pkg_name, component_name, cpp_info)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, vars_xconfig_name)
+        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, package_folder, transitive_internal)
 
         # The entry point for each package
         file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
-        dep_content = self._dep_xconfig_file(pkg_name, component_name, file_dep_name, props_name, reqs)
+        dep_content = self._dep_xconfig_file(pkg_name, component_name, file_dep_name, props_name, transitive_external)
 
         result[file_dep_name] = dep_content
         return result
@@ -244,26 +219,71 @@ class XcodeDeps(object):
 
         # Generate the config files for each component with name conan_pkgname_compname.xcconfig
         # If a package has no components the name is conan_pkgname_pkgname.xcconfig
-        # Then all components are included in the conan_pkgname.xcconfig file
-        for dep in self._conanfile.dependencies.host.values():
+        # All components are included in the conan_pkgname.xcconfig file
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
+        all_deps = list(host_req.values()) + list(test_req.values())
+        for dep in all_deps:
+
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
             if dep.cpp_info.has_components:
-                for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
-                    component_deps = []
-                    for req in comp_cpp_info.requires:
-                        req_pkg, req_cmp = req.split("::") if "::" in req else (dep_name, req)
-                        component_deps.append((req_pkg, req_cmp))
 
-                    component_content = self.get_content_for_component(dep_name, comp_name, comp_cpp_info, component_deps)
+                sorted_components = dep.cpp_info.get_sorted_components().items()
+                for comp_name, comp_cpp_info in sorted_components:
+                    comp_name = _format_name(comp_name)
+
+                    # returns: ("list of cpp infos from required components in same package",
+                    #           "list of names from required components from other packages")
+                    def _get_component_requires(component):
+                        requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
+                                             component.requires if "::" in req]
+                        requires_internal = [dep.cpp_info.components.get(req) for req in
+                                             component.requires if "::" not in req]
+                        return requires_internal, requires_external
+
+                    # these are the transitive dependencies between components of the same package
+                    transitive_internal = []
+                    # these are the transitive dependencies to components from other packages
+                    transitive_external = []
+
+                    # return the internal cpp_infos and external components names
+                    def _transitive_components(component):
+                        requires_internal, requires_external = _get_component_requires(component)
+                        transitive_internal.append(component)
+                        transitive_internal.extend(requires_internal)
+                        transitive_external.extend(requires_external)
+                        for require in requires_internal:
+                            _transitive_components(require)
+
+                    _transitive_components(comp_cpp_info)
+
+                    # remove duplicates
+                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
+                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
+
+                    component_content = self.get_content_for_component(dep_name, comp_name,
+                                                                       dep.package_folder,
+                                                                       transitive_internal,
+                                                                       transitive_external)
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_deps = [(_format_name(d.ref.name),) * 2 for r, d in
-                               dep.dependencies.direct_host.items() if r.visible]
+                public_deps = []
+                for r, d in dep.dependencies.direct_host.items():
+                    if not r.visible:
+                        continue
+                    if d.cpp_info.has_components:
+                        sorted_components = d.cpp_info.get_sorted_components().items()
+                        for comp_name, comp_cpp_info in sorted_components:
+                            public_deps.append((_format_name(d.ref.name), _format_name(comp_name)))
+                    else:
+                        public_deps.append((_format_name(d.ref.name),) * 2)
+
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                root_content = self.get_content_for_component(dep_name, dep_name, dep.cpp_info, required_components)
+                root_content = self.get_content_for_component(dep_name, dep_name, dep.package_folder, [dep.cpp_info],
+                                                              required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 

@@ -22,6 +22,7 @@ class parentLib(ConanFile):
 
 conanfile = """
 import os
+from pathlib import Path
 from conans import ConanFile
 
 class AConan(ConanFile):
@@ -45,6 +46,8 @@ class AConan(ConanFile):
 
     def source(self):
         assert(self.source_folder == os.getcwd())
+        assert(isinstance(self.source_path, Path))
+        assert(str(self.source_path) == self.source_folder)
         self.assert_in_local_cache()
 
         # Prevented to use them, it's dangerous, because the source is run only for the first
@@ -65,6 +68,8 @@ class AConan(ConanFile):
 
     def build(self):
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
 
         self.assert_in_local_cache()
         self.assert_deps_infos()
@@ -77,11 +82,15 @@ class AConan(ConanFile):
             self.install_folder
 
         assert(self.package_folder is not None)
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         self.copy_build_folder = self.build_folder
 
     def package(self):
         assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
         self.assert_in_local_cache()
         self.assert_deps_infos()
 
@@ -97,6 +106,8 @@ class AConan(ConanFile):
 
     def package_info(self):
         assert(self.package_folder == os.getcwd())
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         assert(self.in_local_cache == True)
 
         assert(self.source_folder is None)

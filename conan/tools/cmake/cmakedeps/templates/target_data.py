@@ -4,7 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_file_name, get_find_mode
+from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
 """
 
 foo-release-x86_64-data.cmake
@@ -16,7 +16,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "" if not self.find_module_mode else "module-"
+        data_fname = "" if not self.generating_module else "module-"
         data_fname += "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
@@ -49,6 +49,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         package_folder = package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
+                "has_components": self.conanfile.cpp_info.has_components,
                 "pkg_name": self.pkg_name,
                 "file_name": self.file_name,
                 "package_folder": package_folder,
@@ -84,6 +85,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### VARIABLES #######################################################################
               #############################################################################################
               set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
+              set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
+
+
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
@@ -98,14 +102,14 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }} {{ global_cpp.system_libs }})
               set({{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ global_cpp.framework_paths }})
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
-              set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
 
-              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
 
+              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
 
-              ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
+              ########### COMPONENT {{ comp_target_name }} VARIABLES ############################################
+
               set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
@@ -126,7 +130,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
-              list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
+
+
               {%- endfor %}
           """)
         return ret
@@ -170,9 +175,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
-                    ret.append(get_file_name(req))
+                    ret.append(get_cmake_package_name(req))
         elif direct_host:
-            ret = [get_file_name(r) for r in direct_host.values()]
+            ret = [get_cmake_package_name(r, self.generating_module) for r in direct_host.values()]
 
         return ret
 
@@ -182,9 +187,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
-            dep_file_name = get_file_name(dep)
+            dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)
-            default_value = "NO_MODULE" if not self.find_module_mode else "MODULE"
+            default_value = "NO_MODULE" if not self.generating_module else "MODULE"
             values = {
                 FIND_MODE_NONE: "",
                 FIND_MODE_CONFIG: "NO_MODULE",

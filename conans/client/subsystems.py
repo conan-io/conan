@@ -98,6 +98,13 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder, bash_path, s
     from conan.tools.env.environment import environment_wrap_command
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
 
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    shell_path = conanfile.conf.get("tools.microsoft.bash:path")
+    if not subsystem or not shell_path:
+        raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
+                             "'tools.microsoft.bash:path' are "
+                             "needed to run commands in a Windows subsystem")
+
     env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
@@ -109,7 +116,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder, bash_path, s
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
         env.append(path)
 
-    wrapped_shell = '"%s"' % bash_path if " " in bash_path else bash_path
+    wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
     wrapped_shell = environment_wrap_command(env, envfiles_folder, wrapped_shell,
                                              accepted_extensions=("bat", "ps1"))
 

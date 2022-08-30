@@ -532,6 +532,12 @@ class TestClient(object):
         else:
             return self.get_conan_api_v1()
 
+    def get_default_host_profile(self):
+        return self.cache.default_profile
+
+    def get_default_build_profile(self):
+        return self.cache.default_profile
+
     def run_cli(self, command_line, assert_error=False):
         conan = self.get_conan_api()
         self.api = conan
@@ -619,13 +625,14 @@ class TestClient(object):
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
-    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
+    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None,
+                      main_branch="master"):
         if folder is not None:
             folder = os.path.join(self.current_folder, folder)
         else:
             folder = self.current_folder
         _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
-                                          origin_url=origin_url)
+                                          origin_url=origin_url, main_branch=main_branch)
         return commit
 
 

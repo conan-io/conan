@@ -1,6 +1,6 @@
 import os
 
-
+from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5, save
@@ -49,3 +49,17 @@ class TestManifest:
         save(os.path.join(tmp_dir, "conanmanifest.txt"), "1478122267\nsome: file.py: 123\n")
         read_manifest = FileTreeManifest.load(tmp_dir)
         assert read_manifest.file_sums["some: file.py"] == "123"
+
+
+def test_pycache_included():
+    tmp_dir = temp_folder()
+    files = {"__pycache__/damn.py": "binarythings",
+             "pythonfile.pyc": "binarythings3"}
+    for filename, content in files.items():
+        save(os.path.join(tmp_dir, filename), content)
+
+    with environment_append({"CONAN_KEEP_PYTHON_FILES": "1"}):
+        manifest = FileTreeManifest.create(tmp_dir)
+    manifest = repr(manifest)
+    assert "pythonfile.pyc" in manifest
+    assert "__pycache__/damn.py" in manifest

@@ -110,6 +110,55 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) not in client.out
 
 
+def test_cmaketoolchain_path_find_package_editable():
+    """ make sure a package in editable mode that contains a xxxConfig.cmake file can find that
+    file in the user folder
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "*"
+            def layout(self):
+                cmake_layout(self)
+                self.cpp.source.builddirs = ["cmake"]
+            def package(self):
+                self.copy(pattern="*")
+            def package_info(self):
+                self.cpp_info.builddirs.append("cmake")
+        """)
+    find = textwrap.dedent("""
+        SET(hello_FOUND 1)
+        MESSAGE("HELLO FROM THE hello FIND PACKAGE!")
+        """)
+
+    consumer = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello CXX)
+        find_package(hello REQUIRED)
+        """)
+    client.save({"dep/conanfile.py": conanfile,
+                 "dep/cmake/helloConfig.cmake": find,
+                 "consumer/conanfile.txt": "[requires]\nhello/0.1\n[generators]\nCMakeToolchain",
+                 "consumer/CMakeLists.txt": consumer})
+    with client.chdir("dep"):
+        client.run("install .")
+        client.run("editable add . hello/0.1@")
+
+    with client.chdir("consumer"):
+        client.run("install .")
+
+        with client.chdir("build"):
+            build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
+            cmake_command = "cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake {}".format(
+                build_type)
+            client.run_command(cmake_command)
+        assert "Conan: Target declared" not in client.out
+        assert "HELLO FROM THE hello FIND PACKAGE!" in client.out
+
+
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize(
     "settings",

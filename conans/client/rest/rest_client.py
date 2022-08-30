@@ -111,7 +111,8 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                               self._requester, self._verify_ssl, self._artifacts_properties)
+                               self._requester, self._config, self._verify_ssl,
+                               self._artifacts_properties)
 
         if self._refresh_token and self._token:
             token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)

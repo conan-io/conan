@@ -226,6 +226,11 @@ class OptionsValues(object):
     def __contains__(self, item):
         return item in self._package_values
 
+    def get_safe(self, attr):
+        if attr not in self._package_values:
+            return None
+        return getattr(self._package_values, attr)
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -331,7 +336,8 @@ class PackageOption(object):
     def __init__(self, possible_values, name):
         self._name = name
         self._value = None
-        if possible_values == "ANY":
+        if possible_values == "ANY" or (isinstance(possible_values, list) and
+                                        "ANY" in possible_values):
             self._possible_values = "ANY"
         else:
             self._possible_values = sorted(str(v) for v in possible_values)

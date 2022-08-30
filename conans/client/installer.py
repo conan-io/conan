@@ -218,10 +218,10 @@ class _PackageBuilder(object):
                 conanfile.folders.set_base_build(base_build)
                 conanfile.folders.set_base_imports(base_build)
                 conanfile.folders.set_base_package(base_package)
+                # In local cache, generators folder always in build_folder
+                conanfile.folders.set_base_generators(base_build)
 
                 if not skip_build:
-                    # In local cache, generators folder always in build_folder
-                    conanfile.folders.set_base_generators(base_build)
                     # In local cache, install folder always is build_folder
                     conanfile.folders.set_base_install(base_build)
                     self._build(conanfile, pref)
@@ -423,7 +423,13 @@ class BinaryInstaller(object):
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+                if node.cant_build:
+                    msg.append("{}: Cannot build "
+                               "for this configuration: {}".format(node.conanfile,
+                                                                   node.cant_build))
+                else:
+                    msg.append("{}: Invalid ID: {}".format(node.conanfile,
+                                                           node.conanfile.info.invalid))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}
@@ -674,8 +680,13 @@ class BinaryInstaller(object):
                         # Old cpp info without defaults (the defaults are in the new one)
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
+                        # Note: Remember that this is not needed for Conan 2.x
+                        # Let's avoid losing this information.
+                        conanfile.cpp_info.version = conanfile.version
+                        conanfile.cpp_info.description = conanfile.description
+                        conanfile.cpp_info.public_deps = public_deps
+
                         if not is_editable:
-                            conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:

@@ -1,4 +1,5 @@
 import json
+import re
 import textwrap
 import unittest
 
@@ -38,6 +39,59 @@ class TestValidate(unittest.TestCase):
         myjson = json.loads(client.load("myjson"))
         self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
         self.assertEqual(myjson[0]["id"], 'INVALID')
+
+    def test_validate_header_only(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            from conan.tools.build import check_min_cppstd
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                options = {"shared": [True, False], "header_only": [True, False],}
+                default_options = {"shared": False, "header_only": True}
+
+                def package_id(self):
+                   if self.info.options.header_only:
+                       self.info.clear()
+
+                def validate(self):
+                    if self.info.options.get_safe("header_only") == "False":
+                        if self.info.settings.get_safe("compiler.version") == "12":
+                          raise ConanInvalidConfiguration("This package cannot exist in gcc 12")
+                        check_min_cppstd(self, 11)
+                        # These configurations are impossible
+                        if self.info.settings.os != "Windows" and self.info.options.shared:
+                            raise ConanInvalidConfiguration("shared is only supported under windows")
+
+                    # HOW CAN WE VALIDATE CPPSTD > 11 WHEN HEADER ONLY?
+
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc "
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11")
+        assert re.search(r"Package '(.*)' created", str(client.out))
+
+        client.run("create . pkg/0.1@ -o header_only=False -s os=Linux -s compiler=gcc "
+                   "-s compiler.version=12 -s compiler.libcxx=libstdc++11", assert_error=True)
+
+        assert "Invalid ID: This package cannot exist in gcc 12" in client.out
+
+        client.run("create . pkg/0.1@ -o header_only=False -s os=Macos -s compiler=gcc "
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=98",
+                   assert_error=True)
+
+        assert "Invalid ID: Current cppstd (98) is lower than the required C++ " \
+               "standard (11)" in client.out
+
+        client.run("create . pkg/0.1@ -o header_only=False -o shared=True "
+                   "-s os=Macos -s compiler=gcc "
+                   "-s compiler.version=11 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=11",
+                   assert_error=True)
+
+        assert "Invalid ID: shared is only supported under windows" in client.out
 
     def test_validate_compatible(self):
         client = TestClient()

@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import textwrap
 import unittest
+import pytest
 
 from parameterized.parameterized import parameterized
 
@@ -540,3 +542,145 @@ class MyPkg(ConanFile):
         self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
         self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
         self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+
+
+def test_default_framework_dirs():
+
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake, tools
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def package_info(self):
+            self.output.warn("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: ['Frameworks']" in client.out
+
+
+def test_default_framework_dirs_with_layout():
+
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake, tools
+
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.output.warn("FRAMEWORKS: {}".format(self.cpp_info.frameworkdirs))""")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "FRAMEWORKS: []" in client.out
+
+
+@pytest.mark.parametrize("with_layout", [True, False])
+def test_defaults_in_components_without_layout(with_layout):
+    lib_conan_file = textwrap.dedent("""
+    from conan import ConanFile
+
+    class LibConan(ConanFile):
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            pass
+
+        def package_info(self):
+            self.cpp_info.components["foo"].libs = ["foolib"]
+
+    """)
+    if not with_layout:
+        lib_conan_file = lib_conan_file.replace("def layout(", "def potato(")
+    client = TestClient()
+    client.save({"conanfile.py": lib_conan_file})
+    client.run("create . ")
+
+    consumer_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "lib/1.0"
+
+            def layout(self):
+                pass
+
+            def generate(self):
+                if hasattr(self, "layout"):
+                    cppinfo = self.dependencies["lib"].cpp_info
+                else:
+                    cppinfo = dict(self.deps_cpp_info.dependencies)["lib"]
+
+                components = cppinfo.components
+                self.output.warn("BINDIRS: {}".format(cppinfo.bindirs))
+                self.output.warn("LIBDIRS: {}".format(cppinfo.libdirs))
+                self.output.warn("INCLUDEDIRS: {}".format(cppinfo.includedirs))
+                self.output.warn("RESDIRS: {}".format(cppinfo.resdirs))
+                self.output.warn("FOO LIBDIRS: {}".format(components["foo"].libdirs))
+                self.output.warn("FOO INCLUDEDIRS: {}".format(components["foo"].includedirs))
+                self.output.warn("FOO RESDIRS: {}".format(components["foo"].resdirs))
+
+        """)
+
+    if not with_layout:
+        consumer_conanfile = consumer_conanfile.replace("def layout(", "def potato(")
+
+    client.save({"conanfile.py": consumer_conanfile})
+    client.run("create . ")
+
+    if with_layout:
+        # The paths are absolute and the components have defaults
+        # ".+" Check that there is a path, not only "lib"
+        assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
+        assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
+        assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+        assert "WARN: RES DIRS: []"
+        assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))) is with_layout
+        assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))) is with_layout
+        assert "WARN: FOO RESDIRS: []" in client.out
+    else:
+        # The paths are not absolute and the components have defaults
+        assert "BINDIRS: ['bin']" in client.out
+        assert "LIBDIRS: ['lib']" in client.out
+        assert "INCLUDEDIRS: ['include']" in client.out
+        assert "FOO LIBDIRS: ['lib']" in client.out
+        assert "FOO INCLUDEDIRS: ['include']" in client.out
+        assert "FOO RESDIRS: ['res']" in client.out
+
+
+def test_create_keep_build_sets_generators_folder_even_with_cmake_layout_defined():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/11785
+    """
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout
+
+    class LibConan(ConanFile):
+        settings = 'os', 'arch', 'compiler', 'build_type'
+        name = "lib"
+        version = "1.0"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def package(self):
+            self.output.info("GENERATORS FOLDER: {}".format(self.generators_folder))
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s build_type=Release")
+    client.run("create -kb . -s build_type=Release")
+    # self.generators_folder should be not None when -kb is used
+    assert re.search(r"GENERATORS FOLDER: .*generators", str(client.out))

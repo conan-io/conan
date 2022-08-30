@@ -295,6 +295,7 @@ def test_auto_package_default_folders_with_components():
     conan_file += """
     def layout(self):
         for el in [self.cpp.source, self.cpp.build]:
+            # The defaults for cpp.build and cpp.source are empty
             assert el.components["foo"].includedirs is None
             assert el.components["foo"].libdirs is None
             assert el.components["foo"].bindirs is None
@@ -302,9 +303,10 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs is None
             assert el.components["foo"].resdirs is None
 
-        assert self.cpp.package.components["foo"].includedirs is None
-        assert self.cpp.package.components["foo"].libdirs is None
-        assert self.cpp.package.components["foo"].bindirs is None
+        # The defaults for cpp.package are filled includedirs and libdirs and bindirs
+        assert self.cpp.package.components["foo"].includedirs is not None
+        assert self.cpp.package.components["foo"].libdirs is not None
+        assert self.cpp.package.components["foo"].bindirs is not None
         assert self.cpp.package.components["foo"].frameworkdirs is None
         assert self.cpp.package.components["foo"].srcdirs is None
         assert self.cpp.package.components["foo"].resdirs is None

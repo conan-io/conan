@@ -1,4 +1,5 @@
 import platform
+from unittest.mock import MagicMock, patch
 
 import mock
 import pytest
@@ -51,6 +52,11 @@ def test_msys2():
     ("fedora", "dnf"),
     ("arch", "pacman"),
     ("opensuse", "zypper"),
+    ("sles", "zypper"),
+    ("opensuse", "zypper"),
+    ("opensuse-tumbleweed", "zypper"),
+    ("opensuse-leap", "zypper"),
+    ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
@@ -111,7 +117,11 @@ def test_tools_install_mode_check(tool_class):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
-            tool.install(["package1", "package2"])
+            def fake_check(*args, **kwargs):
+                return ["package1", "package2"]
+            from conan.tools.system.package_manager import _SystemPackageManagerTool
+            with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+                tool.install(["package1", "package2"])
         assert exc_info.value.args[0] == "System requirements: 'package1, package2' are missing but " \
                                          "can't install because tools.system.package_manager:mode is " \
                                          "'check'.Please update packages manually or set " \
@@ -120,28 +130,8 @@ def test_tools_install_mode_check(tool_class):
                                          "'-c tools.system.package_manager:mode=install'"
 
 
-@pytest.mark.parametrize("tool_class",
-                         [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
-def test_tools_update_mode_check(tool_class):
-    conanfile = ConanFileMock()
-    conanfile.conf = Conf()
-    conanfile.settings = Settings()
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "check"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
-        context_mock.return_value = "host"
-        tool = tool_class(conanfile)
-        with pytest.raises(ConanException) as exc_info:
-            tool.update()
-        assert exc_info.value.args[0] == "Can't update because tools.system.package_manager:mode is " \
-                                         "'check'.Please update packages manually or set " \
-                                         "'tools.system.package_manager:mode' to 'install' in the [conf] " \
-                                         "section of the profile, or in the command line using " \
-                                         "'-c tools.system.package_manager:mode=install'"
-
-
-
-@pytest.mark.parametrize("tool_class, result", [
+@pytest.mark.parametrize("tool_class, result",
+[
     (Apt, "apt-get update"),
     (Yum, "yum check-update -y"),
     (Dnf, "dnf check-update -y"),
@@ -157,12 +147,53 @@ def test_tools_update_mode_install(tool_class, result):
     conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
+    for mode in ["check", "install"]:
+        conanfile.conf["tools.system.package_manager:mode"] = mode
+        with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+            context_mock.return_value = "host"
+            tool = tool_class(conanfile)
+            tool.update()
+            if mode == "install":
+                assert tool._conanfile.command == result
+            else:
+                # does not run the update when mode check
+                assert tool._conanfile.command is None
+
+
+@pytest.mark.parametrize("tool_class, result", [
+    (Yum, "yum check-update -y"),
+    (Dnf, "dnf check-update -y"),
+])
+def test_dnf_yum_return_code_100(tool_class, result):
+    # https://github.com/conan-io/conan/issues/11661
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.settings = Settings()
+    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "install"
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
+
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+            assert command == result
+            return 100 if "check-update" in command else 0
+
+        conanfile.run = fake_run
         tool.update()
-    assert tool._conanfile.command == result
+
+    #check that some random return code fails
+    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+            return 55 if "check-update" in command else 0
+
+        conanfile.run = fake_run
+        with pytest.raises(ConanException) as exc_info:
+            tool.update()
+        assert f"Command '{result}' failed" == str(exc_info.value)
 
 
 @pytest.mark.parametrize("tool_class, result", [
@@ -185,8 +216,12 @@ def test_tools_install_mode_install(tool_class, result):
     with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
-        tool.install(["package1", "package2"])
-    assert tool._conanfile.command == result
+
+        def fake_check(*args, **kwargs):
+            return ["package1", "package2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1", "package2"])
 
 
 @pytest.mark.parametrize("tool_class, result", [
@@ -209,4 +244,3 @@ def test_tools_check(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.check(["package"])
-    assert tool._conanfile.command == result

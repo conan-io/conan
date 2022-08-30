@@ -22,7 +22,7 @@ class Git(object):
             # --full-history is needed to not avoid wrong commits:
             # https://github.com/conan-io/conan/issues/10971
             # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
-            commit = self._run('rev-list HEAD -n 1 --full-history -- "{}"'.format(self.folder))
+            commit = self._run('rev-list HEAD -n 1 --full-history -- "."')
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
@@ -76,12 +76,13 @@ class Git(object):
         folder = self._run("rev-parse --show-toplevel")
         return folder.replace("\\", "/")
 
-    def clone(self, url, target=""):
+    def clone(self, url, target="", args=None):
+        args = args or []
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
-        self._run('clone "{}" {}'.format(url, target))
+        self._run('clone "{}" {} {}'.format(url, " ".join(args), target))
 
     def checkout(self, commit):
         self._conanfile.output.info("Checkout: {}".format(commit))

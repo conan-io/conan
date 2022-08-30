@@ -8,7 +8,7 @@ class Infos(object):
     def __init__(self):
         self.source = NewCppInfo()
         self.build = NewCppInfo()
-        self.package = NewCppInfo()
+        self.package = NewCppInfo(with_defaults=True)
 
 
 class Folders(object):
@@ -31,6 +31,10 @@ class Folders(object):
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
         self.root = None
+        # The relative location with respect to the project root of the subproject containing the
+        # conanfile.py, that makes most of the output folders defined in layouts (cmake_layout, etc)
+        # start from the subproject again
+        self.subproject = None
 
     def __repr__(self):
         return str(self.__dict__)

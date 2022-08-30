@@ -44,6 +44,10 @@ def test_third_party_patch_flow():
                  "conandata.yml": ""})
     client.run("install .")
     client.run("source .")
+    assert "apply_conandata_patches(): No patches defined in conandata" in client.out
+
+    client.save({"conandata.yml": "patches: {}"})
+    client.run("source .")
     client.run("build .", assert_error=True)
     assert "MISTAKE1 BUILD!" in client.out
 

@@ -25,7 +25,8 @@ def gather_files(folder):
     symlinks = {}
     keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
     for root, dirs, files in walk(folder):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+        if not keep_python:
+            dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):

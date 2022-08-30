@@ -16,11 +16,11 @@ from conans.util.tracer import log_download
 
 
 def check_checksum(file_path, md5, sha1, sha256):
-    if md5:
+    if md5 is not None:
         check_md5(file_path, md5)
-    if sha1:
+    if sha1 is not None:
         check_sha1(file_path, sha1)
-    if sha256:
+    if sha256 is not None:
         check_sha256(file_path, sha256)
 
 

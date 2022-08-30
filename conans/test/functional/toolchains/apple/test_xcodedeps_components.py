@@ -9,8 +9,6 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_cmake
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
 def test_xcodedeps_components():
     """
     tcp/1.0 is a lib without components
@@ -189,9 +187,11 @@ def test_xcodedeps_components():
     assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
+    host_arch = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if host_arch == "armv8" else host_arch
     client.run_command("xcodegen generate")
-    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Release -arch x86_64")
-    client.run_command("xcodebuild -project ChatApp.xcodeproj -configuration Debug -arch x86_64")
+    client.run_command(f"xcodebuild -project ChatApp.xcodeproj -configuration Release -arch {arch}")
+    client.run_command(f"xcodebuild -project ChatApp.xcodeproj -configuration Debug -arch {arch}")
     client.run_command("build/Debug/chat")
     assert "core/1.0: Hello World Debug!" in client.out
     assert "tcp/1.0: Hello World Debug!" in client.out
@@ -202,3 +202,30 @@ def test_xcodedeps_components():
     assert "tcp/1.0: Hello World Release!" in client.out
     assert "client/1.0: Hello World Release!" in client.out
     assert "chat/1.0: Hello World Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_cmake
+def test_xcodedeps_test_require():
+    client = TestClient()
+    client.run("new gtest/1.0 -m cmake_lib")
+    # client.run("new cmake_lib -d name=app -d version=1.0")
+    client.run("create . -tf=None")
+
+    # Create library having build and test requires
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        class HelloLib(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def build_requirements(self):
+                self.test_requires('gtest/1.0')
+        ''')
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -g XcodeDeps")
+    host_arch = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if host_arch == "armv8" else host_arch
+    assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest.xcconfig"))
+    assert os.path.isfile(os.path.join(client.current_folder, "conan_gtest_gtest.xcconfig"))
+    assert os.path.isfile(os.path.join(client.current_folder,
+                                       f"conan_gtest_gtest_release_{arch}.xcconfig"))
+    assert '#include "conan_gtest.xcconfig"' in client.load("conandeps.xcconfig")

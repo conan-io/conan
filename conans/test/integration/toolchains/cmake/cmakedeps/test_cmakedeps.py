@@ -37,7 +37,8 @@ def test_package_from_system():
     assert os.path.exists(os.path.join(client.current_folder, "dep1-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "dep2-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "custom_dep2-config.cmake"))
-    dep1_contents = client.load("dep1-release-x86_64-data.cmake")
+    host_arch = client.get_default_host_profile().settings['arch']
+    dep1_contents = client.load(f"dep1-release-{host_arch}-data.cmake")
     assert 'list(APPEND dep1_FIND_DEPENDENCY_NAMES custom_dep2)' in dep1_contents
     assert 'set(custom_dep2_FIND_MODE "")' in dep1_contents
 
@@ -61,7 +62,7 @@ def test_test_package():
             requires = "pkg/1.0"
         """)
     client.save({"conanfile.py": consumer})
-    client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    client.run("install . -s:b os=Windows -s:h os=Linux -s:h arch=x86_64 --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
 
@@ -104,18 +105,26 @@ def test_cpp_info_component_objects():
     client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
-        assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:Release>:${hello_hello_say_OBJECTS_RELEASE}
-             ${hello_hello_say_LINK_LIBS_RELEASE}> APPEND)""" in content
-        assert """set_property(TARGET hello::hello
-             PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:Release>:${hello_OBJECTS_RELEASE}
-             ${hello_LIBRARIES_TARGETS_RELEASE}> APPEND)""" in content
+        assert """set_property(TARGET hello::say
+                     PROPERTY INTERFACE_LINK_LIBRARIES
+                     $<$<CONFIG:Release>:${hello_hello_say_OBJECTS_RELEASE}>
+                     $<$<CONFIG:Release>:${hello_hello_say_LIBRARIES_TARGETS}>
+                     APPEND)""" in content
+        # If there are componets, there is not a global cpp so this is not generated
+        assert "hello_OBJECTS_RELEASE" not in content
+        # But the global target is linked with the targets from the components
+        assert "set_property(TARGET hello::hello PROPERTY INTERFACE_LINK_LIBRARIES " \
+               "hello::say APPEND)" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
-        assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
-        assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
+        # https://github.com/conan-io/conan/issues/11862
+        # Global variables
+        assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' \
+               in content
+        # But component variables
+        assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/' \
+               'mycomponent.o")' in content
 
 
 def test_cpp_info_component_error_aggregate():
@@ -172,7 +181,8 @@ def test_cmakedeps_cppinfo_complex_strings():
     client.run("export . hello/1.0@")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g CMakeDeps")
-    deps = client.load("hello-release-x86_64-data.cmake")
+    arch = client.get_default_host_profile().settings['arch']
+    deps = client.load(f"hello-release-{arch}-data.cmake")
     assert r"escape=partially \"escaped\"" in deps
     assert r"spaces=me you" in deps
     assert r"foobar=bazbuz" in deps
