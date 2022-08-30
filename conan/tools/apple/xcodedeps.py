@@ -6,7 +6,7 @@ from jinja2 import Template
 
 from conans.errors import ConanException
 from conans.util.files import load, save
-from conan.tools.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
     // Includes both the toolchain and the dependencies
@@ -22,26 +22,26 @@ def _format_name(name):
     return name.lower()
 
 
-def _xcconfig_settings_filename(conanfile):
-    arch = conanfile.settings.get_safe("arch")
-    architecture = to_apple_arch(conanfile, arch)
-    props = [("configuration", conanfile.settings.get_safe("build_type")),
+def _xcconfig_settings_filename(settings):
+    arch = settings.get_safe("arch")
+    architecture = _to_apple_arch(arch) or arch
+    props = [("configuration", settings.get_safe("build_type")),
              ("architecture", architecture),
-             ("sdk name", conanfile.settings.get_safe("os.sdk")),
-             ("sdk version", conanfile.settings.get_safe("os.sdk_version"))]
+             ("sdk name", settings.get_safe("os.sdk")),
+             ("sdk version", settings.get_safe("os.sdk_version"))]
     name = "".join("_{}".format(v) for _, v in props if v is not None and v)
     return _format_name(name)
 
 
-def _xcconfig_conditional(conanfile):
+def _xcconfig_conditional(settings):
     sdk_condition = "*"
-    arch = conanfile.settings.get_safe("arch")
-    architecture = to_apple_arch(conanfile, arch)
-    sdk = conanfile.settings.get_safe("os.sdk") if conanfile.settings.get_safe("os") != "Macos" else "macosx"
+    arch = settings.get_safe("arch")
+    architecture = _to_apple_arch(arch) or arch
+    sdk = settings.get_safe("os.sdk") if settings.get_safe("os") != "Macos" else "macosx"
     if sdk:
-        sdk_condition = "{}{}".format(sdk, conanfile.settings.get_safe("os.sdk_version") or "*")
+        sdk_condition = "{}{}".format(sdk, settings.get_safe("os.sdk_version") or "*")
 
-    return "[config={}][arch={}][sdk={}]".format(conanfile.settings.get_safe("build_type"), architecture, sdk_condition)
+    return "[config={}][arch={}][sdk={}]".format(settings.get_safe("build_type"), architecture, sdk_condition)
 
 
 def _add_includes_to_file_or_create(filename, template, files_to_include):
@@ -109,7 +109,7 @@ class XcodeDeps(object):
         self.configuration = conanfile.settings.get_safe("build_type")
         arch = conanfile.settings.get_safe("arch")
         self.os_version = conanfile.settings.get_safe("os.version")
-        self.architecture = to_apple_arch(conanfile, default=arch)
+        self.architecture = _to_apple_arch(arch, default=arch)
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
@@ -146,7 +146,7 @@ class XcodeDeps(object):
             'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cxxflags")),
             'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("sharedlinkflags")),
             'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
-            'condition': _xcconfig_conditional(self._conanfile)
+            'condition': _xcconfig_conditional(self._conanfile.settings)
         }
 
         if not require.headers:
@@ -219,7 +219,7 @@ class XcodeDeps(object):
     def get_content_for_component(self, require, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
-        conf_name = _xcconfig_settings_filename(self._conanfile)
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
         result[props_name] = self._conf_xconfig_file(require, pkg_name, component_name, package_folder, transitive_internal)

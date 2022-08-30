@@ -62,21 +62,21 @@ class XcodeToolchain(object):
 
     @property
     def _macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile),
+        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                       self.os_version) if self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
-        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile),
+        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
                                                          self._cppstd) if self._cppstd else ""
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile),
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
                                                                        self.extension)
 
     @property
