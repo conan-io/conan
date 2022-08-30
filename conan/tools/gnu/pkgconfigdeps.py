@@ -355,9 +355,9 @@ class PkgConfigDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        # Activate the build config files for the specified libraries
+        # Activate the build *.pc files for the specified libraries
         self.build_context_activated = []
-        # If specified, the files/targets/variables for the build context will be renamed appending
+        # If specified, the files/requires/names for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
