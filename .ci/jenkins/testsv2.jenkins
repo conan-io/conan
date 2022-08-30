@@ -99,7 +99,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 else if (nodeName=="Macos" || nodeName=="M1Macos") {
                     def localDir = "/Users/jenkins"
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.6", "PY39=3.9.0",
-                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
+                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/make/libexec/gnubin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
                                 def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"
