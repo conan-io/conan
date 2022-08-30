@@ -34,7 +34,7 @@ class XcodeToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         arch = conanfile.settings.get_safe("arch")
-        self.architecture = to_apple_arch(self._conanfile) or arch
+        self.architecture = to_apple_arch(self._conanfile, default=arch)
         self.configuration = conanfile.settings.build_type
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self.os_version = conanfile.settings.get_safe("os.version")
@@ -62,21 +62,21 @@ class XcodeToolchain(object):
 
     @property
     def _macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile),
                                                       self.os_version) if self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
-        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile),
                                                          self._cppstd) if self._cppstd else ""
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile),
                                                                        self.extension)
 
     @property
