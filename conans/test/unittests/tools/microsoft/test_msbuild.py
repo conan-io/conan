@@ -211,9 +211,8 @@ def test_is_msvc_build():
                          "compiler": ["gcc", "msvc"],
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
-    conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile = ConanFile()
+    conanfile.settings = settings
     conanfile.settings.compiler = "gcc"
     conanfile.settings_build = conanfile.settings.copy()
     conanfile.settings_build.compiler = "msvc"
