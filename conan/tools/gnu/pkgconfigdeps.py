@@ -36,13 +36,13 @@ def _get_component_aliases(dep, comp_name):
     return comp_aliases or []
 
 
-def _get_package_name(dep, build_context_suffix):
+def _get_package_name(dep, build_context_suffix=None):
     pkg_name = dep.cpp_info.get_property("pkg_config_name") or _get_package_reference_name(dep)
     suffix = _get_suffix(dep, build_context_suffix)
     return f"{pkg_name}{suffix}"
 
 
-def _get_component_name(dep, comp_name, build_context_suffix):
+def _get_component_name(dep, comp_name, build_context_suffix=None):
     if comp_name not in dep.cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if _get_package_reference_name(dep) == comp_name:
@@ -55,7 +55,7 @@ def _get_component_name(dep, comp_name, build_context_suffix):
     return f"{comp_name}{suffix}" if comp_name else None
 
 
-def _get_suffix(req, build_context_suffix):
+def _get_suffix(req, build_context_suffix=None):
     """
     Get the package name suffix coming from PkgConfigDeps.build_context_suffix attribute, but only
     for requirements declared as build requirement.
@@ -64,7 +64,7 @@ def _get_suffix(req, build_context_suffix):
     :param build_context_suffix: `dict` with all the suffixes
     :return: `str` with the suffix
     """
-    if not req.is_build_context:
+    if not build_context_suffix or not req.is_build_context:
         return ""
     return build_context_suffix.get(req.ref.name, "")
 
