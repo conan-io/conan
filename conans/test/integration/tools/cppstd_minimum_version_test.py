@@ -49,3 +49,28 @@ class CppStdMinimumVersionTests(unittest.TestCase):
         self.client.run("create . --user=user --channel=channel -pr myprofile", assert_error=True)
         self.assertIn("Invalid: Current cppstd (%s) is lower than the required C++ standard (17)."
                       % cppstd, self.client.out)
+
+
+def test_header_only_check_min_cppstd():
+
+    conanfile = dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.build import check_min_cppstd, valid_min_cppstd
+
+        class Fake(ConanFile):
+            name = "fake"
+            version = "0.1"
+            settings = "compiler"
+            def package_id(self):
+                self.info.clear()
+            def validate(self):
+                check_min_cppstd(self, "11")
+            def compatibility(self):
+                check_min_cppstd(self, "11")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.run("install fake/0.1@ -s compiler.cppstd=14")
+    print(client.out)
