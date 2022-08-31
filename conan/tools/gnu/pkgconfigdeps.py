@@ -10,12 +10,16 @@ from conans.util.files import save
 
 
 def _get_name_with_namespace(namespace, name):
-    """Build a name with a namespace, e.g., openssl-crypto"""
+    """
+    Build a name with a namespace, e.g., openssl-crypto
+    """
     return f"{namespace}-{name}"
 
 
 def _get_package_reference_name(dep):
-    """Get the reference name for the given package"""
+    """
+    Get the reference name for the given package
+    """
     return dep.ref.name
 
 
@@ -406,7 +410,7 @@ class PkgConfigDeps:
 
     def generate(self):
         """
-        Save all the *.pc files
+        Save all the `*.pc` files
         """
         # Current directory is the generators_folder
         generator_files = self.content
