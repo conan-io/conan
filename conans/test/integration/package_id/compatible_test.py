@@ -664,3 +664,43 @@ class TestNewCompatibility:
         assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
         assert "pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c" in c.out
         assert "pkg/0.1: Already installed!" in c.out
+
+    # FIXME: This test already exists in Conan 2.0 (in this file). Please, remove this one.
+    def test_compatible_option(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+             from conan import ConanFile
+
+             class Pkg(ConanFile):
+                 options = {"optimized": [1, 2, 3]}
+                 default_options = {"optimized": 1}
+
+                 def compatibility(self):
+                     return [{"options": [("optimized", v)]}
+                             for v in range(int(self.options.optimized), 0, -1)]
+
+                 def package_info(self):
+                     self.output.info("PackageInfo!: Option optimized %s!"
+                                      % self.options.optimized)
+             """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable")
+        package_id = "a97db2488658dd582a070ba8b6c6975eb1601a33"
+        # package_id = client.created_package_id("pkg/0.1@user/stable")
+        assert f"pkg/0.1@user/stable: Package '{package_id}' created" in client.out
+
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
+        client.run("install . -o pkg/*:optimized=2")
+        # Information messages
+        missing_id = "d97fb97a840e4ac3b5e7bb8f79c87f1d333a85bc"
+        assert "pkg/0.1@user/stable: PackageInfo!: Option optimized 1!" in client.out
+        assert f"pkg/0.1@user/stable: Compatible package ID " \
+               f"{missing_id} equal to the default package ID" in client.out
+        assert f"pkg/0.1@user/stable: Main binary package '{missing_id}' missing. " \
+               f"Using compatible package '{package_id}'" in client.out
+        # checking the resulting dependencies
+        assert f"pkg/0.1@user/stable:{package_id} - Cache" in client.out
+        assert "pkg/0.1@user/stable: Already installed!" in client.out
+        client.run("install . -o pkg/*:optimized=3")
+        assert "pkg/0.1@user/stable: Already installed!" in client.out
+        assert f"pkg/0.1@user/stable:{package_id} - Cache" in client.out
