@@ -86,7 +86,7 @@ def _get_formatted_dirs(folders, prefix_path_):
 _PCInfo = namedtuple("PCInfo", ['name', 'requires', 'description', 'cpp_info', 'aliases'])
 
 
-class PCContentGenerator:
+class _PCContentGenerator:
 
     template = textwrap.dedent("""\
         {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
@@ -198,13 +198,13 @@ class PCContentGenerator:
         return template.render(context)
 
 
-class PCGenerator:
+class _PCGenerator:
 
     def __init__(self, conanfile, dep, build_context_suffix=None):
         self._conanfile = conanfile
         self._build_context_suffix = build_context_suffix or {}
         self._dep = dep
-        self._content_generator = PCContentGenerator(self._conanfile, self._dep)
+        self._content_generator = _PCContentGenerator(self._conanfile, self._dep)
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
@@ -398,7 +398,7 @@ class PkgConfigDeps:
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            pc_generator = PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
+            pc_generator = _PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
             pc_files.update(pc_generator.pc_files)
         return pc_files
 
