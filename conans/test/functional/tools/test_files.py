@@ -379,7 +379,7 @@ def test_export_conandata_patches(mock_patch_ng):
     client.save({"conandata.yml": ""})
     client.run("create .", assert_error=True)
     assert "export_conandata_patches(): No patches defined in conandata" in client.out
-    assert "ERROR: mypkg/1.0: Error in source() method, line 18" in client.out
+    assert "ERROR: mypkg/1.0: Error in source() method" in client.out
     # wrong patches
     client.save({"conandata.yml": "patches: 123"})
     client.run("create .", assert_error=True)
