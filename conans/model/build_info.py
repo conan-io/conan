@@ -137,6 +137,13 @@ class _Component(object):
             self._bindirs = []
         return self._bindirs
 
+    @property
+    def bindir(self):
+        bindirs = self.bindirs
+        assert bindirs
+        assert len(bindirs) == 1
+        return bindirs[0]
+
     @bindirs.setter
     def bindirs(self, value):
         self._bindirs = value

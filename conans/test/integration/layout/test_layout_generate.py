@@ -22,11 +22,11 @@ def test_layout_generate():
                 self.cpp.build.bindirs = ["bin"]
 
             def generate(self):
-                f = os.path.join(self.build_bin_folder, "myfile.txt")
+                f = os.path.join(self.build_folder, self.cpp.build.bindir, "myfile.txt")
                 save(self, f, "mycontent!!!")
 
             def build(self):
-                f = os.path.join(self.build_bin_folder, "myfile.txt")
+                f = os.path.join(self.cpp.build.bindir, "myfile.txt")
                 c = load(self, f)
                 self.output.info(c)
         """)
