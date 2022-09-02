@@ -376,6 +376,12 @@ class ConanFile:
         return Path(self.build_folder)
 
     @property
+    def build_bin_folder(self):
+        assert self.cpp.build.bindirs
+        assert len(self.cpp.build.bindirs) == 1
+        return os.path.join(self.build_folder, self.cpp.build.bindirs[0])
+
+    @property
     def package_folder(self):
         """
         The folder to copy the final artifacts for the binary package. In the local cache a package

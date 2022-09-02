@@ -90,7 +90,7 @@ def pkg_cmake_test(require_name):
                 cmake.build()
 
             def test(self):
-                cmd = os.path.join(self.cpp.build.bindirs[0], "test")
+                cmd = os.path.join(self.build_bin_folder, "test")
                 self.run(cmd, env="conanrun")
         """)
 
