@@ -154,6 +154,16 @@ class _EnvValue:
         previous_value = os.getenv(self._name)
         return self.get_str(previous_value, subsystem, pathsep)
 
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        if not self._path:
+            return
+        for i, v in enumerate(self._values):
+            if v is _EnvVarPlaceHolder:
+                continue
+            rel_path = os.path.relpath(v, package_folder)
+            self._values[i] = os.path.join(deploy_folder, rel_path)
+
 
 class Environment:
     """
@@ -285,6 +295,11 @@ class Environment:
         :return:
         """
         return EnvVars(conanfile, self, scope)
+
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        for varvalues in self._values.values():
+            varvalues.deploy_base_folder(package_folder, deploy_folder)
 
 
 class EnvVars:

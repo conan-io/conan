@@ -26,6 +26,10 @@ class UserRequirementsDict(object):
         return bool(self._data)
 
     def get(self, ref, build=None, **kwargs):
+        r, v = self._get(ref, build, **kwargs)
+        return v
+
+    def _get(self, ref, build=None, **kwargs):
         if build is None:
             current_filters = self._require_filter or {}
             if "build" not in current_filters:
@@ -54,14 +58,23 @@ class UserRequirementsDict(object):
         if not ret:
             raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        _, value = ret[0]
-        return value
+        require, value = ret[0]
+        return require, value
 
     def __getitem__(self, name):
         return self.get(name)
 
     def __delitem__(self, name):
-        r = self.get(name)
+        r, _ = self._get(name)
+        print("LEN", len(self._data))
+        print("IN", r in self._data)
+        print("NOT IN", r not in self._data)
+        print("ID", id(r))
+        d = list(self._data.keys())[0]
+        print("ID data", id(d))
+        print("LETS DELETE FROM DICT")
+        print(type(r), r)
+        print(type(d), d)
         del self._data[r]
 
     def items(self):
