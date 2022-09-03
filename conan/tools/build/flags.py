@@ -1,4 +1,4 @@
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 from conans.model.version import Version
 
 
@@ -21,7 +21,7 @@ def architecture_flag(settings):
     if compiler in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if the_os == 'Macos' and subsystem == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
-            apple_arch = to_apple_arch(arch)
+            apple_arch = _to_apple_arch(arch)
             if apple_arch:
                 # TODO: Could we define anything like `to_apple_target()`?
                 #       Check https://github.com/rust-lang/rust/issues/48862

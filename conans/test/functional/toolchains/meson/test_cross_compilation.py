@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
@@ -110,10 +110,10 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     lipo = xcrun.find('lipo')
 
     t.run_command('"%s" -info "%s"' % (lipo, libhello))
-    assert "architecture: %s" % to_apple_arch(arch) in t.out
+    assert "architecture: %s" % _to_apple_arch(arch) in t.out
 
     t.run_command('"%s" -info "%s"' % (lipo, demo))
-    assert "architecture: %s" % to_apple_arch(arch) in t.out
+    assert "architecture: %s" % _to_apple_arch(arch) in t.out
 
     # only check for iOS because one of the macos build variants is usually native
     if os_ == "iOS":

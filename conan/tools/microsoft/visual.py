@@ -251,14 +251,18 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     return vcvars_ver
 
 
-def is_msvc(conanfile):
+def is_msvc(conanfile, build_context=False):
     """
     Validates if the current compiler is ``msvc``.
 
     :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+    :param build_context: If True, will use the settings from the build context, not host ones
     :return: ``bool`` True, if the host compiler is ``msvc``, otherwise, False.
     """
-    settings = conanfile.settings
+    if not build_context:
+        settings = conanfile.settings
+    else:
+        settings = conanfile.settings_build
     return settings.get_safe("compiler") == "msvc"
 
 

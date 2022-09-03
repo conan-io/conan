@@ -10,7 +10,7 @@ def is_apple_os(conanfile):
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch, default=None):
+def _to_apple_arch(arch, default=None):
     """converts conan-style architecture into Apple-style arch"""
     return {'x86': 'i386',
             'x86_64': 'x86_64',
@@ -19,7 +19,13 @@ def to_apple_arch(arch, default=None):
             'armv8_32': 'arm64_32',
             'armv8.3': 'arm64e',
             'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(arch, default)
+            'armv7k': 'armv7k'}.get(str(arch), default)
+
+
+def to_apple_arch(conanfile, default=None):
+    """converts conan-style architecture into Apple-style arch"""
+    arch_ = conanfile.settings.get_safe("arch")
+    return _to_apple_arch(arch_, default)
 
 
 def get_apple_sdk_fullname(conanfile):

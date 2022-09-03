@@ -7,7 +7,7 @@ import unittest
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch, apple_min_version_flag, \
+from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
     is_apple_os
 from conans.test.utils.apple import XCRun
 from conans.test.utils.mocks import MockSettings, ConanFileMock
@@ -72,16 +72,16 @@ class AppleTest(unittest.TestCase):
             self.assertFalse(is_apple_os(conanfile))
 
     def test_to_apple_arch(self):
-        self.assertEqual(to_apple_arch('x86'), 'i386')
-        self.assertEqual(to_apple_arch('x86_64'), 'x86_64')
-        self.assertEqual(to_apple_arch('armv7'), 'armv7')
-        self.assertEqual(to_apple_arch('armv7s'), 'armv7s')
-        self.assertEqual(to_apple_arch('armv7k'), 'armv7k')
-        self.assertEqual(to_apple_arch('armv8'), 'arm64')
-        self.assertEqual(to_apple_arch('armv8.3'), 'arm64e')
-        self.assertEqual(to_apple_arch('armv8_32'), 'arm64_32')
-        self.assertIsNone(to_apple_arch('mips'))
-        self.assertEqual(to_apple_arch('mips', default='mips'), 'mips')
+        self.assertEqual(_to_apple_arch('x86'), 'i386')
+        self.assertEqual(_to_apple_arch('x86_64'), 'x86_64')
+        self.assertEqual(_to_apple_arch('armv7'), 'armv7')
+        self.assertEqual(_to_apple_arch('armv7s'), 'armv7s')
+        self.assertEqual(_to_apple_arch('armv7k'), 'armv7k')
+        self.assertEqual(_to_apple_arch('armv8'), 'arm64')
+        self.assertEqual(_to_apple_arch('armv8.3'), 'arm64e')
+        self.assertEqual(_to_apple_arch('armv8_32'), 'arm64_32')
+        self.assertIsNone(_to_apple_arch('mips'))
+        self.assertEqual(_to_apple_arch('mips', default='mips'), 'mips')
 
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
