@@ -59,7 +59,7 @@ def test_header_only_check_min_cppstd():
     conanfile = dedent("""
         import os
         from conan import ConanFile
-        from conan.tools.build import check_min_cppstd, valid_min_cppstd
+        from conan.tools.build import check_min_cppstd
 
         class Fake(ConanFile):
             name = "fake"
@@ -85,7 +85,7 @@ def test_validate_build_check_min_cppstd():
     conanfile = dedent("""
         import os
         from conan import ConanFile
-        from conan.tools.build import check_min_cppstd, valid_min_cppstd
+        from conan.tools.build import check_min_cppstd
 
         class Fake(ConanFile):
             name = "fake"
