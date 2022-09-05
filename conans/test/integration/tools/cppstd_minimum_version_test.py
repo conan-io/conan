@@ -65,7 +65,8 @@ def test_header_only_check_min_cppstd():
             def package_id(self):
                 self.info.clear()
             def validate(self):
-                check_min_cppstd(self, "11")
+                if self.info.settings.compiler.cppstd:
+                    check_min_cppstd(self, "11")
             def compatibility(self):
                 check_min_cppstd(self, "11")
         """)
