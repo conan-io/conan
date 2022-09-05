@@ -249,14 +249,16 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         visible_host_direct = visible_host.filter({"direct": True})
         if self.conanfile.cpp_info.required_components:
             for dep_name, component_name in self.conanfile.cpp_info.required_components:
-                if not dep_name:
-                    # Internal dep (no another component)
-                    req = self.conanfile
+                try:
+                    # if not dep_name, it is internal, from current self.conanfile
+                    req = visible_host[dep_name] if dep_name is not None else self.conanfile
+                except KeyError:
+                    # if it raises it means the required component is not in the direct_host
+                    # dependencies, maybe it has been filtered out by traits => Skip
+                    pass
                 else:
-                    req = visible_host[dep_name]
-
-                component_name = self.get_component_alias(req, component_name)
-                ret.append(component_name)
+                    component_name = self.get_component_alias(req, component_name)
+                    ret.append(component_name)
         elif visible_host_direct:
             # Regular external "conanfile.requires" declared, not cpp_info requires
             ret = [self.get_root_target_name(r) for r in visible_host_direct.values()]

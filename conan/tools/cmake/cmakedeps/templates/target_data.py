@@ -198,8 +198,14 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.conanfile.cpp_info.required_components:
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
-                    req = direct_host[dep_name]
-                    ret.append(get_cmake_package_name(req))
+                    try:
+                        req = direct_host[dep_name]
+                    except KeyError:
+                        # if it raises it means the required component is not in the direct_host
+                        # dependencies, maybe it has been filtered out by traits => Skip
+                        pass
+                    else:
+                        ret.append(get_cmake_package_name(req))
         elif direct_host:
             ret = [get_cmake_package_name(r, self.generating_module) for r in direct_host.values()]
 
