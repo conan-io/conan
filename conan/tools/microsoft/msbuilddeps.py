@@ -178,16 +178,16 @@ class MSBuildDeps(object):
 
         package_folder = escape_path(dep.package_folder)
 
-        bin_dirs = join_paths(cpp_info.bindirs),
-        res_dirs = join_paths(cpp_info.resdirs),
-        include_dirs = join_paths(cpp_info.includedirs),
-        lib_dirs = join_paths(cpp_info.libdirs) if require.libs else "",
-        libs = "".join([add_valid_ext(lib) for lib in cpp_info.libs]) if require.libs else "",
+        bin_dirs = join_paths(cpp_info.bindirs)
+        res_dirs = join_paths(cpp_info.resdirs)
+        include_dirs = join_paths(cpp_info.includedirs)
+        lib_dirs = join_paths(cpp_info.libdirs)
+        libs = "".join([add_valid_ext(lib) for lib in cpp_info.libs])
         # TODO: Missing objects
-        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
-        definitions = "".join("%s;" % d for d in cpp_info.defines),
-        compiler_flags = " ".join(cpp_info.cxxflags + cpp_info.cflags),
-        linker_flags = " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
+        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs])
+        definitions = "".join("%s;" % d for d in cpp_info.defines)
+        compiler_flags = " ".join(cpp_info.cxxflags + cpp_info.cflags)
+        linker_flags = " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags)
 
         # traits logic
         if require and not require.headers:
