@@ -18,7 +18,15 @@ def color_enabled(stream):
     Command-line software which adds ANSI color to its output by default should check for the
     presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
     prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
     """
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
+        return True
+
     from conan.api.output import conan_output_logger_format
     if conan_output_logger_format:
         return False

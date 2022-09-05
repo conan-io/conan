@@ -3,6 +3,7 @@ import sys
 import unittest
 from unittest import mock
 
+import pytest
 from parameterized import parameterized
 
 from conan.api.output import ConanOutput
@@ -20,4 +21,19 @@ class ConanOutputTest(unittest.TestCase):
                 init_colorama(sys.stderr)
                 out = ConanOutput()
                 assert out.color is False
+                init.assert_not_called()
+
+
+@pytest.mark.parametrize("force", ["1", "0", "foo"])
+def test_output_forced(force):
+    env = {"CLICOLOR_FORCE": force}
+    forced = force != "0"
+    with mock.patch("colorama.init") as init:
+        with mock.patch("sys.stderr.isatty", return_value=False), \
+             mock.patch.dict("os.environ", env, clear=True):
+            init_colorama(sys.stderr)
+            out = ConanOutput()
+
+            assert out.color is forced
+            if not forced:
                 init.assert_not_called()
