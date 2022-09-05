@@ -6,6 +6,7 @@ import pytest
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -43,6 +44,25 @@ def test_install_deploy():
     # I can totally build without errors with deployed
     c.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=mydeploy/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
     c.run_command("cmake --build . --config Release")
+
+
+def test_copy_files_deploy():
+    c = TestClient()
+    deploy = textwrap.dedent("""
+        import os, shutil
+
+        def deploy(conanfile, output_folder, **kwargs):
+            for r, d in conanfile.dependencies.items():
+                bindir = os.path.join(d.package_folder, "bin")
+                for f in os.listdir(bindir):
+                    shutil.copy2(os.path.join(bindir, f), os.path.join(output_folder, f))
+        """)
+    c.save({"conanfile.txt": "[requires]\nhello/0.1",
+            "deploy.py": deploy,
+            "hello/conanfile.py": GenConanfile("hello", "0.1").with_package_file("bin/file.txt",
+                                                                                 "content!!")})
+    c.run("create hello")
+    c.run("install . --deploy=deploy.py -of=mydeploy")
 
 
 def test_multi_deploy():
@@ -168,9 +188,11 @@ def test_deploy_editable():
             "src/include/hi.h": "hi"})
     c.run("editable add . pkg/1.0")
 
-    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/src/include/hi.h")
-    assert "hi" in header
+    # If we don't change to another folder, the full_deploy will be recursive and fail
+    with c.chdir(temp_folder()):
+        c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
+        header = c.load("output/host/pkg/1.0/src/include/hi.h")
+        assert "hi" in header
 
 
 def test_deploy_single_package():
