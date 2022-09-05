@@ -71,6 +71,6 @@ def test_header_only_check_min_cppstd():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create .")
-    client.run("install fake/0.1@ -s compiler.cppstd=14")
+    client.run("create . -s compiler.cppstd=11")
+    client.run("install --require=fake/0.1@ -s compiler.cppstd=14")
     print(client.out)
