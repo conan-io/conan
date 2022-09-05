@@ -23,13 +23,15 @@ def color_enabled(stream):
 
     https://bixense.com/clicolors/
     """
-    if os.getenv("CLICOLOR_FORCE", "0") != "0":
-        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
-        return True
 
     from conan.api.output import conan_output_logger_format
     if conan_output_logger_format:
         return False
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
+        return True
+
     if os.getenv("NO_COLOR") is not None:
         return False
     return is_terminal(stream)
