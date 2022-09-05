@@ -267,8 +267,6 @@ class _TargetDataContext(object):
                                    for v in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        if require and not require.headers:
-            self.include_paths = ""
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
@@ -281,11 +279,6 @@ class _TargetDataContext(object):
         self.compile_definitions = join_defines(cpp_info.defines)
         self.library_type = library_type
         self.is_host_windows = "1" if is_host_windows else "0"
-        if require and not require.libs:
-            self.lib_paths = ""
-            self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
@@ -303,6 +296,14 @@ class _TargetDataContext(object):
 
         self.objects_list = join_paths(cpp_info.objects)
 
+        # traits logic
+        if require and not require.headers:
+            self.include_paths = ""
+        if require and not require.libs:
+            self.lib_paths = ""
+            self.libs = ""
+            self.system_libs = ""
+            self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""
@@ -311,6 +312,8 @@ class _TargetDataContext(object):
             self.sharedlinkflags_list = ""
             self.exelinkflags_list = ""
             self.objects_list = ""
+        if require and not require.run:
+            self.bin_paths = ""
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)
