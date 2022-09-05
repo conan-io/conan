@@ -52,7 +52,10 @@ class CppStdMinimumVersionTests(unittest.TestCase):
 
 
 def test_header_only_check_min_cppstd():
-
+    """
+    Check that for a header only package you can check self.info in the validate
+    Related to: https://github.com/conan-io/conan/issues/11786
+    """
     conanfile = dedent("""
         import os
         from conan import ConanFile
@@ -65,13 +68,44 @@ def test_header_only_check_min_cppstd():
             def package_id(self):
                 self.info.clear()
             def validate(self):
-                if self.info.settings.compiler.cppstd:
-                    check_min_cppstd(self, "11")
-            def compatibility(self):
                 check_min_cppstd(self, "11")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . -s compiler.cppstd=11")
+    client.run("create . -s compiler.cppstd=14")
     client.run("install --require=fake/0.1@ -s compiler.cppstd=14")
-    print(client.out)
+    assert "fake/0.1: Already installed!" in client.out
+
+
+def test_validate_build_check_min_cppstd():
+    """
+    Check the case that a package needs certain cppstd to build but can be consumed with a lower
+    cppstd or even not cppstd defined at all
+    """
+    conanfile = dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.build import check_min_cppstd, valid_min_cppstd
+
+        class Fake(ConanFile):
+            name = "fake"
+            version = "0.1"
+            settings = "compiler"
+            def validate_build(self):
+                check_min_cppstd(self, "14")
+            def validate(self):
+                print("validated")
+            def build(self):
+                print("built")
+            def package_id(self):
+                del self.info.settings.compiler.cppstd
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s compiler.cppstd=11", assert_error=True)
+    assert "fake/0.1: Cannot build for this configuration: " \
+           "Current cppstd (11) is lower than the required C++ standard (14)." in client.out
+    client.run("create . -s compiler.cppstd=14")
+    client.run("install --require=fake/0.1@")
+    assert "fake/0.1: Already installed!" in client.out
+    assert "validated" in client.out
