@@ -576,7 +576,7 @@ def test_error_missing_build_type():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Not prepared but possible for win")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Not prepared (but possible) for win")
 @pytest.mark.tool_cmake
 def test_map_imported_config():
     # https://github.com/conan-io/conan/issues/12041
@@ -585,7 +585,7 @@ def test_map_imported_config():
     client.run("new hello/1.0 -m=cmake_lib")
     client.run("create . -tf=None -s build_type=Release")
 
-    talk_cpp = gen_function_cpp(name="talk", includes=["hello"])
+    talk_cpp = gen_function_cpp(name="talk", includes=["hello"], calls=["hello"])
     talk_h = gen_function_h(name="talk")
     conanfile = textwrap.dedent("""
         import os
@@ -649,8 +649,7 @@ def test_map_imported_config():
             add_executable(app main.cpp)
             target_link_libraries(app talk::talk)
 
-            set_target_properties(talk::talk PROPERTIES
-                                  MAP_IMPORTED_CONFIG_DEBUG Release)
+            set_target_properties(talk::talk PROPERTIES MAP_IMPORTED_CONFIG_DEBUG Release)
         """)
 
     client.save({
@@ -664,5 +663,6 @@ def test_map_imported_config():
                        "-DCMAKE_BUILD_TYPE=DEBUG")
     client.run_command("cmake --build .")
     client.run_command("./app")
+    assert "hello/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
     assert "MAIN: Debug" in client.out
