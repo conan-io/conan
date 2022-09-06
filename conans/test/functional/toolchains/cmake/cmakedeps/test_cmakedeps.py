@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 def client():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
         class Pkg(ConanFile):
@@ -99,7 +99,7 @@ def test_transitive_multi(client):
 @pytest.mark.tool_cmake
 def test_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -175,7 +175,7 @@ def test_system_libs_no_libs():
     """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
        and transitive deps has to be linked to the global target"""
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -237,7 +237,7 @@ def test_system_libs_components_no_libs():
     """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
        and transitive deps has to be linked to the component target"""
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os
 
@@ -305,7 +305,7 @@ def test_do_not_mix_cflags_cxxflags():
     client.run("create .")
 
     consumer_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -341,7 +341,7 @@ def test_do_not_mix_cflags_cxxflags():
 def test_custom_configuration(client):
     """  The configuration may differ from the build context and the host context"""
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMakeDeps
 
        class Consumer(ConanFile):
@@ -517,8 +517,8 @@ def test_system_dep():
 @pytest.mark.tool_cmake(version="3.19")
 def test_error_missing_build_type():
     # https://github.com/conan-io/conan/issues/11168
-    client = TestClient()
 
+    client = TestClient()
     client.run("new hello/1.0 -m=cmake_lib")
     client.run("create . -tf=None")
 
@@ -552,7 +552,8 @@ def test_error_missing_build_type():
         }, clean_first=True)
 
         client.run("install .")
-        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'", assert_error=True)
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                           "-G 'Unix Makefiles'", assert_error=True)
         assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
 
     client.save({
@@ -574,3 +575,95 @@ def test_error_missing_build_type():
     run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
     client.run_command(run_app)
     assert "Hello World Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Not prepared but possible for win")
+@pytest.mark.tool_cmake
+def test_map_imported_config():
+    # https://github.com/conan-io/conan/issues/12041
+
+    client = TestClient()
+    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("create . -tf=None -s build_type=Release")
+
+    talk_cpp = gen_function_cpp(name="talk", includes=["hello"])
+    talk_h = gen_function_h(name="talk")
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        from conan.tools.files import copy
+        class HelloConan(ConanFile):
+            name = 'talk'
+            version = '1.0'
+            exports_sources = "*"
+            generators = "CMakeDeps", "CMakeToolchain"
+            requires = ("hello/1.0", )
+            settings = "os", "compiler", "arch", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                copy(self, "libtalk*", self.build_folder, os.path.join(self.package_folder, "lib"))
+                copy(self, "*.h", self.build_folder, os.path.join(self.package_folder, "include"))
+
+            def package_info(self):
+                self.cpp_info.libs.append("talk")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": gen_cmakelists(libname="talk",
+                                                  libsources=["talk.cpp"], find_package=["hello"]),
+                 "talk.cpp": talk_cpp,
+                 "talk.h": talk_h}, clean_first=True)
+    client.run("create . -tf=None -s build_type=Release")
+
+    conanfile = textwrap.dedent("""
+            [requires]
+            talk/1.0
+            [generators]
+            CMakeDeps
+            CMakeToolchain
+        """)
+
+    main = textwrap.dedent("""
+            #include <iostream>
+            #include <talk.h>
+            int main() {
+            talk();
+            #ifdef NDEBUG
+            std::cout << "MAIN: Release!" << std::endl;
+            #else
+            std::cout << "MAIN: Debug!" << std::endl;
+            #endif
+            return 0;
+            }
+        """)
+
+    cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(app)
+            find_package(talk REQUIRED)
+            add_executable(app main.cpp)
+            target_link_libraries(app talk::talk)
+
+            set_target_properties(talk::talk PROPERTIES
+                                  MAP_IMPORTED_CONFIG_DEBUG Release)
+        """)
+
+    client.save({
+        "conanfile.txt": conanfile,
+        "main.cpp": main,
+        "CMakeLists.txt": cmakelists
+    }, clean_first=True)
+
+    client.run("install . -s build_type=Release")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                       "-DCMAKE_BUILD_TYPE=DEBUG")
+    client.run_command("cmake --build .")
+    client.run_command("./app")
+    assert "talk: Release!" in client.out
+    assert "MAIN: Debug" in client.out
