@@ -7,6 +7,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import use_win_mingw
+from conan.tools.cmake.cmake_initial_cache import save_cmake_initial_cache
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
@@ -186,6 +187,8 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables)
+        # Save the CMakeInitialCache.cmake file
+        save_cmake_initial_cache(self._conanfile)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
