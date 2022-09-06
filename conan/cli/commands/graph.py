@@ -25,7 +25,9 @@ def cli_build_order(build_order):
     output = ConanOutput()
     for level in build_order:
         for item in level:
-            output.writeln(item["ref"])
+            for package_level in item['packages']:
+                for package in package_level:
+                    output.writeln(f"{item['ref']}:{package['package_id']} - {package['binary']}")
 
 
 def json_build_order(build_order):
@@ -48,7 +50,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
-    out.highlight("Computing the build order")
+    out.title("Computing the build order")
     install_graph = InstallGraph(deps_graph)
     install_order_serialized = install_graph.install_build_order()
     cli_build_order(install_order_serialized)
