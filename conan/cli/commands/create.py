@@ -60,19 +60,7 @@ def create(conan_api, parser, *args):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    if args.test_folder == "None":
-        # Now if parameter --test-folder=None (string None) we have to skip tests
-        args.test_folder = False
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
-    if test_conanfile_path:
-        if args.build_require:
-            raise ConanException("--build-require should not be specified, test_package does it")
-        root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
-                                                             profile_host, profile_build,
-                                                             remotes=remotes,
-                                                             update=args.update,
-                                                             lockfile=lockfile)
-    else:
+    if True:  # just to keep diff
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
@@ -104,7 +92,40 @@ def create(conan_api, parser, *args):
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
 
+    if args.test_folder == "None":
+        # Now if parameter --test-folder=None (string None) we have to skip tests
+        args.test_folder = False
+    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     if test_conanfile_path:
+        # All of this should be fixed to not repeat operations over the graph
+        root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
+                                                             profile_host, profile_build,
+                                                             remotes=remotes,
+                                                             update=args.update,
+                                                             lockfile=lockfile)
+
+        out.title("Computing test_package dependency graph")
+        check_updates = args.check_updates if "check_updates" in args else False
+        deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
+                                                profile_build=profile_build,
+                                                lockfile=lockfile,
+                                                remotes=remotes,
+                                                update=args.update,
+                                                check_update=check_updates)
+        print_graph_basic(deps_graph)
+        out.title("Computing test_package necessary packages")
+
+        build_modes = None  # FIXME: Hardcoded
+
+        deps_graph.report_graph_error()
+        conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
+                                         update=args.update,
+                                         lockfile=lockfile)
+        print_graph_packages(deps_graph)
+
+        out.title("Installing test_package packages")
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
+                                           update=args.update)
         _check_tested_reference_matches(deps_graph, ref, out)
         test_package(conan_api, deps_graph, test_conanfile_path)
 
