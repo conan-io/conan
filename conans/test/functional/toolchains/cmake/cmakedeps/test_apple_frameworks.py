@@ -251,7 +251,11 @@ def test_apple_own_framework_cross_build(settings):
                  "test_package/conanfile.py": test_conanfile,
                  'test_package/CMakeLists.txt': test_cmake,
                  "test_package/timer.cpp": timer_cpp})
-    client.run("create . %s" % settings)
+    # TODO: this is a bit weird, it will build the "host" library in the first pass, that will
+    #  be considered the main tested thing, then when executing the "test_package" it will build
+    #  the library, now for "build" context
+    #  other alternatives would be to have 2 separate "test_package"
+    client.run("create . %s --test-package-build=missing" % settings)
     if not len(settings):
         assert "Hello World Release!" in client.out
 

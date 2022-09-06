@@ -217,7 +217,7 @@ class TestSubsystemsBuild:
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": profile})
 
-        client.run("create . --name foo --version 1.0 --profile:build myprofile")
+        client.run("create . --name foo --version 1.0 --profile:build myprofile --build-require")
         assert "__MINGW64__" in client.out
         assert "__CYGWIN__" not in client.out
 
