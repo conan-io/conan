@@ -3,7 +3,7 @@ import os
 import shutil
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, ExtenderValueRequired
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
@@ -35,6 +35,7 @@ def create(conan_api, parser, *args):
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "None" to skip the test stage')
+    parser.add_argument("--test-package-build", action=ExtenderValueRequired, nargs="?", help="")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -90,13 +91,18 @@ def create(conan_api, parser, *args):
     out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
-    save_lockfile_out(args, deps_graph, lockfile, cwd)
+    # make sure test_package uses the locked graph
+    lockfile = save_lockfile_out(args, deps_graph, lockfile, cwd)
 
     if args.test_folder == "None":
         # Now if parameter --test-folder=None (string None) we have to skip tests
         args.test_folder = False
     test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     if test_conanfile_path:
+        # TODO: We need arguments for:
+        #  - decide build policy for test_package deps "--test_package_build=missing"
+        #  - decide update policy "--test_package_update"
+
         # All of this should be fixed to not repeat operations over the graph
         root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
                                                              profile_host, profile_build,
@@ -115,7 +121,7 @@ def create(conan_api, parser, *args):
         print_graph_basic(deps_graph)
         out.title("Computing test_package necessary packages")
 
-        build_modes = None  # FIXME: Hardcoded
+        build_modes = args.test_package_build  # FIXME: Hardcoded
 
         deps_graph.report_graph_error()
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
