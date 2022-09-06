@@ -81,3 +81,36 @@ def test_with_options_validate_build_test():
            "with False option" in t.out
 
     t.run("create consumer.py --build missing -o foo/*:my_option=True")
+
+
+def test_validate_build_and_compatible_packages():
+    """
+    If there are compatible packages and the validate_build raises an exception
+    in the end the error is that we are Missing prebuilt package for the package
+    even if we force the build. The error should be the one raised in the validate_build when
+    trying to build the package
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+
+        class Fake(ConanFile):
+            name = "fake"
+            version = "0.1"
+            settings = "compiler"
+            def validate_build(self):
+                raise ConanInvalidConfiguration("This doesn't build")
+            def validate(self):
+                print("validated")
+            def build(self):
+                print("built")
+            def compatibility(self):
+                # just to add a compatible package and make it fail
+                return [{"settings": [("build_type", "Debug")]}]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --build=fake", assert_error=True)
+    assert "Missing prebuilt package for 'fake/0.1'" not in client.out
+    assert "This doesn't build" in client.out
