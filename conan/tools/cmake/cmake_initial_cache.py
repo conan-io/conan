@@ -29,7 +29,7 @@ def save_cmake_initial_cache(conanfile):
     Save a *.cmake build helper file to save all the CACHE variables (-DXXX vars) in one
     file instead of passing all of them via CLI.
 
-    Note: it needs to load the cmake presets file to load all the existing cache variables
+    Note: it needs the cmake presets file to load all the existing cache variables
     already defined.
 
     :param conanfile: ``ConanFile`` instance
