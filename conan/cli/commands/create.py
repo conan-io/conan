@@ -47,10 +47,13 @@ def create(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("Exporting the recipe")
-    ref = conan_api.export.export(path=path,
+    ref, conanfile = conan_api.export.export(path=path,
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
+
+    is_build_require = args.build_require
+    is_build_require = is_build_require or getattr(conanfile, "is_build_require", False)
     if lockfile:
         # FIXME: We need to update build_requires too, not only ``requires``
         lockfile.add(requires=[ref])
@@ -62,8 +65,8 @@ def create(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     if True:  # just to keep diff
-        requires = [ref] if not args.build_require else None
-        tool_requires = [ref] if args.build_require else None
+        requires = [ref] if not is_build_require else None
+        tool_requires = [ref] if is_build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
