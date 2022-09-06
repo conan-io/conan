@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 def client():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conan import ConanFile
+        from conans import ConanFile
         from conans.tools import save
         import os
         class Pkg(ConanFile):
@@ -99,7 +99,7 @@ def test_transitive_multi(client):
 @pytest.mark.tool_cmake
 def test_system_libs():
     conanfile = textwrap.dedent("""
-        from conan import ConanFile
+        from conans import ConanFile
         from conans.tools import save
         import os
 
@@ -175,7 +175,7 @@ def test_system_libs_no_libs():
     """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
        and transitive deps has to be linked to the global target"""
     conanfile = textwrap.dedent("""
-        from conan import ConanFile
+        from conans import ConanFile
         from conans.tools import save
         import os
 
@@ -237,7 +237,7 @@ def test_system_libs_components_no_libs():
     """If the recipe doesn't declare cpp_info.libs then the target with the system deps, frameworks
        and transitive deps has to be linked to the component target"""
     conanfile = textwrap.dedent("""
-        from conan import ConanFile
+        from conans import ConanFile
         from conans.tools import save
         import os
 
@@ -305,7 +305,7 @@ def test_do_not_mix_cflags_cxxflags():
     client.run("create .")
 
     consumer_conanfile = textwrap.dedent("""
-        from conan import ConanFile
+        from conans import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -341,7 +341,7 @@ def test_do_not_mix_cflags_cxxflags():
 def test_custom_configuration(client):
     """  The configuration may differ from the build context and the host context"""
     conanfile = textwrap.dedent("""
-       from conan import ConanFile
+       from conans import ConanFile
        from conan.tools.cmake import CMakeDeps
 
        class Consumer(ConanFile):
@@ -517,8 +517,8 @@ def test_system_dep():
 @pytest.mark.tool_cmake(version="3.19")
 def test_error_missing_build_type():
     # https://github.com/conan-io/conan/issues/11168
-
     client = TestClient()
+
     client.run("new hello/1.0 -m=cmake_lib")
     client.run("create . -tf=None")
 
@@ -552,8 +552,7 @@ def test_error_missing_build_type():
         }, clean_first=True)
 
         client.run("install .")
-        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
-                           "-G 'Unix Makefiles'", assert_error=True)
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -G 'Unix Makefiles'", assert_error=True)
         assert "Please, set the CMAKE_BUILD_TYPE variable when calling to CMake" in client.out
 
     client.save({
