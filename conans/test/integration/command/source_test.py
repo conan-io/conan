@@ -205,3 +205,7 @@ class ConanLib(ConanFile):
         client.run("create . --name=lib --version=1.0")
         assert "Running source!" not in client.out
         assert "Copying sources to build folder" not in client.out
+
+        client.run("create . --name=lib --version=1.0 -s build_type=Debug")
+        assert "Running source!" not in client.out
+        assert "Copying sources to build folder" not in client.out
