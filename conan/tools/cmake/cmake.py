@@ -57,7 +57,30 @@ class CMake(object):
         configure_preset = get_configure_preset(cmake_presets, conanfile)
 
         self._generator = configure_preset["generator"]
+        self._toolchain_file = configure_preset.get("toolchainFile")
+        self._presets_cache_variables = configure_preset["cacheVariables"]
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
+
+    @property
+    def _cache_variables(self):
+        """
+        Get all the variables that should be passed the CLI as ``cmake -Dxxxxx -Dyyyyy ....``
+        """
+        cache_variables = {}
+        generator_folder = self._conanfile.generators_folder
+        if self._toolchain_file:
+            if os.path.isabs(self._toolchain_file):
+                toolchain_file = self._toolchain_file
+            else:
+                toolchain_file = os.path.join(generator_folder, self._toolchain_file)
+            cache_variables["CMAKE_TOOLCHAIN_FILE"] = toolchain_file.replace("\\", "/")
+
+        if self._conanfile.package_folder:
+            pkg_folder = self._conanfile.package_folder.replace("\\", "/")
+            cache_variables["CMAKE_INSTALL_PREFIX"] = pkg_folder
+
+        cache_variables.update(self._presets_cache_variables)
+        return cache_variables
 
     def configure(self, variables=None, build_script_folder=None):
         cmakelist_folder = self._conanfile.source_folder
@@ -69,8 +92,9 @@ class CMake(object):
 
         arg_list = [self._cmake_program]
         # Running the initial cache file
-        if variables:
-            update_cmake_initial_cache(self._conanfile, variables)
+        cache_variables = self._cache_variables
+        cache_variables.update(variables or {})
+        update_cmake_initial_cache(self._conanfile, cache_variables)
         arg_list.append(f'-C "{get_initial_cache_path(self._conanfile)}"')
 
         if self._generator:

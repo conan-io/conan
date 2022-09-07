@@ -187,8 +187,8 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables)
-        # Save the CMakeInitialCache.cmake file
-        save_cmake_initial_cache(self._conanfile)
+        # Save the conan_initial_cache.cmake file but without any content.
+        save_cmake_initial_cache(self._conanfile, cache_variables)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

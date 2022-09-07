@@ -1,7 +1,6 @@
 import os
 
-from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
-from conans.util.files import save, save_append
+from conans.util.files import save, save_append, load
 
 
 def _format_cache_variables(cache_variables):
@@ -17,58 +16,39 @@ def _format_cache_variables(cache_variables):
             type_ = "STRING"
             v = f'"{value}"'
         ret.append(f'set({name} {v} CACHE {type_} "" FORCE)')
-    return "\n".join(ret)
+    return ret
 
 
 def get_initial_cache_path(conanfile):
-    return os.path.join(conanfile.generators_folder, "CMakeInitialCache.cmake")
+    return os.path.join(conanfile.generators_folder, "conan_initial_cache.cmake")
 
 
-def save_cmake_initial_cache(conanfile):
+def save_cmake_initial_cache(conanfile, cache_variables):
     """
-    Save a *.cmake build helper file to save all the CACHE variables (-DXXX vars) in one
+    Save a conan_initial_cache.cmake file to save all the CACHE variables (-DXXX vars) in one
     file instead of passing all of them via CLI.
 
-    Note: it needs the cmake presets file to load all the existing cache variables
-    already defined.
-
     :param conanfile: ``ConanFile`` instance
+    :param cache_variables: ``dict`` with variables to be saved as CACHE ones
     """
-    cmake_presets = load_cmake_presets(conanfile.generators_folder)
-    configure_preset = get_configure_preset(cmake_presets, conanfile)
-    toolchain_file = configure_preset.get("toolchainFile")
-    cache_variables = configure_preset["cacheVariables"]
-
-    generator_folder = conanfile.generators_folder
-    variables = {}
-
-    if toolchain_file:
-        if os.path.isabs(toolchain_file):
-            toolchain_file = toolchain_file
-        else:
-            toolchain_file = os.path.join(generator_folder, toolchain_file)
-        variables["CMAKE_TOOLCHAIN_FILE"] = toolchain_file.replace("\\", "/")
-
-    if conanfile.package_folder:
-        pkg_folder = conanfile.package_folder.replace("\\", "/")
-        variables["CMAKE_INSTALL_PREFIX"] = pkg_folder
-
-    variables.update(cache_variables)
-
     cache_cmake_path = get_initial_cache_path(conanfile)
-    content = _format_cache_variables(variables)
-    save(cache_cmake_path, content)
+    content = _format_cache_variables(cache_variables)
+    save(cache_cmake_path, "\n".join(content))
 
 
 def update_cmake_initial_cache(conanfile, cache_variables):
     """
-    Update the existing `CMakeInitialCache.cmake` file with new cache variables
+    Update the existing `conan_initial_cache.cmake` file with new cache variables
 
     :param conanfile: ``ConanFile`` instance
-    :param cache_variables: ``dict`` with extra variables to be saved as CACHE ones
+    :param cache_variables: ``dict`` with variables to be saved as CACHE ones
     """
-    if not cache_variables:
-        return
     cache_cmake_path = get_initial_cache_path(conanfile)
-    content = _format_cache_variables(cache_variables)
-    save_append(cache_cmake_path, content)
+    new_content = []
+    original_content = load(cache_cmake_path)
+    # Pruning duplicated lines. If the variable already exists but the value is different
+    # then it'll override the original value
+    for line in _format_cache_variables(cache_variables):
+        if line not in original_content:
+            new_content.append(line)
+    save_append(cache_cmake_path, "\n".join(new_content))
