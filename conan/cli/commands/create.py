@@ -3,7 +3,7 @@ import os
 import shutil
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, ExtenderValueRequired
+from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
@@ -35,7 +35,6 @@ def create(conan_api, parser, *args):
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "None" to skip the test stage')
-    parser.add_argument("--test-package-build", action=ExtenderValueRequired, nargs="?", help="")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -47,13 +46,10 @@ def create(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("Exporting the recipe")
-    ref, conanfile = conan_api.export.export(path=path,
+    ref = conan_api.export.export(path=path,
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
-
-    is_build_require = args.build_require
-    is_build_require = is_build_require or getattr(conanfile, "is_build_require", False)
     if lockfile:
         # FIXME: We need to update build_requires too, not only ``requires``
         lockfile.add(requires=[ref])
@@ -65,8 +61,8 @@ def create(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     if True:  # just to keep diff
-        requires = [ref] if not is_build_require else None
-        tool_requires = [ref] if is_build_require else None
+        requires = [ref] if not args.build_require else None
+        tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
                                                                 tool_requires=tool_requires,
@@ -114,17 +110,17 @@ def create(conan_api, parser, *args):
                                                              lockfile=lockfile)
 
         out.title("Computing test_package dependency graph")
-        check_updates = args.check_updates if "check_updates" in args else False
+        # Update and check updates are None at the moment for test_package
         deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                                 profile_build=profile_build,
                                                 lockfile=lockfile,
                                                 remotes=remotes,
-                                                update=args.update,
-                                                check_update=check_updates)
+                                                update=None,
+                                                check_update=None)
         print_graph_basic(deps_graph)
         out.title("Computing test_package necessary packages")
 
-        build_modes = args.test_package_build  # FIXME: Hardcoded
+        build_modes = None  # FIXME: Hardcoded, will never build test_package deps
 
         deps_graph.report_graph_error()
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
