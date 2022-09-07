@@ -208,3 +208,31 @@ class ConanLib(ConanFile):
 
         client.run("create . --name=lib --version=1.0 -s build_type=Debug")
         assert "Running source!" not in client.out
+
+    def test_source_method_called_again_if_left_dirty(self):
+
+        """
+        If we fail in retreiving sources make sure the source() method will be called
+        next time we create
+        """
+
+        conanfile = textwrap.dedent('''
+            import os
+            from conan import ConanFile
+
+            class ConanLib(ConanFile):
+
+                def source(self):
+                    self.output.info("Running source!")
+                    assert False
+            ''')
+
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+
+        client.run("create . --name=lib --version=1.0", assert_error=True)
+        assert "Running source!" in client.out
+
+        client.run("create . --name=lib --version=1.0", assert_error=True)
+        assert "Running source!" in client.out
+        assert "Trying to remove corrupted source folder" in client.out
