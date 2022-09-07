@@ -111,6 +111,12 @@ class SettingsItem(object):
         except Exception:
             pass
 
+    def rm_safe(self, item):
+        try:
+            delattr(self, item)
+        except:
+            pass
+
     def remove(self, values):
         if not isinstance(values, (list, tuple, set)):
             values = [values]
@@ -212,6 +218,12 @@ class Settings(object):
         if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
             return str(tmp)
         return default
+
+    def rm_safe(self, name):
+        try:
+            delattr(self, name)
+        except:
+            pass
 
     def copy(self):
         """ deepcopy, recursive
