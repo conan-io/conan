@@ -648,8 +648,7 @@ def test_map_imported_config():
             find_package(talk REQUIRED)
             add_executable(app main.cpp)
             target_link_libraries(app talk::talk)
-
-            set_target_properties(talk::talk PROPERTIES MAP_IMPORTED_CONFIG_DEBUG Release)
+            set_target_properties(app PROPERTIES MAP_IMPORTED_CONFIG_DEBUG Release)
         """)
 
     client.save({
