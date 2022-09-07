@@ -787,7 +787,8 @@ def test_pkg_config_block():
     assert pkg_config_path_set in toolchain
 
 
-def test_user_presets_custom_location():
+@pytest.mark.parametrize("path", ["subproject", False])
+def test_user_presets_custom_location(path):
     client = TestClient()
     conanfile = textwrap.dedent("""
                 import os
@@ -799,12 +800,12 @@ def test_user_presets_custom_location():
 
                     def generate(self):
                         t = CMakeToolchain(self)
-                        t.user_presets_path = os.path.join(self.source_folder, "subproject")
+                        t.user_presets_path = {}
                         t.generate()
 
                     def layout(self):
                         cmake_layout(self)
-                """)
+                """.format('"{}"'.format(path) if isinstance(path, str) else path))
     client.save({"CMakeLists.txt": "",
                  "subproject/CMakeLists.txt": "",
                  "subproject2/foo.txt": "",
@@ -812,15 +813,10 @@ def test_user_presets_custom_location():
 
     # We want to generate it to build the subproject
     client.run("install . ")
-    assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
-    assert os.path.exists(os.path.join(client.current_folder, "subproject", "CMakeUserPresets.json"))
 
-    # Prioritize the command line, it doesn't matter if there isn't CMakeLists.txt there
-    client.run("install . -c tools.cmake.cmaketoolchain.presets:user_presets_path=subproject2")
-    assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
-    assert os.path.exists(os.path.join(client.current_folder, "subproject2", "CMakeUserPresets.json"))
-
-    # We can input an absolute path for the presets
-    tmp = temp_folder()
-    client.run("install . -c tools.cmake.cmaketoolchain.presets:user_presets_path='{}'".format(tmp))
-    assert os.path.exists(os.path.join(tmp, "CMakeUserPresets.json"))
+    if path is not False:
+        assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+        assert os.path.exists(os.path.join(client.current_folder, "subproject", "CMakeUserPresets.json"))
+    else:
+        assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+        assert not os.path.exists(os.path.join(client.current_folder, "False", "CMakeUserPresets.json"))
