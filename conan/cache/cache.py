@@ -208,7 +208,11 @@ class DataCache:
         if not os.path.exists(full_path):
             renamedir(self._full_path(layout.base_folder), full_path)
         else:
-            # remove the tmp files we created, we won't need them
+            # TODO: fix this
+            rmdir(os.path.join(full_path, "e"))
+            rmdir(os.path.join(full_path, "es"))
+            renamedir(os.path.join(self._full_path(layout.base_folder), "e"), full_path)
+            renamedir(os.path.join(self._full_path(layout.base_folder), "es"), full_path)
             rmdir(self._full_path(layout.base_folder))
 
         layout._base_folder = os.path.join(self.base_folder, new_path)
