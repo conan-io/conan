@@ -48,7 +48,7 @@ class PremakeDeps(object):
 
     def _get_cpp_info(self):
         ret = CppInfo()
-        for dep in self._conanfile.dependencies.installed.host.values():
+        for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.copy()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)
             # In case we have components, aggregate them, we do not support isolated "targets"
@@ -60,8 +60,8 @@ class PremakeDeps(object):
     def content(self):
         ret = {}  # filename -> file content
 
-        host_req = self._conanfile.dependencies.installed.host
-        test_req = self._conanfile.dependencies.installed.test
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
 
         template = ('conan_includedirs{dep} = {{{deps.includedirs}}}\n'
                     'conan_libdirs{dep} = {{{deps.libdirs}}}\n'

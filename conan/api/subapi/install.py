@@ -107,7 +107,7 @@ def full_deploy(conanfile, output_folder):
     import shutil
 
     conanfile.output.info(f"Conan built-in full deployer to {output_folder}")
-    for dep in conanfile.dependencies.installed.values():
+    for dep in conanfile.dependencies.values():
         folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
         build_type = dep.info.settings.get_safe("build_type")
         arch = dep.info.settings.get_safe("arch")

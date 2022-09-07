@@ -444,7 +444,7 @@ class FindFiles(Block):
         is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
-        host_req = self._conanfile.dependencies.installed.host.values()
+        host_req = self._conanfile.dependencies.host.values()
         build_paths = []
         host_lib_paths = []
         host_framework_paths = []
@@ -458,7 +458,7 @@ class FindFiles(Block):
             host_include_paths.extend(cppinfo.includedirs)
 
         # Read information from build context
-        build_req = self._conanfile.dependencies.installed.build.values()
+        build_req = self._conanfile.dependencies.build.values()
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()

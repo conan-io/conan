@@ -83,13 +83,7 @@ class ConanFileDependencies(UserRequirementsDict):
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
-    @property
-    def installed(self):
-        data = OrderedDict((k, v) for k, v in self._data.items()
-                           if v._conanfile.binary != BINARY_SKIP)
-        return ConanFileDependencies(data)
-
-    def filter(self, require_filter):
+    def filter(self, require_filter, skip=False):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
         def filter_fn(require):
             for k, v in require_filter.items():
@@ -97,7 +91,11 @@ class ConanFileDependencies(UserRequirementsDict):
                     return False
             return True
 
-        data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        if skip:
+            data = OrderedDict((k, v) for k, v in self._data.items()
+                               if filter_fn(k) and v._conanfile.binary != BINARY_SKIP)
+        else:
+            data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
         return ConanFileDependencies(data, require_filter)
 
     @property
@@ -121,22 +119,22 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True, "test": False})
+        return self.filter({"build": False, "direct": True, "test": False}, skip=True)
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True})
+        return self.filter({"build": True, "direct": True}, skip=True)
 
     @property
     def host(self):
-        return self.filter({"build": False, "test": False})
+        return self.filter({"build": False, "test": False}, skip=True)
 
     @property
     def test(self):
         # Not needed a direct_test because they are visible=False so only the direct consumer
         # will have them in the graph
-        return self.filter({"build": False, "test": True})
+        return self.filter({"build": False, "test": True}, skip=True)
 
     @property
     def build(self):
-        return self.filter({"build": True})
+        return self.filter({"build": True}, skip=True)

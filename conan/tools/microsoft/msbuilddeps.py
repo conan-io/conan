@@ -288,7 +288,7 @@ class MSBuildDeps(object):
         """
         # Current directory is the generators_folder
         conandeps_filename = "conandeps.props"
-        direct_deps = self._conanfile.dependencies.installed.filter({"direct": True})
+        direct_deps = self._conanfile.dependencies.filter({"direct": True})
         pkg_aggregated_content = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
             <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -351,7 +351,7 @@ class MSBuildDeps(object):
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
             public_deps = [self._dep_name(d, build)
-                           for r, d in dep.dependencies.installed.direct_host.items() if r.visible]
+                           for r, d in dep.dependencies.direct_host.items() if r.visible]
             result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           public_deps, build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
@@ -365,11 +365,11 @@ class MSBuildDeps(object):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
 
-        for req, dep in self._conanfile.dependencies.installed.host.items():
+        for req, dep in self._conanfile.dependencies.host.items():
             result.update(self._package_props_files(req, dep, build=False))
-        for req, dep in self._conanfile.dependencies.installed.test.items():
+        for req, dep in self._conanfile.dependencies.test.items():
             result.update(self._package_props_files(req, dep, build=False))
-        for req, dep in self._conanfile.dependencies.installed.build.items():
+        for req, dep in self._conanfile.dependencies.build.items():
             result.update(self._package_props_files(req, dep, build=True))
 
         # Include all direct build_requires for host context. This might change

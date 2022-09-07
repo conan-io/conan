@@ -237,8 +237,8 @@ class XcodeDeps(object):
         # Generate the config files for each component with name conan_pkgname_compname.xcconfig
         # If a package has no components the name is conan_pkgname_pkgname.xcconfig
         # All components are included in the conan_pkgname.xcconfig file
-        host_req = self._conanfile.dependencies.installed.host
-        test_req = self._conanfile.dependencies.installed.test
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
 
         for require, dep in list(host_req.items()) + list(test_req.items()):
 
@@ -288,7 +288,7 @@ class XcodeDeps(object):
                     result.update(component_content)
             else:
                 public_deps = []
-                for r, d in dep.dependencies.installed.direct_host.items():
+                for r, d in dep.dependencies.direct_host.items():
                     if not r.visible:
                         continue
                     if d.cpp_info.has_components:
@@ -307,7 +307,7 @@ class XcodeDeps(object):
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
         # Include all direct build_requires for host context.
-        direct_deps = self._conanfile.dependencies.installed.filter({"direct": True, "build": False})
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
         result[self.general_name] = self._all_xconfig_file(direct_deps)
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content

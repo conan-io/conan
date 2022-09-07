@@ -62,8 +62,8 @@ class VirtualRunEnv:
         # FIXME: Missing profile info
         # FIXME: Cache value?
 
-        host_req = self._conanfile.dependencies.installed.host
-        test_req = self._conanfile.dependencies.installed.test
+        host_req = self._conanfile.dependencies.host
+        test_req = self._conanfile.dependencies.test
         for require, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
