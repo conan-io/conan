@@ -666,7 +666,7 @@ def test_map_imported_config():
         client.run_command("./app")
     else:
         client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
-        client.run_command("cmake --build . --config=Debug")
+        client.run_command("cmake --build . --config Debug")
         client.run_command("Debug\\app.exe")
     assert "hello/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
