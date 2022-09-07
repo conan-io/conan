@@ -80,9 +80,14 @@ class ConanFileDependencies(UserRequirementsDict):
     def from_node(node):
         # TODO: Probably the BINARY_SKIP should be filtered later at the user level, not forced here
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
-                        for require, transitive in node.transitive_deps.items()
-                        if transitive.node.binary != BINARY_SKIP)
+                        for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
+
+    @property
+    def installed(self):
+        data = OrderedDict((k, v) for k, v in self._data.items()
+                           if v._conanfile.binary != BINARY_SKIP)
+        return ConanFileDependencies(data)
 
     def filter(self, require_filter):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object

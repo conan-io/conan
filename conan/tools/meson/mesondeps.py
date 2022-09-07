@@ -34,7 +34,7 @@ class MesonDeps:
     @property
     def ordered_deps(self):
         if not self._ordered_deps:
-            deps = self._conanfile.dependencies.host.topological_sort
+            deps = self._conanfile.dependencies.installed.host.topological_sort
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
 

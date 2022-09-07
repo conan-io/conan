@@ -16,7 +16,7 @@ class BazelDeps(object):
         local_repositories = []
         generators_folder = self._conanfile.generators_folder
 
-        for build_dependency in self._conanfile.dependencies.direct_build.values():
+        for build_dependency in self._conanfile.dependencies.installed.direct_build.values():
             content = self._get_build_dependency_buildfile_content(build_dependency)
             filename = self._save_dependency_buildfile(build_dependency, content,
                                                        generators_folder)
@@ -24,7 +24,7 @@ class BazelDeps(object):
             local_repository = self._create_new_local_repository(build_dependency, filename)
             local_repositories.append(local_repository)
 
-        for dependency in self._conanfile.dependencies.host.values():
+        for dependency in self._conanfile.dependencies.installed.host.values():
             content = self._get_dependency_buildfile_content(dependency)
             if not content:
                 continue
@@ -144,7 +144,7 @@ class BazelDeps(object):
         lib_dir = 'lib'
 
         dependencies = []
-        for req, dep in dependency.dependencies.items():
+        for req, dep in dependency.dependencies.installed.items():
             dependencies.append(dep.ref.name)
 
         shared_library = dependency.options.get_safe("shared") if dependency.options else False

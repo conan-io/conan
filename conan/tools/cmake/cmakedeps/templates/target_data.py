@@ -168,7 +168,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
+        direct_visible_host = self.conanfile.dependencies.installed.filter({"build": False, "visible": True,
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
             # TODO: Read a property from the component to discard this is shared
@@ -193,7 +193,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.conanfile.is_build_context:
             return []
         ret = []
-        direct_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
+        direct_host = self.conanfile.dependencies.installed.filter({"build": False, "visible": True,
                                                           "direct": True})
         if self.conanfile.cpp_info.required_components:
             for dep_name, _ in self.conanfile.cpp_info.required_components:
@@ -209,7 +209,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = {}
         if self.conanfile.is_build_context:
             return ret
-        deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
+        deps = self.conanfile.dependencies.installed.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
             dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)

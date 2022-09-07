@@ -241,7 +241,7 @@ class PCGenerator:
             pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
             # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
             if dep_ref_name != pkg_ref_name:
-                req_conanfile = self._dep.dependencies.host[pkg_ref_name]
+                req_conanfile = self._dep.dependencies.installed.host[pkg_ref_name]
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = _get_component_name(req_conanfile, comp_ref_name, self._build_context_suffix)
@@ -293,7 +293,7 @@ class PCGenerator:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
             requires = [_get_package_name(req, self._build_context_suffix)
-                        for req in self._dep.dependencies.direct_host.values()]
+                        for req in self._dep.dependencies.installed.direct_host.values()]
         description = "Conan package: %s" % pkg_name
         aliases = _get_package_aliases(self._dep)
         cpp_info = self._dep.cpp_info
@@ -390,9 +390,9 @@ class PkgConfigDeps:
         """
         pc_files = {}
         # Get all the dependencies
-        host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.build  # tool_requires
-        test_req = self._conanfile.dependencies.test
+        host_req = self._conanfile.dependencies.installed.host
+        build_req = self._conanfile.dependencies.installed.build  # tool_requires
+        test_req = self._conanfile.dependencies.installed.test
 
         # Check if it exists both as require and as build require without a suffix
         self._validate_build_requires(host_req, build_req)
