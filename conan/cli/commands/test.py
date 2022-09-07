@@ -60,7 +60,7 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
                                             update=update,
                                             check_update=update)
     print_graph_basic(deps_graph)
-    out.title("test_package: Computing test necessary packages")
+    out.title("test_package: Computing necessary packages")
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
                                      lockfile=lockfile)
