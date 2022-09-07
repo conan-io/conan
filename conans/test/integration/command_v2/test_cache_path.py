@@ -1,4 +1,3 @@
-import copy
 import json
 
 import pytest
@@ -125,15 +124,3 @@ def test_cache_path_regular_errors(created_package):
 
     t.run("cache path patata/1.0#123123", assert_error=True)
     assert "ERROR: No entry for recipe 'patata/1.0#123123'" in t.out
-
-
-def test_cache_path_regular_json_output_format(created_package):
-    t, pref = created_package
-
-    # JSON output
-    t.run("cache path {} --folder package --format json".format(pref.repr_notime()))
-    data = json.loads(t.stdout)
-    path = t.cache.pkg_layout(pref).package()
-    assert data["ref"] == pref.repr_notime()
-    assert data["folder"] == "package"
-    assert data["path"] == path
