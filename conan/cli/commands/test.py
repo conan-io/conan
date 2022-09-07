@@ -19,7 +19,7 @@ def test(conan_api, parser, *args):
                         help="Path to a test_package folder containing a conanfile.py")
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
-    _add_common_install_arguments(parser, build_help=True)  # Package must exist
+    _add_common_install_arguments(parser, build_help=False)  # Used packages must exist
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
@@ -39,7 +39,7 @@ def test(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                          args.update, args.build)
+                          args.update, build_modes=None)
     save_lockfile_out(args, deps_graph, lockfile, cwd)
 
 
