@@ -1,7 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS, cli_out_write
 from conan.cli.commands import json_formatter
 from conan.cli.common import add_profiles_args, get_profiles_from_args
 from conans.errors import ConanException
@@ -42,7 +42,7 @@ def profile_show(conan_api, parser, subparser, *args):
     return result
 
 
-@conan_subcommand(formatters={"text": lambda x: x, "json": json_formatter})
+@conan_subcommand()
 def profile_path(conan_api, parser, subparser, *args):
     """
     Show profile path location
@@ -51,9 +51,7 @@ def profile_path(conan_api, parser, subparser, *args):
     subparser.add_argument("name", help="Profile name")
     args = parser.parse_args(*args)
     result = conan_api.profiles.get_path(args.name)
-    out = ConanOutput()
-    out.writeln(result)
-    return result
+    cli_out_write(result)
 
 
 @conan_subcommand()
