@@ -645,10 +645,10 @@ def test_map_imported_config():
     cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
             project(app)
+            set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
             find_package(talk REQUIRED)
             add_executable(app main.cpp)
             target_link_libraries(app talk::talk)
-            set_target_properties(app PROPERTIES MAP_IMPORTED_CONFIG_DEBUG Release)
         """)
 
     client.save({
