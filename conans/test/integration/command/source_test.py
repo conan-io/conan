@@ -186,12 +186,14 @@ class ConanLib(ConanFile):
         """
 
         conanfile = textwrap.dedent('''
+            import os
             from conan import ConanFile
             from conans.util.files import save
 
             class ConanLib(ConanFile):
 
                 def source(self):
+                    save(os.path.join(self.source_folder, "main.cpp"), "void main() {}")
                     self.output.info("Running source!")
             ''')
 
@@ -200,12 +202,9 @@ class ConanLib(ConanFile):
 
         client.run("create . --name=lib --version=1.0")
         assert "Running source!" in client.out
-        assert "Copying sources to build folder" in client.out
 
         client.run("create . --name=lib --version=1.0")
         assert "Running source!" not in client.out
-        assert "Copying sources to build folder" not in client.out
 
         client.run("create . --name=lib --version=1.0 -s build_type=Debug")
         assert "Running source!" not in client.out
-        assert "Copying sources to build folder" not in client.out
