@@ -208,7 +208,11 @@ class DataCache:
         if not os.path.exists(full_path):
             rmdir(full_path)
             renamedir(self._full_path(layout.base_folder), full_path)
-            layout._base_folder = os.path.join(self.base_folder, new_path)
+        else:
+            # remove the tmp files we created, we won't need them
+            rmdir(self._full_path(layout.base_folder))
+
+        layout._base_folder = os.path.join(self.base_folder, new_path)
 
         # Wait until it finish to really update the DB
         try:
