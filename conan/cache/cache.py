@@ -1,7 +1,8 @@
 import hashlib
 import os
 
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout, EXPORT_SRC_FOLDER, \
+    EXPORT_FOLDER
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
@@ -204,16 +205,16 @@ class DataCache:
 
         full_path = self._full_path(new_path)
 
-        # If the path already exists keep it
-        if not os.path.exists(full_path):
-            renamedir(self._full_path(layout.base_folder), full_path)
-        else:
-            # TODO: fix this
-            rmdir(os.path.join(full_path, "e"))
-            rmdir(os.path.join(full_path, "es"))
-            renamedir(os.path.join(self._full_path(layout.base_folder), "e"), full_path)
-            renamedir(os.path.join(self._full_path(layout.base_folder), "es"), full_path)
+        if os.path.exists(full_path):
+            # we already copied e and es folders to the tmp folder
+            # move them again to the final folder and remove the e and es folders
+            # that were already there
+            for folder in [EXPORT_SRC_FOLDER, EXPORT_FOLDER]:
+                rmdir(os.path.join(full_path, folder))
+                renamedir(os.path.join(self._full_path(layout.base_folder), folder), os.path.join(full_path, folder))
             rmdir(self._full_path(layout.base_folder))
+        else:
+            renamedir(self._full_path(layout.base_folder), full_path)
 
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
