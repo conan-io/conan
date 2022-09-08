@@ -81,13 +81,11 @@ def create(conan_api, parser, *args):
                                                                 profile_host=profile_host)
 
     out.title("Computing dependency graph")
-    check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
                                             remotes=remotes,
-                                            update=args.update,
-                                            check_update=check_updates)
+                                            update=args.update)
     print_graph_basic(deps_graph)
     out.title("Computing necessary packages")
     if args.build is None:  # Not specified, force build the tested library
