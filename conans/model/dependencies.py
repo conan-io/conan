@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_SKIP
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -83,7 +82,7 @@ class ConanFileDependencies(UserRequirementsDict):
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
-    def filter(self, require_filter, skip=False):
+    def filter(self, require_filter):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
         def filter_fn(require):
             for k, v in require_filter.items():
@@ -91,12 +90,16 @@ class ConanFileDependencies(UserRequirementsDict):
                     return False
             return True
 
-        if skip:
-            data = OrderedDict((k, v) for k, v in self._data.items()
-                               if filter_fn(k) and v._conanfile.binary != BINARY_SKIP)
-        else:
-            data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
         return ConanFileDependencies(data, require_filter)
+
+    def matching(self, other):
+        data = OrderedDict()
+        for k, v in self._data.items():
+            for otherk, otherv in other._data.items():
+                if v is otherv:
+                    data[k] = v
+        return ConanFileDependencies(data)
 
     @property
     def topological_sort(self):
@@ -119,22 +122,22 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True, "test": False}, skip=True)
+        return self.filter({"build": False, "direct": True, "test": False, "artifacts": True})
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True}, skip=True)
+        return self.filter({"build": True, "direct": True})
 
     @property
     def host(self):
-        return self.filter({"build": False, "test": False}, skip=True)
+        return self.filter({"build": False, "test": False, "artifacts": True})
 
     @property
     def test(self):
         # Not needed a direct_test because they are visible=False so only the direct consumer
         # will have them in the graph
-        return self.filter({"build": False, "test": True}, skip=True)
+        return self.filter({"build": False, "test": True})
 
     @property
     def build(self):
-        return self.filter({"build": True}, skip=True)
+        return self.filter({"build": True})

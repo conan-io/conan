@@ -29,6 +29,10 @@ class Requirement:
         self._direct = direct
         self.options = options
 
+    @property
+    def artifacts(self):
+        return self.headers or self.libs or self.run or self.build
+
     @staticmethod
     def _default_if_none(field, default_value):
         return field if field is not None else default_value

@@ -163,13 +163,23 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
                                   self.require, self.cmake_package_type, self.is_host_windows)
 
+    def _get_transitive_requires(self):
+        """ the transitive requires that we need are the consumer ones, not the current dependencey
+        ones, so we get the current ones, then look for them in the consumer, and return those
+        """
+        direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
+                                                                  "direct": True})
+        consumer_deps = self.cmakedeps._conanfile.dependencies
+        result = consumer_deps.matching(direct_visible_host)
+        result = result.filter({"artifacts": True})
+        return result
+
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
-                                                                  "direct": True})
+        direct_visible_host = self._get_transitive_requires()
         for comp_name, comp in sorted_comps.items():
             # TODO: Read a property from the component to discard this is shared
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
@@ -193,8 +203,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.conanfile.is_build_context:
             return []
         ret = []
-        direct_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
-                                                          "direct": True})
+        direct_host = self._get_transitive_requires()
         if self.conanfile.cpp_info.required_components:
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
@@ -209,7 +218,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = {}
         if self.conanfile.is_build_context:
             return ret
-        deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
+        deps = self._get_transitive_requires()
         for dep in deps.values():
             dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)

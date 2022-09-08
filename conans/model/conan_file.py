@@ -290,10 +290,6 @@ class ConanFile:
         return self._conan_node.ref
 
     @property
-    def binary(self):
-        return self._conan_node.binary
-
-    @property
     def pref(self):
         return self._conan_node.pref
 
