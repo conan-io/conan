@@ -235,4 +235,4 @@ class ConanLib(ConanFile):
 
         client.run("create . --name=lib --version=1.0", assert_error=True)
         assert "Running source!" in client.out
-        assert "Trying to remove corrupted source folder" in client.out
+        assert "Source folder is corrupted, forcing removal" in client.out
