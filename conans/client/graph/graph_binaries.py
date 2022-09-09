@@ -236,11 +236,10 @@ class GraphBinariesAnalyzer(object):
                             break
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID
-                if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                    if node.cant_build:
-                        node.binary = BINARY_INVALID
-                    else:
-                        node.binary = BINARY_BUILD
+                if node.cant_build:
+                    node.binary = BINARY_INVALID
+                elif node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+                    node.binary = BINARY_BUILD
 
             if locked:
                 # package_id was not locked, this means a base lockfile that is being completed
