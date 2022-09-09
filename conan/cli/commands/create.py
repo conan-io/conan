@@ -6,6 +6,7 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.commands.test import run_test
 from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options, save_lockfile_out
 from conan.api.conan_app import ConanApp
@@ -60,7 +61,7 @@ def create(conan_api, parser, *args):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    if True:  # just to keep diff
+    if True:  # just to keep diff shorter now
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
@@ -99,38 +100,8 @@ def create(conan_api, parser, *args):
         # TODO: We need arguments for:
         #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
-
-        # All of this should be fixed to not repeat operations over the graph
-        root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
-                                                             profile_host, profile_build,
-                                                             remotes=remotes,
-                                                             update=args.update,
-                                                             lockfile=lockfile)
-
-        out.title("Computing test_package dependency graph")
-        # Update and check updates are None at the moment for test_package
-        deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                                profile_build=profile_build,
-                                                lockfile=lockfile,
-                                                remotes=remotes,
-                                                update=None,
-                                                check_update=None)
-        print_graph_basic(deps_graph)
-        out.title("Computing test_package necessary packages")
-
-        build_modes = None  # FIXME: Hardcoded, will never build test_package deps
-
-        deps_graph.report_graph_error()
-        conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
-                                         update=args.update,
-                                         lockfile=lockfile)
-        print_graph_packages(deps_graph)
-
-        out.title("Installing test_package packages")
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
-                                           update=args.update)
-        _check_tested_reference_matches(deps_graph, ref, out)
-        test_package(conan_api, deps_graph, test_conanfile_path)
+        deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
+                              update=False, build_modes=None)
 
     return deps_graph
 

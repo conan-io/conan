@@ -64,7 +64,7 @@ class TestPackageTestCase(unittest.TestCase):
               "--profile:host=profile_host --profile:build=profile_build")
 
         t.run("create conanfile.py --name=name --version=version --build=missing"
-              " --profile:host=profile_host --profile:build=profile_build ")
+              " --profile:host=profile_host --profile:build=profile_build")
 
         # Build requires are built in the 'build' context:
         self.assertIn("br1/version: >> settings.os: Build", t.out)

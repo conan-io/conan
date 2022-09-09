@@ -85,7 +85,7 @@ def test_android_ndk():
     c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Build")},
                            build=True)
     # The same NDK can be used for different architectures, this should not require a new NDK build
-    c.run("create . -pr:b=windows -pr:h=android -s:h arch=armv8 --build=missing --build-require")
+    c.run("create . -pr:b=windows -pr:h=android -s:h arch=armv8 --build=missing  --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("522dcea5982a3f8a5b624c16477e47195da2f84f", "Cache")},
                            build=True)
     assert "androidndk/0.1: Already installed!" in c.out
@@ -95,7 +95,7 @@ def test_android_ndk():
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
     # But a different build OS is a different NDK executable
-    c.run("create . -pr:b=linux -pr:h=android --build-require")
+    c.run("create . -pr:b=linux -pr:h=android  --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("63fead0844576fc02943e16909f08fcdddd6f44b", "Build")},
                            build=True)
     assert "androidndk/0.1: Calling build()" in c.out
