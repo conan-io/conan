@@ -52,9 +52,9 @@ def test_layout_generate():
 def test_generate_source_folder():
     c = TestClient()
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.cmake import cmake_layout
-        from conan.tools.env import Environment
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -63,13 +63,11 @@ def test_generate_source_folder():
                 cmake_layout(self)
 
             def generate(self):
-                env = Environment()
-                env.prepend_path("PKG_CONFIG_PATH", self.source_folder)
-                envvars = env.vars(self).save_script("conanbuildenv_pkg_config_path")
+                self.output.info("PKG_CONFIG_PATH {}!".format(os.path.exists(self.source_folder)))
         """)
     c.save({"conanfile.py": conanfile})
     c.run("install .")
-    assert "PKG_CONFIG_PATH" in c.load("build/generators/conanbuildenv_pkg_config_path.bat")
+    assert "PKG_CONFIG_PATH True!" in c.out
 
 
 def test_generate_source_folder_test_package():
