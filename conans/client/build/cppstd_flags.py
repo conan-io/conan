@@ -66,6 +66,8 @@ def cppstd_default(settings):
 
 
 def _clang_cppstd_default(compiler_version):
+    if Version(compiler_version) >= "16":
+        return "gnu17"
     # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
     return "gnu98" if Version(compiler_version) < "6" else "gnu14"
 
