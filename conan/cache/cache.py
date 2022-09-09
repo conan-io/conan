@@ -201,26 +201,25 @@ class DataCache:
         ref.timestamp = revision_timestamp_now()
 
         # TODO: here maybe we should block the recipe and all the packages too
-        new_path = self._get_path(ref)
+        # This is the destination path for the temporary created export and export_sources folders
+        # with the hash created based on the recipe revision
+        new_path_relative = self._get_path(ref)
 
-        full_path = self._full_path(new_path)
+        new_path_absolute = self._full_path(new_path_relative)
 
-        if os.path.exists(full_path):
-            # we already copied e and es folders to the tmp folder
-            # move them again to the final folder and remove the e and es folders
-            # that were already there
-            for folder in [EXPORT_SRC_FOLDER, EXPORT_FOLDER]:
-                rmdir(os.path.join(full_path, folder))
-                renamedir(os.path.join(self._full_path(layout.base_folder), folder), os.path.join(full_path, folder))
+        if os.path.exists(new_path_absolute):
+            # If there source folder exists, export and export_sources 
+            # folders are already copied so we can remove the tmp ones
             rmdir(self._full_path(layout.base_folder))
         else:
-            renamedir(self._full_path(layout.base_folder), full_path)
+            # Destination folder is empty, move all the tmp contents
+            renamedir(self._full_path(layout.base_folder), new_path_absolute)
 
-        layout._base_folder = os.path.join(self.base_folder, new_path)
+        layout._base_folder = os.path.join(self.base_folder, new_path_relative)
 
         # Wait until it finish to really update the DB
         try:
-            self._db.create_recipe(new_path, ref)
+            self._db.create_recipe(new_path_relative, ref)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
             ref = layout.reference
