@@ -92,7 +92,7 @@ def test_validate_build_check_min_cppstd():
             version = "0.1"
             settings = "compiler"
             def validate_build(self):
-                check_min_cppstd(self, "14")
+                check_min_cppstd(self, "17")
             def validate(self):
                 print("validated")
             def build(self):
@@ -102,10 +102,10 @@ def test_validate_build_check_min_cppstd():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . -s compiler.cppstd=11", assert_error=True)
+    client.run("create . -s compiler.cppstd=14", assert_error=True)
     assert "fake/0.1: Cannot build for this configuration: " \
-           "Current cppstd (11) is lower than the required C++ standard (14)." in client.out
-    client.run("create . -s compiler.cppstd=14")
+           "Current cppstd (14) is lower than the required C++ standard (17)." in client.out
+    client.run("create . -s compiler.cppstd=17")
     client.run("install --require=fake/0.1@")
     assert "fake/0.1: Already installed!" in client.out
     assert "validated" in client.out
