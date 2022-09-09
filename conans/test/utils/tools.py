@@ -467,6 +467,12 @@ class TestClient(object):
                 with mock.patch("getpass.getpass", mock_get_pass):
                     yield
 
+    def get_default_host_profile(self):
+        return self.cache.default_profile
+
+    def get_default_build_profile(self):
+        return self.cache.default_profile
+
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -648,6 +654,14 @@ class TestClient(object):
         latest_rrev = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
+
+    def get_default_host_profile(self):
+        api = ConanAPIV2(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_host()])
+
+    def get_default_build_profile(self):
+        api = ConanAPIV2(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_build()])
 
     def recipe_exists(self, ref):
         rrev = self.cache.get_recipe_revisions_references(ref)

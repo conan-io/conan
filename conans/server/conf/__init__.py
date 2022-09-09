@@ -49,6 +49,7 @@ class ConanServerConfigParser(ConfigParser):
                            "public_port": get_env("CONAN_SERVER_PUBLIC_PORT", None, environment),
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
+                           "custom_authorizer": get_env("CONAN_CUSTOM_AUTHORIZER", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -157,6 +158,13 @@ class ConanServerConfigParser(ConfigParser):
     def custom_authenticator(self):
         try:
             return self._get_conf_server_string("custom_authenticator")
+        except ConanException:
+            return None
+
+    @property
+    def custom_authorizer(self):
+        try:
+            return self._get_conf_server_string("custom_authorizer")
         except ConanException:
             return None
 

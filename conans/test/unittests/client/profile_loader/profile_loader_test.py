@@ -6,7 +6,7 @@ import pytest
 from conans.client.profile_loader import _ProfileParser, ProfileLoader
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -212,10 +212,14 @@ def test_profile_buildenv():
     buildenv = profile.buildenv
     env = buildenv.get_profile_env(None)
     conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
     env_vars = env.vars(conanfile)
     assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
-    # Mock is never Windows path
     assert env_vars.get("MyPath1") == "/some/path11:/other path/path12"
+
+    conanfile.settings_build = MockSettings({"os": "Windows", "arch": "x86_64"})
+    env_vars = env.vars(conanfile)
+    assert env_vars.get("MyPath1") == "/some/path11;/other path/path12"
 
 
 @pytest.mark.parametrize("conf_name", [

@@ -97,7 +97,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
 
-              {% if not has_components %}
 
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
@@ -119,12 +118,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
               set({{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }} {{ global_cpp.no_soname }})
 
-              {% else %}
+
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
 
-              ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
+              ########### COMPONENT {{ comp_target_name }} VARIABLES ############################################
+
               set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_variable_name }}_BIN_DIRS{{ config_suffix }} {{ cpp.bin_paths }})
@@ -150,16 +150,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
-              {%- endfor %}
 
-              {%- endif %}
+
+              {%- endfor %}
           """)
         return ret
 
     def _get_global_cpp_cmake(self):
+        global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         # TODO: Read a property to discard this is shared
-        return _TargetDataContext(self.conanfile.cpp_info, pfolder_var_name, self.conanfile.package_folder,
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
                                   self.require, self.cmake_package_type, self.is_host_windows)
 
     def _get_required_components_cpp(self):
@@ -266,8 +267,6 @@ class _TargetDataContext(object):
                                    for v in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        if require and not require.headers:
-            self.include_paths = ""
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
@@ -280,11 +279,6 @@ class _TargetDataContext(object):
         self.compile_definitions = join_defines(cpp_info.defines)
         self.library_type = library_type
         self.is_host_windows = "1" if is_host_windows else "0"
-        if require and not require.libs:
-            self.lib_paths = ""
-            self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
@@ -302,6 +296,14 @@ class _TargetDataContext(object):
 
         self.objects_list = join_paths(cpp_info.objects)
 
+        # traits logic
+        if require and not require.headers:
+            self.include_paths = ""
+        if require and not require.libs:
+            self.lib_paths = ""
+            self.libs = ""
+            self.system_libs = ""
+            self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""
@@ -310,6 +312,8 @@ class _TargetDataContext(object):
             self.sharedlinkflags_list = ""
             self.exelinkflags_list = ""
             self.objects_list = ""
+        if require and not require.run:
+            self.bin_paths = ""
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)

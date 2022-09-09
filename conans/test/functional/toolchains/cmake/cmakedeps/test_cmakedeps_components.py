@@ -67,8 +67,9 @@ class PropagateSpecificComponents(unittest.TestCase):
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install --requires=middle/version@ -g CMakeDeps')
+        host_arch = t.get_default_host_profile().settings['arch']
 
-        content = t.load('middle-release-x86_64-data.cmake')
+        content = t.load(f'middle-release-{host_arch}-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-Target-release.cmake')
@@ -200,13 +201,16 @@ def test_components_system_libs():
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
         message("component libs: ${tmp_libs}")
         message("component options: ${tmp_options}")
+        message("component deps: ${tmp_deps}")
     """)
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    assert 'component libs: $<$<CONFIG:Release>:;system_lib_component>' in t.out
+    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
+    assert 'component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:system_lib_component>;' in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
@@ -322,3 +326,84 @@ def test_components_sharedlinkflags():
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
+
+
+@pytest.mark.tool("cmake")
+def test_cmake_add_subdirectory():
+    """https://github.com/conan-io/conan/issues/11743
+       https://github.com/conan-io/conan/issues/11755"""
+
+    t = TestClient()
+    boost = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "boost"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "Boost")
+                self.cpp_info.components["A"].system_libs = ["A_1", "A_2"]
+                self.cpp_info.components["B"].system_libs = ["B_1", "B_2"]
+    """)
+    t.save({"conanfile.py": boost})
+    t.run("create .")
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
+
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "0.1"
+                requires = "boost/1.0"
+                generators = "CMakeDeps", "CMakeToolchain"
+                settings = "os", "arch", "compiler", "build_type"
+
+                def layout(self):
+                    cmake_layout(self)
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+
+    cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(hello CXX)
+            find_package(Boost CONFIG)
+            add_subdirectory(src)
+
+    """)
+    sub_cmakelists = textwrap.dedent("""
+            find_package(Boost REQUIRED COMPONENTS exception headers)
+
+            message("AGGREGATED LIBS: ${Boost_LIBRARIES}")
+            get_target_property(tmp boost::boost INTERFACE_LINK_LIBRARIES)
+            message("AGGREGATED LINKED: ${tmp}")
+
+            get_target_property(tmp boost::B INTERFACE_LINK_LIBRARIES)
+            message("BOOST_B LINKED: ${tmp}")
+
+            get_target_property(tmp boost::A INTERFACE_LINK_LIBRARIES)
+            message("BOOST_A LINKED: ${tmp}")
+
+            get_target_property(tmp boost_boost_B_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+            message("BOOST_B_DEPS LINKED: ${tmp}")
+
+            get_target_property(tmp boost_boost_A_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+            message("BOOST_A_DEPS LINKED: ${tmp}")
+
+    """)
+
+    t.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmakelists, "src/CMakeLists.txt": sub_cmakelists})
+    t.run("install .")
+    # only doing the configure failed before #11743 fix
+    t.run("build .")
+    # The boost::boost target has linked the two components
+    assert "AGGREGATED LIBS: boost::boost" in t.out
+    assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
+    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
+    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
+    assert "BOOST_B_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:B_1;B_2>" in t.out
+    assert "BOOST_A_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:A_1;A_2>;" in t.out

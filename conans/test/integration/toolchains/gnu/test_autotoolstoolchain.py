@@ -90,4 +90,3 @@ def test_not_none_values():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
 
-

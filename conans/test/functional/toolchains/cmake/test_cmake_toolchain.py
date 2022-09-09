@@ -817,6 +817,15 @@ def test_cmake_presets_multiple_settings_multi_config():
 
 
 @pytest.mark.tool("cmake", "3.23")
+def test_max_schema_version2_build():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2"]
+    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
+    client.run("build .")
+
+
+@pytest.mark.tool("cmake", "3.23")
 def test_user_presets_version2():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")

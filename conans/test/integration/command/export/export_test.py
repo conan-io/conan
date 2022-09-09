@@ -517,6 +517,17 @@ def test_export_invalid_refs():
     assert "ERROR: Invalid package channel 'channel%'" in c.out
 
 
+def test_warn_special_chars_refs():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=pkg.name --version=0.1")
+    assert "WARN: Name containing special chars is discouraged 'pkg.name'" in c.out
+    c.run("export . --name=name --version=0.1 --user=user+some")
+    assert "WARN: User containing special chars is discouraged 'user+some'" in c.out
+    c.run("export . --name=pkg.name --version=0.1 --user=user --channel=channel-some")
+    assert "WARN: Channel containing special chars is discouraged 'channel-some'" in c.out
+
+
 def test_export_json():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile()})

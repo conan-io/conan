@@ -806,6 +806,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
 class SCMRevisions(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="reconsider this case for Conan 2.0")
     def test_auto_revision_even_without_scm_git(self):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages

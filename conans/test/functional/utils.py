@@ -86,6 +86,8 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "{} _M_IX86 defined".format(name) in output
             elif arch == "x86_64":
                 assert "{} _M_X64 defined".format(name) in output
+            elif arch == "armv8":
+                assert "{} _M_ARM64 defined".format(name) in output
             else:
                 assert arch is None, "checked don't know how to validate this architecture"
 

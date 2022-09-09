@@ -76,12 +76,13 @@ class Git(object):
         folder = self._run("rev-parse --show-toplevel")
         return folder.replace("\\", "/")
 
-    def clone(self, url, target=""):
+    def clone(self, url, target="", args=None):
+        args = args or []
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
-        self._run('clone "{}" {}'.format(url, target))
+        self._run('clone "{}" {} {}'.format(url, " ".join(args), target))
 
     def checkout(self, commit):
         self._conanfile.output.info("Checkout: {}".format(commit))

@@ -94,7 +94,7 @@ class MesonToolchain(object):
         """
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
-        self._is_apple_system = is_apple_os(self._os)
+        self._is_apple_system = is_apple_os(self._conanfile)
 
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
@@ -155,7 +155,7 @@ class MesonToolchain(object):
                 os_target = settings_target.get_safe("os")
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = to_meson_machine(os_target, arch_target)
-            if is_apple_os(os_host):  # default cross-compiler in Apple is common
+            if is_apple_os(self._conanfile):  # default cross-compiler in Apple is common
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
@@ -279,7 +279,7 @@ class MesonToolchain(object):
             raise ConanException("Please, specify a suitable value for os.sdk.")
 
         # Calculating the main Apple flags
-        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+        arch = to_apple_arch(self._conanfile)
         self.apple_arch_flag = ["-arch", arch] if arch else []
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
         os_version = self._conanfile.settings.get_safe("os.version")

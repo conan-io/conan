@@ -15,7 +15,6 @@ class SynchronizeTest(unittest.TestCase):
 
     def test_upload(self):
         client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
-        save(client.cache.default_profile_path, "")
         ref = RecipeReference.loads("hello/0.1@lasote/stable")
         files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),
                  "to_be_deleted.txt": "delete me",

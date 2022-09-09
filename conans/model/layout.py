@@ -14,7 +14,6 @@ class Infos(object):
 class Folders(object):
 
     def __init__(self):
-        self._base_install = None
         self._base_source = None
         self._base_build = None
         self._base_package = None
@@ -55,11 +54,8 @@ class Folders(object):
             os.path.normpath(os.path.join(conanfile_folder, self.root))
 
         self._base_source = base_folder
-
-        self._base_install = output_folder or base_folder
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
-
         self._base_export_sources = output_folder or base_folder
 
     @property

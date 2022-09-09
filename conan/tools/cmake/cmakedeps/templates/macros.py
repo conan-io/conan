@@ -41,50 +41,51 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
+
        function(conan_package_library_targets libraries package_libdir package_bindir library_type
-                is_host_windows deps out_libraries out_libraries_target config_suffix package_name
-                no_soname_mode)
-           set(_out_libraries "")
+                is_host_windows deps_target out_libraries_target config_suffix package_name no_soname_mode)
            set(_out_libraries_target "")
-           set(_CONAN_ACTUAL_TARGETS "")
 
            foreach(_LIBRARY_NAME ${libraries})
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                if(CONAN_FOUND_LIBRARY)
                    message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-                   list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                    # Create a micro-target for each lib/a found
                    # Allow only some characters for the target name
                    string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
                    set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
-                   if(NOT TARGET ${_LIB_NAME})
-                       if(is_host_windows AND library_type STREQUAL "SHARED")
-                         set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
-                         find_library(CONAN_SHARED_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_bindir}
-                                      NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-                         if(NOT CONAN_SHARED_FOUND_LIBRARY)
-                           message(STATUS "Cannot locate shared library: ${_LIBRARY_NAME}")
-                           message(DEBUG "DLL library not found, creating UNKNOWN IMPORTED target")
-                           add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                           set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                         else()
-                            add_library(${_LIB_NAME} SHARED IMPORTED)
-                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_SHARED_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
-                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_IMPLIB ${CONAN_FOUND_LIBRARY})
-                            message(DEBUG "Found DLL and STATIC at ${CONAN_SHARED_FOUND_LIBRARY}, ${CONAN_FOUND_LIBRARY}")
-                         endif()
-                       else()
+
+                   if(is_host_windows AND library_type STREQUAL "SHARED")
+                     set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
+                     find_library(CONAN_SHARED_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_bindir}
+                                  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+                     if(NOT CONAN_SHARED_FOUND_LIBRARY)
+                       message(STATUS "Cannot locate shared library: ${_LIBRARY_NAME}")
+                       message(DEBUG "DLL library not found, creating UNKNOWN IMPORTED target")
+                       if(NOT TARGET ${_LIB_NAME})
+                          add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                       endif()
+                       set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                     else()
+                        if(NOT TARGET ${_LIB_NAME})
+                          add_library(${_LIB_NAME} SHARED IMPORTED)
+                        endif()
+                        set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_SHARED_FOUND_LIBRARY})
+                        set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_IMPLIB ${CONAN_FOUND_LIBRARY})
+                        message(DEBUG "Found DLL and STATIC at ${CONAN_SHARED_FOUND_LIBRARY}, ${CONAN_FOUND_LIBRARY}")
+                     endif()
+                   else()
+                     if(NOT TARGET ${_LIB_NAME})
                          # library_type can be STATIC, still UNKNOWN (if no package type available in the recipe) or SHARED (but no windows)
                          add_library(${_LIB_NAME} ${library_type} IMPORTED)
-                         message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
-                         set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
-                       endif()
-                       list(APPEND _CONAN_ACTUAL_TARGETS ${_LIB_NAME})
-                   else()
-                       message(VERBOSE "Conan: Skipping already existing target: ${_LIB_NAME}")
+                     endif()
+                     message(DEBUG "Created target ${_LIB_NAME} ${library_type} IMPORTED")
+                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY} IMPORTED_NO_SONAME ${no_soname_mode})
                    endif()
+                   # Link library file
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()
@@ -93,13 +94,11 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                unset(CONAN_FOUND_LIBRARY CACHE)
            endforeach()
 
-           # Add all dependencies to all targets
-           string(REPLACE " " ";" deps_list "${deps}")
-           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${deps_list}" APPEND)
+           # Add the dependencies target for all the imported libraries
+           foreach(_T ${_out_libraries_target})
+               set_property(TARGET ${_T} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
            endforeach()
 
-           set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
        endfunction()
 

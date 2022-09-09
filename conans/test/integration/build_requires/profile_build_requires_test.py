@@ -197,6 +197,7 @@ def test_consumer_patterns_loop_error():
     client = TestClient()
 
     profile_patterns = textwrap.dedent("""
+        include(default)
         [tool_requires]
         tool1/1.0
         tool2/1.0
@@ -208,12 +209,12 @@ def test_consumer_patterns_loop_error():
 
     client.run("export tool1 --name=tool1 --version=1.0")
     client.run("export tool2 --name=tool2 --version=1.0")
-    with pytest.raises(Exception) as e:
-        client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
-    assert "graph loop" in str(e.value)
+    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt", assert_error=True)
+    assert "graph loop" in client.out
 
     # we can fix it with the negation
     profile_patterns = textwrap.dedent("""
+        include(default)
         [tool_requires]
         tool1/1.0
         !tool1*:tool2/1.0

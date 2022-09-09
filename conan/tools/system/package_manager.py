@@ -41,7 +41,7 @@ class _SystemPackageManagerTool(object):
                                    "almalinux", "rocky"],
                            "dnf": ["fedora", "rhel", "centos", "mageia"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro", "msys2"],
+                           "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
@@ -146,9 +146,6 @@ class _SystemPackageManagerTool(object):
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, **kwargs):
-        if update:
-            self.update()
-
         if check:
             packages = self.check(packages)
 
@@ -163,6 +160,9 @@ class _SystemPackageManagerTool(object):
                                                                                      self.mode_check,
                                                                                      self.mode_install))
         elif packages:
+            if update:
+                self.update()
+
             packages_arch = [self.get_package_name(package) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
@@ -175,16 +175,11 @@ class _SystemPackageManagerTool(object):
                                         "installed".format(" ".join(packages)))
 
     def _update(self):
-        if self._mode == self.mode_check:
-            raise ConanException("Can't update because tools.system.package_manager:mode is '{0}'."
-                                 "Please update packages manually or set "
-                                 "'tools.system.package_manager:mode' "
-                                 "to '{1}' in the [conf] section of the profile, "
-                                 "or in the command line using "
-                                 "'-c tools.system.package_manager:mode={1}'".format(self.mode_check,
-                                                                                     self.mode_install))
-        command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-        return self._conanfile_run(command, self.accepted_update_codes)
+        # we just update the package manager database in case we are in 'install mode'
+        # in case we are in check mode just ignore
+        if self._mode == self.mode_install:
+            command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
+            return self._conanfile_run(command, self.accepted_update_codes)
 
     def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
@@ -297,7 +292,7 @@ class PkgUtil(_SystemPackageManagerTool):
 
 class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
-    install_command = "{tool} --install --yes {packages}"
+    install_command = "{tool} install --yes {packages}"
     update_command = "{tool} outdated"
     check_command = '{tool} search --local-only --exact {package} | ' \
                     'findstr /c:"1 packages installed."'

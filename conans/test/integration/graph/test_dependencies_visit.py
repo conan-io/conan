@@ -103,7 +103,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . --name=zlib --version=0.2")
 
     client.save({"conanfile.py": GenConanfile().with_tool_requirement("zlib/0.1",
-                                                                            visible=True)})
+                                                                      visible=True)})
     client.run("create . --name=cmake --version=0.1")
 
     client.save({"conanfile.py": GenConanfile()})
@@ -213,3 +213,74 @@ def test_dependencies_package_type():
     assert "APP: True!!" in c.out
     assert "conanfile.py: Error in generate() method, line 9" in c.out
     assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out
+
+
+def test_dependency_interface():
+    """
+    Quick test for the ConanFileInterface exposed
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            homepage = "myhome"
+            url = "myurl"
+            license = "MIT"
+        """)
+    user = textwrap.dedent("""
+        from conan import ConanFile
+        class User(ConanFile):
+            requires = "dep/1.0"
+            def generate(self):
+                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
+                self.output.info("URL: {}".format(self.dependencies["dep"].url))
+                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
+                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
+                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "dep/conandata.yml": "",
+            "user/conanfile.py": user})
+    c.run("create dep")
+    c.run("install user")
+    assert "conanfile.py: HOME: myhome" in c.out
+    assert "conanfile.py: URL: myurl" in c.out
+    assert "conanfile.py: LICENSE: MIT" in c.out
+    assert "conanfile.py: RECIPE:" in c.out
+    assert "conanfile.py: CONANDATA: {}" in c.out
+
+
+def test_dependency_interface_validate():
+    """
+    In the validate() method, there is no access to dep.package_folder, because the packages are
+    not there. validate() operates at the graph level, without binaries, before they are installed,
+    and we want to keep it that way
+    https://github.com/conan-io/conan/issues/11959
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            homepage = "myhome"
+        """)
+    user = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class User(ConanFile):
+            requires = "dep/1.0"
+            def validate(self):
+                dep = self.dependencies["dep"]
+                self.output.info("HOME: {}".format(dep.homepage))
+                self.output.info("PKG FOLDER: {}".format(dep.package_folder is None))
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "user/conanfile.py": user})
+    c.run("create dep")
+    c.run("install user")
+    assert "conanfile.py: HOME: myhome" in c.out
+    assert "conanfile.py: PKG FOLDER: True" in c.out

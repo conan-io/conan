@@ -4,12 +4,13 @@ from conans.errors import ConanException
 from conans.util.runners import check_output_runner
 
 
-def is_apple_os(os_):
+def is_apple_os(conanfile):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    os_ = conanfile.settings.get_safe("os")
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch, default=None):
+def _to_apple_arch(arch, default=None):
     """converts conan-style architecture into Apple-style arch"""
     return {'x86': 'i386',
             'x86_64': 'x86_64',
@@ -18,7 +19,13 @@ def to_apple_arch(arch, default=None):
             'armv8_32': 'arm64_32',
             'armv8.3': 'arm64e',
             'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(arch, default)
+            'armv7k': 'armv7k'}.get(str(arch), default)
+
+
+def to_apple_arch(conanfile, default=None):
+    """converts conan-style architecture into Apple-style arch"""
+    arch_ = conanfile.settings.get_safe("arch")
+    return _to_apple_arch(arch_, default)
 
 
 def get_apple_sdk_fullname(conanfile):
@@ -36,7 +43,7 @@ def get_apple_sdk_fullname(conanfile):
         return "{}{}".format(os_sdk, os_sdk_version)
     elif os_ == "Macos":  # it has only a single value for all the architectures
         return "{}{}".format("macosx", os_sdk_version)
-    elif is_apple_os(os_):
+    elif is_apple_os(conanfile):
         raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
@@ -95,7 +102,7 @@ def fix_apple_shared_install_name(conanfile):
 
     substitutions = {}
 
-    if is_apple_os(conanfile.settings.get_safe("os")) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)

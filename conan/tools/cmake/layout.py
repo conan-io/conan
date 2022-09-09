@@ -3,7 +3,7 @@ import os
 from conans.errors import ConanException
 
 
-def cmake_layout(conanfile, generator=None, src_folder="."):
+def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):
     """
 
     :param conanfile: The current recipe object. Always use ``self``.
@@ -28,17 +28,17 @@ def cmake_layout(conanfile, generator=None, src_folder="."):
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    build_folder = "build" if not subproject else os.path.join(subproject, "build")
+    build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
     custom_conf = get_build_folder_custom_vars(conanfile)
     if custom_conf:
-        build_folder = "{}/{}".format(build_folder, custom_conf)
+        build_folder = os.path.join(build_folder, custom_conf)
 
     if multi:
         conanfile.folders.build = build_folder
     else:
-        conanfile.folders.build = "{}/{}".format(build_folder, build_type)
+        conanfile.folders.build = os.path.join(build_folder, build_type)
 
-    conanfile.folders.generators = "{}/{}".format(build_folder, "generators")
+    conanfile.folders.generators = os.path.join(build_folder, "generators")
 
     conanfile.cpp.source.includedirs = ["include"]
 

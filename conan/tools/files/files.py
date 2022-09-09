@@ -1,6 +1,7 @@
 import configparser
 import errno
 import gzip
+import hashlib
 import os
 import platform
 import shutil
@@ -87,13 +88,6 @@ def mkdir(conanfile, path):
 
 
 def rmdir(conanfile, path):
-    """
-    Utility functions to remove a directory. The existence of the specified directory is checked,
-    so rmdir() will do nothing if the directory doesn’t exists.
-
-    :param conanfile: The current recipe object. Always use ``self``.
-    :param path: Path to the folder to be removed.
-    """
     _internal_rmdir(path)
 
 
@@ -115,7 +109,7 @@ def rm(conanfile, pattern, folder, recursive=False):
             break
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """
@@ -192,7 +186,7 @@ def ftp_download(conanfile, host, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None):
     """
     Retrieves a file from a given URL into a file with a given filename. It uses certificates from
     a list of known verifiers for https downloads, but this can be optionally disabled.
@@ -203,7 +197,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
-                the follow URLs will be used as mirror in case of download error.
+                the follow URLs will be used as mirror in case of download error.  Files accessible
+                in the local filesystem can be referenced with a URL starting with ``file:///``
+                followed by an absolute path to a file (where the third ``/`` implies ``localhost``).
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param retry: Number of retries in case of failure. Default is overridden by
@@ -261,11 +257,11 @@ def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sh
     file_origin = _path_from_file_uri(url)
     shutil.copyfile(file_origin, file_path)
 
-    if md5:
+    if md5 is not None:
         check_md5(conanfile, file_path, md5)
-    if sha1:
+    if sha1 is not None:
         check_sha1(conanfile, file_path, sha1)
-    if sha256:
+    if sha256 is not None:
         check_sha256(conanfile, file_path, sha256)
 
 
@@ -613,24 +609,28 @@ def collect_libs(conanfile, folder=None):
     else:
         lib_folders = [os.path.join(conanfile.package_folder, folder)
                        for folder in conanfile.cpp_info.libdirs]
-    result = []
+
+    ref_libs = {}
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
             conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
                                      "{0}".format(lib_folder))
             continue
+        # In case of symlinks, only keep shortest file name in the same "group"
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
             if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                if name in result:
-                    conanfile.output.warning("Library '%s' was either already found in a previous "
-                                             "'conanfile.cpp_info.libdirs' folder or appears several "
-                                             "times with a different file extension" % name)
-                else:
-                    result.append(name)
+                real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
+                if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
+                    ref_libs[real_lib] = f
+
+    result = []
+    for f in ref_libs.values():
+        name, ext = os.path.splitext(f)
+        if ext != ".lib" and name.startswith("lib"):
+            name = name[3:]
+        result.append(name)
     result.sort()
     return result
 

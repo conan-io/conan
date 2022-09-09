@@ -263,7 +263,7 @@ class AndroidSystemBlock(Block):
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'android_platform': self._conanfile.settings.os.api_level,
+            'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
             'android_abi': android_abi,
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
@@ -327,14 +327,13 @@ class AppleSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
+        if not is_apple_os(self._conanfile):
             return None
 
-        arch = self._conanfile.settings.get_safe("arch")
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        host_architecture = to_apple_arch(arch, default=arch)
+        host_architecture = to_apple_arch(self._conanfile)
 
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
@@ -442,7 +441,7 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        is_apple_ = is_apple_os(os_)
+        is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
@@ -743,7 +742,7 @@ class GenericSystemBlock(Block):
                     system_name = {'Macos': 'Darwin'}.get(os_host, os_host)
                     #  CMAKE_SYSTEM_VERSION for Apple sets the sdk version, not the os version
                     _system_version = self._conanfile.settings.get_safe("os.sdk_version")
-                    _system_processor = to_apple_arch(arch_host)
+                    _system_processor = to_apple_arch(self._conanfile)
                 elif os_host != 'Android':
                     system_name = self._get_generic_system_name()
                     _system_version = self._conanfile.settings.get_safe("os.version")

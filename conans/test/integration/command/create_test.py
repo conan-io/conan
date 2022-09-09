@@ -15,8 +15,6 @@ class CreateTest(unittest.TestCase):
 
     def test_dependencies_order_matches_requires(self):
         client = TestClient()
-        save(client.cache.default_profile_path, "")
-        save(client.cache.settings_path, "build_type: [Release, Debug]\narch: [x86]")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkga --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": GenConanfile()})
@@ -701,8 +699,7 @@ def test_default_framework_dirs_with_layout():
     assert "FRAMEWORKS: []" in client.out
 
 
-@pytest.mark.parametrize("with_layout", [True, False])
-def test_defaults_in_components(with_layout):
+def test_defaults_in_components():
     """In Conan 2, declaring or not the layout has no influence in how cpp_info behaves. It was
        only 1.X"""
     lib_conan_file = textwrap.dedent("""
@@ -719,8 +716,6 @@ def test_defaults_in_components(with_layout):
             self.cpp_info.components["foo"].libs = ["foolib"]
 
     """)
-    if not with_layout:
-        lib_conan_file = lib_conan_file.replace("def layout(", "def potato(")
     client = TestClient()
     client.save({"conanfile.py": lib_conan_file})
     client.run("create . ")
@@ -749,9 +744,6 @@ def test_defaults_in_components(with_layout):
 
         """)
 
-    if not with_layout:
-        consumer_conanfile = consumer_conanfile.replace("def layout(", "def potato(")
-
     client.save({"conanfile.py": consumer_conanfile})
     client.run("create . ")
 
@@ -763,4 +755,15 @@ def test_defaults_in_components(with_layout):
     assert "WARN: RES DIRS: []"
     assert re.search(r"WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out))
     assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: FOO RESDIRS: []" in client.out
+
+
+    # The paths are absolute and the components have defaults
+    # ".+" Check that there is a path, not only "lib"
+    assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
+    assert re.search("LIBDIRS: \['.+lib'\]", str(client.out))
+    assert re.search("INCLUDEDIRS: \['.+include'\]", str(client.out))
+    assert "WARN: RES DIRS: []"
+    assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out)))
+    assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out)))
     assert "WARN: FOO RESDIRS: []" in client.out

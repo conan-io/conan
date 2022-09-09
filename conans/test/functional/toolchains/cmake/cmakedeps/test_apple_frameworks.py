@@ -251,6 +251,11 @@ def test_apple_own_framework_cross_build(settings):
                  "test_package/conanfile.py": test_conanfile,
                  'test_package/CMakeLists.txt': test_cmake,
                  "test_package/timer.cpp": timer_cpp})
+    # First build it as build_require in the build-context, no testing
+    # the UX could be improved, but the simplest could be:
+    #  - Have users 2 test_packages, one for the host and other for the build, with some naming
+    #    convention. CI launches one after the other if found
+    client.run("create . %s -tf=None --build-require" % settings)
     client.run("create . %s" % settings)
     if not len(settings):
         assert "Hello World Release!" in client.out
@@ -503,7 +508,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
 
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-def test_m1():
+def test_iphoneos_crossbuild():
     profile = textwrap.dedent("""
         include(default)
         [settings]
@@ -514,9 +519,9 @@ def test_m1():
     """).format()
 
     client = TestClient(path_with_spaces=False)
-    client.save({"m1": profile}, clean_first=True)
+    client.save({"ios-armv8": profile}, clean_first=True)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create . --profile:build=default --profile:host=m1 -tf None")
+    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
@@ -552,12 +557,13 @@ def test_m1():
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmakelists,
                  "main.cpp": main,
-                 "m1": profile}, clean_first=True)
-    client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build . --profile:build=default --profile:host=m1")
+                 "ios-armv8": profile}, clean_first=True)
+    client.run("install . --profile:build=default --profile:host=ios-armv8")
+    client.run("build . --profile:build=default --profile:host=ios-armv8")
     main_path = "./main.app/main"
-    client.run_command(main_path, assert_error=True)
-    assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info {}".format(main_path))
     assert "Non-fat file" in client.out
     assert "is architecture: arm64" in client.out
+    client.run_command(f"vtool -show-build {main_path}")
+    assert "platform IOS" in client.out
+    assert "minos 12.0" in client.out

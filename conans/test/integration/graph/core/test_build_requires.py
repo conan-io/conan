@@ -769,7 +769,7 @@ class TestDuplicateBuildRequires:
         """)
 
         client.save({"test_package/conanfile.py": test})
-        client.run("create . -s:b os=Windows -s:h os=Linux")
+        client.run("create . -s:b os=Windows -s:h os=Linux  --build-require")
         assert "This is the binary for OS=Linux" not in client.out
         assert "This is in context=host" not in client.out
         client.assert_listed_require({"consumer/1.0": "Cache"}, build=True)

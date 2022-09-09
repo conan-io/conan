@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
@@ -46,10 +46,12 @@ executable('demo', 'main.m', link_args: ['-framework', 'Foundation'])
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 def test_apple_meson_toolchain_native_compilation_objective_c():
-    profile = textwrap.dedent("""
+    t = TestClient()
+    arch = t.get_default_host_profile().settings['arch']
+    profile = textwrap.dedent(f"""
     [settings]
     os = Macos
-    arch = x86_64
+    arch = {arch}
     compiler = apple-clang
     compiler.version = 12.0
     compiler.libcxx = libc++
@@ -65,7 +67,6 @@ def test_apple_meson_toolchain_native_compilation_objective_c():
         return 0;
     }
     """)
-    t = TestClient()
     t.save({"conanfile.py": _conanfile_py,
             "meson.build": _meson_build_objc,
             "main.m": app,
@@ -81,7 +82,7 @@ def test_apple_meson_toolchain_native_compilation_objective_c():
     ('armv7', 'iOS', '10.0', 'iphoneos'),
     ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
-    ('armv8', 'Macos', '11.0', None)  # MacOS M1
+    ('armv8', 'Macos', '11.0', None)  # Apple Silicon
 ])
 @pytest.mark.tool("meson")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
@@ -137,4 +138,4 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
 
     lipo = xcrun.find('lipo')
     t.run_command('"%s" -info "%s"' % (lipo, demo))
-    assert "architecture: %s" % to_apple_arch(arch) in t.out
+    assert "architecture: %s" % _to_apple_arch(arch) in t.out
