@@ -6,13 +6,13 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.commands.test import run_test
 from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options, save_lockfile_out
 from conan.api.conan_app import ConanApp
 from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.graph_lock import Lockfile
 from conans.util.files import chdir, mkdir
 
 
@@ -89,9 +89,6 @@ def create(conan_api, parser, *args):
     out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
-    # make sure test_package uses the locked graph
-    lockfile = save_lockfile_out(args, deps_graph, lockfile, cwd)
-
     if args.test_folder == "None":
         # Now if parameter --test-folder=None (string None) we have to skip tests
         args.test_folder = False
@@ -100,8 +97,11 @@ def create(conan_api, parser, *args):
         # TODO: We need arguments for:
         #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
-        deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                              update=False, build_modes=None)
+        from conan.cli.commands.test import run_test
+        deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
+                              remotes, lockfile, update=False, build_modes=None)
+
+    save_lockfile_out(args, deps_graph, lockfile, cwd)
 
     return deps_graph
 
