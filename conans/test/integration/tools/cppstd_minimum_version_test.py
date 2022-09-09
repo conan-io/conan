@@ -68,13 +68,15 @@ def test_header_only_check_min_cppstd():
             def package_id(self):
                 self.info.clear()
             def validate(self):
-                check_min_cppstd(self, "11")
+                check_min_cppstd(self, "17")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . -s compiler.cppstd=14")
-    client.run("install --require=fake/0.1@ -s compiler.cppstd=14")
+    client.run("create . -s compiler.cppstd=17")
+    client.run("install --require=fake/0.1@ -s compiler.cppstd=17")
     assert "fake/0.1: Already installed!" in client.out
+    client.run("install --require=fake/0.1@ -s compiler.cppstd=14", assert_error=True)
+    assert "Current cppstd (14) is lower than the required C++ standard (17)" in client.out
 
 
 def test_validate_build_check_min_cppstd():
