@@ -13,14 +13,17 @@ from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestCl
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    assert len(values) == len(transitive_deps)
+    assert len(values) == len(transitive_deps), f"{node}:{len(values)} != {len(transitive_deps)}"
 
     for v1, v2 in zip(values, transitive_deps):
-        assert v1.node is v2[0]
-        assert v1.require.headers is v2[1]
-        assert v1.require.libs is v2[2]
-        assert v1.require.build is v2[3]
-        assert v1.require.run is v2[4]
+        # asserts were difficult to debug
+        if v1.node is not v2[0]: raise Exception(f"{v1.node}!={v2[0]}")
+        if v1.require.headers is not v2[1]: raise Exception(f"{v1.node}!={v2[0]} headers")
+        if v1.require.libs is not v2[2]: raise Exception(f"{v1.node}!={v2[0]} libs")
+        if v1.require.build is not v2[3]: raise Exception(f"{v1.node}!={v2[0]} build")
+        if v1.require.run is not v2[4]: raise Exception(f"{v1.node}!={v2[0]} run")
+        if len(v2) >= 6:
+            if v1.require.test is not v2[5]: raise Exception(f"{v1.node}!={v2[0]} test")
 
 
 class BuildRequiresGraphTest(GraphManagerTest):
@@ -365,8 +368,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(app, "app/0.1@", deps=[gtest], dependents=[])
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
 
-        # node, include, link, build, run
-        _check_transitive(app, [(gtest, True, True, False, False)])
+        # node, include, link, build, run, test
+        _check_transitive(app, [(gtest, True, True, False, False, True)])
 
     def test_lib_build_require(self):
         # app -> lib -(tr)-> gtest
@@ -451,6 +454,35 @@ class TestTestRequire(GraphManagerTest):
         elif gtestlib_type == "notrun":
             _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, False)])
+
+    def test_trait_aggregated(self):
+        # app -> lib -(tr)-> gtest -> zlib
+        #         \-------------------/
+        # If zlib is in the host context, a dependency for host, better test=False trait
+        self._cache_recipe("zlib/0.1", GenConanfile())
+        self._cache_recipe("gtest/0.1", GenConanfile().with_requires("zlib/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1")
+                                                    .with_requires("zlib/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        gtest = lib.dependencies[1].dst
+        zlib = gtest.dependencies[0].dst
+        zlib2 = lib.dependencies[0].dst
+        assert zlib is zlib2
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[zlib, gtest], dependents=[app])
+        self._check_node(gtest, "gtest/0.1#123", deps=[zlib], dependents=[lib])
+        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[gtest, lib])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, False),
+                                (zlib, True, True, False, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False),
+                                (zlib, True, True, False, False, False)])
 
 
 class BuildRequiresPackageIDTest(GraphManagerTest):
