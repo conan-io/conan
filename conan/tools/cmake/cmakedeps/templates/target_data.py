@@ -167,11 +167,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         """ the transitive requires that we need are the consumer ones, not the current dependencey
         ones, so we get the current ones, then look for them in the consumer, and return those
         """
-        direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
-                                                                  "direct": True})
+        pkg_deps = self.conanfile.dependencies
         consumer_deps = self.cmakedeps._conanfile.dependencies
-        result = consumer_deps.matching(direct_visible_host)
-        result = result.filter({"artifacts": True})
+        result = consumer_deps.transitive_requires(pkg_deps)
         return result
 
     def _get_required_components_cpp(self):

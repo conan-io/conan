@@ -307,7 +307,8 @@ class XcodeDeps(object):
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
         # Include all direct build_requires for host context.
-        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "artifacts": True})
+        # FIXME: This needs to be fixed, using the transitive dependencies
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
         result[self.general_name] = self._all_xconfig_file(direct_deps)
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content

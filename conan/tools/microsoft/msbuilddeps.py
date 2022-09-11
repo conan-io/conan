@@ -288,7 +288,7 @@ class MSBuildDeps(object):
         """
         # Current directory is the generators_folder
         conandeps_filename = "conandeps.props"
-        direct_deps = self._conanfile.dependencies.filter({"direct": True, "artifacts": True})
+        direct_deps = self._conanfile.dependencies.filter({"direct": True})
         pkg_aggregated_content = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
             <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">

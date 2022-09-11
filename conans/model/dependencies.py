@@ -122,7 +122,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True, "test": False, "artifacts": True})
+        return self.filter({"build": False, "direct": True, "test": False, "skip": False})
 
     @property
     def direct_build(self):
@@ -130,13 +130,13 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def host(self):
-        return self.filter({"build": False, "test": False, "artifacts": True})
+        return self.filter({"build": False, "test": False, "skip": False})
 
     @property
     def test(self):
         # Not needed a direct_test because they are visible=False so only the direct consumer
         # will have them in the graph
-        return self.filter({"build": False, "test": True})
+        return self.filter({"build": False, "test": True, "skip": False})
 
     @property
     def build(self):

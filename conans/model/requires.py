@@ -30,8 +30,8 @@ class Requirement:
         self.options = options
 
     @property
-    def artifacts(self):
-        return self.headers or self.libs or self.run or self.build
+    def skip(self):
+        return not (self.headers or self.libs or self.run or self.build)
 
     @staticmethod
     def _default_if_none(field, default_value):

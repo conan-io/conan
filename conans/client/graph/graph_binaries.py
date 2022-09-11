@@ -326,7 +326,7 @@ class GraphBinariesAnalyzer(object):
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node
                 require = dep.require
-                if require.artifacts:
+                if not require.skip:
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:
