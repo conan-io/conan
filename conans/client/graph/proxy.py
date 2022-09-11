@@ -48,6 +48,7 @@ class ConanProxy(object):
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
 
+        # TODO: If the revision is given, then we don't need to check for updates?
         if self._conan_app.check_updates or self._conan_app.update:
 
             remote, remote_ref = self._find_newest_recipe_in_remotes(reference)

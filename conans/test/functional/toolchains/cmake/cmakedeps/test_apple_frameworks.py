@@ -251,6 +251,11 @@ def test_apple_own_framework_cross_build(settings):
                  "test_package/conanfile.py": test_conanfile,
                  'test_package/CMakeLists.txt': test_cmake,
                  "test_package/timer.cpp": timer_cpp})
+    # First build it as build_require in the build-context, no testing
+    # the UX could be improved, but the simplest could be:
+    #  - Have users 2 test_packages, one for the host and other for the build, with some naming
+    #    convention. CI launches one after the other if found
+    client.run("create . %s -tf=None --build-require" % settings)
     client.run("create . %s" % settings)
     if not len(settings):
         assert "Hello World Release!" in client.out
