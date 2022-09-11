@@ -93,11 +93,11 @@ class ConanFileDependencies(UserRequirementsDict):
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
         return ConanFileDependencies(data, require_filter)
 
-    def matching(self, other):
+    def transitive_requires(self, other):
         data = OrderedDict()
         for k, v in self._data.items():
             for otherk, otherv in other._data.items():
-                if v is otherv:
+                if v == otherv:
                     data[k] = v
         return ConanFileDependencies(data)
 
