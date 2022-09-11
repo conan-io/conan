@@ -523,8 +523,9 @@ class FindFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         is_apple_ = is_apple_os(self._conanfile)
 
-        # Read information from host context
-        host_req = self._conanfile.dependencies.host.values()
+        # Read information from host context, also including test_requires, which are in host
+        # TODO: Add here in 2.0 the "skip": False trait
+        host_req = self._conanfile.dependencies.filter({"build": False}).values()
         host_build_paths_root = []
         host_build_paths_noroot = []
         host_lib_paths = []
