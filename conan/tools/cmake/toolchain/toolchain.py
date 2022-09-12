@@ -186,6 +186,8 @@ class CMakeToolchain(object):
             elif isinstance(value, PackageOption):
                 if str(value).lower() in ["true", "false", "none"]:
                     cache_variables[name] = "ON" if bool(value) else "OFF"
+                elif str(value).isdigit():
+                    cache_variables[name] = int(value)
                 else:
                     cache_variables[name] = str(value)
             else:
