@@ -111,12 +111,6 @@ class SettingsItem(object):
         except Exception:
             pass
 
-    def rm_safe(self, item):
-        try:
-            delattr(self, item)
-        except ConanException:
-            pass
-
     def remove(self, values):
         if not isinstance(values, (list, tuple, set)):
             values = [values]
