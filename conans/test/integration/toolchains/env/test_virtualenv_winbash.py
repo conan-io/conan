@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
@@ -166,3 +167,56 @@ def test_nowinbash_virtual_cygwin(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
+
+
+def test_conf_inherited_in_test_package():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Recipe(ConanFile):
+                name="msys2"
+                version="1.0"
+
+                def package_info(self):
+                    self.conf_info["tools.microsoft.bash:subsystem"] = "msys2"
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+                from conan import ConanFile
+
+                class Recipe(ConanFile):
+                    name="consumer"
+                    version="1.0"
+                    win_bash = True
+
+                    def build_requirements(self):
+                        self.tool_requires("msys2/1.0")
+
+                    def build(self):
+                        self.run("pwd")
+        """)
+    test_package = textwrap.dedent("""
+                    from conan import ConanFile
+
+                    class Recipe(ConanFile):
+                        name="test"
+                        version="1.0"
+                        win_bash = True
+
+                        def build_requirements(self):
+                            self.tool_requires(self.tested_reference_str)
+                            self.tool_requires("msys2/1.0")
+
+                        def build(self):
+                            self.run("pwd")
+
+                        def test(self):
+                            pass
+            """)
+    client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+    client.run("create .")
+
+
