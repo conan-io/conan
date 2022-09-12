@@ -195,7 +195,9 @@ def test_settings_and_options_rm_safe():
 
     client.run("source ..")
     assert "'settings.build_type' doesn't exist" in client.out
+    assert "'settings' possible configurations are ['compiler', 'os']" in client.out
     assert "'settings.compiler.version' doesn't exist" in client.out
+    assert "'settings.compiler' possible configurations are [" in client.out
     client.run("install ..")
     client.run("build ..")
     assert "option 'opt2' doesn't exist" in client.out
