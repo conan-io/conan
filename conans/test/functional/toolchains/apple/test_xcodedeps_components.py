@@ -105,10 +105,10 @@ def test_xcodedeps_components():
         self.cpp_info.components["core"].includedirs.append("include")
         self.cpp_info.components["core"].libdirs.append("lib")
 
-        self.cpp_info.components["client"].libs = ["client"]
-        self.cpp_info.components["client"].includedirs.append("include")
-        self.cpp_info.components["client"].libdirs.append("lib")
-        self.cpp_info.components["client"].requires.extend(["core", "tcp::tcp"])
+        self.cpp_info.components["client-test"].libs = ["client"]
+        self.cpp_info.components["client-test"].includedirs.append("include")
+        self.cpp_info.components["client-test"].libdirs.append("lib")
+        self.cpp_info.components["client-test"].requires.extend(["core", "tcp::tcp"])
 
         self.cpp_info.components["server"].libs = ["server"]
         self.cpp_info.components["server"].includedirs.append("include")
@@ -136,7 +136,7 @@ def test_xcodedeps_components():
         self.cpp_info.libs = ["chat"]
         self.cpp_info.includedirs.append("include")
         self.cpp_info.libdirs.append("lib")
-        self.cpp_info.requires.append("network::client")
+        self.cpp_info.requires.append("network::client-test")
     """
 
     cmakelists_chat = textwrap.dedent("""
@@ -146,7 +146,7 @@ def test_xcodedeps_components():
         add_library(chat src/chat.cpp include/chat.h)
         target_include_directories(chat PUBLIC include)
         set_target_properties(chat PROPERTIES PUBLIC_HEADER "include/chat.h")
-        target_link_libraries(chat network::client)
+        target_link_libraries(chat network::client-test)
         install(TARGETS chat)
         """)
 
@@ -184,7 +184,7 @@ def test_xcodedeps_components():
     client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan -s build_type=Debug "
                "--build=missing")
     chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
-    assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
+    assert '#include "conan_network_client_test.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
     host_arch = client.get_default_host_profile().settings['arch']
