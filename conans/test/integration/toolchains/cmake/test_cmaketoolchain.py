@@ -447,17 +447,21 @@ def test_cmake_presets_singleconfig():
 def test_toolchain_cache_variables():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
 
         class Conan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
+            options = {"enable_foobar": [True, False], "qux": ["ANY"]}
+            default_options = {"enable_foobar": True, "qux": "baz"}
 
             def generate(self):
                 toolchain = CMakeToolchain(self)
                 toolchain.cache_variables["foo"] = True
                 toolchain.cache_variables["foo2"] = False
                 toolchain.cache_variables["var"] = "23"
+                toolchain.cache_variables["ENABLE_FOOBAR"] = self.options.enable_foobar
+                toolchain.cache_variables["QUX"] = self.options.qux
                 toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
                 toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
                 toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS NO PRIORITY"
@@ -476,6 +480,8 @@ def test_toolchain_cache_variables():
     assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
     assert cache_variables["BUILD_TESTING"] == 'OFF'
+    assert cache_variables["ENABLE_FOOBAR"] == 'ON'
+    assert cache_variables["QUX"] == 'baz'
 
 
 def test_android_c_library():
