@@ -146,4 +146,4 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)
 
-    return install_folder
+    return install_folder, conanfile

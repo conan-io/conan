@@ -191,13 +191,6 @@ def test_conf_inherited_in_test_package():
                 class Recipe(ConanFile):
                     name="consumer"
                     version="1.0"
-                    win_bash = True
-
-                    def build_requirements(self):
-                        self.tool_requires("msys2/1.0")
-
-                    def build(self):
-                        self.run("pwd")
         """)
     test_package = textwrap.dedent("""
                     from conan import ConanFile
@@ -213,12 +206,13 @@ def test_conf_inherited_in_test_package():
 
                         def build(self):
                             self.output.warn(self.conf["tools.microsoft.bash:subsystem"])
-                            self.run("foo")
+                            self.run("pwd")
 
                         def test(self):
                             pass
             """)
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
     # THIS SHOULD WORK
-    client.run("create .", assert_error=True)
-    assert "are needed to run commands in a Windows subsystem" in client.out
+    client.run("create .")
+    assert "are needed to run commands in a Windows subsystem" not in client.out
+    assert "/usr/bin" in client.out
