@@ -6,7 +6,7 @@ import six
 from conans.errors import ConanException
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core:required_conan_version": "Raise if current version does not match the defined range",
     "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
@@ -46,13 +46,23 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    # Flags configuration
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain and AutotoolsToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
     "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
+    "tools.microsoft.bash:subsystem": "Set subsystem to use for Windows. Possible values: 'msys2', 'msys', 'cygwin', 'wsl' and 'sfu'",
+    "tools.microsoft.bash:path": "Path to the shell executable. Default: 'bash'",
+    "tools.apple:sdk_path": "Path for the sdk location. This value will be passed as SDKROOT or -isysroot depending on the generator used",
+    "tools.cmake.cmaketoolchain:toolset_arch": "Will add the ',host=xxx' specifier in the 'CMAKE_GENERATOR_TOOLSET' variable of 'conan_toolchain.cmake' file",
+    "tools.gnu:pkg_config": "Define the 'pkg_config' executable name or full path",
+    "tools.env.virtualenv:powershell": "Opt-in to generate Powershell '.ps1' scripts instead of '.bat'",
+    "tools.meson.mesontoolchain:backend": "Set the Meson backend. Possible values: 'ninja', 'vs', 'vs2010', 'vs2015', 'vs2017', 'vs2019', 'xcode'",
+    "tools.files.download:download_cache": "Location for the download cache",
+    "tools.build.cross_building:can_run": "Set the return value for the 'conan.tools.build.can_run()' tool",
 }
+
+BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
 
 def _is_profile_module(module_name):
