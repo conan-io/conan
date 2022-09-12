@@ -80,6 +80,12 @@ class PackageOptionValues(object):
             return
         del self._dict[attr]
 
+    def rm_safe(self, name):
+        try:
+            delattr(self, name)
+        except ConanException:
+            pass
+
     def clear(self):
         self._dict.clear()
 
@@ -279,6 +285,9 @@ class OptionsValues(object):
 
     def __delattr__(self, attr):
         delattr(self._package_values, attr)
+
+    def rm_safe(self, name):
+        self._package_values.rm_safe(name)
 
     def clear_indirect(self):
         for v in self._reqs_options.values():

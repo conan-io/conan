@@ -114,7 +114,7 @@ class SettingsItem(object):
     def rm_safe(self, item):
         try:
             delattr(self, item)
-        except:
+        except ConanException:
             pass
 
     def remove(self, values):
@@ -222,7 +222,7 @@ class Settings(object):
     def rm_safe(self, name):
         try:
             delattr(self, name)
-        except:
+        except ConanException:
             pass
 
     def copy(self):
