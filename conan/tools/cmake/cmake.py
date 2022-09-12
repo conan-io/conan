@@ -58,7 +58,7 @@ class CMake(object):
 
         self._generator = configure_preset["generator"]
         self._toolchain_file = configure_preset.get("toolchainFile")
-        self._presets_cache_variables = configure_preset["cacheVariables"]
+        self._cache_variables = configure_preset["cacheVariables"]
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     def configure(self, variables=None, build_script_folder=None):
