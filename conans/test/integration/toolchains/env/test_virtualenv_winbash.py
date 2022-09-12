@@ -169,6 +169,7 @@ def test_nowinbash_virtual_cygwin(client):
     assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_conf_inherited_in_test_package():
     client = TestClient()
     conanfile = textwrap.dedent("""
