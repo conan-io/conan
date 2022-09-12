@@ -213,7 +213,6 @@ def test_conf_inherited_in_test_package():
                             pass
             """)
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-    # THIS SHOULD WORK
     client.run("create .")
     assert "are needed to run commands in a Windows subsystem" not in client.out
-    assert "/usr/bin" in client.out
+    assert "/c/test_conan/" in client.out
