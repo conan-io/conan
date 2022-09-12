@@ -172,6 +172,9 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
     data = json.dumps(data, indent=4)
     save(preset_path, data)
     save_cmake_user_presets(conanfile, preset_path)
+    # Save the conan_initial_cache.cmake file
+    cache_variables["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
+    _save_cmake_initial_cache(conanfile, cache_variables)
 
 
 def save_cmake_user_presets(conanfile, preset_path):
@@ -259,3 +262,36 @@ def get_configure_preset(cmake_presets, conanfile):
     #        is the correct configurePreset because the generator IS in the configure preset.
 
     raise ConanException("Not available configurePreset, expected name is {}".format(expected_name))
+
+
+def get_initial_cache_path(conanfile):
+    return os.path.join(conanfile.generators_folder, "conan_initial_cache.cmake")
+
+
+def _format_cache_variables(cache_variables):
+    ret = []
+    for name, value in cache_variables.items():
+        if isinstance(value, bool):
+            type_ = "BOOL"
+            v = "ON" if value else "OFF"
+        elif value in ("ON", "OFF"):
+            type_ = "BOOL"
+            v = value
+        else:
+            type_ = "STRING"
+            v = f'"{value}"'
+        ret.append(f'set({name} {v} CACHE {type_} "" FORCE)')
+    return ret
+
+
+def _save_cmake_initial_cache(conanfile, cache_variables):
+    """
+    Save a conan_initial_cache.cmake file to save all the CACHE variables (-DXXX vars) in one
+    file instead of passing all of them via CLI.
+
+    :param conanfile: ``ConanFile`` instance
+    :param cache_variables: ``dict`` with variables to be saved as CACHE ones
+    """
+    cache_cmake_path = get_initial_cache_path(conanfile)
+    content = _format_cache_variables(cache_variables)
+    save(cache_cmake_path, "\n".join(content))
