@@ -180,6 +180,7 @@ def test_conf_inherited_in_test_package():
 
                 def package_info(self):
                     self.conf_info["tools.microsoft.bash:subsystem"] = "msys2"
+                    self.conf_info["tools.microsoft.bash:path"] = "C:/msys64/usr/bin/bash.exe"
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create .")
@@ -211,12 +212,13 @@ def test_conf_inherited_in_test_package():
                             self.tool_requires("msys2/1.0")
 
                         def build(self):
-                            self.run("pwd")
+                            self.output.warn(self.conf["tools.microsoft.bash:subsystem"])
+                            self.run("foo")
 
                         def test(self):
                             pass
             """)
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-    client.run("create .")
-
-
+    # THIS SHOULD WORK
+    client.run("create .", assert_error=True)
+    assert "are needed to run commands in a Windows subsystem" in client.out
