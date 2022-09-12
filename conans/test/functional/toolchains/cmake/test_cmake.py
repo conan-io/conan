@@ -220,8 +220,7 @@ class WinTest(Base):
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+        self.assertIn('Using Conan toolchain: {}'.format(toolchain_path), self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
@@ -316,9 +315,9 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
-        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
+        self.assertIn('Using Conan toolchain: {}'.format(toolchain_path), self.client.out)
+        cmake_cache = self.client.load(os.path.join(self.client.current_folder, "conan_initial_cache.cmake"))
+        assert 'set(CMAKE_SH "CMAKE_SH-NOTFOUND"' in cmake_cache
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
@@ -372,8 +371,7 @@ class LinuxTest(Base):
         self._run_build(settings, {"shared": shared})
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+        self.assertIn('Using Conan toolchain: {}'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
@@ -429,8 +427,7 @@ class AppleTest(Base):
 
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+        self.assertIn('Using Conan toolchain: {}'.format(toolchain_path), self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,

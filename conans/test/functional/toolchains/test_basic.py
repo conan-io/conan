@@ -104,9 +104,10 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         client.run("build .", assert_error=True)  # No CMakeLists.txt
-        toolchain_path = os.path.join(client.current_folder,
-                                      "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
+        toolchain_path = os.path.join(client.current_folder, "conan_toolchain.cmake").replace("\\", "/")
+        cmake_cache = client.load(os.path.join(client.current_folder, "conan_initial_cache.cmake"))
+        cmake_cache = cmake_cache.replace("\\", "/")
+        self.assertIn('set(CMAKE_TOOLCHAIN_FILE "{}"'.format(toolchain_path), cmake_cache)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
     def test_old_toolchain(self):

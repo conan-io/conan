@@ -1,14 +1,14 @@
+from unittest.mock import Mock, MagicMock, patch
+
 import pytest
-from mock import mock
-from mock.mock import Mock
 
 from conan.tools.cmake import CMake
-from conan.tools.cmake.presets import write_cmake_presets
-from conan.tools.files.files import save_toolchain_args
+from conan.tools.cmake.presets import write_cmake_presets, get_initial_cache_path
 from conans import ConanFile, Settings
 from conans.model.conf import Conf
 from conans.model.env_info import EnvValues
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
 
 
 @pytest.fixture(scope="module")
@@ -33,15 +33,16 @@ def conanfile():
 
 
 def test_cmake_make_program(conanfile):
-    def run(command):
-        assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
+    def run(_):
+        cmake_cache = get_initial_cache_path(conanfile)
+        content = load(cmake_cache)
+        assert 'set(CMAKE_MAKE_PROGRAM "C:/mymake.exe" CACHE STRING "" FORCE)' in content
 
     conanfile.run = run
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
 
-    with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
+    with patch("platform.system", MagicMock(return_value='Windows')):
         write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles", {})
-
     cmake = CMake(conanfile)
     cmake.configure()
 

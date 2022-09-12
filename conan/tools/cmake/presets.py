@@ -274,6 +274,9 @@ def _format_cache_variables(cache_variables):
         if isinstance(value, bool):
             type_ = "BOOL"
             v = "ON" if value else "OFF"
+        elif ":" in name:  # cache_variables["CMAKE_VERBOSE_MAKEFILE:BOOL"] = "ON"
+            name, type_ = name.split(":")
+            v = value
         elif value in ("ON", "OFF"):
             type_ = "BOOL"
             v = value
