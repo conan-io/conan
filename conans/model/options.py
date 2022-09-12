@@ -80,12 +80,6 @@ class PackageOptionValues(object):
             return
         del self._dict[attr]
 
-    def rm_safe(self, name):
-        try:
-            delattr(self, name)
-        except ConanException:
-            pass
-
     def clear(self):
         self._dict.clear()
 
@@ -237,6 +231,12 @@ class OptionsValues(object):
             return None
         return getattr(self._package_values, attr)
 
+    def rm_safe(self, attr):
+        try:
+            delattr(self._package_values, attr)
+        except ConanException:
+            pass
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -285,9 +285,6 @@ class OptionsValues(object):
 
     def __delattr__(self, attr):
         delattr(self._package_values, attr)
-
-    def rm_safe(self, name):
-        self._package_values.rm_safe(name)
 
     def clear_indirect(self):
         for v in self._reqs_options.values():
@@ -433,6 +430,12 @@ class PackageOptions(object):
 
     def get_safe(self, field, default=None):
         return self._data.get(field, default)
+
+    def rm_safe(self, field):
+        try:
+            delattr(self, field)
+        except ConanException:
+            pass
 
     def validate(self):
         for child in self._data.values():
@@ -592,6 +595,9 @@ class Options(object):
             self._package_options.__delattr__(field)
         except ConanException:
             pass
+
+    def rm_safe(self, field):
+        self._package_options.rm_safe(field)
 
     @property
     def values(self):
