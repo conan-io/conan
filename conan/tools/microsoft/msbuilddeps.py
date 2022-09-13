@@ -350,8 +350,13 @@ class MSBuildDeps(object):
             vars_filename = "conan_%s_vars%s.props" % (dep_name, conf_name)
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
-            public_deps = [self._dep_name(d, build)
-                           for r, d in dep.dependencies.direct_host.items() if r.visible]
+            # TODO: This logic is identical to CMakeDeps, to reuse it
+            pkg_deps = dep.dependencies.filter({"direct": True})
+            consumer_deps = self._conanfile.dependencies
+            public_deps = consumer_deps.transitive_requires(pkg_deps)
+            public_deps = public_deps.filter({"skip": False})
+            public_deps = [d.ref.name for d in public_deps.values()]
+
             result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           public_deps, build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
