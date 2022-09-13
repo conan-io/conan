@@ -171,6 +171,7 @@ def test_nowinbash_virtual_cygwin(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool_msys2
 def test_conf_inherited_in_test_package():
     client = TestClient()
     bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
@@ -215,6 +216,6 @@ def test_conf_inherited_in_test_package():
                             pass
             """)
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-    client.run("create .")
+    client.run("create . -s:b os=Windows -s:h os=Windows")
     assert "are needed to run commands in a Windows subsystem" not in client.out
     assert "aclocal (GNU automake)" in client.out
