@@ -223,6 +223,8 @@ class Requirement:
         self.run = self.run or other.run
         self.visible |= other.visible
         self.force |= other.force
+        if not other.test:
+            self.test = False  # it it was previously a test, but also required by non-test
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
