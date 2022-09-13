@@ -232,7 +232,7 @@ def test_find_builddirs():
 
     conanfile = textwrap.dedent("""
        import os
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMakeToolchain
 
        class Conan(ConanFile):
