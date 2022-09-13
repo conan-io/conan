@@ -62,9 +62,7 @@ def test_locally_build_linux(build_type, shared, client):
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}".format(build_type,
                                                                                        shared)
     client.run("install . {}".format(settings))
-    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
-                       .format(CMakeToolchain.filename, build_type))
-
+    client.run_command(f'cmake . -G "Ninja" -C conan_initial_cache_{build_type.lower()}.cmake')
     client.run_command('ninja')
     if shared:
         assert "Linking CXX shared library libmylibrary.so" in client.out
@@ -76,7 +74,7 @@ def test_locally_build_linux(build_type, shared, client):
 
     # create should also work
     client.run("create . hello/1.0@ {}".format(settings))
-    assert 'cmake -G "Ninja"' in client.out
+    assert '-G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
     ldpath = os.path.join(client.current_folder, "mydeploy", "hello", "lib")
@@ -92,9 +90,8 @@ def test_locally_build_msvc(build_type, shared, client):
     settings = "-s build_type={} -o hello:shared={}".format(build_type, shared)
     client.run("install . {}".format(settings))
 
-    client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
-                       '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                       '-DCMAKE_BUILD_TYPE={}'.format(build_type))
+    client.run_command(f'conanvcvars.bat && cmake . -G "Ninja" '
+                       f'-C conan_initial_cache_{build_type.lower()}.cmake')
 
     client.run_command("conanvcvars.bat && ninja")
 
@@ -109,7 +106,7 @@ def test_locally_build_msvc(build_type, shared, client):
 
     # create should also work
     client.run("create . hello/1.0@ {}".format(settings))
-    assert 'cmake -G "Ninja"' in client.out
+    assert '-G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
     client.run_command(r"mydeploy\hello\bin\myapp.exe")
@@ -136,9 +133,7 @@ def test_locally_build_msvc_toolset(client):
     client.save({"profile": profile})
     client.run("install . -pr=profile")
 
-    client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
-                       '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                       '-DCMAKE_BUILD_TYPE=Release')
+    client.run_command('conanvcvars.bat && cmake . -G "Ninja" -C conan_initial_cache_release.cmake')
 
     client.run_command("conanvcvars.bat && ninja")
 
@@ -161,9 +156,7 @@ def test_locally_build_gcc(build_type, shared, client):
 
     client.run("install . {} -o hello:shared={}".format(gcc, shared))
 
-    client.run_command('cmake . -G "Ninja" '
-                       '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                       '-DCMAKE_BUILD_TYPE={}'.format(build_type))
+    client.run_command(f'cmake . -G "Ninja" -C conan_initial_cache_{build_type.lower()}.cmake')
 
     libname = "mylibrary.dll" if shared else "libmylibrary.a"
     client.run_command("ninja")
@@ -181,8 +174,8 @@ def test_locally_build_gcc(build_type, shared, client):
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
-    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
-                       .format(CMakeToolchain.filename, build_type))
+
+    client.run_command(f'cmake . -G "Ninja" -C conan_initial_cache_{build_type.lower()}.cmake')
 
     client.run_command('ninja')
     if shared:
