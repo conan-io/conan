@@ -264,8 +264,16 @@ def test_cpp_info_require_whole_package():
     client.run("create libb.py")
     client.run("create libc.py")
     client.run("install libb/1.0@ -g XcodeDeps --install-folder=libb")
+
+    libb_xcconfig = client.load(os.path.join("libb", "conan_libb_libb.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libb_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
+
     client.run("install libc/1.0@ -g XcodeDeps --install-folder=libc")
-    print("..........")
+
+    libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libc_comp1_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libc_comp1_xcconfig
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
