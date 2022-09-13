@@ -144,6 +144,10 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("clang", "10"), "gnu14")
         self.assertEqual(_make_cppstd_default("clang", "11"), "gnu14")
         self.assertEqual(_make_cppstd_default("clang", "12"), "gnu14")
+        self.assertEqual(_make_cppstd_default("clang", "13"), "gnu14")
+        self.assertEqual(_make_cppstd_default("clang", "14"), "gnu14")
+        self.assertEqual(_make_cppstd_default("clang", "15"), "gnu14")
+        self.assertEqual(_make_cppstd_default("clang", "16"), "gnu17")
 
     def test_apple_clang_cppstd_flags(self):
         self.assertEqual(_make_cppstd_flag("apple-clang", "3.9", "98"), None)

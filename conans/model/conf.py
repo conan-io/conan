@@ -87,6 +87,8 @@ BUILT_IN_CONFS = {
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
 
+BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
+
 
 CORE_CONF_PATTERN = re.compile(r"^core[\.:]")
 TOOLS_CONF_PATTERN = re.compile(r"^tools[\.:]")

@@ -66,10 +66,11 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/${flavor}/"
                 def venvName = "env_${env.BUILD_NUMBER}_${pythonVersion}_${commit}"
 
-                def pipInstalls = "python -m pip install -r conans/requirements.txt && " \
-                                + "python -m pip install -r conans/requirements_server.txt && " \
-                                + "python -m pip install -r conans/requirements_dev.txt && " \
-                                + "python -m pip install meson && "
+                def pipArguments = "--no-cache-dir --timeout 30"
+                def pipInstalls = "python -m pip install -r conans/requirements.txt ${pipArguments} && " \
+                                + "python -m pip install -r conans/requirements_server.txt ${pipArguments} && " \
+                                + "python -m pip install -r conans/requirements_dev.txt ${pipArguments} && " \
+                                + "python -m pip install meson ${pipArguments} && "
 
                 def conanToolInstall = "python -m pip install . && " \
                                      + "conan --version && conan --help && "

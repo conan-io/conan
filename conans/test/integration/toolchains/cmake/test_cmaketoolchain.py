@@ -221,9 +221,32 @@ def test_find_builddirs():
 
                 def generate(self):
                     cmake = CMakeToolchain(self)
-                    {}
                     cmake.generate()
             """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . ")
+    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
+        contents = f.read()
+        assert "/path/to/builddir" in contents
+
+    conanfile = textwrap.dedent("""
+       import os
+       from conan import ConanFile
+       from conan.tools.cmake import CMakeToolchain
+
+       class Conan(ConanFile):
+           name = "mydep"
+           version = "1.0"
+           settings = "os", "arch", "compiler", "build_type"
+
+           def build_requirements(self):
+               self.test_requires("dep/1.0")
+
+           def generate(self):
+               cmake = CMakeToolchain(self)
+               cmake.generate()
+       """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
