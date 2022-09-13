@@ -29,7 +29,8 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
                              "requirements and generators from '%s' file"
                              % (CONANFILE, CONANFILE, CONANFILE_TXT))
 
-    conan_file.conf = conf
+    if conf:
+        conan_file.conf.compose_conf(conf)
     if test:
         try:
             conan_file.requires.add_ref(test)
