@@ -213,6 +213,19 @@ class Settings(object):
             return str(tmp)
         return default
 
+    def rm_safe(self, name):
+        try:
+            tmp = self
+            attr_ = name
+            if "." in name:
+                fields = name.split(".")
+                attr_ = fields.pop()
+                for prop in fields:
+                    tmp = getattr(tmp, prop)
+            delattr(tmp, attr_)
+        except ConanException:
+            pass
+
     def copy(self):
         """ deepcopy, recursive
         """
