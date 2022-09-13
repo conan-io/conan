@@ -79,7 +79,7 @@ class XcodeDeps(object):
         // Includes all configurations for each dependency
         {% for dep in deps %}
         // Includes for {{dep[0]}}::{{dep[1]}} dependency
-        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        #include "conan_{{format_name(dep[0])}}_{{format_name(dep[1])}}.xcconfig"
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
@@ -163,7 +163,8 @@ class XcodeDeps(object):
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs})
+                                                            "deps": reqs,
+                                                            "format_name": _format_name})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
