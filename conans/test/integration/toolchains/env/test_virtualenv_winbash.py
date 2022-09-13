@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.conftest import tools_locations
 from conans.test.utils.tools import TestClient
 from conans.tools import save
 
@@ -172,6 +173,7 @@ def test_nowinbash_virtual_cygwin(client):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_conf_inherited_in_test_package():
     client = TestClient()
+    bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
     conanfile = textwrap.dedent("""
             from conan import ConanFile
 
@@ -181,8 +183,8 @@ def test_conf_inherited_in_test_package():
 
                 def package_info(self):
                     self.conf_info["tools.microsoft.bash:subsystem"] = "msys2"
-                    self.conf_info["tools.microsoft.bash:path"] = "C:/msys64/usr/bin/bash.exe"
-    """)
+                    self.conf_info["tools.microsoft.bash:path"] = "{}"
+    """.format(bash_path))
     client.save({"conanfile.py": conanfile})
     client.run("create .")
 
@@ -207,7 +209,7 @@ def test_conf_inherited_in_test_package():
 
                         def build(self):
                             self.output.warn(self.conf["tools.microsoft.bash:subsystem"])
-                            self.run("pwd")
+                            self.run("aclocal --version")
 
                         def test(self):
                             pass
@@ -215,4 +217,4 @@ def test_conf_inherited_in_test_package():
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
     client.run("create .")
     assert "are needed to run commands in a Windows subsystem" not in client.out
-    assert "/c/test_conan/" in client.out
+    assert "aclocal (GNU automake)" in client.out
