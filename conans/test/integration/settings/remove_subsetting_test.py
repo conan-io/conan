@@ -171,7 +171,7 @@ def test_settings_and_options_rm_safe():
             # wrong option
             self.options.rm_safe("opt15")
 
-        def source(self):
+        def build(self):
             try:
                 self.settings.build_type
             except Exception as exc:
@@ -180,8 +180,6 @@ def test_settings_and_options_rm_safe():
                 self.settings.compiler.version
             except Exception as exc:
                 self.output.warn(str(exc))
-
-        def build(self):
             try:
                 self.options.opt2
             except Exception as exc:
@@ -193,12 +191,11 @@ def test_settings_and_options_rm_safe():
     mkdir(build_folder)
     client.current_folder = build_folder
 
-    client.run("source ..")
+    client.run("install ..")
+    client.run("build ..")
     assert "'settings.build_type' doesn't exist" in client.out
     assert "'settings' possible configurations are ['compiler', 'os']" in client.out
     assert "'settings.compiler.version' doesn't exist" in client.out
     assert "'settings.compiler' possible configurations are [" in client.out
-    client.run("install ..")
-    client.run("build ..")
     assert "option 'opt2' doesn't exist" in client.out
     assert "Possible options are ['opt1']" in client.out
