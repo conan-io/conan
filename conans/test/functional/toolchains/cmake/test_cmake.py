@@ -15,9 +15,9 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-def _load_cmake_initial_cache(client):
+def _load_cmake_initial_cache(client, build_type):
     cmake_cache = client.load(os.path.join(client.current_folder, "build",
-                                           "conan_initial_cache.cmake"))
+                                           f"conan_initial_cache_{build_type.lower()}.cmake"))
     cmake_cache = cmake_cache.replace("\\", "/")
     return cmake_cache
 
@@ -227,7 +227,7 @@ class WinTest(Base):
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        cmake_cache = _load_cmake_initial_cache(self.client)
+        cmake_cache = _load_cmake_initial_cache(self.client, build_type)
         assert 'set(CMAKE_TOOLCHAIN_FILE "{}"'.format(toolchain_path) in cmake_cache
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
@@ -323,7 +323,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        cmake_cache = _load_cmake_initial_cache(self.client)
+        cmake_cache = _load_cmake_initial_cache(self.client, build_type)
         assert 'set(CMAKE_TOOLCHAIN_FILE "{}"'.format(toolchain_path) in cmake_cache
         assert 'set(CMAKE_SH "CMAKE_SH-NOTFOUND"' in cmake_cache
 
@@ -379,7 +379,7 @@ class LinuxTest(Base):
         self._run_build(settings, {"shared": shared})
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        cmake_cache = _load_cmake_initial_cache(self.client)
+        cmake_cache = _load_cmake_initial_cache(self.client, build_type)
         assert 'set(CMAKE_TOOLCHAIN_FILE "{}"'.format(toolchain_path) in cmake_cache
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
@@ -436,7 +436,7 @@ class AppleTest(Base):
 
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        cmake_cache = _load_cmake_initial_cache(self.client)
+        cmake_cache = _load_cmake_initial_cache(self.client, build_type)
         self.assertIn('set(CMAKE_TOOLCHAIN_FILE "{}"'.format(toolchain_path), cmake_cache)
 
         extensions_str = "OFF" if cppstd else ""

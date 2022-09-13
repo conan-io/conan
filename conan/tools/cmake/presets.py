@@ -265,7 +265,11 @@ def get_configure_preset(cmake_presets, conanfile):
 
 
 def get_initial_cache_path(conanfile):
-    return os.path.join(conanfile.generators_folder, "conan_initial_cache.cmake")
+    cmake_cache_path = os.path.join(conanfile.generators_folder, "conan_initial_cache")
+    build_type = conanfile.settings.get_safe("build_type")
+    if build_type:
+        cmake_cache_path += f'_{build_type.lower()}'
+    return f"{cmake_cache_path}.cmake"
 
 
 def _format_cache_variables(cache_variables):
@@ -295,6 +299,6 @@ def _save_cmake_initial_cache(conanfile, cache_variables):
     :param conanfile: ``ConanFile`` instance
     :param cache_variables: ``dict`` with variables to be saved as CACHE ones
     """
-    cache_cmake_path = get_initial_cache_path(conanfile)
+    cmake_cache_path = get_initial_cache_path(conanfile)
     content = _format_cache_variables(cache_variables)
-    save(cache_cmake_path, "\n".join(content))
+    save(cmake_cache_path, "\n".join(content))
