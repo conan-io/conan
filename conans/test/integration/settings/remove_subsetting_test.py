@@ -156,12 +156,8 @@ def test_settings_and_options_rm_safe():
             assert "opt2" not in self.options
     """)
     client.save({"conanfile.py": conanfile})
-    build_folder = os.path.join(client.current_folder, "build")
-    mkdir(build_folder)
-    client.current_folder = build_folder
-
-    client.run("install ..")
-    client.run("build ..")
+    client.run("install .")
+    client.run("build .")
     assert "'settings.build_type' doesn't exist" in client.out
     assert "'settings' possible configurations are ['compiler', 'os']" in client.out
     assert "'settings.compiler.version' doesn't exist" in client.out
