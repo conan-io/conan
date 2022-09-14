@@ -220,7 +220,7 @@ def test_meson_and_user_filenames_composition():
     client.run("install . -pr=profile -if build")
     client.run("build . -bf build", assert_error=True)  # fails because of the fake compiler
     # Checking the order of the appended user file (the order matters)
-    assert f'meson setup --native-file "{client.current_folder}/build/conan_meson_native.ini" ' \
-           f'--native-file "myfilename.ini"' in client.out
+    conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
+    assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
     # Meson is trying to use the c and cpp binary paths from user file
     assert "Unknown compiler(s): [['/usr/fake/path/g++']]" in client.out
