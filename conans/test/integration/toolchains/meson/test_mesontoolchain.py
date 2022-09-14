@@ -1,13 +1,9 @@
-import sys
 import textwrap
-
-import pytest
 
 from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_apple_meson_keep_user_custom_flags():
     default = textwrap.dedent("""
     [settings]
@@ -62,7 +58,6 @@ def test_apple_meson_keep_user_custom_flags():
     assert "cpp_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7', '-stdlib=libc++']" in content
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -97,7 +92,6 @@ def test_extra_flags_via_conf():
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_correct_quotes():
     profile = textwrap.dedent("""
        [settings]
