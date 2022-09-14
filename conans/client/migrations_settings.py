@@ -3988,7 +3988,7 @@ compiler:
     apple-clang: &apple_clang
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14.0"]
         libcxx: [libstdc++, libc++]
-        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     intel:
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
         update: [None, ANY]
