@@ -26,6 +26,7 @@ from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
+from conans.model.manifest import FileTreeManifest
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
 from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
