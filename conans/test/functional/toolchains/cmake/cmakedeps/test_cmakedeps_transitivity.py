@@ -142,18 +142,14 @@ def test_shared_requires_static_build_all(transitive_libraries):
 
     c.save({"conanfile.py": conanfile}, clean_first=True)
 
+    arch = c.get_default_host_profile().settings['arch']
+
     c.run("install . -o libb*:shared=True")
-    print(c.out)
-    print(c.current_folder)
-    assert not os.path.exists(os.path.join(c.current_folder, "liba-release-x86_64-data.cmake"))
-    assert os.path.exists(os.path.join(c.current_folder, "libb-release-x86_64-data.cmake"))
-    cmake = c.load("libb-release-x86_64-data.cmake")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
     assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake
 
     c.run("install . -o libb*:shared=True --build=libb*")
-    print(c.out)
-    print(c.current_folder)
-    assert not os.path.exists(os.path.join(c.current_folder, "liba-release-x86_64-data.cmake"))
-    assert os.path.exists(os.path.join(c.current_folder, "libb-release-x86_64-data.cmake"))
-    cmake = c.load("libb-release-x86_64-data.cmake")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
     assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake
