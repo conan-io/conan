@@ -23,7 +23,7 @@ def pkg_cmake(name, version, requires=None, exe=False):
             settings = "os", "compiler", "arch", "build_type"
             options = {{"shared": [True, False],
                         "fPIC": [True, False]}}
-            default_options = {{"shared": False, "fPIC": False}}
+            default_options = {{"shared": False, "fPIC": True}}
             generators = "CMakeToolchain", "CMakeDeps"
 
             def config_options(self):
