@@ -4,6 +4,7 @@ from conan.tools.files import chdir
 from conans.errors import ConanException
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
+from conan.tools.scm import Version
 
 
 class Git(object):
@@ -26,6 +27,12 @@ class Git(object):
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
+
+    def get_version(self):
+        try:
+            return Version(self._run('describe --always --tags --abbrev=9'))
+        except Exception as e:
+            raise ConanException("Unable to get git version in '%s': %s" % (self.folder, str(e)))
 
     def get_remote_url(self, remote="origin"):
         remotes = self._run("remote -v")
