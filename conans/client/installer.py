@@ -398,10 +398,11 @@ class BinaryInstaller(object):
             layout = self._cache.package_layout(n.pref.ref, n.conanfile.short_paths)
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
+            output = n.conanfile.output
             with layout.package_lock(n.pref):
                 package_folder = layout.package(n.pref)
                 if os.path.exists(package_folder) and FileTreeManifest.exists_at(package_folder):
-                    self._out.info("Skipping download since it looks like that this package already exists")
+                    output.info(f"Skipping download of package {n.pref.id} since it is already downloaded and unpacked")
                     return
                 self._download_pkg(layout, n)
 
