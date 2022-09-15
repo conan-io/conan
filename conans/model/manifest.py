@@ -90,6 +90,10 @@ class FileTreeManifest(object):
     def load(folder):
         text = load(os.path.join(folder, CONAN_MANIFEST))
         return FileTreeManifest.loads(text)
+    
+    @staticmethod
+    def exists_at(folder):
+        return os.path.exists(os.path.join(folder, CONAN_MANIFEST))
 
     def __repr__(self):
         # Used for serialization and saving it to disk
