@@ -222,7 +222,7 @@ endforeach()
                 find_dependency({{ public_dep }} REQUIRED NO_MODULE)
             endif()
         else()
-            message(STATUS "Dependency {{ public_dep }} already found")
+            conan_message(STATUS "Dependency {{ public_dep }} already found")
         endif()
 
         {%- endfor %}
