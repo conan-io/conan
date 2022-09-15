@@ -132,6 +132,12 @@ class _PackageOptions:
     def get_safe(self, field, default=None):
         return self._data.get(field, default)
 
+    def rm_safe(self, field):
+        try:
+            delattr(self, field)
+        except ConanException:
+            pass
+
     def validate(self):
         for child in self._data.values():
             child.validate()
