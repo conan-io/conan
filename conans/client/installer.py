@@ -399,6 +399,10 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             with layout.package_lock(n.pref):
+                package_folder = layout.package(n.pref)
+                if os.path.exists(package_folder) and FileTreeManifest.exists_at(package_folder):
+                    self._out.info("Skipping download since it looks like that this package already exists")
+                    return
                 self._download_pkg(layout, n)
 
         parallel = self._cache.config.parallel_download
