@@ -108,13 +108,3 @@ class CMakeDepsFileTemplate(object):
         # property because that is also an absolute name (Greetings::Greetings), it is not a namespace
         # and we don't want to split and do tricks.
         return ret or self._get_target_default_name(req, component_name=comp_name)
-
-    def _get_transitive_requires(self):
-        """ the transitive requires that we need are the consumer ones, not the current dependencey
-        ones, so we get the current ones, then look for them in the consumer, and return those
-        """
-        pkg_deps = self.conanfile.dependencies.filter({"direct": True})
-        consumer_deps = self.cmakedeps._conanfile.dependencies
-        result = consumer_deps.transitive_requires(pkg_deps)
-        result = result.filter({"skip": False})
-        return result

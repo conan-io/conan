@@ -5,6 +5,8 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
+from conans.model.dependencies import get_transitive_requires
+
 """
 
 foo-release-x86_64-data.cmake
@@ -168,7 +170,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        transitive_requires = self._get_transitive_requires()
+        transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for comp_name, comp in sorted_comps.items():
             # TODO: Read a property from the component to discard this is shared
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
@@ -192,7 +194,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.conanfile.is_build_context:
             return []
         ret = []
-        transitive_reqs = self._get_transitive_requires()
+        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         if self.conanfile.cpp_info.required_components:
             for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
@@ -207,7 +209,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = {}
         if self.conanfile.is_build_context:
             return ret
-        deps = self._get_transitive_requires()
+        deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for dep in deps.values():
             dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)
