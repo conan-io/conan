@@ -183,8 +183,8 @@ def test_conf_inherited_in_test_package():
                 version="1.0"
 
                 def package_info(self):
-                    self.conf_info["tools.microsoft.bash:subsystem"] = "msys2"
-                    self.conf_info["tools.microsoft.bash:path"] = "{}"
+                    self.conf_info.define("tools.microsoft.bash:subsystem", "msys2")
+                    self.conf_info.define("tools.microsoft.bash:path", "{}")
     """.format(bash_path))
     client.save({"conanfile.py": conanfile})
     client.run("create .")
@@ -209,7 +209,7 @@ def test_conf_inherited_in_test_package():
                             self.tool_requires("msys2/1.0")
 
                         def build(self):
-                            self.output.warn(self.conf["tools.microsoft.bash:subsystem"])
+                            self.output.warning(self.conf.get("tools.microsoft.bash:subsystem"))
                             self.run("aclocal --version")
 
                         def test(self):
