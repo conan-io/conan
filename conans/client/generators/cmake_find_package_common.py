@@ -81,7 +81,7 @@ def find_transitive_dependencies(public_deps_filenames, find_modules):
             if(NOT {dep_filename}_FOUND)
                 find_dependency({dep_filename} REQUIRED)
             else()
-                message(STATUS "Dependency {dep_filename} already found")
+                conan_message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     else:  # for cmake_find_package_multi generator
@@ -95,7 +95,7 @@ def find_transitive_dependencies(public_deps_filenames, find_modules):
                     find_dependency({dep_filename} REQUIRED NO_MODULE)
                 endif()
             else()
-                message(STATUS "Dependency {dep_filename} already found")
+                conan_message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
