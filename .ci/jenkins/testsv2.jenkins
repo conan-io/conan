@@ -96,8 +96,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                             + pipInstalls \
                                             + conanToolInstall \
                                             + launchTests + " && " \
-                                            + testConanServer
-                                            + "\""
+                                            + "${testConanServer}\""
 
                             sh(script: launchCommand)
                         }
