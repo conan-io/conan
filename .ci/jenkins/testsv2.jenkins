@@ -103,9 +103,6 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")
 
-                            // as last step test conan_server runs
-                            def testConanServer = "rm setup.py && mv setup_server.py setup.py && python -m pip install . && conan_server --help"
-
                             def launchCommand = "su - conan -c \"" \
                                             + "export PYENV_ROOT=${pyenvdir} && " \
                                             + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
