@@ -51,8 +51,8 @@ String getDockerImage(String moduleName) {
 }
 
 String shouldTestServer(String moduleName) {
-    // run conan_server --help after running unittests
-    if (moduleName=="conans/test/unittests") {
+    // run conan_server --help after running functional tests
+    if (moduleName=="conans/test/functional") {
         return true
     }
     return false
