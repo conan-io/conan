@@ -172,18 +172,6 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-void runTestInstalls(String branchName, String jobName) {
-    def configs = getConfigurations(moduleName, branchName, jobName)
-    def paralellRuns = [:]
-    configs.each { config ->
-        def testKind = moduleName.split("/").last()
-        config["pyvers"].each { pyver ->
-            paralellRuns["${testKind} - ${config['node']} - ${pyver}"] = runTests(config["node"], pyver, moduleName)
-        }
-    }
-    parallel(paralellRuns)
-}
-
 def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
 
 void deployToPypiTest() {

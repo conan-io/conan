@@ -137,14 +137,12 @@ class RecipeReference:
 
         # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
         pattern = re.compile(r'[.+-]')
+        from conan.api.output import ConanOutput
         if pattern.search(self.name):
-            from conan.api.output import ConanOutput
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
         if self.user and pattern.search(self.user):
-            from conan.api.output import ConanOutput
             ConanOutput().warning(f"User containing special chars is discouraged '{self.user}'")
         if self.channel and pattern.search(self.channel):
-            from conan.api.output import ConanOutput
             ConanOutput().warning(f"Channel containing special chars is discouraged "
                                   f"'{self.channel}'")
 
