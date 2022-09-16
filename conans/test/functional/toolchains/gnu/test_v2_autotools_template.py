@@ -269,6 +269,10 @@ def test_autotools_fix_shared_libs():
         libbye_la_HEADERS = bye.h
         libbye_ladir = $(includedir)
         libbye_la_LIBADD = libhello.la
+
+        bin_PROGRAMS = main
+        main_SOURCES = main.cpp
+        main_LDADD = libhello.la libbye.la
     """)
 
     test_src = textwrap.dedent("""
@@ -280,6 +284,7 @@ def test_autotools_fix_shared_libs():
         "src/makefile.am": makefile_am,
         "src/bye.cpp": bye_cpp,
         "src/bye.h": bye_h,
+        "src/main.cpp": test_src,
         "test_package/main.cpp": test_src,
         "conanfile.py": conanfile,
     })
@@ -304,5 +309,13 @@ def test_autotools_fix_shared_libs():
     assert "@rpath/libhello.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
     assert "@rpath/libbye.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
 
+    # app rpath fixed in executable
+    exe_path = os.path.join(package_folder, "bin", "main")
+    client.run_command("otool -L {}".format(exe_path))
+    assert "@executable_path/../lib/libhello.0.dylib" in client.out
+    client.run_command(exe_path)
+    assert "Bye, bye!" in client.out
+
+    # Running the test-package also works
     client.run("test test_package hello/0.1@ -o hello:shared=True")
     assert "Bye, bye!" in client.out

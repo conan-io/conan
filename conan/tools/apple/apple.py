@@ -152,7 +152,18 @@ class XCRun(object):
 
 
 def fix_apple_shared_install_name(conanfile):
+    if not is_apple_os(conanfile) or not conanfile.options.get_safe("shared", False):
+        return
+    _fix_dylib_files(conanfile)
+    _fix_executables(conanfile)
 
+
+def _fix_dep_name(conanfile, origin_name, old_name, new_name):
+    command = f"install_name_tool {origin_name} -change {old_name} {new_name}"
+    conanfile.run(command)
+
+
+def _fix_dylib_files(conanfile):
     def _get_install_name(path_to_dylib):
         command = "otool -D {}".format(path_to_dylib)
         install_name = check_output_runner(command).strip().split(":")[1].strip()
@@ -166,16 +177,18 @@ def fix_apple_shared_install_name(conanfile):
         command = f"install_name_tool {dylib_path} -id {new_name}"
         conanfile.run(command)
 
-    def _fix_dep_name(dylib_path, old_name, new_name):
-        command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
-        conanfile.run(command)
-
-    substitutions = {}
-
     if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
+
+        substitutions = {}
+
+        # Patch the dylib files
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
+            if not os.path.exists(full_folder):
+                # as method package is running before package_info, the cpp.package might be
+                # wrong
+                continue
             shared_libs = _osx_collect_dylibs(full_folder)
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
@@ -187,4 +200,48 @@ def fix_apple_shared_install_name(conanfile):
             # fix dependencies in second pass
             for shared_lib in shared_libs:
                 for old, new in substitutions.items():
-                    _fix_dep_name(shared_lib, old, new)
+                    _fix_dep_name(conanfile, shared_lib, old, new)
+
+
+def _fix_executables(conanfile):
+
+    def _osx_collect_executables(bin_folder):
+        ret = []
+        for f in os.listdir(bin_folder):
+            full_path = os.path.join(bin_folder, f)
+            if not os.access(full_path, os.X_OK) or os.path.islink(full_path):
+                continue
+
+            # Check if it is not a script or any other kind of executable
+            check_bin = "otool -L {}".format(full_path)
+            # FIXME: This looks weak
+            if "is not an object file" in check_output_runner(check_bin):
+                continue
+
+            ret.append(full_path)
+        return ret
+
+    def _get_shared_used(path_to_exe):
+        command = "otool -L {}".format(path_to_exe)
+        all_shared = check_output_runner(command).strip().split(":")[1].strip()
+        # FIXME: How to skip system linked shared like "/usr/lib/libc++.1.dylib" and
+        #  "/usr/lib/libSystem.B.dylib" without checking that starts with /lib/ (ñapa)
+        #  maybe passing executable patterns?
+        ret = [s.split("(")[0].strip() for s in all_shared.splitlines()
+               if s.strip().startswith("/lib/")]
+        return ret
+
+    bindirs = getattr(conanfile.cpp.package, "bindirs")
+
+    for bindir in bindirs:
+        full_folder = os.path.join(conanfile.package_folder, bindir)
+        if not os.path.exists(full_folder):
+            # as method package is running before package_info, the cpp.package might be typically
+            # wrong
+            continue
+        exes = _osx_collect_executables(full_folder)
+        for exe in exes:
+            shared_used = _get_shared_used(exe)
+            for shared in shared_used:
+                rpath_name = f"@executable_path/../lib/{os.path.basename(shared)}"
+                _fix_dep_name(conanfile, exe, shared, rpath_name)
