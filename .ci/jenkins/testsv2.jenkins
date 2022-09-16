@@ -167,7 +167,7 @@ private Closure testInstall(String nodeName, String pythonVersion) {
                 def mv = (nodeName=="Windows") ? "move" : "mv"
 
                 def conanServerToolInstall = "${rm} setup.py && ${mv} setup_server.py setup.py && " \ 
-                                             "python -m pip install . && conan_server --help"
+                                           + "python -m pip install . && conan_server --help"
 
                 if (nodeName=="Linux") {
                     try {
