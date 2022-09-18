@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from bottle import static_file
+from bottle import static_file, request
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -77,16 +77,19 @@ class TestDownloadCache:
         http_server = StoppableThreadBottle()
         file_path = os.path.join(temp_folder(), "myfile.txt")
         save(file_path, "some content")
+        file_path_query = os.path.join(temp_folder(), "myfile2.txt")
+        save(file_path_query, "some query")
 
         @http_server.server.get("/myfile.txt")
         def get_file():
-            return static_file(os.path.basename(file_path), os.path.dirname(file_path))
+            f = file_path_query if request.query else file_path
+            return static_file(os.path.basename(f), os.path.dirname(f))
 
         http_server.run_server()
 
         client = TestClient()
         tmp_folder = temp_folder()
-        client.save({"global.conf": f"core.download:download_cache={tmp_folder}"},
+        client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
@@ -118,15 +121,15 @@ class TestDownloadCache:
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         local_path = os.path.join(client.current_folder, "myfile.txt")
-        self.assertTrue(os.path.exists(local_path))
-        self.assertEqual("some content", client.load("myfile.txt"))
+        assert os.path.exists(local_path)
+        assert "some content" in client.load("myfile.txt")
         local_path2 = os.path.join(client.current_folder, "myfile2.txt")
-        self.assertTrue(os.path.exists(local_path2))
-        self.assertEqual("some query", client.load("myfile2.txt"))
+        assert os.path.exists(local_path2)
+        assert "some query" in client.load("myfile2.txt")
 
         # 2 files cached, plus "locks" folder = 3
         # "locks" folder + 2 files cached + .dirty file from previous failure
-        self.assertEqual(4, len(os.listdir(cache_folder)))
+        assert 4 == len(os.listdir(tmp_folder))
 
         # remove remote file
         os.remove(file_path)
@@ -134,15 +137,15 @@ class TestDownloadCache:
         os.remove(local_path2)
         # Will use the cached one
         client.run("source .")
-        self.assertTrue(os.path.exists(local_path))
-        self.assertTrue(os.path.exists(local_path2))
-        self.assertEqual("some content", client.load("myfile.txt"))
-        self.assertEqual("some query", client.load("myfile2.txt"))
+        assert os.path.exists(local_path)
+        assert os.path.exists(local_path2)
+        assert "some content" == client.load("myfile.txt")
+        assert "some query" == client.load("myfile2.txt")
 
         # disabling cache will make it fail
         os.remove(local_path)
         os.remove(local_path2)
         save(client.cache.new_config_path, "")
         client.run("source .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in source() method, line 8", client.out)
-        self.assertIn("Not found: http://localhost", client.out)
+        assert "ERROR: conanfile.py: Error in source() method, line 8" in client.out
+        assert "Not found: http://localhost" in client.out

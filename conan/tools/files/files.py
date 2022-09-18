@@ -225,7 +225,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
     checksum = md5 or sha1 or sha256
-    download_cache = config.get("core.download:download_cache") if checksum else None
+    download_cache = config.get("tools.files.download:download_cache") if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
@@ -236,7 +236,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
             downloader = CachingFileDownloader(requester, download_cache=download_cache)
             downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
                                 verify_ssl=verify, retry=retry, retry_wait=retry_wait,
-                                headers=headers)
+                                headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):
