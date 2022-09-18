@@ -1,5 +1,5 @@
 import fnmatch
-import imp
+import importlib.machinery
 import inspect
 import os
 import re
@@ -439,8 +439,10 @@ def _parse_conanfile(conan_file_path):
             old_dont_write_bytecode = sys.dont_write_bytecode
             try:
                 sys.dont_write_bytecode = True
-                # FIXME: imp is deprecated in favour of implib
-                loaded = imp.load_source(module_id, conan_file_path)
+                loader = importlib.machinery.SourceFileLoader(module_id, conan_file_path)
+                spec = importlib.util.spec_from_loader(module_id, loader)
+                mymodule = importlib.util.module_from_spec(spec)
+                loader.exec_module(mymodule)
                 sys.dont_write_bytecode = old_dont_write_bytecode
             except ImportError:
                 version_txt = _get_required_conan_version_without_loading(conan_file_path)
@@ -448,7 +450,7 @@ def _parse_conanfile(conan_file_path):
                     validate_conan_version(version_txt)
                 raise
 
-            required_conan_version = getattr(loaded, "required_conan_version", None)
+            required_conan_version = getattr(mymodule, "required_conan_version", None)
             if required_conan_version:
                 validate_conan_version(required_conan_version)
 
@@ -482,7 +484,7 @@ def _parse_conanfile(conan_file_path):
     finally:
         sys.path.pop(0)
 
-    return loaded, module_id
+    return mymodule, module_id
 
 
 def _get_required_conan_version_without_loading(conan_file_path):
