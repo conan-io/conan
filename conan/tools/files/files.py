@@ -15,7 +15,7 @@ from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conans.client.downloaders.download import run_downloader
+from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
 from conans.util.sha import check_with_algorithm_sum
@@ -218,14 +218,14 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     out = ConanOutput()
     overwrite = True
 
-    config_retry = config.get("tools.files.download:retry", check_type=int, default=None)
-    retry = config_retry if config_retry is not None else retry if retry is not None else 2
-    config_retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=None)
-    retry_wait = config_retry_wait if config_retry_wait is not None \
-        else retry_wait if retry_wait is not None else 5
+    retry = retry if retry is not None else 2
+    retry = config.get("tools.files.download:retry", check_type=int, default=retry)
+    retry_wait = retry_wait if retry_wait is not None else 5
+    retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
     # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
-    download_cache = False
+    checksum = md5 or sha1 or sha256
+    download_cache = config.get("core.download:download_cache") if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
@@ -233,10 +233,10 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
             _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
                                       sha1=sha1, sha256=sha256)
         else:
-            run_downloader(requester=requester, verify=verify, download_cache=download_cache,
-                           url=file_url, overwrite=overwrite,
-                           file_path=filename, retry=retry, retry_wait=retry_wait,
-                           auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+            downloader = CachingFileDownloader(requester, download_cache=download_cache)
+            downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
+                                verify_ssl=verify, retry=retry, retry_wait=retry_wait,
+                                headers=headers)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):

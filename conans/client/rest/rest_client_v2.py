@@ -3,7 +3,8 @@ import os
 import time
 
 from conan.api.output import ConanOutput
-from conans.client.downloaders.download import run_downloader
+
+from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
@@ -34,18 +35,6 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    # FIXME: This method seems to be useless
-    def _get_remote_file_contents(self, url, use_cache, headers=None):
-        # We don't want traces in output of these downloads, they are ugly in output
-        retry = self._config.get("core.download:retry", check_type=int)
-        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
-        # Conan 2.0: Removed "core.download:download_cache" configuration
-        download_cache = False
-        contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
-                                  retry_wait=retry_wait, download_cache=download_cache, url=url,
-                                  auth=self.auth, headers=headers)
-        return contents
-
     def _get_snapshot(self, url):
         try:
             data = self._get_file_list_json(url)
@@ -64,7 +53,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
+        self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -82,7 +71,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
+        self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -93,7 +82,7 @@ class RestV2Methods(RestCommonMethods):
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
+        self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -156,19 +145,18 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files, use_cache):
+    def _download_and_save_files(self, urls, dest_folder, files):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        retry = self._config.get("core.download:retry", check_type=int)
-        retry_wait = self._config.get("core.download:retry_wait", check_type=int)
-        # Conan 2.0: Removed "core.download:download_cache" configuration
-        download_cache = False
+        retry = self._config.get("core.download:retry", check_type=int, default=2)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
+        download_cache = self._config.get("core.download:download_cache")
+        downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            run_downloader(self.requester,  self.verify_ssl, retry=retry,
-                           retry_wait=retry_wait, download_cache=download_cache,
-                           url=resource_url, file_path=abs_path, auth=self.auth)
+            downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
+                                verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
 
     def _remove_recipe_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
