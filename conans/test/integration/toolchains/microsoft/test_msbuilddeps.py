@@ -1,5 +1,6 @@
 import os
 import textwrap
+from xml.dom import minidom
 
 import pytest
 
@@ -30,20 +31,24 @@ def test_msbuilddeps_format_names():
         from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            name = "pkg"
+            name = "pkg.name-more+"
             version = "1.0"
 
             def package_info(self):
                 self.cpp_info.components["libmpdecimal++"].libs = ["libmp++"]
+                self.cpp_info.components["mycomp.some-comp+"].libs = ["mylib"]
+                self.cpp_info.components["libmpdecimal++"].requires = ["mycomp.some-comp+"]
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create . -s arch=x86_64")
     # Issue: https://github.com/conan-io/conan/issues/11822
-    c.run("install pkg/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
+    c.run("install pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
-    props = c.load("conan_pkg_libmpdecimal__.props")
-    assert "<conan_pkg_libmpdecimal___props_imported>" in props
-    props = c.load("conan_pkg_libmpdecimal___release_x64.props")
-    assert "Conanpkg_libmpdecimal__IncludeDirectories" in props
-    props = c.load("conan_pkg_libmpdecimal___vars_release_x64.props")
-    assert "<Conanpkg_libmpdecimal__RootFolder>" in props
+    # loading all .props and xml parse them to check no errors
+    counter = 0
+    for f in os.listdir(c.current_folder):
+        if f.endswith(".props"):
+            content = c.load(f)
+            minidom.parseString(content)
+            counter += 1
+    assert counter == 8
