@@ -1,6 +1,6 @@
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
-    build_type_link_flags
+    build_type_link_flags, libcxx_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
@@ -28,7 +28,6 @@ class AutotoolsToolchain:
         self.extra_defines = []
 
         # Defines
-        self.gcc_cxx11_abi = self._get_cxx11_abi_define()
         self.ndebug = None
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
@@ -40,7 +39,7 @@ class AutotoolsToolchain:
 
         self.cppstd = cppstd_flag(self._conanfile.settings)
         self.arch_flag = architecture_flag(self._conanfile.settings)
-        self.libcxx = self._get_libcxx_flag()
+        self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
@@ -75,48 +74,11 @@ class AutotoolsToolchain:
 
         check_using_build_profile(self._conanfile)
 
-    def _get_cxx11_abi_define(self):
-        # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
-        # The default is libstdc++11, only specify the contrary '_GLIBCXX_USE_CXX11_ABI=0'
-        settings = self._conanfile.settings
-        libcxx = settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return
-
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-        if compiler in ['clang', 'apple-clang', 'gcc']:
-            if libcxx == 'libstdc++':
-                return '_GLIBCXX_USE_CXX11_ABI=0'
-            elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi",
-                                                                      check_type=bool):
-                return '_GLIBCXX_USE_CXX11_ABI=1'
-
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
         if flag:
             flag = "-{}".format(flag)
         return flag
-
-    def _get_libcxx_flag(self):
-        settings = self._conanfile.settings
-        libcxx = settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return
-
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
-        if compiler in ['clang', 'apple-clang']:
-            if libcxx in ['libstdc++', 'libstdc++11']:
-                return '-stdlib=libstdc++'
-            elif libcxx == 'libc++':
-                return '-stdlib=libc++'
-        elif compiler == 'sun-cc':
-            return ({"libCstd": "-library=Cstd",
-                     "libstdcxx": "-library=stdcxx4",
-                     "libstlport": "-library=stlport4",
-                     "libstdc++": "-library=stdcpp"}.get(libcxx))
-        elif compiler == "qcc":
-            return "-Y _%s" % str(libcxx)
 
     @staticmethod
     def _filter_list_empty_fields(v):
