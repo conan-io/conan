@@ -168,7 +168,7 @@ class MSBuildToolchain(object):
             "toolset": toolset,
             "compile_options": compile_options,
             "parallel": parallel,
-            "properties": self.properties
+            "properties": self.properties,
         }
 
     def _write_config_toolchain(self, config_filename):
