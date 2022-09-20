@@ -165,8 +165,6 @@ class GLibCXXBlock(Block):
 
     def context(self):
         libcxx, stdlib11 = libcxx_flags(self._conanfile)
-        if libcxx is None and stdlib11 is None:
-            return None
         return {"set_libcxx": libcxx, "glibcxx": stdlib11}
 
 
