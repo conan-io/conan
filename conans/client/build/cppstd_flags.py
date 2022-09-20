@@ -50,14 +50,10 @@ def cppstd_flag_new(settings):
 
 
 def cppstd_default(settings):
-    if getattr(settings, "get_safe", None):
-        compiler = settings.get_safe("compiler")
-        compiler_version = settings.get_safe("compiler.version")
-        compiler_base = settings.get_safe("compiler.base")
-    else:
-        compiler = str(settings.compiler)
-        compiler_version = str(settings.compiler.version)
-        compiler_base = str(settings.compiler.base)
+
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    compiler_base = settings.get_safe("compiler.base")
     intel_cppstd_default = _intel_visual_cppstd_default if compiler_base == "Visual Studio" \
         else _intel_gcc_cppstd_default
     default = {"gcc": _gcc_cppstd_default(compiler_version),
@@ -70,6 +66,8 @@ def cppstd_default(settings):
 
 
 def _clang_cppstd_default(compiler_version):
+    if Version(compiler_version) >= "16":
+        return "gnu17"
     # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
     return "gnu98" if Version(compiler_version) < "6" else "gnu14"
 
@@ -103,6 +101,7 @@ def _cppstd_visualstudio(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
     if Version(visual_version) >= "14":
         v14 = "c++14"
@@ -110,8 +109,11 @@ def _cppstd_visualstudio(visual_version, cppstd):
     if Version(visual_version) >= "15":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "17":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -120,15 +122,19 @@ def _cppstd_msvc(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
-    if Version(visual_version) >= "19.0":
+    if Version(visual_version) >= "190":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "19.1":
+    if Version(visual_version) >= "191":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "193":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -253,7 +259,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) >= "5.1":
+    if Version(gcc_version) >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 

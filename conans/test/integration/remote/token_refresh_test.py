@@ -80,7 +80,8 @@ class TestTokenRefresh(unittest.TestCase):
         mocked_user_io.get_password = Mock(return_value="mypassword")
 
         requester = RequesterWithTokenMock()
-        config = namedtuple("ConfigMock", "revisions_enabled download_cache")(False, None)
+        config = namedtuple("ConfigMock", "revisions_enabled download_cache retry retry_wait")\
+            (False, None, None, None)
         self.rest_client_factory = RestApiClientFactory(mocked_user_io.out,
                                                         requester, config=config,
                                                         artifacts_properties=None)

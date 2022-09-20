@@ -2,11 +2,18 @@ import fnmatch
 import imp
 import inspect
 import os
+import re
 import sys
+import types
 import uuid
 
 import yaml
 
+from pathlib import Path
+
+from conan.tools.cmake import cmake_layout
+from conan.tools.google import bazel_layout
+from conan.tools.microsoft import vs_layout
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -69,6 +76,7 @@ class ConanFileLoader(object):
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
+            conanfile.recipe_path = Path(conanfile.recipe_folder)
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
@@ -261,7 +269,7 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile_txt(self, conan_txt_path, profile_host, ref=None):
+    def load_conanfile_txt(self, conan_txt_path, profile_host, ref=None, require_overrides=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
@@ -269,6 +277,12 @@ class ConanFileLoader(object):
         path, basename = os.path.split(conan_txt_path)
         display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
         conanfile = self._parse_conan_txt(contents, path, display_name, profile_host)
+
+        if require_overrides is not None:
+            for req_override in require_overrides:
+                req_override = ConanFileReference.loads(req_override)
+                conanfile.requires.override(req_override)
+
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
@@ -298,9 +312,20 @@ class ConanFileLoader(object):
             if not hasattr(conanfile, "build_requires"):
                 conanfile.build_requires = []
             conanfile.build_requires.append(build_reference)
+        if parser.layout:
+            layout_method = {"cmake_layout": cmake_layout,
+                             "vs_layout": vs_layout,
+                             "bazel_layout": bazel_layout}.get(parser.layout)
+            if not layout_method:
+                raise ConanException("Unknown predefined layout '{}' declared in "
+                                     "conanfile.txt".format(parser.layout))
+
+            def layout(self):
+                layout_method(self)
+
+            conanfile.layout = types.MethodType(layout, conanfile)
 
         conanfile.generators = parser.generators
-
         try:
             options = OptionsValues.loads(parser.options)
         except Exception:
@@ -411,13 +436,21 @@ def _parse_conanfile(conan_file_path):
     try:
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
-            sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
-            sys.dont_write_bytecode = False
+            old_dont_write_bytecode = sys.dont_write_bytecode
+            try:
+                sys.dont_write_bytecode = True
+                # FIXME: imp is deprecated in favour of implib
+                loaded = imp.load_source(module_id, conan_file_path)
+                sys.dont_write_bytecode = old_dont_write_bytecode
+            except ImportError:
+                version_txt = _get_required_conan_version_without_loading(conan_file_path)
+                if version_txt:
+                    validate_conan_version(version_txt)
+                raise
 
-        required_conan_version = getattr(loaded, "required_conan_version", None)
-        if required_conan_version:
-            validate_conan_version(required_conan_version)
+            required_conan_version = getattr(loaded, "required_conan_version", None)
+            if required_conan_version:
+                validate_conan_version(required_conan_version)
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
@@ -450,3 +483,20 @@ def _parse_conanfile(conan_file_path):
         sys.path.pop(0)
 
     return loaded, module_id
+
+
+def _get_required_conan_version_without_loading(conan_file_path):
+    # First, try to detect the required_conan_version in "text" mode
+    # https://github.com/conan-io/conan/issues/11239
+    contents = load(conan_file_path)
+
+    txt_version = None
+
+    try:
+        found = re.search(r"required_conan_version\s*=\s*(.*)", contents)
+        if found:
+            txt_version = found.group(1).replace('"', "")
+    except:
+        pass
+
+    return txt_version

@@ -21,7 +21,6 @@ class BasicBuildTest(unittest.TestCase):
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=True, lang=lang)
 
-    @pytest.mark.tool_compiler
     def test_build_default(self):
         """ build default (gcc in nix, VS in win) """
         if platform.system() == "SunOS":

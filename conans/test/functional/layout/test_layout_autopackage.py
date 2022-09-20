@@ -10,23 +10,23 @@ def test_auto_package_no_components():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
 
     def source(self):
-        tools.save("my_source/source_sources/source_stuff.cpp", "")
-        tools.save("my_source/source_includes/include1.hpp", "")
-        tools.save("my_source/source_includes/include2.hpp", "")
-        tools.save("my_source/source_includes2/include3.h", "")
-        tools.save("my_source/source_libs/slibone.a", "")
-        tools.save("my_source/source_libs/slibtwo.a", "")
-        tools.save("my_source/source_libs/bin_to_discard.exe", "")
-        tools.save("my_source/source_bins/source_bin.exe", "")
-        tools.save("my_source/source_frameworks/sframe1/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe2/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe1/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/foo/bar.txt", "")
+        tools.save("source_sources/source_stuff.cpp", "")
+        tools.save("source_includes/include1.hpp", "")
+        tools.save("source_includes/include2.hpp", "")
+        tools.save("source_includes2/include3.h", "")
+        tools.save("source_libs/slibone.a", "")
+        tools.save("source_libs/slibtwo.a", "")
+        tools.save("source_libs/bin_to_discard.exe", "")
+        tools.save("source_bins/source_bin.exe", "")
+        tools.save("source_frameworks/sframe1/include/include.h", "")
+        tools.save("source_frameworks/sframe2/include/include.h", "")
+        tools.save("source_frameworks/sframe1/lib/libframework.lib", "")
+        tools.save("source_frameworks/sframe2/lib/libframework.lib", "")
+        tools.save("source_frameworks/sframe2/foo/bar.txt", "")
 
     def build(self):
         tools.save("build_sources/build_stuff.cpp", "")
@@ -60,13 +60,6 @@ def test_auto_package_no_components():
         self.cpp.source.bindirs = ["source_bins"]
         self.cpp.source.frameworkdirs = ["source_frameworks"]
 
-        # Source File patterns
-        self.patterns.source.include = ["*.hpp"] # Discard include3.h from source
-        self.patterns.source.lib = ["*.a"]
-        self.patterns.source.bin = ["*.exe"]
-        self.patterns.source.src = ["*.cpp"]
-        self.patterns.source.framework = ["sframe*"]
-
         # Build CPP INFO
         self.cpp.build.srcdirs = ["build_sources",
                                               "build_sources/subdir/othersubdir"]
@@ -75,15 +68,20 @@ def test_auto_package_no_components():
         self.cpp.build.bindirs = ["build_bins"]
         self.cpp.build.frameworkdirs = ["build_frameworks"]
 
-        # Build File patterns
-        self.patterns.build.include = ["*.h"]
-        self.patterns.build.lib = ["*.a"]
-        self.patterns.build.bin = ["*.exe"]
-        self.patterns.build.src = ["*.cpp"]
-        self.patterns.build.framework = ["bframe*"]
-
     def package(self):
-        LayoutPackager(self).package()
+        # Discard include3.h from source
+        packager = AutoPackager(self)
+        packager.patterns.build.include = ["*.hpp", "*.h", "include3.h"]
+        packager.patterns.build.lib = ["*.a"]
+        packager.patterns.build.bin = ["*.exe"]
+        packager.patterns.build.src = ["*.cpp"]
+        packager.patterns.build.framework = ["sframe*", "bframe*"]
+        packager.patterns.source.include = ["*.hpp"] # Discard include3.h from source
+        packager.patterns.source.lib = ["*.a"]
+        packager.patterns.source.bin = ["*.exe"]
+        packager.patterns.source.src = ["*.cpp"]
+        packager.patterns.source.framework = ["sframe*"]
+        packager.run()
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
@@ -145,7 +143,7 @@ def test_auto_package_with_components():
     conan_file = str(GenConanfile()
                      .with_settings("build_type")
                      .with_import("from conans import tools")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
 
     def source(self):
@@ -173,7 +171,8 @@ def test_auto_package_with_components():
         self.cpp.package.components["component3"].bindirs = ["bin"]
 
     def package(self):
-        LayoutPackager(self).package()
+        packager = AutoPackager(self)
+        packager.run()
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
@@ -209,7 +208,7 @@ def test_auto_package_with_components_declared_badly():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
 
     def layout(self):
@@ -226,14 +225,14 @@ def test_auto_package_with_components_declared_badly():
         self.cpp.package.components["component3"].bindirs = ["bin"]
 
     def package(self):
-        LayoutPackager(self).package()
+        AutoPackager(self).run()
     """
 
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@", assert_error=True)
-    assert "There are components declared in source_cpp_info.components or in " \
-           "build_cpp_info.components that are not declared in " \
-           "package_cpp_info.components" in client.out
+    assert "There are components declared in cpp.source.components or in " \
+           "cpp.build.components that are not declared in " \
+           "cpp.package.components" in client.out
 
 
 def test_auto_package_default_patterns():
@@ -246,7 +245,7 @@ def test_auto_package_default_patterns():
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
     def source(self):
         tools.save("myincludes/mylib.header","")
@@ -270,7 +269,7 @@ def test_auto_package_default_patterns():
         self.cpp.build.bindirs = ["ugly_build"]
 
     def package(self):
-        LayoutPackager(self).package()
+        AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
@@ -292,10 +291,11 @@ def test_auto_package_default_folders_with_components():
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
     def layout(self):
         for el in [self.cpp.source, self.cpp.build]:
+            # The defaults for cpp.build and cpp.source are empty
             assert el.components["foo"].includedirs is None
             assert el.components["foo"].libdirs is None
             assert el.components["foo"].bindirs is None
@@ -303,15 +303,16 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs is None
             assert el.components["foo"].resdirs is None
 
-        assert self.cpp.package.components["foo"].includedirs is None
-        assert self.cpp.package.components["foo"].libdirs is None
-        assert self.cpp.package.components["foo"].bindirs is None
+        # The defaults for cpp.package are filled includedirs and libdirs and bindirs
+        assert self.cpp.package.components["foo"].includedirs is not None
+        assert self.cpp.package.components["foo"].libdirs is not None
+        assert self.cpp.package.components["foo"].bindirs is not None
         assert self.cpp.package.components["foo"].frameworkdirs is None
         assert self.cpp.package.components["foo"].srcdirs is None
         assert self.cpp.package.components["foo"].resdirs is None
 
     def package(self):
-        LayoutPackager(self).package()
+        AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
@@ -324,7 +325,7 @@ def test_auto_package_with_custom_package_too():
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
     def source(self):
         tools.save("myincludes/mylib.header","")
@@ -335,11 +336,12 @@ def test_auto_package_with_custom_package_too():
     def layout(self):
         self.cpp.source.includedirs = ["myincludes"]
         self.cpp.build.libdirs = ["ugly_build"]
-        self.patterns.source.include = ["*.header"]
-        self.patterns.build.lib = ["*.a"]
 
     def package(self):
-        LayoutPackager(self).package()
+        packager = AutoPackager(self)
+        packager.patterns.source.include = ["*.header"]
+        packager.patterns.build.lib = ["*.a"]
+        packager.run()
         assert os.path.exists(os.path.join(self.package_folder, "include", "mylib.header"))
         assert os.path.exists(os.path.join(self.package_folder, "lib", "mylib.a"))
         self.output.warn("Package method called!")
@@ -357,7 +359,7 @@ def test_auto_package_only_one_destination():
     conan_file = str(GenConanfile().with_settings("build_type")
                      .with_import("from conans import tools")
                      .with_import("import os")
-                     .with_import("from conan.tools.layout import LayoutPackager"))
+                     .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
     def source(self):
         tools.save("myincludes/mylib.header","")
@@ -374,13 +376,13 @@ def test_auto_package_only_one_destination():
        self.cpp.build.builddirs = ["ugly_build"]
        self.cpp.build.resdirs = ["ugly_build"]
 
-       self.patterns.source.include = ["*.header"]
-       self.patterns.build.lib = ["*.a"]
-
        self.cpp.package.{} = ["folder1", "folder2"]
 
     def package(self):
-        LayoutPackager(self).package()
+        packager = AutoPackager(self)
+        packager.patterns.source.include = ["*.header"]
+        packager.patterns.build.lib = ["*.a"]
+        packager.run()
 
     """
     for dirs in ["includedirs", "builddirs", "bindirs", "srcdirs", "frameworkdirs", "libdirs",

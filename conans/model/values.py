@@ -8,6 +8,10 @@ class Values(object):
         self._dict = {}  # {key: Values()}
         self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
 
+    def get_safe(self, attr):
+        values = [v[1] for v in self.as_list() if v[0] == attr]
+        return values[0] if values else None
+
     def __getattr__(self, attr):
         if attr not in self._dict:
             return None
@@ -66,6 +70,18 @@ class Values(object):
             name, value = line.split("=", 1)
             result.append((name.strip(), value.strip()))
         return cls.from_list(result)
+
+    def update_values(self, values):
+        """ receives a list of tuples (compiler.version, value)
+        Necessary for binary_compatibility.py
+        """
+        assert isinstance(values, (list, tuple)), values
+        for (name, value) in values:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+            setattr(attr, list_settings[-1], value)
 
     def as_list(self, list_all=True):
         result = []

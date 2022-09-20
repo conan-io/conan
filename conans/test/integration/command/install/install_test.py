@@ -430,6 +430,17 @@ class TestCliOverride:
         client.run("install . --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
 
+    def test_install_cli_override_in_conanfile_txt(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.txt": textwrap.dedent("""\
+        [requires]
+        zlib/1.0
+        """)}, clean_first=True)
+        client.run("install . --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out
+
     def test_install_ref_cli_override(self, client):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . zlib/1.0@")
@@ -447,3 +458,81 @@ class TestCliOverride:
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . pkg/0.1@ --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
+
+    def test_conditional(self, client):
+        # https://github.com/conan-io/conan/issues/10045
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cuda/10.2@")
+        client.run("create . cuda/10.3@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {"with_cuda":[True,False]}
+                default_options = {"with_cuda":True}
+                def requirements(self):
+                    if self.options.with_cuda:
+                        self.requires('cuda/[>=10.1 <=11.4.2]')
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")  # Check that without override, it resolves to 10.3
+        assert "cuda/10.3" in client.out
+        assert "cuda/10.2" not in client.out
+        # Now check overrides for different commands
+        client.run("create . opencv/1.0@ --require-override=cuda/10.2")
+        assert "cuda/10.2" in client.out
+        assert "cuda/10.3" not in client.out
+        client.run("install . --require-override=cuda/10.2")
+        assert "cuda/10.2" in client.out
+        assert "cuda/10.3" not in client.out
+        client.run("install opencv/1.0@ --require-override=cuda/10.2")
+        assert "cuda/10.2" in client.out
+        assert "cuda/10.3" not in client.out
+
+
+def test_install_bintray_warning():
+    server = TestServer(complete_urls=True)
+    from conans.client.graph import proxy
+    proxy.DEPRECATED_CONAN_CENTER_BINTRAY_URL = server.fake_url  # Mocking!
+    client = TestClient(servers={"conan-center": server},
+                        users={"conan-center": [("lasote", "mypass")]})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@lasote/testing")
+    client.run("upload zlib/1.0@lasote/testing --all -r conan-center")
+    client.run("remove * -f")
+    client.run("install zlib/1.0@lasote/testing -r conan-center")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" in client.out
+    client.run("install zlib/1.0@lasote/testing -r conan-center -s build_type=Debug")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" not in client.out
+
+
+def test_package_folder_available_consumer():
+    """
+    The package folder is not available when doing a consumer conan install "."
+    We don't want to provide the package folder for the "cmake install" nor the "make install",
+    as a consumer you could call the build system and pass the prefix PATH manually.
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile
+    from conan.tools.cmake import cmake_layout
+    class HelloConan(ConanFile):
+
+        settings = "os", "arch", "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            self.output.warn("Package folder is None? {}".format(self.package_folder is None))
+    """)
+    client.save({"conanfile.py": conanfile})
+
+    # Installing it with "install ." with output folder
+    client.run("install . -of=my_build")
+    assert "WARN: Package folder is None? True" in client.out
+
+    # Installing it with "install ." without output folder
+    client.run("install .")
+    assert "WARN: Package folder is None? True" in client.out

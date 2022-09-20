@@ -7,7 +7,6 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.toolchain
 class TestTxtCommandLine(unittest.TestCase):
 
     def test_declarative(self):

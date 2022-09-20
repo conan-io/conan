@@ -244,8 +244,8 @@ class RestCommonMethods(object):
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(reference) for reference in response]
 
-    def search_packages(self, ref, query):
+    def search_packages(self, ref):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref, query)
+        url = self.router.search_packages(ref)
         package_infos = self.get_json(url)
         return package_infos

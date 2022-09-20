@@ -1,8 +1,13 @@
 import os
+import platform
 import re
+import textwrap
+
+import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
 
 
@@ -154,7 +159,7 @@ def test_local_build_change_base():
         tools.save("build_file.dll", "bar")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=common")
+    client.run("install . -if=common -bf=common")
     client.run("build . -if=common -bf=common")
     dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
     assert os.path.exists(dll)
@@ -171,7 +176,7 @@ def test_local_source():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -192,7 +197,7 @@ def test_local_source_change_base():
         self.folders.source = "my_source"
 
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
@@ -248,6 +253,8 @@ def test_export_pkg():
     assert os.path.exists(os.path.join(pf, "library.lib"))
 
 
+@pytest.mark.xfail(reason="We cannot test the export-pkg from a local package folder when we cannot "
+                          "run the package method")
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     client = TestClient()
@@ -359,3 +366,84 @@ def test_imports():
     bfolder = client.cache.package_layout(ref).build(pref)
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out
+
+
+def test_start_dir_failure():
+    c = TestClient()
+    c.save(pkg_cmake("dep", "0.1"))
+    c.run("install .")
+    expected_path = os.path.join(c.current_folder, "build", "generators", "conan_toolchain.cmake")
+    assert os.path.exists(expected_path)
+    os.unlink(expected_path)
+    with c.chdir("build"):
+        c.run("install ..")
+    assert os.path.exists(expected_path)
+
+
+def test_importdir_failure():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import save
+        class Cosumer(ConanFile):
+            requires = "dep/0.1"
+            settings = "build_type"
+            def layout(self):
+                self.folders.imports = "Import" + str(self.settings.build_type)
+                self.folders.build = "build"
+            def build(self):
+                self.output.info("saving file")
+                save(self, "mybuild.txt", "mybuild")
+            def imports(self):
+                self.copy("myfile.txt")
+        """)
+    c.save({"dep/conanfile.py": GenConanfile().with_package_file("myfile.txt", "mycontent"),
+            "consumer/conanfile.py": conanfile})
+    c.run("create dep dep/0.1@")
+    with c.chdir("consumer"):
+        c.run("install . -s build_type=Release")
+        expected_path_release = os.path.join(c.current_folder, "ImportRelease", "myfile.txt")
+        assert os.path.exists(expected_path_release)
+        c.run("build .")
+        expected_build_file = os.path.join(c.current_folder, "build", "mybuild.txt")
+        assert os.path.exists(expected_build_file)
+        c.run("install . -s build_type=Debug")
+        expected_path_debug = os.path.join(c.current_folder, "ImportDebug", "myfile.txt")
+        assert os.path.exists(expected_path_debug)
+
+        os.unlink(expected_path_release)
+        os.unlink(expected_path_debug)
+        os.unlink(expected_build_file)
+        with c.chdir("build"):
+            c.run("install .. -s build_type=Release")
+            assert os.path.exists(expected_path_release)
+            c.run("build ..")
+            assert os.path.exists(expected_build_file)
+            c.run("install .. -s build_type=Debug")
+            assert os.path.exists(expected_path_debug)
+
+
+def test_local_folders_without_layout():
+    """ Test that the "conan install" can report the local source and build folder
+    """
+    # https://github.com/conan-io/conan/issues/10566
+    client = TestClient()
+    conan_file = textwrap.dedent("""
+        from conan import ConanFile
+        class Test(ConanFile):
+            version = "1.2.3"
+            name = "test"
+
+            def layout(self):
+                self.folders.source = "."
+                self.folders.build = "build"
+
+            def generate(self):
+                self.output.info("generate sf: {}".format(self.source_folder))
+                self.output.info("generate bf: {}".format(self.build_folder))
+        """)
+
+    client.save({"conanfile.py": conan_file})
+    client.run("install .")
+    assert "conanfile.py (test/1.2.3): generate sf: {}".format(client.current_folder) in client.out
+    assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out

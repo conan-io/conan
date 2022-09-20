@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 
 class CMakeInstallPackageTest(unittest.TestCase):
 
-    @pytest.mark.tool_compiler
     def test_patch_config(self):
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake

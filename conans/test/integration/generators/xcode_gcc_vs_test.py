@@ -8,10 +8,26 @@ from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
+
+    def test_frameworks_no_compiler(self):
+        client = TestClient()
+        client.save({"conanfile.py": textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def package_info(self):
+                    self.cpp_info.frameworks = ["CoreAudio"]
+            """)})
+        client.run("export . Hello/0.1@lasote/stable")
+
+        client.save({"conanfile.py": GenConanfile().with_requires("Hello/0.1@lasote/stable").with_generator("xcode")})
+        client.run('install . --build missing')
+        xcode = client.load(BUILD_INFO_XCODE)
+        self.assertIn('OTHER_LDFLAGS = $(inherited)    -framework CoreAudio', xcode)
 
     def test_generators(self):
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")

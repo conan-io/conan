@@ -262,7 +262,6 @@ class ProfileTest(unittest.TestCase):
 
 
 class DetectCompilersTest(unittest.TestCase):
-    @pytest.mark.tool_compiler
     def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",

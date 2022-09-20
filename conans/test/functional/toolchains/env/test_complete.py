@@ -6,8 +6,8 @@ from conans.test.utils.tools import TestClient
 
 def test_cmake_virtualenv():
     client = TestClient()
-    client.run("new hello/0.1 -s")
-    client.run("create .")
+    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("create . -tf=None")
 
     cmakewrapper = textwrap.dedent(r"""
         from conans import ConanFile
@@ -67,7 +67,7 @@ def test_cmake_virtualenv():
 
 def test_complete():
     client = TestClient()
-    client.run("new myopenssl/1.0 -m=v2_cmake")
+    client.run("new myopenssl/1.0 -m=cmake_lib")
     client.run("create . -o myopenssl:shared=True")
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
 
@@ -122,6 +122,7 @@ def test_complete():
             default_options = {"myopenssl:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
@@ -131,9 +132,9 @@ def test_complete():
                 self.output.info("RUNNING MYAPP")
                 if self.settings.os == "Windows":
                     self.run(os.sep.join([".", str(self.settings.build_type), "myapp"]),
-                             env="conanrunenv")
+                             env="conanrun")
                 else:
-                    self.run(os.sep.join([".", "myapp"]), env="conanrunenv")
+                    self.run(os.sep.join([".", "myapp"]), env=["conanrun"])
             """)
 
     cmakelists = textwrap.dedent("""

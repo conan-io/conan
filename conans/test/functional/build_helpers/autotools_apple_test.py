@@ -81,16 +81,16 @@ class AutoToolsAppleTest(unittest.TestCase):
         self.t.run_command('lipo -info "%s"' % app)
         self.assertIn("architecture: %s" % expected_arch, self.t.out)
 
-    @parameterized.expand([("x86_64",),
-                           ("armv8",)])
+    @parameterized.expand([("x86_64",), ("armv8",)])
     def test_catalyst(self, arch):
         profile = textwrap.dedent("""
             include(default)
             [settings]
             os = Macos
-            os.version = 13.0
+            os.version = 12.0
             os.sdk = macosx
             os.subsystem = catalyst
+            os.subsystem.ios_version = 13.1
             arch = {arch}
             """).format(arch=arch)
 
@@ -137,4 +137,4 @@ class AutoToolsAppleTest(unittest.TestCase):
 
         if arch == "x86_64":
             self.t.run_command('"%s"' % app)
-            self.assertIn("running catalyst 130000", self.t.out)
+            self.assertIn("running catalyst 130100", self.t.out)

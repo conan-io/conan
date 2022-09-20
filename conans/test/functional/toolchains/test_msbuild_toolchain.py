@@ -7,8 +7,8 @@ from parameterized import parameterized
 from conans.test.utils.tools import TestClient
 
 
-@parameterized.expand([("msvc", "19.0", "dynamic"),
-                       ("msvc", "19.1", "static")]
+@parameterized.expand([("msvc", "190", "dynamic"),
+                       ("msvc", "191", "static")]
                       )
 @pytest.mark.tool_visual_studio
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -31,13 +31,15 @@ def test_toolchain_win(compiler, version, runtime):
             settings = "os", "compiler", "build_type", "arch"
             def generate(self):
                 msbuild = MSBuildToolchain(self)
+                msbuild.properties["IncludeExternals"] = "true"
                 msbuild.generate()
             """)
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     props = client.load("conantoolchain_release_x64.props")
+    assert "<IncludeExternals>true</IncludeExternals>" in props
     assert "<LanguageStandard>stdcpp17</LanguageStandard>" in props
-    if version == "19.0":
+    if version == "190":
         assert "<PlatformToolset>v140</PlatformToolset>" in props
     else:
         assert "<PlatformToolset>v141</PlatformToolset>" in props

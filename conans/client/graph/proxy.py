@@ -13,6 +13,10 @@ from conans.paths.package_layouts.package_editable_layout import PackageEditable
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
+# TODO: Remove warning message when this URL is no longer available
+DEPRECATED_CONAN_CENTER_BINTRAY_URL = "https://conan.bintray.com"
+
+
 class ConanProxy(object):
     def __init__(self, cache, output, remote_manager):
         # collaborators
@@ -113,6 +117,12 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
+            if the_remote.url.startswith(DEPRECATED_CONAN_CENTER_BINTRAY_URL):
+                output.warn("Remote https://conan.bintray.com is deprecated and will be shut down "
+                            "soon.")
+                output.warn("Please use the new 'conancenter' default remote.")
+                output.warn("Add it to your remotes with: conan remote add -i 0 conancenter "
+                            "https://center.conan.io")
             _ref = self._remote_manager.get_recipe(ref, the_remote)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             recorder.recipe_downloaded(ref, the_remote.url)

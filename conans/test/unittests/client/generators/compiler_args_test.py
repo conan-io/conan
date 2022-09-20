@@ -38,8 +38,8 @@ class CompilerArgsTest(unittest.TestCase):
     def _get_conanfile(settings, frameworks=False, system_libs=False):
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        conan_file.source_folder = "my_cache_source_folder"
-        conan_file.build_folder = "my_cache_build_folder"
+        conan_file.folders.set_base_source("my_cache_source_folder")
+        conan_file.folders.set_base_build("my_cache_build_folder")
         conan_file.deps_env_info = DepsEnvInfo()
         conan_file.deps_user_info = DepsUserInfo()
         conan_file.deps_cpp_info = DepsCppInfo()

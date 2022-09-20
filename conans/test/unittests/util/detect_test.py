@@ -93,3 +93,12 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
             detect_defaults_settings(output, profile_path="./MyProfile")
             self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
+
+    def test_vs2022(self):
+        with mock.patch("conans.client.conf.detect._get_default_compiler",
+                        mock.MagicMock(return_value=("Visual Studio", "17"))):
+            result = detect_defaults_settings(output=Mock(),
+                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = dict(result)
+            self.assertEqual('Visual Studio', result['compiler'])
+            self.assertEqual('17', result['compiler.version'])

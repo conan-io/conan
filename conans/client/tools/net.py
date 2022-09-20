@@ -6,7 +6,7 @@ from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
 
 
-def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
+def get(url, md5=None, sha1=None, sha256=None, destination=".", filename="", keep_permissions=False,
         pattern=None, requester=None, output=None, verify=True, retry=None, retry_wait=None,
         overwrite=False, auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
@@ -51,7 +51,7 @@ def ftp_download(ip, filename, login='', password=''):
 
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
-             auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, requester=None, md5=None, sha1=None, sha256=None):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
@@ -87,11 +87,12 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
+    download_cache = config.download_cache if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, config=config,
-                       user_download=True, use_cache=bool(config and checksum), url=file_url,
+        run_downloader(requester=requester, output=out, verify=verify,
+                       user_download=True, download_cache=download_cache, url=file_url,
                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")

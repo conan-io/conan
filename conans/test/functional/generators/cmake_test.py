@@ -104,6 +104,42 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
     @pytest.mark.slow
+    @pytest.mark.tool_visual_studio(version="17")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
+    def test_check_msvc_compiler(self):
+        """
+        Checking if MSVC 19.X compiler is being called via CMake
+        while using compiler=msvc in Conan profile.
+
+        Issue related: https://github.com/conan-io/conan/issues/10185
+        """
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileMSVCTest(ConanFile):
+                generators = "cmake"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                """)
+        client = TestClient()
+        cmakelists = textwrap.dedent("""
+            PROJECT(Hello)
+            cmake_minimum_required(VERSION 2.8)
+            include("${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+            CONAN_BASIC_SETUP()
+            """)
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+        client.run("create . lib/1.0@ -s compiler=msvc -s compiler.version=193")
+        self.assertIn("-- The C compiler identification is MSVC 19.3", client.out)
+        self.assertIn("-- The CXX compiler identification is MSVC 19.3", client.out)
+
+    @pytest.mark.slow
     def test_no_output(self):
         client = TestClient()
         client.run("new Test/1.0 --sources")

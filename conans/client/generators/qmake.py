@@ -52,8 +52,8 @@ class QmakeGenerator(Generator):
                     'CONAN_DEFINES{dep_name}{build_type} += {deps.defines}\n'
                     'CONAN_QMAKE_CXXFLAGS{dep_name}{build_type} += {deps.cxxflags}\n'
                     'CONAN_QMAKE_CFLAGS{dep_name}{build_type} += {deps.cflags}\n'
-                    'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.sharedlinkflags}\n'
-                    'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.exelinkflags}\n')
+                    'CONAN_QMAKE_LFLAGS_SHLIB{dep_name}{build_type} += {deps.sharedlinkflags}\n'
+                    'CONAN_QMAKE_LFLAGS_APP{dep_name}{build_type} += {deps.exelinkflags}\n')
         sections = []
         template_all = template
         all_flags = template_all.format(dep_name="", deps=deps, build_type="")
@@ -116,13 +116,16 @@ class QmakeGenerator(Generator):
     }
     QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS
     QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS
-    QMAKE_LFLAGS += $$CONAN_QMAKE_LFLAGS
+    QMAKE_LFLAGS_SHLIB += $$CONAN_QMAKE_LFLAGS_SHLIB
+    QMAKE_LFLAGS_APP += $$CONAN_QMAKE_LFLAGS_APP
     QMAKE_CXXFLAGS_DEBUG += $$CONAN_QMAKE_CXXFLAGS_DEBUG
     QMAKE_CFLAGS_DEBUG += $$CONAN_QMAKE_CFLAGS_DEBUG
-    QMAKE_LFLAGS_DEBUG += $$CONAN_QMAKE_LFLAGS_DEBUG
+    QMAKE_LFLAGS_SHLIB_DEBUG += $$CONAN_QMAKE_LFLAGS_SHLIB_DEBUG
+    QMAKE_LFLAGS_APP_DEBUG += $$CONAN_QMAKE_LFLAGS_APP_DEBUG
     QMAKE_CXXFLAGS_RELEASE += $$CONAN_QMAKE_CXXFLAGS_RELEASE
     QMAKE_CFLAGS_RELEASE += $$CONAN_QMAKE_CFLAGS_RELEASE
-    QMAKE_LFLAGS_RELEASE += $$CONAN_QMAKE_LFLAGS_RELEASE
+    QMAKE_LFLAGS_SHLIB_RELEASE += $$CONAN_QMAKE_LFLAGS_SHLIB_RELEASE
+    QMAKE_LFLAGS_APP_RELEASE += $$CONAN_QMAKE_LFLAGS_APP_RELEASE
 }""")
 
         return output

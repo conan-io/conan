@@ -127,6 +127,8 @@ class VCVarsTest(unittest.TestCase):
     def test_vcvars_raises_when_not_found(self):
         text = """
 os: [Windows]
+arch: [x86_64]
+arch_build: [x86_64]
 compiler:
     Visual Studio:
         version: ["5"]
@@ -135,6 +137,8 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
+        settings.arch = "x86_64"
+        settings.arch_build = "x86_64"
         with six.assertRaisesRegex(self, ConanException,
                                    "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
@@ -172,7 +176,6 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True, output=output)
 
-    @pytest.mark.tool_compiler
     def test_vcvars_context_manager(self):
         conanfile = """
 from conans import ConanFile, tools

@@ -11,6 +11,7 @@ def architecture_flag(settings):
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
@@ -22,7 +23,7 @@ def architecture_flag(settings):
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
-                return '--target=%s-apple-ios-macabi' % apple_arch
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
@@ -40,6 +41,12 @@ def architecture_flag(settings):
             return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
         elif str(arch) == "x86_64":
             return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
+    elif str(compiler) == "intel-cc":
+        # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
+        if str(arch) == "x86":
+            return "/Qm32" if the_os == "Windows" else "-m32"
+        elif str(arch) == "x86_64":
+            return "/Qm64" if the_os == "Windows" else "-m64"
     elif str(compiler) == "mcst-lcc":
         return {"e2k-v2": "-march=elbrus-v2",
                 "e2k-v3": "-march=elbrus-v3",
@@ -50,21 +57,39 @@ def architecture_flag(settings):
     return ""
 
 
+def build_type_link_flags(settings):
+    """
+    returns link flags specific to the build type (Debug, Release, etc.)
+    [-debug]
+    """
+    compiler = settings.get_safe("compiler")
+    build_type = settings.get_safe("build_type")
+    if not compiler or not build_type:
+        return []
+
+    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+    # Modules/Platform/Windows-MSVC.cmake
+    if compiler in ["msvc", "Visual Studio"]:
+        if build_type in ("Debug", "RelWithDebInfo"):
+            return ["-debug"]
+
+    return []
+
+
 def build_type_flags(settings):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     """
     compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
-        return ""
+        return []
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if str(compiler) == 'Visual Studio':
+    if str(compiler) in ['Visual Studio', 'msvc']:
         if vs_toolset and "clang" in str(vs_toolset):
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
@@ -140,6 +165,7 @@ def cppstd_flag(settings):
             "Visual Studio": _cppstd_visualstudio,
             "msvc": _cppstd_msvc,
             "intel": cppstd_intel,
+            "intel-cc": _cppstd_intel_cc,
             "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
     flag = None
     if func:
@@ -152,6 +178,7 @@ def _cppstd_visualstudio(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
     if Version(visual_version) >= "14":
         v14 = "c++14"
@@ -159,8 +186,11 @@ def _cppstd_visualstudio(visual_version, cppstd):
     if Version(visual_version) >= "15":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "17":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -169,15 +199,19 @@ def _cppstd_msvc(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
-    if Version(visual_version) >= "19.0":
+    if Version(visual_version) >= "190":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "19.1":
+    if Version(visual_version) >= "191":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "193":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -302,7 +336,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) >= "5.1":
+    if Version(gcc_version) >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
@@ -387,4 +421,37 @@ def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20}.get(cppstd)
+    return "-std=%s" % flag if flag else None
+
+
+def _cppstd_intel_cc(_, cppstd):
+    """
+    Inspired in:
+    https://software.intel.com/content/www/us/en/develop/documentation/
+    oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top/compiler-reference/
+    compiler-options/compiler-option-details/language-options/std-qstd.html
+    """
+    # Note: for now, we don't care about compiler version
+    v98 = "c++98"
+    vgnu98 = "gnu++98"
+    v03 = "c++03"
+    vgnu03 = "gnu++03"
+    v11 = "c++11"
+    vgnu11 = "gnu++11"
+    v14 = "c++14"
+    vgnu14 = "gnu++14"
+    v17 = "c++17"
+    vgnu17 = "gnu++17"
+    v20 = "c++20"
+    vgnu20 = "gnu++20"
+    v23 = "c++2b"
+    vgnu23 = "gnu++2b"
+
+    flag = {"98": v98, "gnu98": vgnu98,
+            "03": v03, "gnu03": vgnu03,
+            "11": v11, "gnu11": vgnu11,
+            "14": v14, "gnu14": vgnu14,
+            "17": v17, "gnu17": vgnu17,
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
     return "-std=%s" % flag if flag else None

@@ -8,6 +8,7 @@ from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.search.binary_html_table import html_binary_graph
 from conans.util.dates import iso8601_to_str
 from conans.util.files import save
@@ -139,6 +140,10 @@ class CommandOutputer(object):
             item_data["build_id"] = build_id(conanfile)
             item_data["context"] = conanfile.context
 
+            item_data["invalid_build"] = node.cant_build is not False
+            if node.cant_build:
+                item_data["invalid_build_reason"] = node.cant_build
+
             python_requires = getattr(conanfile, "python_requires", None)
             if python_requires and not isinstance(python_requires, dict):  # no old python requires
                 item_data["python_requires"] = [repr(r)
@@ -147,14 +152,19 @@ class CommandOutputer(object):
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
                 package_layout = self._cache.package_layout(ref, conanfile.short_paths)
-                item_data["export_folder"] = package_layout.export()
-                item_data["source_folder"] = package_layout.source()
-                pref_build_id = build_id(conanfile) or package_id
-                pref = PackageReference(ref, pref_build_id)
-                item_data["build_folder"] = package_layout.build(pref)
-
-                pref = PackageReference(ref, package_id)
-                item_data["package_folder"] = package_layout.package(pref)
+                if isinstance(package_layout, PackageEditableLayout):  # Avoid raising exception
+                    item_data["export_folder"] = conanfile.recipe_folder
+                    item_data["source_folder"] = conanfile.source_folder  # This is None now
+                    item_data["build_folder"] = conanfile.build_folder  # This is None now
+                    item_data["package_folder"] = conanfile.package_folder  # This is None now
+                else:
+                    item_data["export_folder"] = package_layout.export()
+                    item_data["source_folder"] = package_layout.source()
+                    pref_build_id = build_id(conanfile) or package_id
+                    pref = PackageReference(ref, pref_build_id)
+                    item_data["build_folder"] = package_layout.build(pref)
+                    pref = PackageReference(ref, package_id)
+                    item_data["package_folder"] = package_layout.package(pref)
 
             try:
                 package_metadata = self._cache.package_layout(ref).load_metadata()

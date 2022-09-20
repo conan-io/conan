@@ -7,7 +7,8 @@ import pytest
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ def conanfile():
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
-        tools.save("my_sources/source.h", "foo")
+        tools.save("source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))
@@ -172,11 +173,9 @@ def test_same_conanfile_local(conanfile):
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
-    client.run("package .  -if=install")
-    # By default, the "package" folder is still used (not breaking)
-    pf = os.path.join(client.current_folder, "package")
-    assert "Package folder: {}".format(pf) in client.out
-    assert os.path.exists(os.path.join(pf, "LICENSE"))
+    client.run("package .  -if=install", assert_error=True)
+    assert "The usage of the 'conan package' local method is disabled when using " \
+           "layout()" in client.out
 
 
 def test_imports():
@@ -246,6 +245,9 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -262,11 +264,46 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_consumer})
     client.run("install .")
-    assert "**includedirs:['foo/include']**" in client.out
-    assert "**libdirs:['foo/libs']**" in client.out
-    assert "**libs:['foo']**" in client.out
-    cmake = client.load("hello-release-x86_64-data.cmake")
+    out = str(client.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['foo/include']**" in out
+    assert "**libdirs:['foo/libs']**" in out
+    assert "**libs:['foo']**" in out
+    arch = client.get_default_host_profile().settings['arch']
+    cmake = client.load(f"hello-release-{arch}-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake
     assert 'set(hello_LIBS_RELEASE foo)' in cmake
+
+
+def test_git_clone_with_source_layout():
+    client = TestClient()
+    repo = temp_folder()
+    conanfile = textwrap.dedent("""
+           import os
+           from conans import ConanFile
+           class Pkg(ConanFile):
+               exports_sources = "*.txt"
+
+               def layout(self):
+                   self.folders.source = "src"
+
+               def source(self):
+                   self.run('git clone "{}" .')
+       """).format(repo.replace("\\", "/"))
+
+    client.save({"conanfile.py": conanfile,
+                 "myfile.txt": "My file is copied"})
+    with client.chdir(repo):
+        client.save({"cloned.txt": "foo"}, repo)
+        client.init_git_repo()
+
+    client.run("create . hello/1.0@")
+    sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
+    assert os.path.exists(os.path.join(sf, "myfile.txt"))
+    # The conanfile is cleared from the root before cloning
+    assert not os.path.exists(os.path.join(sf, "conanfile.py"))
+    assert not os.path.exists(os.path.join(sf, "cloned.txt"))
+
+    assert os.path.exists(os.path.join(sf, "src", "cloned.txt"))
+    assert not os.path.exists(os.path.join(sf, "src", "myfile.txt"))

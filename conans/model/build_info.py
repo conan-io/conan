@@ -122,6 +122,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
+        self.objects = []  # objects to link
         self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
@@ -143,7 +144,7 @@ class _CppInfo(object):
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+                     if not os.path.isabs(p) else p for p in paths if p is not None]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -217,52 +218,28 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
-        if "cmake" in generator:
-            property_name = "cmake_target_name"
-        elif "pkg_config" in generator:
+        if "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
+        return self.get_property(property_name) \
                or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
-        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
-        if result:
-            return result
-        return self.get_name(generator, default_name=default_name)
+        # Default to the legacy "names"
+        return self.filenames.get(generator) or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
         if self._build_modules is None:  # Not cached yet
-            try:
-                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
-            except KeyError:
-                ret_dict = {}
-            else:
-                ret_dict = {"cmake_find_package": default_build_modules_value,
-                            "cmake_find_package_multi": default_build_modules_value,
-                            "cmake": default_build_modules_value,
-                            "cmake_multi": default_build_modules_value}
-
-            for generator, values in self._generator_properties.items():
-                if generator:
-                    v = values.get("cmake_build_modules")
-                    if v:
-                        ret_dict[generator] = v
-            self._build_modules = ret_dict if ret_dict else self.build_modules
+            self._build_modules = self.build_modules
         return self._build_modules
 
-    def set_property(self, property_name, value, generator=None):
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+    def set_property(self, property_name, value):
+        self._generator_properties[property_name] = value
 
-    def get_property(self, property_name, generator=None):
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
+    def get_property(self, property_name):
         try:
-            return self._generator_properties[None][property_name]
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -351,9 +328,10 @@ class CppInfo(_CppInfo):
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
-        # Legacy logic for pkg_config generator
+        # Legacy logic for pkg_config generator, do not enter this logic if the properties model
+        # is used: https://github.com/conan-io/conan/issues/10309
         from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
+        if generator == PkgConfigGenerator.name and self.get_property("pkg_config_name") is None:
             fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
                 conan_v2_error("Generated file and name for {gen} generator will change in"
@@ -409,6 +387,7 @@ class CppInfo(_CppInfo):
              self.cxxflags or
              self.sharedlinkflags or
              self.exelinkflags or
+             self.objects or
              self.get_build_modules() or
              self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
@@ -492,6 +471,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+        self.objects = merge_lists(dep_cpp_info.objects, self.objects)
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
 
@@ -540,6 +520,7 @@ class DepCppInfo(object):
         self._cflags = None
         self._sharedlinkflags = None
         self._exelinkflags = None
+        self._objects = None
         self._requires = None
 
         self._include_paths = None
@@ -627,8 +608,15 @@ class DepCppInfo(object):
                             del components[comp_name]
                             break
                     else:
+                        dset = set()
+                        for comp_name, comp in components.items():
+                            for dep_name, dep in components.items():
+                                for require in self._filter_component_requires(dep.requires):
+                                    if require == comp_name:
+                                        dset.add("   {} requires {}".format(dep_name, comp_name))
+                        dep_mesg = "\n".join(dset)
                         raise ConanException("There is a dependency loop in "
-                                             "'self.cpp_info.components' requires")
+                                "'self.cpp_info.components' requires:\n{}".format(dep_mesg))
                 self._sorted_components = ordered
             else:  # If components do not have requirements, keep them in the same order
                 self._sorted_components = self._cpp_info.components
@@ -697,6 +685,10 @@ class DepCppInfo(object):
     @property
     def exelinkflags(self):
         return self._aggregated_list_values("exelinkflags")
+
+    @property
+    def objects(self):
+        return self._aggregated_list_values("objects")
 
     @property
     def requires(self):

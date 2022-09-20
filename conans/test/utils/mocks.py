@@ -9,9 +9,10 @@ from six import StringIO
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
-from conans.model.layout import Folders
+from conans.model.layout import Folders, Infos
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 
@@ -83,8 +84,14 @@ class MockSettings(object):
     def __init__(self, values):
         self.values = values
 
-    def get_safe(self, value):
-        return self.values.get(value, None)
+    def get_safe(self, value, default=None):
+        return self.values.get(value, default)
+
+    def __getattr__(self, name):
+        try:
+            return self.values[name]
+        except KeyError:
+            raise ConanException("'%s' value not defined" % name)
 
 
 class MockCppInfo(object):
@@ -138,8 +145,6 @@ class MockConanfile(ConanFile):
         self.should_install = True
         self.should_test = True
 
-        self.package_folder = None
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -175,22 +180,24 @@ class ConanFileMock(ConanFile):
         self._conan_env_values = EnvValues()
         self.folders = Folders()
         self.folders.set_base_source(".")
+        self.folders.set_base_export_sources(".")
         self.folders.set_base_build(".")
         self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
         self._conan_user = None
         self._conan_channel = None
-        self.environment_scripts = []
+        self.env_scripts = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
+        self.cpp = Infos()
 
-
-    def run(self, command, win_bash=False, subsystem=None, env=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+        return 0
 
 
 MockOptions = MockSettings

@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tarfile
 import textwrap
 import time
 import unittest
@@ -16,7 +17,7 @@ from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
+from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
@@ -143,6 +144,21 @@ class ConfigInstallTest(unittest.TestCase):
         zippath = zippath or os.path.join(folder, "myconfig.zip")
         zipdir(folder, zippath)
         return zippath
+
+    @staticmethod
+    def _get_files(folder):
+        relpaths = scan_folder(folder)
+        files = {}
+        for path in relpaths:
+            with open(os.path.join(folder, path), "r") as file_handle:
+                files[path] = file_handle.read()
+        return files
+
+    def _create_tgz(self, tgz_path=None):
+        folder = self._create_profile_folder()
+        tgz_path = tgz_path or os.path.join(folder, "myconfig.tar.gz")
+        files = self._get_files(folder)
+        return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
@@ -317,13 +333,56 @@ class Pkg(ConanFile):
         self.client.run("remote list")
         self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
 
-    def test_install_remotes_json_error(self):
+    def test_install_remotes_json(self):
         folder = temp_folder()
-        save_files(folder, {"remotes.json": ""})
-        self.client.run('config install "%s"' % folder, assert_error=True)
-        self.assertIn("ERROR: Failed conan config install: "
-                      "remotes.json install is not supported yet. Use 'remotes.txt'",
-                      self.client.out)
+
+        remotes_json = textwrap.dedent("""
+            {
+                "remotes": [
+                    { "name": "repojson1", "url": "https://repojson1.net", "verify_ssl": false },
+                    { "name": "repojson2", "url": "https://repojson2.com", "verify_ssl": true }
+                ]
+            }
+        """)
+
+        remotes_txt = textwrap.dedent("""\
+            repotxt1 https://repotxt1.net False
+            repotxt2 https://repotxt2.com True
+        """)
+
+        # remotes.txt and json try to define both the remotes,
+        # could lead to unpredictable results
+        save_files(folder, {"remotes.json": remotes_json,
+                            "remotes.txt": remotes_txt})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+        assert "Defining remotes from remotes.txt" in self.client.out
+
+        # If there's only a remotes.txt it's the one installed
+        folder = temp_folder()
+        save_files(folder, {"remotes.txt": remotes_txt})
+
+        self.client.run(f'config install "{folder}"')
+
+        assert "Defining remotes from remotes.txt" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repotxt1: https://repotxt1.net [Verify SSL: False]" in self.client.out
+        assert "repotxt2: https://repotxt2.com [Verify SSL: True]" in self.client.out
+
+        # If there's only a remotes.json it's the one installed
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": remotes_json})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repojson1: https://repojson1.net [Verify SSL: False]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True]" in self.client.out
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)
@@ -350,6 +409,18 @@ class Pkg(ConanFile):
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
+    def test_install_url_query(self):
+        """ should install from a URL
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            # repeat the process to check it works with ?args
+            self.client.run("config install http://myfakeurl.com/myconf.zip?sha=1")
+            self._check("url, http://myfakeurl.com/myconf.zip?sha=1, True, None")
+
     def test_install_change_only_verify_ssl(self):
         def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
             self._create_zip(file_path)
@@ -361,6 +432,17 @@ class Pkg(ConanFile):
             # repeat the process to check
             self.client.run("config install http://myfakeurl.com/myconf.zip --verify-ssl=False")
             self._check("url, http://myfakeurl.com/myconf.zip, False, None")
+
+    def test_install_url_tgz(self):
+        """ should install from a URL to tar.gz
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_tgz(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            self.client.run("config install http://myfakeurl.com/myconf.tar.gz")
+            self._check("url, http://myfakeurl.com/myconf.tar.gz, True, None")
 
     def test_failed_install_repo(self):
         """ should install from a git repo
@@ -777,3 +859,30 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert "config_install_interval = 5m" in conf
         dirs = os.listdir(client.cache.cache_folder)
         assert ".git" not in dirs
+
+    def test_config_install_reestructuring_source(self):
+        """  https://github.com/conan-io/conan/issues/9885 """
+
+        folder = temp_folder()
+        client = TestClient()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+
+        debug_cache_folder = os.path.join(client.cache_folder, "profiles", "debug")
+        assert os.path.isdir(debug_cache_folder)
+
+        # Now reestructure the files, what it was already a directory in the cache now we want
+        # it to be a file
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug": ""})
+            client.run("config install .")
+        assert os.path.isfile(debug_cache_folder)
+
+        # And now is a directory again
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+        assert os.path.isdir(debug_cache_folder)

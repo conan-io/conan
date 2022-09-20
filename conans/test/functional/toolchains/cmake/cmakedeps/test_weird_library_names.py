@@ -14,11 +14,10 @@ def client_weird_lib_name():
     conanfile = textwrap.dedent("""
         import os, platform
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
-            exports_sources = "src/*"
+            exports_sources = "CMakeLists.txt", "src/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
 
@@ -31,7 +30,7 @@ def client_weird_lib_name():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
+                self.copy("*.h", dst="include", src="src")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
                 ext = "a" if platform.system() != "Windows" else "lib"
@@ -46,11 +45,11 @@ def client_weird_lib_name():
 
     hdr = gen_function_h(name="hello")
     src = gen_function_cpp(name="hello")
-    cmake = gen_cmakelists(libname="hello_0.1", libsources=["hello.cpp"])
+    cmake = gen_cmakelists(libname="hello_0.1", libsources=["src/hello.cpp"])
 
     c.save({"src/hello.h": hdr,
             "src/hello.cpp": src,
-            "src/CMakeLists.txt": cmake,
+            "CMakeLists.txt": cmake,
             "conanfile.py": conanfile})
     c.run("create . hello/0.1@")
     return c
@@ -74,14 +73,14 @@ def test_cmake_find_package(client_weird_lib_name):
         from conans import ConanFile, CMake
 
         class Pkg(ConanFile):
-            exports_sources = "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "cmake_find_package"
             requires = "hello/0.1"
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
         """)
     files["conanfile.py"] = conanfile
@@ -100,14 +99,14 @@ def test_cmake_find_package_multi(client_weird_lib_name):
         from conans import ConanFile, CMake
 
         class Pkg(ConanFile):
-            exports_sources = "src/*"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "cmake_find_package_multi"
             requires = "hello/0.1"
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
         """)
     files["conanfile.py"] = conanfile

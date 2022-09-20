@@ -969,3 +969,54 @@ def test_transitive_diamond_python_requires():
            client.out
     assert "consumer/1.0@user/channel: Calling package()\nconsumer/1.0@user/channel: 222, 234" in \
            client.out
+
+
+def test_multiple_reuse():
+    """ test how to enable the multiple code reuse for custom user generators
+        # https://github.com/conan-io/conan/issues/11589
+    """
+
+    c = TestClient()
+    common = textwrap.dedent("""
+        from conan import ConanFile
+        def mycommon():
+            return 42
+        class Common(ConanFile):
+            name = "common"
+            version = "0.1"
+        """)
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyGenerator:
+            common = None
+            def __init__(self, conanfile):
+                self.conanfile = conanfile
+            def generate(self):
+                self.conanfile.output.info("VALUE TOOL: {}!!!".format(MyGenerator.common.mycommon()))
+
+        class Tool(ConanFile):
+            name = "tool"
+            version = "0.1"
+            python_requires = "common/0.1"
+            def init(self):
+                MyGenerator.common = self.python_requires["common"].module
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            python_requires = "tool/0.1", "common/0.1"
+            def generate(self):
+                mycommon = self.python_requires["common"].module.mycommon
+                self.output.info("VALUE COMMON: {}!!!".format(mycommon()))
+                mygenerator = self.python_requires["tool"].module.MyGenerator(self)
+                mygenerator.generate()
+        """)
+    c.save({"common/conanfile.py": common,
+            "tool/conanfile.py": tool,
+            "consumer/conanfile.py": consumer})
+    c.run("export common")
+    c.run("export tool")
+    c.run("install consumer")
+    assert "VALUE COMMON: 42!!!" in c.out
+    assert "VALUE TOOL: 42!!!" in c.out

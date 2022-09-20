@@ -4,7 +4,7 @@ import platform
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conans.client.tools.apple import to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -88,6 +88,7 @@ def test_catalyst(arch):
         os.version = 13.0
         os.sdk = macosx
         os.subsystem = catalyst
+        os.subsystem.ios_version = 13.1
         arch = {arch}
         """).format(arch=arch)
 
@@ -134,4 +135,4 @@ def test_catalyst(arch):
 
     if arch == "x86_64":
         t.run_command('"%s"' % app)
-        assert "running catalyst 130000" in t.out
+        assert "running catalyst 130100" in t.out

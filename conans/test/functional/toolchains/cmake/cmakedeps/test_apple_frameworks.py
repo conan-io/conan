@@ -72,9 +72,12 @@ conanfile = textwrap.dedent("""
                 name = "mylibrary"
                 version = "1.0"
 
+                def layout(self):
+                    self.folders.source = "src"
+
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure()
                     cmake.build()
                     cmake.install()
                     self.run("otool -L '%s/hello.framework/hello'" % self.build_folder)
@@ -188,8 +191,8 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
                          [('',),
-                          ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+                          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+                          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -341,6 +344,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     client.run("create .")
     assert "Hello World Release!" in client.out
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
@@ -366,8 +370,7 @@ class HelloConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
+        self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
 
         self.cpp_info.components["libhello"].libs = ["hello"]
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])

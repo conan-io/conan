@@ -576,3 +576,33 @@ def test_override_not_locked():
     client.run("create pkg pkg/1.0@")
     client.run("lock create consumer/conanfile.py --lockfile-out=app1.lock")
     client.run("install consumer/conanfile.py --lockfile app1.lock")
+
+
+def test_compatible_transient_options():
+    # https://github.com/conan-io/conan/issues/9591
+    client = TestClient()
+
+    lib_base = GenConanfile().with_option("shared", [True, False])\
+        .with_default_option("shared", False)
+
+    lib_compatible = textwrap.dedent("""
+        from conans import ConanFile
+        class LibCompatibleConanFile(ConanFile):
+            settings = "os"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+            requires = "base/1.0"
+            def package_id(self):
+                if self.settings.os == "Windows":
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.os = "Linux"
+                    self.compatible_packages.append(compatible_pkg)
+        """)
+    consumer = GenConanfile().with_requires("compatible/1.0")
+    client.save({"base/conanfile.py": lib_base,
+                 "compat/conanfile.py": lib_compatible,
+                 "consumer/conanfile.py": consumer})
+    client.run("create base base/1.0@")
+    client.run("create compat compatible/1.0@ -s os=Linux")
+    client.run("lock create consumer/conanfile.py -s os=Windows --lockfile-out=deps.lock")
+    client.run("install consumer/conanfile.py --lockfile=deps.lock")

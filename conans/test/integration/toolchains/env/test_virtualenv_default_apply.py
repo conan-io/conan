@@ -26,8 +26,8 @@ def client():
 
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
 def test_virtualenv_deactivated(client, default_virtualenv):
-    format_str = {True: "virtualenv = True",
-                  False: "virtualenv = False",
+    format_str = {True: "virtualbuildenv = True",
+                  False: "virtualbuildenv = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conans import ConanFile
@@ -41,7 +41,8 @@ def test_virtualenv_deactivated(client, default_virtualenv):
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
     extension = "bat" if platform.system() == "Windows" else "sh"
-    exists_file = os.path.exists(os.path.join(client.current_folder, "conanbuildenv.{}".format(extension)))
+    exists_file = os.path.exists(os.path.join(client.current_folder,
+                                              "conanbuildenv.{}".format(extension)))
     if default_virtualenv is True or default_virtualenv is None:
         assert exists_file
     elif default_virtualenv is False:
@@ -56,6 +57,7 @@ def test_virtualrunenv_not_applied(client):
     import platform
 
     class ConanFileToolsTest(ConanFile):
+        settings = "os"
         generators = "VirtualBuildEnv", "VirtualRunEnv"
         requires = "foo/1.0"
     """)
@@ -64,10 +66,10 @@ def test_virtualrunenv_not_applied(client):
     client.run("install . ")
     extension = "bat" if platform.system() == "Windows" else "sh"
     exists_file = os.path.exists(os.path.join(client.current_folder,
-                                              "conanrunenv.{}".format(extension)))
+                                              "conanrun.{}".format(extension)))
     assert exists_file
 
-    global_env = client.load("conanenv.{}".format(extension))
+    global_env = client.load("conanbuild.{}".format(extension))
     assert "conanrunenv" not in global_env
 
 
@@ -86,19 +88,19 @@ def test_virtualrunenv_explicit_declare(client, explicit_declare):
         def generate(self):
             VirtualRunEnv(self).generate({})
 
-    """).format({True: "auto_activate=True",
-                 False: "auto_activate=False",
+    """).format({True: "scope='build'",
+                 False: "scope='run'",
                  None: ""}.get(explicit_declare))
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
     extension = "bat" if platform.system() == "Windows" else "sh"
     exists_file = os.path.exists(os.path.join(client.current_folder,
-                                              "conanrunenv.{}".format(extension)))
+                                              "conanbuild.{}".format(extension)))
     assert exists_file
 
-    global_env = client.load("conanenv.{}".format(extension))
+    global_env = client.load("conanbuild.{}".format(extension))
     if explicit_declare:
-        assert "conanrunenv" in global_env
+        assert "conanrun" in global_env
     else:
-        assert "conanrunenv" not in global_env
+        assert "conanrun" not in global_env

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import subprocess
+import subprocess, os
 
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
@@ -12,7 +12,7 @@ class PkgConfig(object):
     def _cmd_output(command):
         return check_output_runner(command).strip()
 
-    def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None,
+    def __init__(self, library, pkg_config_executable=None, static=False, msvc_syntax=False, variables=None,
                  print_errors=True):
         """
         :param library: library (package) name, such as libastral
@@ -23,7 +23,7 @@ class PkgConfig(object):
         :param print_errors: output error messages (adds --print-errors)
         """
         self.library = library
-        self.pkg_config_executable = pkg_config_executable
+        self.pkg_config_executable = pkg_config_executable or os.getenv('PKG_CONFIG', 'pkg-config')
         self.static = static
         self.msvc_syntax = msvc_syntax
         self.define_variables = variables

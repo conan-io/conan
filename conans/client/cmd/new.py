@@ -387,9 +387,36 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                         package_name=package_name,
                                         defines=defines)
             files = {"conanfile.py": replaced}
-        elif template == "v2_cmake":
-            from conans.assets.templates.new_v2_cmake import get_files
-            files = get_files(name, version, package_name)
+        elif template == "cmake_lib":
+            from conans.assets.templates.new_v2_cmake import get_cmake_lib_files
+            files = get_cmake_lib_files(name, version, package_name)
+        elif template == "cmake_exe":
+            from conans.assets.templates.new_v2_cmake import get_cmake_exe_files
+            files = get_cmake_exe_files(name, version, package_name)
+        elif template == "meson_lib":
+            from conans.assets.templates.new_v2_meson import get_meson_lib_files
+            files = get_meson_lib_files(name, version, package_name)
+        elif template == "meson_exe":
+            from conans.assets.templates.new_v2_meson import get_meson_exe_files
+            files = get_meson_exe_files(name, version, package_name)
+        elif template == "msbuild_lib":
+            from conans.assets.templates.new_v2_msbuild import get_msbuild_lib_files
+            files = get_msbuild_lib_files(name, version, package_name)
+        elif template == "msbuild_exe":
+            from conans.assets.templates.new_v2_msbuild import get_msbuild_exe_files
+            files = get_msbuild_exe_files(name, version, package_name)
+        elif template == "bazel_lib":
+            from conans.assets.templates.new_v2_bazel import get_bazel_lib_files
+            files = get_bazel_lib_files(name, version, package_name)
+        elif template == "bazel_exe":
+            from conans.assets.templates.new_v2_bazel import get_bazel_exe_files
+            files = get_bazel_exe_files(name, version, package_name)
+        elif template == "autotools_lib":
+            from conans.assets.templates.new_v2_autotools import get_autotools_lib_files
+            files = get_autotools_lib_files(name, version, package_name)
+        elif template == "autotools_exe":
+            from conans.assets.templates.new_v2_autotools import get_autotools_exe_files
+            files = get_autotools_exe_files(name, version, package_name)
         else:
             if not os.path.isabs(template):
                 template = os.path.join(cache.cache_folder, "templates", "command/new", template)

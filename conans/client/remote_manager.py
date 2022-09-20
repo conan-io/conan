@@ -9,6 +9,7 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
+from conans.model.info import ConanInfo
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -225,7 +226,13 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
+        packages = self._call_remote(remote, "search_packages", ref)
+        # Avoid serializing conaninfo in server side
+        packages = {pid: ConanInfo.loads(data["content"]).serialize_min()
+                    if "content" in data else data
+                    for pid, data in packages.items()}
+        # Filter packages without recipe_hash, those are 1.X packages, the 2.0 are disregarded
+        packages = {pid: data for pid, data in packages.items() if data.get("recipe_hash")}
         packages = filter_packages(query, packages)
         return packages
 
@@ -320,11 +327,13 @@ def check_compressed_files(tgz_name, files):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
-            src_path)) as file_handler:
+        with progress_bar.open_binary(src_path, output,
+                                      "Decompressing %s" % os.path.basename(src_path)) \
+                as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
-        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
+        error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
+                    % (src_path, dest_folder, str(e))
         # try to remove the files
         try:
             if os.path.exists(dest_folder):

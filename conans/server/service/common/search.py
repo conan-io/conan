@@ -33,10 +33,15 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 info_path = os.path.join(server_store.package(pref), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
-                conan_info_content = load(info_path)
-                info = ConanInfo.loads(conan_info_content)
+                content = load(info_path)
+                info = ConanInfo.loads(content)
+                # From Conan 1.48 the conaninfo.txt is sent raw.
+                result[package_id] = {"content": content}
+                # FIXME: This could be removed in the conan_server, Artifactory should keep it
+                #        to guarantee compatibility with old conan clients.
                 conan_vars_info = info.serialize_min()
-                result[package_id] = conan_vars_info
+                result[package_id].update(conan_vars_info)
+
             except Exception as exc:  # FIXME: Too wide
                 logger.error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
@@ -62,7 +67,8 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
     if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
         raise RecipeNotFoundException(ref)
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
-    return filter_packages(query, infos)
+    assert query is None, "The server is not filtering packages remotely anymore"
+    return infos
 
 
 class SearchService(object):

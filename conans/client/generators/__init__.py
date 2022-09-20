@@ -1,5 +1,4 @@
 import os
-import textwrap
 import traceback
 from os.path import join
 
@@ -8,6 +7,7 @@ from conans.client.generators.cmake_find_package import CMakeFindPackageGenerato
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
+from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
@@ -72,7 +72,8 @@ class GeneratorManager(object):
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                                 "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars"]
+                                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain",
+                                "MesonDeps"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -113,12 +114,18 @@ class GeneratorManager(object):
         elif generator_name == "MesonToolchain":
             from conan.tools.meson import MesonToolchain
             return MesonToolchain
+        elif generator_name == "MesonDeps":
+            from conan.tools.meson import MesonDeps
+            return MesonDeps
         elif generator_name in ("MSBuildDeps", "msbuild"):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
         elif generator_name == "VCVars":
             from conan.tools.microsoft import VCVars
             return VCVars
+        elif generator_name == "IntelCC":
+            from conan.tools.intel import IntelCC
+            return IntelCC
         elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
@@ -134,6 +141,15 @@ class GeneratorManager(object):
         elif generator_name == "BazelToolchain":
             from conan.tools.google import BazelToolchain
             return BazelToolchain
+        elif generator_name == "XcodeDeps":
+            from conan.tools.apple import XcodeDeps
+            return XcodeDeps
+        elif generator_name == "PremakeDeps":
+            from conan.tools.premake import PremakeDeps
+            return PremakeDeps
+        elif generator_name == "XcodeToolchain":
+            from conan.tools.apple import XcodeToolchain
+            return XcodeToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -141,6 +157,8 @@ class GeneratorManager(object):
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
+        _receive_conf(conanfile)
+
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
@@ -163,6 +181,7 @@ class GeneratorManager(object):
                         generator.generate()
                     continue
                 except Exception as e:
+                    output.error(traceback.format_exc())
                     raise ConanException("Error in generator '{}': {}".format(generator_name,
                                                                               str(e)))
 
@@ -213,7 +232,7 @@ def _receive_conf(conanfile):
     # Conf only for first level build_requires
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
-            conanfile.conf.compose(build_require.conf_info)
+            conanfile.conf.compose_conf(build_require.conf_info)
 
 
 def write_toolchain(conanfile, path, output):
@@ -226,8 +245,6 @@ def write_toolchain(conanfile, path, output):
                "********************************************************************\n")
         raise ConanException(msg)
 
-    _receive_conf(conanfile)
-
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
         mkdir(path)
@@ -236,38 +253,61 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"]:
         with chdir(path):
-            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            env = VirtualBuildEnv(conanfile)
-            env.generate()
-
-            env = VirtualRunEnv(conanfile)
-            env.generate()
+            if conanfile.virtualbuildenv:
+                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                env = VirtualBuildEnv(conanfile)
+                env.generate()
+            if conanfile.virtualrunenv:
+                env = VirtualRunEnv(conanfile)
+                env.generate()
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft import unix_path
-    bats = []
-    shs = []
 
-    for s in conanfile.environment_scripts:
-        path = os.path.join(conanfile.generators_folder, s)
-        if path.lower().endswith(".bat"):
-            bats.append(path)
-        elif path.lower().endswith(".sh"):
-            shs.append(unix_path(conanfile, path))
-    if shs:
-        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
-    if bats:
-        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-        bat_content = textwrap.dedent("""\
-                        @echo off
-                        {}
-                        """.format(lines))
-        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
+    def deactivates(filenames):
+        # FIXME: Probably the order needs to be reversed
+        result = []
+        for s in filenames:
+            folder, f = os.path.split(s)
+            result.append(os.path.join(folder, "deactivate_{}".format(f)))
+        return result
 
+    for group, env_scripts in conanfile.env_scripts.items():
+        subsystem = deduce_subsystem(conanfile, group)
+        bats = []
+        shs = []
+        ps1s = []
+        for env_script in env_scripts:
+            path = os.path.join(conanfile.generators_folder, env_script)
+            if env_script.endswith(".bat"):
+                bats.append(path)
+            elif env_script.endswith(".sh"):
+                shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".ps1"):
+                ps1s.append(path)
+        if shs:
+            def sh_content(files):
+                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+            filename = "conan{}.sh".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 sh_content(deactivates(shs)))
+        if bats:
+            def bat_content(files):
+                return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+            filename = "conan{}.bat".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 bat_content(deactivates(bats)))
+        if ps1s:
+            def ps1_content(files):
+                return "\r\n".join(['& "{}"'.format(b) for b in files])
+            filename = "conan{}.ps1".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 ps1_content(deactivates(ps1s)))

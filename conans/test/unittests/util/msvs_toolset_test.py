@@ -11,7 +11,8 @@ from conans.test.utils.mocks import MockSettings
 
 class MSVCToolsetTest(unittest.TestCase):
 
-    @parameterized.expand([("16", "v142"),
+    @parameterized.expand([("17", "v143"),
+                           ("16", "v142"),
                            ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),

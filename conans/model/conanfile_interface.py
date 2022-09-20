@@ -1,3 +1,4 @@
+from pathlib import Path
 from conans.client.graph.graph import CONTEXT_BUILD
 
 
@@ -19,12 +20,24 @@ class ConanFileInterface:
         """
         return self._conanfile == other._conanfile
 
+    def __hash__(self):
+        return hash(self._conanfile)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
     @property
+    def recipe_folder(self):
+        return self._conanfile.recipe_folder
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
+
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
 
     @property
     def ref(self):
@@ -44,10 +57,6 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
-        return self._conanfile.cpp_info
-
-    @property
-    def new_cpp_info(self):
         return self._conanfile.new_cpp_info
 
     @property
@@ -77,3 +86,23 @@ class ConanFileInterface:
     @property
     def is_build_context(self):
         return self._conanfile.context == CONTEXT_BUILD
+
+    @property
+    def conan_data(self):
+        return self._conanfile.conan_data
+
+    @property
+    def license(self):
+        return self._conanfile.license
+
+    @property
+    def description(self):
+        return self._conanfile.description
+
+    @property
+    def homepage(self):
+        return self._conanfile.homepage
+
+    @property
+    def url(self):
+        return self._conanfile.url
