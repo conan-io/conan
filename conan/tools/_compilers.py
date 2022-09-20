@@ -79,7 +79,7 @@ def libcxx_flags(conanfile):
                "libstdc++": "-library=stdcpp"
                }.get(libcxx)
     elif compiler == "qcc":
-        return "-Y _{}".format(libcxx)
+        lib = "-Y _{}".format(libcxx)
 
     if compiler in ['clang', 'apple-clang', 'gcc']:
         if libcxx == "libstdc++":

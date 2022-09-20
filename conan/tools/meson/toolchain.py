@@ -318,7 +318,7 @@ class MesonToolchain(object):
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
         if self.gcc_cxx11_abi:
-            self.cpp_args.append(self.gcc_cxx11_abi)
+            self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
