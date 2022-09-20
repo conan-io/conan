@@ -50,6 +50,15 @@ String getDockerImage(String moduleName) {
     return ""
 }
 
+String shouldTestServer(String moduleName) {
+    // run conan_server --help after running functional tests
+    if (moduleName=="conans/test/functional") {
+        return true
+    }
+    return false
+}
+
+
 // call to pytest for different nodes
 private Closure runTests(String nodeName, String pythonVersion, String module) {
     def ret = {
@@ -78,6 +87,14 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
 
                 def launchTests = "python -m pytest ${module} -n=4 --durations=20"
 
+                if (shouldTestServer(module)) {
+                    def rm = (nodeName=="Windows") ? "del" : "rm"
+                    def mv = (nodeName=="Windows") ? "move" : "mv"
+
+                    def conanServerToolInstall = "${rm} setup.py && ${mv} setup_server.py setup.py && python -m pip install . && conan_server --help"
+                    launchTests = launchTests + ' && ' + conanServerToolInstall
+                }
+
                 if (nodeName=="Linux") {
                     try {
                         def dockerImage = getDockerImage(module)
@@ -85,13 +102,15 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                             def sourcedir = "/home/conan/"
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")
+
                             def launchCommand = "su - conan -c \"" \
                                             + "export PYENV_ROOT=${pyenvdir} && " \
                                             + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
                                             + "pyenv global \$${pythonVersion} && " \
                                             + pipInstalls \
                                             + conanToolInstall \
-                                            + "${launchTests}\""
+                                            + launchTests + '\"'
+
                             sh(script: launchCommand)
                         }
                     }
