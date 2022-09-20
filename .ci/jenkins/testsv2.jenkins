@@ -50,7 +50,7 @@ String getDockerImage(String moduleName) {
     return ""
 }
 
-String shouldTestServer(String moduleName) {
+boolean shouldTestServer(String moduleName) {
     // run conan_server --help after running functional tests
     if (moduleName=="conans/test/functional") {
         return true
