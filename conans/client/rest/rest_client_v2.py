@@ -151,6 +151,8 @@ class RestV2Methods(RestCommonMethods):
         retry = self._config.get("core.download:retry", check_type=int, default=2)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
         download_cache = self._config.get("core.download:download_cache")
+        if download_cache and not os.path.isabs(download_cache):
+            raise ConanException("core.download:download_cache must be an absolute path")
         downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]

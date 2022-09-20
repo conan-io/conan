@@ -149,3 +149,18 @@ class TestDownloadCache:
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 8" in client.out
         assert "Not found: http://localhost" in client.out
+
+    def test_download_relative_error(self):
+        """ relative paths are not allowed
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
+        c.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        c.run("upload * --confirm -r default")
+        c.run("remove * -f")
+
+        # enable cache
+        c.save({"global.conf": f"core.download:download_cache=mytmp_folder"},
+               path=c.cache.cache_folder)
+        c.run("install --requires=mypkg/0.1@user/testing", assert_error=True)
+        assert 'core.download:download_cache must be an absolute path' in c.out

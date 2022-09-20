@@ -226,6 +226,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
     checksum = md5 or sha1 or sha256
     download_cache = config.get("tools.files.download:download_cache") if checksum else None
+    if download_cache and not os.path.isabs(download_cache):
+        raise ConanException("core.download:download_cache must be an absolute path")
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
