@@ -98,7 +98,7 @@ def test_validate_build_and_compatible_packages():
         class Fake(ConanFile):
             name = "fake"
             version = "0.1"
-            settings = "compiler"
+            settings = "build_type"
             def validate_build(self):
                 raise ConanInvalidConfiguration("This doesn't build")
             def validate(self):
@@ -111,6 +111,40 @@ def test_validate_build_and_compatible_packages():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . --build=fake", assert_error=True)
+    client.run("create .", assert_error=True)
     assert "Missing prebuilt package for 'fake/0.1'" not in client.out
     assert "This doesn't build" in client.out
+
+
+def test_validate_build_and_not_compatible_packages():
+    """
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+
+        class Fake(ConanFile):
+            name = "fake"
+            version = "0.1"
+            settings = "build_type"
+            def validate_build(self):
+                if self.settings.build_type == "Debug":
+                    raise ConanInvalidConfiguration("This Debug! doesn't build")
+            def validate(self):
+                print("validated")
+            def build(self):
+                print("built")
+            def compatibility(self):
+                # just to add a compatible package and make it fail
+                return [{"settings": [("build_type", "Release")]}]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . ")
+    assert "fake/0.1: Created package" in client.out
+
+    # If I have rquested the Debug package, it doesn't exist, but it is compatible with the
+    # existing Release package, it should work
+    client.run("install fake/0.1@ -s build_type=Debug")
+
