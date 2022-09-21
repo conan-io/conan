@@ -269,7 +269,7 @@ def test_cpp_info_require_whole_package():
     assert '#include "conan_liba.xcconfig"' in libb_xcconfig
     assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
 
-    client.run("install --requires=libc/1.0 -g XcodeDeps --of=libc")
+    client.run("install --requires=libc/1.0 -g XcodeDeps -of=libc")
 
     libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
     assert '#include "conan_liba.xcconfig"' in libc_comp1_xcconfig
