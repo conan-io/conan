@@ -58,7 +58,7 @@ class VCVarsArchTest(unittest.TestCase):
 
         self.assert_vcvars_command(settings, "arm64")
 
-        self.arch = 'x86'
+        settings.arch = 'x86'
         self.assert_vcvars_command(settings, "arm64_x86")
 
         self.arch = 'x86_64'
