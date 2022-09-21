@@ -61,7 +61,7 @@ class VCVarsArchTest(unittest.TestCase):
         settings.arch = 'x86'
         self.assert_vcvars_command(settings, "arm64_x86")
 
-        self.arch = 'x86_64'
+        settings.arch = 'x86_64'
         self.assert_vcvars_command(settings, "arm64_x64")
 
     def test_arch_override(self):
