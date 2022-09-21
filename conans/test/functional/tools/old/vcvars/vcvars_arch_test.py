@@ -53,6 +53,17 @@ class VCVarsArchTest(unittest.TestCase):
         settings.arch = 'x86'
         self.assert_vcvars_command(settings, "amd64_x86")
 
+        settings.arch_build = 'armv8'
+        settings.arch = 'armv8'
+
+        self.assert_vcvars_command(settings, "arm64")
+
+        settings.arch = 'x86'
+        self.assert_vcvars_command(settings, "arm64_x86")
+
+        settings.arch = 'x86_64'
+        self.assert_vcvars_command(settings, "arm64_x64")
+
     def test_arch_override(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
