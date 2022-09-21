@@ -508,6 +508,13 @@ def test_toolchain_cache_variables():
     assert cache_variables["QUX"] == 'baz'
     assert cache_variables["NUMBER"] == 1
 
+    def _format_val(val):
+        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+
+    for var, value in cache_variables.items():
+        assert f"-D{var}={_format_val(value)}" in client.out
+    assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
+    assert f"-G {_format_val('MinGW Makefiles')}" in client.out
 
 def test_android_c_library():
     client = TestClient()
