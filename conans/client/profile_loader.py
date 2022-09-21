@@ -139,7 +139,7 @@ class ProfileLoader:
     def load_profile(self, profile_name, cwd=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile, _ = self._load_profile(profile_name, cwd)
+        profile = self._load_profile(profile_name, cwd)
         return profile
 
     def _load_profile(self, profile_name, cwd):
@@ -177,23 +177,15 @@ class ProfileLoader:
             profile_parser = _ProfileParser(text)
             # Iterate the includes and call recursive to get the profile and variables
             # from parent profiles
-            for include in profile_parser.get_includes():
+            for include in profile_parser.includes:
                 # Recursion !!
-                profile, included_vars = self._load_profile(include, cwd)
+                profile = self._load_profile(include, cwd)
                 inherited_profile.compose_profile(profile)
-                profile_parser.update_vars(included_vars)
-
-            # Apply the automatic PROFILE_DIR variable
-            if cwd:
-                profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
-
-            # Replace the variables from parents in the current profile
-            profile_parser.apply_vars()
 
             # Current profile before update with parents (but parent variables already applied)
             inherited_profile = _ProfileValueParser.get_profile(profile_parser.profile_text,
                                                                 inherited_profile)
-            return inherited_profile, profile_parser.vars
+            return inherited_profile
         except ConanException:
             raise
         except Exception as exc:
@@ -225,16 +217,14 @@ class ProfileLoader:
         return profile_path
 
 
-class _ProfileParser(object):
+# TODO: This class can be removed/simplified now to a function, it reduced to just __init__
+class _ProfileParser:
 
     def __init__(self, text):
         """ divides the text in 3 items:
-        - self.vars: Dictionary with variable=value declarations
         - self.includes: List of other profiles to include
         - self.profile_text: the remaining, containing settings, options, env, etc
         """
-        self.vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12,
-        # and in profile MYVAR=$FOO, it will
         self.includes = []
         self.profile_text = ""
 
@@ -252,46 +242,7 @@ class _ProfileParser(object):
                 include = include[:-1]
                 self.includes.append(include)
             else:
-                try:
-                    name, value = line.split("=", 1)
-                except ValueError:
-                    raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
-                name = name.strip()
-                if " " in name:
-                    raise ConanException("The names of the variables cannot contain spaces")
-                value = _unquote(value)
-                self.vars[name] = value
-
-    def apply_vars(self):
-        self._apply_in_vars()
-        self._apply_in_profile_text()
-
-    def get_includes(self):
-        # Replace over includes seems insane and it is not documented. I am leaving it now
-        # afraid of breaking, but should be removed Conan 2.0
-        for include in self.includes:
-            for repl_key, repl_value in self.vars.items():
-                include = include.replace("$%s" % repl_key, repl_value)
-            yield include
-
-    def update_vars(self, included_vars):
-        """ update the variables dict with new ones from included profiles,
-        but keeping (higher priority) existing values"""
-        included_vars.update(self.vars)
-        self.vars = included_vars
-
-    def _apply_in_vars(self):
-        tmp_vars = OrderedDict()
-        for key, value in self.vars.items():
-            for repl_key, repl_value in self.vars.items():
-                key = key.replace("$%s" % repl_key, repl_value)
-                value = value.replace("$%s" % repl_key, repl_value)
-            tmp_vars[key] = value
-        self.vars = tmp_vars
-
-    def _apply_in_profile_text(self):
-        for k, v in self.vars.items():
-            self.profile_text = self.profile_text.replace("$%s" % k, v)
+                raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
 
 
 class _ProfileValueParser(object):

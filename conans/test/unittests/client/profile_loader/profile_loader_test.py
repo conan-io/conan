@@ -14,43 +14,20 @@ from conans.util.files import save
 def test_profile_parser():
     txt = textwrap.dedent(r"""
         include(a/path/to\profile.txt)
-        VAR=2
         include(other/path/to/file.txt)
-        OTHERVAR=thing
 
         [settings]
         os=2
         """)
     a = _ProfileParser(txt)
-    assert a.vars == {"VAR": "2", "OTHERVAR": "thing"}
     assert a.includes == [r"a/path/to\profile.txt", "other/path/to/file.txt"]
     assert a.profile_text == textwrap.dedent("""[settings]
 os=2""")
 
     txt = ""
     a = _ProfileParser(txt)
-    assert a.vars == {}
     assert a.includes == []
     assert a.profile_text == ""
-
-    txt = textwrap.dedent(r"""
-        include(a/path/to\profile.txt)
-        VAR=$REPLACE_VAR
-        include(other/path/to/$FILE)
-        OTHERVAR=thing
-
-        [settings]
-        os=$OTHERVAR
-        """)
-
-    a = _ProfileParser(txt)
-    a.update_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
-    a.apply_vars()
-    assert a.vars == {"VAR": "22", "OTHERVAR": "thing",
-                      "REPLACE_VAR": "22", "FILE": "MyFile",}
-    assert [i for i in a.get_includes()] == [r"a/path/to\profile.txt", "other/path/to/MyFile"]
-    assert a.profile_text == textwrap.dedent("""[settings]
-os=thing""")
 
     txt = textwrap.dedent(r"""
         includes(a/path/to\profile.txt)
@@ -74,18 +51,17 @@ def test_profiles_includes():
     os.mkdir(os.path.join(tmp, "subdir"))
 
     profile0 = textwrap.dedent("""
-            ROOTVAR=0
+            {% set ROOTVAR=0 %}
 
 
             [tool_requires]
-            one/1.$ROOTVAR@lasote/stable
+            one/1.{{ROOTVAR}}@lasote/stable
             two/1.2@lasote/stable
         """)
     save_profile(profile0, "subdir/profile0.txt")
 
     profile1 = textwrap.dedent("""
             # Include in subdir, curdir
-            MYVAR=1
             include(./profile0.txt)
 
             [settings]
@@ -99,15 +75,14 @@ def test_profiles_includes():
 
     profile2 = textwrap.dedent("""
             #  Include in subdir
+            {% set MYVAR=1 %}
             include(./subdir/profile1.txt)
             [settings]
-            os=$MYVAR
+            os={{MYVAR}}
         """)
 
     save_profile(profile2, "profile2.txt")
     profile3 = textwrap.dedent("""
-            OTHERVAR=34
-
             [tool_requires]
             one/1.5@lasote/stable
         """)
@@ -137,13 +112,13 @@ def test_profiles_includes():
 def test_profile_include_order():
     tmp = temp_folder()
 
-    save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
+    save(os.path.join(tmp, "profile1.txt"), '{% set MYVAR="fromProfile1" %}')
 
     profile2 = textwrap.dedent("""
             include(./profile1.txt)
-            MYVAR=fromProfile2
+            {% set MYVAR="fromProfile2" %}
             [settings]
-            os=$MYVAR
+            os={{MYVAR}}
         """)
     save(os.path.join(tmp, "profile2.txt"), profile2)
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
