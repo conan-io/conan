@@ -11,24 +11,24 @@ class Git(object):
         self._conanfile = conanfile
         self.folder = folder
 
-    def _run(self, cmd):
+    def run(self, cmd):
         with chdir(self._conanfile, self.folder):
             return check_output_runner("git {}".format(cmd)).strip()
 
     def get_commit(self):
         try:
-            # commit = self._run("rev-parse HEAD") For the whole repo
+            # commit = self.run("rev-parse HEAD") For the whole repo
             # This rev-list knows to capture the last commit for the folder
             # --full-history is needed to not avoid wrong commits:
             # https://github.com/conan-io/conan/issues/10971
             # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
-            commit = self._run('rev-list HEAD -n 1 --full-history -- "."')
+            commit = self.run('rev-list HEAD -n 1 --full-history -- "."')
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
 
     def get_remote_url(self, remote="origin"):
-        remotes = self._run("remote -v")
+        remotes = self.run("remote -v")
         for r in remotes.splitlines():
             name, url = r.split(maxsplit=1)
             if name == remote:
@@ -41,13 +41,13 @@ class Git(object):
         if not remote:
             return False
         try:
-            branches = self._run("branch -r --contains {}".format(commit))
+            branches = self.run("branch -r --contains {}".format(commit))
             return "{}/".format(remote) in branches
         except Exception as e:
             raise ConanException("Unable to check remote commit in '%s': %s" % (self.folder, str(e)))
 
     def is_dirty(self):
-        status = self._run("status -s").strip()
+        status = self.run("status -s").strip()
         return bool(status)
 
     def get_url_and_commit(self, remote="origin"):
@@ -73,7 +73,7 @@ class Git(object):
         return self.get_repo_root(), commit
 
     def get_repo_root(self):
-        folder = self._run("rev-parse --show-toplevel")
+        folder = self.run("rev-parse --show-toplevel")
         return folder.replace("\\", "/")
 
     def clone(self, url, target="", args=None):
@@ -82,8 +82,8 @@ class Git(object):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
-        self._run('clone "{}" {} {}'.format(url, " ".join(args), target))
+        self.run('clone "{}" {} {}'.format(url, " ".join(args), target))
 
     def checkout(self, commit):
         self._conanfile.output.info("Checkout: {}".format(commit))
-        self._run('checkout {}'.format(commit))
+        self.run('checkout {}'.format(commit))
