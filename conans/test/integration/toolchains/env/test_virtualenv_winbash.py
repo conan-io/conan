@@ -1,9 +1,11 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.conftest import tools_locations
 from conans.test.utils.tools import TestClient
 from conans.tools import save
 
@@ -166,3 +168,54 @@ def test_nowinbash_virtual_cygwin(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool_msys2
+def test_conf_inherited_in_test_package():
+    client = TestClient()
+    bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Recipe(ConanFile):
+                name="msys2"
+                version="1.0"
+
+                def package_info(self):
+                    self.conf_info.define("tools.microsoft.bash:subsystem", "msys2")
+                    self.conf_info.define("tools.microsoft.bash:path", "{}")
+    """.format(bash_path))
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+                from conan import ConanFile
+
+                class Recipe(ConanFile):
+                    name="consumer"
+                    version="1.0"
+        """)
+    test_package = textwrap.dedent("""
+                    from conan import ConanFile
+
+                    class Recipe(ConanFile):
+                        name="test"
+                        version="1.0"
+                        win_bash = True
+
+                        def build_requirements(self):
+                            self.tool_requires(self.tested_reference_str)
+                            self.tool_requires("msys2/1.0")
+
+                        def build(self):
+                            self.output.warning(self.conf.get("tools.microsoft.bash:subsystem"))
+                            self.run("aclocal --version")
+
+                        def test(self):
+                            pass
+            """)
+    client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+    client.run("create . -s:b os=Windows -s:h os=Windows")
+    assert "are needed to run commands in a Windows subsystem" not in client.out
+    assert "aclocal (GNU automake)" in client.out
