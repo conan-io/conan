@@ -206,6 +206,78 @@ def test_xcodedeps_components():
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("cmake")
+def test_cpp_info_require_whole_package():
+    """
+    https://github.com/conan-io/conan/issues/12089
+
+    liba has two components liba::cmp1 liba::cmp2
+
+    libb has not components and requires liba::liba so should generate the same info as
+    if it was requiring liba::cmp1 and liba::cmp2
+
+    libc has components and one component requires liba::liba so should generate the same info as if
+    it was requiring liba::cmp1 and liba::cmp2
+    """
+    client = TestClient(path_with_spaces=False)
+
+    liba = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "liba"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs.append("cmp1")
+                self.cpp_info.components["cmp2"].includedirs.append("cmp2")
+        """)
+
+    libb = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "libb"
+            version = "1.0"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.requires = ["liba::liba"]
+        """)
+
+    libc = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "libc"
+            version = "1.0"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs.append("cmp1")
+                self.cpp_info.components["cmp2"].includedirs.append("cmp2")
+                self.cpp_info.components["cmp1"].requires = ["liba::liba"]
+        """)
+
+    client.save({"liba.py": liba, "libb.py": libb, "libc.py": libc})
+
+    client.run("create liba.py")
+    client.run("create libb.py")
+    client.run("create libc.py")
+    client.run("install --requires=libb/1.0 -g XcodeDeps -of=libb")
+
+    libb_xcconfig = client.load(os.path.join("libb", "conan_libb_libb.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libb_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
+
+    client.run("install --requires=libc/1.0 -g XcodeDeps --of=libc")
+
+    libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libc_comp1_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libc_comp1_xcconfig
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("cmake")
 def test_xcodedeps_test_require():
     client = TestClient()
     client.run("new cmake_lib -d name=gtest -d version=1.0")
