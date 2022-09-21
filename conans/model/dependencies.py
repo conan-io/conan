@@ -77,7 +77,6 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        # TODO: Probably the BINARY_SKIP should be filtered later at the user level, not forced here
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
