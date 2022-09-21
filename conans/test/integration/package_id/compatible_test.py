@@ -4,7 +4,7 @@ import unittest
 
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import save
 
 
@@ -86,6 +86,53 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Build",
                       client.out)
+
+    def test_compatible_setting_debug_release(self):
+        # From issue https://github.com/conan-io/conan/issues/9398
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                settings = "build_type"
+
+                def package_id(self):
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.build_type = "Release"
+                    self.compatible_packages.append(compatible_pkg)
+            """)
+        client.save({"conanfile.py": conanfile})
+        # Create the recipe and upload it into the remote
+        client.run("create . -s build_type=Release")
+        client.run("upload pkg* -r=default --confirm --all")
+        client.run("remove * -f")
+
+        # Install locally the uploaded package
+        client.run("install pkga/0.1@")
+
+        # Create a middle package and export it
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class PkgB(ConanFile):
+                name = "pkgb"
+                version = "0.1"
+                build_requires = "pkga/0.1"
+               """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("export .")
+
+        # Create a final package and install it changing the "build_type"
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class PkgC(ConanFile):
+               requires = "pkgb/0.1"
+               build_requires = "pkga/0.1"
+               """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("install . -s build_type=Debug --build=missing")
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
