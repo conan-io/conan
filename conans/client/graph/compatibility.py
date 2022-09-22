@@ -27,6 +27,8 @@ class BinaryCompatibility:
                     compat_info.settings.update_values(settings)
                 options = elem.get("options")
                 if options:
-                    compat_info.options.update(options_values=OrderedDict(options))
+                    from conans.model.options import OptionsValues
+                    new_options = OptionsValues(options)
+                    compat_info.options.update(new_options)
                 result.append(compat_info)
         return result

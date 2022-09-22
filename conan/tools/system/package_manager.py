@@ -38,7 +38,7 @@ class _SystemPackageManagerTool(object):
                                    "almalinux", "rocky"],
                            "dnf": ["fedora", "rhel", "centos", "mageia"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro", "msys2"],
+                           "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],

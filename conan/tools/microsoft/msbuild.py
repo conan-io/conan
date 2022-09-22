@@ -28,7 +28,7 @@ class MSBuild(object):
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch
 
-    def command(self, sln):
+    def command(self, sln, targets=None):
         cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
                % (sln, self.build_type, self.platform))
 
@@ -41,10 +41,15 @@ class MSBuild(object):
         if maxcpucount:
             cmd += " /m:{}".format(maxcpucount)
 
+        if targets:
+            if not isinstance(targets, list):
+                raise ConanException("targets argument should be a list")
+            cmd += " /target:{}".format(";".join(targets))
+
         return cmd
 
-    def build(self, sln):
-        cmd = self.command(sln)
+    def build(self, sln, targets=None):
+        cmd = self.command(sln, targets=targets)
         self._conanfile.run(cmd)
 
     @staticmethod

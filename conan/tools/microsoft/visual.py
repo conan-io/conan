@@ -215,6 +215,11 @@ def vcvars_arch(conanfile):
                 'x86_64': 'x86_amd64',
                 'armv7': 'x86_arm',
                 'armv8': 'x86_arm64'}.get(arch_host)
+    elif arch_build == 'armv8':
+        arch = {'x86': 'arm64_x86',
+                'x86_64': 'arm64_x64',
+                'armv7': 'arm64_arm',
+                'armv8': 'arm64'}.get(arch_host)
 
     if not arch:
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))

@@ -153,7 +153,7 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    assert '#include "conan_liba_liba.xcconfig"' in component7_entry
+    assert '#include "conan_liba.xcconfig"' in component7_entry
 
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting

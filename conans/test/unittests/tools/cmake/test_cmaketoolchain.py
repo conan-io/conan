@@ -402,7 +402,7 @@ def test_libcxx_abi_flag():
     # by default, no flag is output anymore, it is assumed the compiler default
     assert 'GLIBCXX_USE_CXX11_ABI' not in content
     # recipe workaround for older distros
-    toolchain.blocks["libcxx"].values["glibcxx"] = "1"
+    toolchain.blocks["libcxx"].values["glibcxx"] = "_GLIBCXX_USE_CXX11_ABI=1"
     content = toolchain.content
     assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 

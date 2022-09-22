@@ -72,6 +72,27 @@ class _NewComponent(object):
         setattr(self, attribute, default)
         return default
 
+    @property
+    def bindir(self):
+        bindirs = self.bindirs
+        assert bindirs
+        assert len(bindirs) == 1
+        return bindirs[0]
+
+    @property
+    def libdir(self):
+        libdirs = self.libdirs
+        assert libdirs
+        assert len(libdirs) == 1
+        return libdirs[0]
+
+    @property
+    def includedir(self):
+        includedirs = self.includedirs
+        assert includedirs
+        assert len(includedirs) == 1
+        return includedirs[0]
+
 
 class NewCppInfo(object):
 
