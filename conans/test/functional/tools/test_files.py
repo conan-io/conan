@@ -397,3 +397,35 @@ def test_export_conandata_patches(mock_patch_ng):
     client.save({"conandata.yml": conandata_yml})
     client.run("create .")
     assert "mypkg/1.0: mypatch!!!" in client.out
+
+
+def test_patch_no_layout_local_flow():
+    # https://github.com/conan-io/conan/issues/11781
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import patch, save, load
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+            exports_sources = "*"
+
+            def source(self):
+                save(self, "myfile.h", "//unpatched contents")
+                patch(self, patch_file="mypatch", patch_type="security")
+        """)
+
+    client = TestClient()
+    patch = textwrap.dedent("""\
+        --- myfile.h
+        +++ myfile.h
+        @@ -1 +1 @@
+        -//unpatched contents
+        +//patched contents
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "mypatch": patch})
+    client.run('install . -if build')
+    client.run('source . -sf build')
+    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
