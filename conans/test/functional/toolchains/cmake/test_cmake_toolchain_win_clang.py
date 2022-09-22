@@ -57,7 +57,7 @@ def client():
 
 
 @pytest.mark.tool_cmake
-@pytest.mark.tool_clang(version="12")
+@pytest.mark.tool_clang(version="13")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestLLVMClang:
     """ External LLVM/clang, with different CMake generators
@@ -66,7 +66,7 @@ class TestLLVMClang:
 
     @pytest.mark.tool_mingw64
     @pytest.mark.tool_visual_studio(version="17")
-    @pytest.mark.tool_clang(version="12")  # repeated, for priority over the mingw64 clang
+    @pytest.mark.tool_clang(version="13")  # repeated, for priority over the mingw64 clang
     @pytest.mark.parametrize("runtime", ["static", "dynamic"])
     def test_clang_mingw(self, client, runtime):
         """ compiling with an LLVM-clang installed, which uses by default the
@@ -78,7 +78,7 @@ class TestLLVMClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__12" in client.out
+        assert "main __clang_major__13" in client.out
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -99,7 +99,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__12" in client.out
+        assert "main __clang_major__13" in client.out
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -109,6 +109,7 @@ class TestLLVMClang:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
     @pytest.mark.tool_visual_studio(version="16")
+    @pytest.mark.tool_clang(version="12")  # repeated, for priority over the mingw64 clang
     def test_clang_cmake_runtime_version(self, client):
         generator = "Ninja"
         # Make sure that normal CMakeLists with verify=False works
@@ -146,7 +147,7 @@ class TestVSClangCL:
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__13" in client.out
+        assert "main __clang_major__14" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER193" in client.out
         assert "main _MSVC_LANG2017" in client.out
