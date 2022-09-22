@@ -1,6 +1,7 @@
 import os
 import platform
 from contextlib import contextmanager
+from pathlib import Path
 
 import six
 from six import string_types
@@ -8,6 +9,7 @@ from six import string_types
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
+from conans.client.subsystems import command_env_wrapper
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
@@ -174,9 +176,9 @@ class ConanFile(object):
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
         self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.resdirs = []
         self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
+        self.cpp.package.frameworkdirs = []
 
     @property
     def context(self):
@@ -258,6 +260,11 @@ class ConanFile(object):
         return self.folders.source_folder
 
     @property
+    def source_path(self) -> Path:
+        assert self.source_folder is not None, "`source_folder` is `None`"
+        return Path(self.source_folder)
+
+    @property
     def export_sources_folder(self):
         """points to the base source folder when calling source() and to the cache export sources
         folder while calling the exports_sources() method. Prepared in case we want to introduce a
@@ -265,16 +272,36 @@ class ConanFile(object):
         return self.folders.base_export_sources
 
     @property
+    def export_sources_path(self) -> Path:
+        assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
+        return Path(self.export_sources_folder)
+
+    @property
     def export_folder(self):
         return self.folders.base_export
+
+    @property
+    def export_path(self) -> Path:
+        assert self.export_folder is not None, "`export_folder` is `None`"
+        return Path(self.export_folder)
 
     @property
     def build_folder(self):
         return self.folders.build_folder
 
     @property
+    def build_path(self) -> Path:
+        assert self.build_folder is not None, "`build_folder` is `None`"
+        return Path(self.build_folder)
+
+    @property
     def package_folder(self):
         return self.folders.base_package
+
+    @property
+    def package_path(self) -> Path:
+        assert self.package_folder is not None, "`package_folder` is `None`"
+        return Path(self.package_folder)
 
     @property
     def install_folder(self):
@@ -285,6 +312,11 @@ class ConanFile(object):
     def generators_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.generators_folder if self.folders.generators else self.install_folder
+
+    @property
+    def generators_path(self) -> Path:
+        assert self.generators_folder is not None, "`generators_folder` is `None`"
+        return Path(self.generators_folder)
 
     @property
     def imports_folder(self):
@@ -387,14 +419,9 @@ class ConanFile(object):
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
-                elif self.win_bash:  # New, Conan 2.0
-                    from conans.client.subsystems import run_in_windows_bash
-                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            from conan.tools.env.environment import environment_wrap_command
-            if env:
-                wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
-            else:
-                wrapped_cmd = cmd
+            envfiles_folder = self.generators_folder or os.getcwd()
+            _env = [_env] if _env and isinstance(_env, str) else []
+            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:

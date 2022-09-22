@@ -333,13 +333,56 @@ class Pkg(ConanFile):
         self.client.run("remote list")
         self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
 
-    def test_install_remotes_json_error(self):
+    def test_install_remotes_json(self):
         folder = temp_folder()
-        save_files(folder, {"remotes.json": ""})
-        self.client.run('config install "%s"' % folder, assert_error=True)
-        self.assertIn("ERROR: Failed conan config install: "
-                      "remotes.json install is not supported yet. Use 'remotes.txt'",
-                      self.client.out)
+
+        remotes_json = textwrap.dedent("""
+            {
+                "remotes": [
+                    { "name": "repojson1", "url": "https://repojson1.net", "verify_ssl": false },
+                    { "name": "repojson2", "url": "https://repojson2.com", "verify_ssl": true }
+                ]
+            }
+        """)
+
+        remotes_txt = textwrap.dedent("""\
+            repotxt1 https://repotxt1.net False
+            repotxt2 https://repotxt2.com True
+        """)
+
+        # remotes.txt and json try to define both the remotes,
+        # could lead to unpredictable results
+        save_files(folder, {"remotes.json": remotes_json,
+                            "remotes.txt": remotes_txt})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+        assert "Defining remotes from remotes.txt" in self.client.out
+
+        # If there's only a remotes.txt it's the one installed
+        folder = temp_folder()
+        save_files(folder, {"remotes.txt": remotes_txt})
+
+        self.client.run(f'config install "{folder}"')
+
+        assert "Defining remotes from remotes.txt" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repotxt1: https://repotxt1.net [Verify SSL: False]" in self.client.out
+        assert "repotxt2: https://repotxt2.com [Verify SSL: True]" in self.client.out
+
+        # If there's only a remotes.json it's the one installed
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": remotes_json})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repojson1: https://repojson1.net [Verify SSL: False]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True]" in self.client.out
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)

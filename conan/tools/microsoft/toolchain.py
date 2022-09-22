@@ -36,6 +36,9 @@ class MSBuildToolchain(object):
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
             <PlatformToolset>{{ toolset }}</PlatformToolset>
+            {% for k, v in properties.items() %}
+            <{{k}}>{{ v }}</{{k}}>
+            {% endfor %}
           </PropertyGroup>
         </Project>
     """)
@@ -51,13 +54,17 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile)
+        self.properties = {}
         check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
-                 # FIXME: This probably requires mapping ARM architectures
+                 # TODO: refactor, put in common with MSBuildDeps. Beware this is != msbuild_arch
+                 #  because of Win32
                  ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
+                               'x86_64': 'x64',
+                               'armv7': 'ARM',
+                               'armv8': 'ARM64'}.get(settings.get_safe("arch")))]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
@@ -160,7 +167,8 @@ class MSBuildToolchain(object):
             "runtime_library": runtime_library,
             "toolset": toolset,
             "compile_options": compile_options,
-            "parallel": parallel
+            "parallel": parallel,
+            "properties": self.properties,
         }
 
     def _write_config_toolchain(self, config_filename):

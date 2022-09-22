@@ -44,6 +44,14 @@ class Authorizer(object):
         raise NotImplemented()
 
     @abstractmethod
+    def check_delete_conan(self, username, ref):
+        """
+        username: User requesting a recipe's deletion
+        ref: ConanFileReference
+        """
+        raise NotImplemented()
+
+    @abstractmethod
     def check_read_package(self, username, pref):
         """
         username: User that request to read the package
@@ -55,6 +63,14 @@ class Authorizer(object):
     def check_write_package(self, username, pref):
         """
         username: User that request to write the package
+        pref: PackageReference
+        """
+        raise NotImplemented()
+
+    @abstractmethod
+    def check_delete_package(self, username, pref):
+        """
+        username: User requesting a package's deletion
         pref: PackageReference
         """
         raise NotImplemented()

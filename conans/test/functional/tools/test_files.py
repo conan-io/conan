@@ -340,3 +340,60 @@ def test_relate_base_path_all_versions(mock_patch_ng):
 
     assert mock_patch_ng.apply_args[0].endswith(os.path.join('source_subfolder', "relative_dir"))
     assert mock_patch_ng.apply_args[1:] == (0, False)
+
+
+def test_export_conandata_patches(mock_patch_ng):
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import export_conandata_patches, load
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
+            def export_sources(self):
+                export_conandata_patches(self)
+
+            def source(self):
+                self.output.info(load(self, os.path.join(self.export_sources_folder, "patches/mypatch.patch")))
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          - patch_file: "patches/mypatch.patch"
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .", assert_error=True)
+    assert "conandata.yml not defined" in client.out
+    # Empty conandata
+    client.save({"conandata.yml": ""})
+    client.run("create .", assert_error=True)
+    assert "export_conandata_patches(): No patches defined in conandata" in client.out
+    assert "ERROR: mypkg/1.0: Error in source() method" in client.out
+    # wrong patches
+    client.save({"conandata.yml": "patches: 123"})
+    client.run("create .", assert_error=True)
+    assert "conandata.yml 'patches' should be a list or a dict"  in client.out
+
+    # No patch found
+    client.save({"conandata.yml": conandata_yml})
+    client.run("create .", assert_error=True)
+    assert "No such file or directory" in client.out
+
+    client.save({"patches/mypatch.patch": "mypatch!!!"})
+    client.run("create .")
+    assert "mypkg/1.0: mypatch!!!" in client.out
+
+    conandata_yml = textwrap.dedent("""
+        patches:
+            "1.0":
+                - patch_file: "patches/mypatch.patch"
+    """)
+    client.save({"conandata.yml": conandata_yml})
+    client.run("create .")
+    assert "mypkg/1.0: mypatch!!!" in client.out

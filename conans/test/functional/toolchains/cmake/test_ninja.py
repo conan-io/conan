@@ -62,8 +62,8 @@ def test_locally_build_linux(build_type, shared, client):
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}".format(build_type,
                                                                                        shared)
     client.run("install . {}".format(settings))
-    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:
@@ -171,7 +171,8 @@ def test_locally_build_gcc(build_type, shared, client):
 
     client.run_command("myapp.exe")
     # TODO: Need full gcc version check
-    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
+    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None,
+                  subsystem="mingw64")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
@@ -180,8 +181,8 @@ def test_locally_build_gcc(build_type, shared, client):
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
-    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:

@@ -13,7 +13,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        name = "" if not self.find_module_mode else "module-"
+        name = "" if not self.generating_module else "module-"
         name += "{}-Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
         return name
 
@@ -26,16 +26,22 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
+        is_win = self.conanfile.settings.get_safe("os") == "Windows"
+        auto_link = self.conanfile.cpp_info.get_property("cmake_set_interface_link_directories")
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
+                "config": self.configuration.upper(),
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
-                "configuration": self.cmakedeps.configuration}
+                "configuration": self.cmakedeps.configuration,
+                "set_interface_link_directories": auto_link and is_win}
 
     @property
     def template(self):
         return textwrap.dedent("""\
+        # Avoid multiple calls to find_package to append duplicated properties to the targets
+        include_guard()
 
         {%- macro tvalue(pkg_name, comp_name, var, config_suffix) -%}
             {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
@@ -56,99 +62,160 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "") # Will be filled later
         conan_find_apple_frameworks({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS{{ config_suffix }}}" "{{ '${' }}{{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }}}")
 
-        # Gather all the libraries that should be linked to the targets (do not touch existing variables)
-        set(_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}} {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}} {{ deps_targets_names }}")
+        set({{ pkg_name }}_LIBRARIES_TARGETS "") # Will be filled later
 
-        set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} "") # Will be filled later
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} "") # Will be filled later
+
+        ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
+        if(NOT TARGET {{ pkg_name+'_DEPS_TARGET'}})
+            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE)
+        endif()
+
+        set_property(TARGET {{ pkg_name + '_DEPS_TARGET'}}
+                     PROPERTY INTERFACE_LINK_LIBRARIES
+                     $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }}>
+                     $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_SYSTEM_LIBS'+config_suffix+'}' }}>
+                     $<$<CONFIG:{{configuration}}>:{{ deps_targets_names }}>
+                     APPEND)
+
+        ####### Find the libraries declared in cpp_info.libs, create an IMPORTED target for each one and link the
+        ####### {{pkg_name}}_DEPS_TARGET to all of them
         conan_package_library_targets("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}"    # libraries
                                       "{{ '${' }}{{ pkg_name }}_LIB_DIRS{{ config_suffix }}}" # package_libdir
-                                      "{{ '${' }}_{{ pkg_name }}_DEPENDENCIES{{ config_suffix }}}" # deps
-                                      {{ pkg_name }}_LIBRARIES{{ config_suffix }}   # out_libraries
-                                      {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}  # out_libraries_targets
-                                      "{{ config_suffix }}"  # config_suffix
+                                      {{ pkg_name + '_DEPS_TARGET'}}
+                                      {{ pkg_name }}_LIBRARIES_TARGETS  # out_libraries_targets
+                                      "{{ config_suffix }}"
                                       "{{ pkg_name }}")    # package_name
-
-        foreach(_FRAMEWORK {{ '${' }}{{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_FRAMEWORK})
-            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_FRAMEWORK})
-        endforeach()
-
-        foreach(_SYSTEM_LIB {{ '${' }}{{ pkg_name }}_SYSTEM_LIBS{{ config_suffix }}})
-            list(APPEND {{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} ${_SYSTEM_LIB})
-            list(APPEND {{ pkg_name }}_LIBRARIES{{ config_suffix }} ${_SYSTEM_LIB})
-        endforeach()
-
-        # We need to add our requirements too
-        set({{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }} {{ '"${' }}{{ pkg_name }}_LIBRARIES_TARGETS{{ config_suffix }}{{ '};' }}{{ deps_targets_names }}")
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ '"${' }}{{ pkg_name }}_LIBRARIES{{ config_suffix }}{{ '};' }}{{ deps_targets_names }}")
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_PREFIX_PATH})
 
-        {%- for comp_variable_name, comp_target_name in components_names %}
-
-        ########## COMPONENT {{ comp_target_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
-        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }} "")
-        set({{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }} "")
-        set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }})
-        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
-                                      {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
-                                      {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
-                                      "{{ config_suffix }}"
-                                      "{{ pkg_name }}_{{ comp_variable_name }}")
-
-        set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
-        {%- endfor %}
-
-
+        {% if not components_names %}
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
-        set_property(TARGET {{root_target_name}}
-                     PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
-                                                   ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{root_target_name}}
-                     PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{root_target_name}}
-                     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{root_target_name}}
-                     PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{root_target_name}}
-                     PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_LINK_LIBRARIES
+                         $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_OBJECTS'+config_suffix+'}' }}>
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS}>
+                         APPEND)
+
+            if("{{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}}" STREQUAL "")
+                # If the package is not declaring any "cpp_info.libs" the package deps, system libs,
+                # frameworks etc are not linked to the imported targets and we need to do it to the
+                # global target
+                set_property(TARGET {{root_target_name}}
+                             PROPERTY INTERFACE_LINK_LIBRARIES
+                             {{pkg_name}}_DEPS_TARGET
+                             APPEND)
+            endif()
+
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_LINK_OPTIONS
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_COMPILE_OPTIONS
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
+
+            {%- if set_interface_link_directories %}
+
+            # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_LINK_DIRECTORIES
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
+            {%- endif %}
+
+
+        {%- else %}
 
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
-        {%- for comp_variable_name, comp_target_name in components_names %}
+            {%- for comp_variable_name, comp_target_name in components_names %}
 
-        ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES ######################################
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINK_LIBS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_variable_name, 'OBJECTS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<CONFIG:{{ configuration }}>:
-                     {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix)}}
-                     {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
-        set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
 
-        {%- endfor %}
+            ########## COMPONENT {{ comp_target_name }} #############
+
+                set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
+                conan_find_apple_frameworks({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
+
+                set({{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS "")
+
+                ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
+                if(NOT TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}})
+                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE)
+                endif()
+
+                set_property(TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
+                             PROPERTY INTERFACE_LINK_LIBRARIES
+                             $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }}>
+                             $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }}>
+                             $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }}>
+                             APPEND)
+
+                ####### Find the libraries declared in cpp_info.component["xxx"].libs,
+                ####### create an IMPORTED target for each one and link the '{{pkg_name}}_{{comp_variable_name}}_DEPS_TARGET' to all of them
+                conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
+                                              "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
+                                              {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
+                                              {{ pkg_name }}_{{ comp_variable_name }}_LIBRARIES_TARGETS
+                                              "{{ config_suffix }}"
+                                              "{{ pkg_name }}_{{ comp_variable_name }}")
+
+                ########## TARGET PROPERTIES #####################################
+                set_property(TARGET {{comp_target_name}}
+                             PROPERTY INTERFACE_LINK_LIBRARIES
+                             $<$<CONFIG:{{configuration}}>:{{ '${'+pkg_name+'_'+comp_variable_name+'_OBJECTS'+config_suffix+'}' }}>
+                             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_{{comp_variable_name}}_LIBRARIES_TARGETS}>
+                             APPEND)
+
+                if("{{ '${' }}{{ pkg_name }}_{{comp_variable_name}}_LIBS{{ config_suffix }}}" STREQUAL "")
+                    # If the component is not declaring any "cpp_info.components['foo'].libs" the system, frameworks etc are not
+                    # linked to the imported targets and we need to do it to the global target
+                    set_property(TARGET {{comp_target_name}}
+                                 PROPERTY INTERFACE_LINK_LIBRARIES
+                                 {{pkg_name}}_{{comp_variable_name}}_DEPS_TARGET
+                                 APPEND)
+                endif()
+
+                set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_OPTIONS
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
+                set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
+                set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
+                set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+                             $<$<CONFIG:{{ configuration }}>:
+                             {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix)}}
+                             {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
+                set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
+
+                {%- if set_interface_link_directories %}
+                # This is only used for '#pragma comment(lib, "foo")' (automatic link)
+                set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix)}}> APPEND)
+
+                {%- endif %}
+            {%endfor %}
+
+
+            ########## AGGREGATED GLOBAL TARGET WITH THE COMPONENTS #####################
+            {%- for comp_variable_name, comp_target_name in components_names %}
+
+            set_property(TARGET {{root_target_name}} PROPERTY INTERFACE_LINK_LIBRARIES {{ comp_target_name }} APPEND)
+
+            {%- endfor %}
+
+
+        {%- endif %}
+
+
+        ########## For the modules (FindXXX)
+        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{root_target_name}})
 
         """)
 

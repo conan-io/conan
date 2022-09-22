@@ -3,7 +3,7 @@ import time
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
@@ -65,7 +65,9 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
                           update, remotes, profile_host, profile_build, graph_lock)
+
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
+
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
@@ -471,4 +473,5 @@ class DepsGraphBuilder(object):
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)
+
         return new_node

@@ -21,7 +21,6 @@ class GnuDepsFlags(object):
         self.libs = self._format_libraries(cpp_info.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
         self.framework_paths = self._format_frameworks(cpp_info.frameworkdirs, is_path=True)
-        self.sysroot = self._sysroot_flag(cpp_info.sysroot)
 
         # Direct flags
         self.cxxflags = cpp_info.cxxflags or []
@@ -47,9 +46,8 @@ class GnuDepsFlags(object):
         or an empty array, if Apple Frameworks aren't supported by the given compiler
         """
         os_ = self._conanfile.settings.get_safe("os")
-        if not frameworks or not is_apple_os(os_):
+        if not frameworks or not is_apple_os(self._conanfile):
             return []
-        # FIXME: Missing support for subsystems
         compiler = self._conanfile.settings.get_safe("compiler")
         if str(compiler) not in self._GCC_LIKE:
             return []
@@ -58,25 +56,17 @@ class GnuDepsFlags(object):
         else:
             return ["-framework %s" % framework for framework in frameworks]
 
-    def _sysroot_flag(self, sysroot):
-        # FIXME: Missing support for subsystems
-        if not is_msvc(self._conanfile) and sysroot:
-            sysroot = self._adjust_path(sysroot)
-            return '--sysroot=%s' % sysroot
-        return ""
-
     def _format_include_paths(self, include_paths):
         if not include_paths:
             return []
-        # FIXME: Missing support for subsystems
-        return ["-I%s" % (self._adjust_path(include_path))
+        pattern = "/I%s" if is_msvc(self._conanfile) else "-I%s"
+        return [pattern % (self._adjust_path(include_path))
                 for include_path in include_paths if include_path]
 
     def _format_library_paths(self, library_paths):
         if not library_paths:
             return []
-        # FIXME: Missing support for subsystems
-        pattern = "-LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
+        pattern = "/LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
         return [pattern % self._adjust_path(library_path)
                 for library_path in library_paths if library_path]
 

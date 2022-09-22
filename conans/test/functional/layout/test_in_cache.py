@@ -268,7 +268,8 @@ def test_cpp_package():
     assert "**includedirs:['foo/include']**" in out
     assert "**libdirs:['foo/libs']**" in out
     assert "**libs:['foo']**" in out
-    cmake = client.load("hello-release-x86_64-data.cmake")
+    arch = client.get_default_host_profile().settings['arch']
+    cmake = client.load(f"hello-release-{arch}-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake

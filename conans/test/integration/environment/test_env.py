@@ -103,16 +103,15 @@ def test_complete(client):
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     if platform.system() == "Windows":
-        cmd = environment_wrap_command("conanbuildenv", "mycmake.bat",
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanbuildenv", client.current_folder, "mycmake.bat")
         client.run_command(cmd)
         assert "MYCMAKE=Windows!!" in client.out
         assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
     if platform.system() != "Windows":
-        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
-                                       cwd=client.current_folder)
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mygtest.sh && .{}myrunner.sh".format(os.sep))
         client.run_command(cmd)
         assert "MYGTEST=Linux!!" in client.out
         assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
@@ -204,8 +203,8 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
-                                   cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuildenv", client.current_folder,
+                                   "mycompiler.{}".format(ext))
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
     assert "MYPATH=" in client.out
@@ -367,6 +366,7 @@ def test_diamond_repeated():
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))
                 self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
+                env.generate()
        """)
     client = TestClient()
     client.save({"pkga/conanfile.py": pkga,
@@ -385,6 +385,10 @@ def test_diamond_repeated():
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+    # No settings always sh
+    conanrun = client.load("conanrunenv.sh")
+    assert "PATH" not in conanrun
 
 
 def test_environment_scripts_generated_envvars():
@@ -493,6 +497,76 @@ def test_multiple_deactivate():
     assert "VAR2=!!" in out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
+@pytest.mark.parametrize("num_deps", [3, ])
+def test_massive_paths(num_deps):
+    """ This test proves that having too many dependencies that will result in a very long PATH
+    env-var in the consumer by one VirtualXXXEnv environment, will overflow.
+    https://github.com/conan-io/conan/issues/9565
+    This seems an unsolvable limitation, the only alternatives are:
+    - shorten the paths in general (shorter cache paths)
+    - add exclusively the paths of needed things (better visibility)
+    Seems that Conan 2.0 will improve over these things, allowing larger dependencies graphs without
+    failing. Besides that, it might use the deployers to workaround shared-libs running scenarios.
+
+    The test is parameterized for being fast an passing, but if we add a num_deps >= 80 approx,
+    it will start to enter the failing scenarios. Not adding the >=80 scenario, because that tests
+    takes 1 minute by itself, not worth the value.
+    """
+    client = TestClient(path_with_spaces=False)
+    compiler_bat = "@echo off\necho MYTOOL {}!!\n"
+    conanfile = textwrap.dedent("""\
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            exports = "*"
+            def package(self):
+                self.copy("*", dst="bin")
+        """)
+
+    for i in range(num_deps):
+        client.save({"conanfile.py": conanfile,
+                     "mycompiler{}.bat".format(i): compiler_bat.format(i)})
+        client.run("create . pkg{}/0.1@".format(i))
+
+    conanfile = textwrap.dedent("""\
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            requires = {}
+            generators = "VirtualRunEnv"
+        """)
+    requires = ", ".join('"pkg{}/0.1"'.format(i) for i in range(num_deps))
+    conanfile = conanfile.format(requires)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -c tools.env.virtualenv:powershell=True")
+    assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
+    assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
+    for i in range(num_deps):
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mycompiler{}.bat".format(i))
+        if num_deps > 50:  # to be safe if we change the "num_deps" number
+            client.run_command(cmd, assert_error=True)
+            assert "is not recognized as an internal" in client.out
+        else:
+            client.run_command(cmd)
+            assert "MYTOOL {}!!".format(i) in client.out
+
+    # Test .bats now
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install .")
+    assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
+    assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
+    for i in range(num_deps):
+        cmd = environment_wrap_command("conanrunenv", client.current_folder,
+                                       "mycompiler{}.bat".format(i))
+        if num_deps > 50:  # to be safe if we change the "num_deps" number
+            client.run_command(cmd, assert_error=True)
+            # This also fails, but without an error message (in my terminal, it kills the terminal!)
+        else:
+            client.run_command(cmd)
+            assert "MYTOOL {}!!".format(i) in client.out
+
+
 def test_profile_build_env_spaces():
     display_bat = textwrap.dedent("""\
         @echo off
@@ -589,3 +663,21 @@ def test_skip_virtualbuildenv_run():
     # client.run("create . --name consumer --version 1.0")
     client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
     assert "FOO is BAR" not in client.out
+
+
+def test_files_always_created():
+    """ test that even if there are no env-variables, the generators always create files,
+    they will be mostly empty, but exist
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "consumer/conanfile.txt": "[requires]\ndep/0.1"})
+    c.run("create dep")
+    c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv")
+    ext = "bat" if platform.system() == "Windows" else "sh"
+
+    arch = c.get_default_host_profile().settings['arch']
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuild.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanrun.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))

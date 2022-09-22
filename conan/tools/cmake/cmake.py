@@ -1,11 +1,9 @@
 import os
-import platform
 
 from conan.tools.build import build_jobs
-from conan.tools.cmake.presets import load_cmake_presets
+from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
-from conan.tools.files.files import load_toolchain_args
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
@@ -55,9 +53,11 @@ class CMake(object):
         self._conanfile = conanfile
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
-        self._generator = cmake_presets["configurePresets"][0]["generator"]
-        self._toolchain_file = cmake_presets["configurePresets"][0]["toolchainFile"]
-        self._cache_variables = cmake_presets["configurePresets"][0]["cacheVariables"]
+        configure_preset = get_configure_preset(cmake_presets, conanfile)
+
+        self._generator = configure_preset["generator"]
+        self._toolchain_file = configure_preset.get("toolchainFile")
+        self._cache_variables = configure_preset["cacheVariables"]
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -151,7 +151,8 @@ class CMake(object):
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)
-            target = "RUN_TESTS" if is_multi else "test"
+            is_ninja = "Ninja" in self._generator
+            target = "RUN_TESTS" if is_multi and not is_ninja else "test"
 
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args)

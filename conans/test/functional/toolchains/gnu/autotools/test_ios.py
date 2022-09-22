@@ -53,11 +53,12 @@ def test_ios():
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsToolchain", "AutotoolsDeps"
 
+            def layout(self):
+                self.cpp.package.resdirs = ["res"]
+
             def build(self):
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
                 autotools = Autotools(self)
+                autotools.autoreconf()
                 autotools.configure()
                 autotools.make()
         """)
@@ -69,11 +70,21 @@ def test_ios():
                  "m1": profile}, clean_first=True)
     client.run("install . --profile:build=default --profile:host=m1")
     client.run("build .")
-    client.run_command("./main", assert_error=True)
-    assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info main")
     assert "Non-fat file: main is architecture: arm64" in client.out
+    client.run_command("vtool -show-build main")
+    assert "platform IOS" in client.out
+    assert "minos 12.0" in client.out
 
     conanbuild = load_toolchain_args(client.current_folder)
     configure_args = conanbuild["configure_args"]
-    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"
+    make_args = conanbuild["make_args"]
+    autoreconf_args = conanbuild["autoreconf_args"]
+    build_arch = client.get_default_build_profile().settings['arch']
+    build_arch = "aarch64" if build_arch == "armv8" else build_arch
+    assert configure_args == "'--prefix=/' '--bindir=${prefix}/bin' '--sbindir=${prefix}/bin' " \
+                             "'--libdir=${prefix}/lib' '--includedir=${prefix}/include' " \
+                             "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res' " \
+                             f"'--host=aarch64-apple-ios' '--build={build_arch}-apple-darwin'"
+    assert make_args == ""
+    assert autoreconf_args == "'--force' '--install'"

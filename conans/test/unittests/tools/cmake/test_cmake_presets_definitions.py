@@ -40,7 +40,7 @@ def test_cmake_make_program(conanfile):
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
 
     with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-        write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles")
+        write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles", {})
 
     cmake = CMake(conanfile)
     cmake.configure()

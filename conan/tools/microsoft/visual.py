@@ -2,9 +2,37 @@ import os
 import textwrap
 
 from conans.client.tools import vs_installation_path
-from conans.errors import ConanException
+from conans.client.tools.version import Version
+from conans.errors import ConanException, ConanInvalidConfiguration
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
+def check_min_vs(conanfile, version):
+    """ this is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
+    withoug breaking recipes
+    The legacy "Visual Studio" with different toolset is not managed, not worth the complexity
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = None
+    if compiler == "Visual Studio":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_version = {"17": "193",
+                            "16": "192",
+                            "15": "191",
+                            "14": "190",
+                            "12": "180",
+                            "11": "170"}.get(compiler_version)
+    elif compiler == "msvc":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_update = conanfile.settings.get_safe("compiler.update")
+        if compiler_version and compiler_update is not None:
+            compiler_version += ".{}".format(compiler_update)
+
+    if compiler_version and Version(compiler_version) < version:
+        msg = "This package doesn't work with VS compiler version '{}'" \
+              ", it requires at least '{}'".format(compiler_version, version)
+        raise ConanInvalidConfiguration(msg)
 
 
 def msvc_version_to_vs_ide_version(version):
@@ -170,6 +198,11 @@ def vcvars_arch(conanfile):
                 'x86_64': 'x86_amd64',
                 'armv7': 'x86_arm',
                 'armv8': 'x86_arm64'}.get(arch_host)
+    elif arch_build == 'armv8':
+        arch = {'x86': 'arm64_x86',
+                'x86_64': 'arm64_x64',
+                'armv7': 'arm64_arm',
+                'armv8': 'arm64'}.get(arch_host)
 
     if not arch:
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
@@ -198,12 +231,17 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     return vcvars_ver
 
 
-def is_msvc(conanfile):
+def is_msvc(conanfile, build_context=False):
     """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
     :param conanfile: ConanFile instance
+    :param build_context: If True, will use the settings from the build context, not host ones
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
-    settings = conanfile.settings
+    # FIXME: 2.0: remove "hasattr()" condition
+    if not build_context or not hasattr(conanfile, "settings_build"):
+        settings = conanfile.settings
+    else:
+        settings = conanfile.settings_build
     return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
 
 

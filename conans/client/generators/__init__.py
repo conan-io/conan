@@ -72,7 +72,8 @@ class GeneratorManager(object):
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                                 "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
+                                "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain",
+                                "MesonDeps"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -113,6 +114,9 @@ class GeneratorManager(object):
         elif generator_name == "MesonToolchain":
             from conan.tools.meson import MesonToolchain
             return MesonToolchain
+        elif generator_name == "MesonDeps":
+            from conan.tools.meson import MesonDeps
+            return MesonDeps
         elif generator_name in ("MSBuildDeps", "msbuild"):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps

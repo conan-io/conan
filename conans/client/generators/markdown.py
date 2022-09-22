@@ -8,8 +8,8 @@ from jinja2 import Environment
 from conan.tools.cmake.cmakedeps.cmakedeps import CMakeDeps
 from conan.tools.cmake.cmakedeps.templates import (
     CMakeDepsFileTemplate,
-    get_file_name as cmake_get_file_name)
-from conan.tools.gnu.pkgconfigdeps.pc_info_loader import (
+    get_cmake_package_name as cmake_get_file_name)
+from conan.tools.gnu.pkgconfigdeps import (
     _get_component_name as pkgconfig_get_component_name,
     _get_name_with_namespace as pkgconfig_get_name_with_namespace,
     _get_package_name as pkgconfig_get_package_name
@@ -101,7 +101,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
 
     * [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html): generates information about where the **{{ requirement.ref.name }}** library and its dependencies {% if requires %} ({% for dep_name, dep in requires %} [{{ dep_name }}](https://conan.io/center/{{ dep_name }}){% if not loop.last %}, {% endif %} {%- endfor -%}) {%- endif %} are installed together with other information like version, flags, and directory data or configuration. CMake will use this files when you invoke ``find_package()`` in your *CMakeLists.txt*.
 
-    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file the you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
+    * [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html): generates a CMake toolchain file that you can later invoke with CMake in the command line using `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`.
 
     Declare these generators in your **conanfile.txt** along with your **{{ requirement.ref.name }}** dependency like:
 
@@ -149,7 +149,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     ```shell
     # for Linux/macOS
     $ conan install . --install-folder cmake-build-release --build=missing
-    $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake
+    $ cmake . -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
     $ cmake --build .
 
     # for Windows and Visual Studio 2017
@@ -165,7 +165,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {% for component_name, target_name in cmake_variables.component_alias.items() %}
     {%- if loop.index==1 %}
 
-    As the {{ requirement.ref.name }} Conan package defines components you can link only that desired part of the library in your project. For example, linking only with the {{ requirement.ref.name }} **{{ component_name }}** component, through the **{{ target_name }}** target.
+    As the {{ requirement.ref.name }} Conan package defines components, you can link only the desired parts of the library in your project. For example, linking only with the {{ requirement.ref.name }} **{{ component_name }}** component, through the **{{ target_name }}** target.
 
     ```cmake
     ...
@@ -308,7 +308,6 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     # set the environment variables for Autotools
     $ source conanautotoolstoolchain.sh
 
-    # You will have to set the PKG_CONFIG_PATH to where Conan created the {{ pkgconfig_variables.pkg_name }}.pc file
     $ export CPPFLAGS="$CPPFLAGS $(pkg-config --cflags {{ requirement.ref.name }})"
     $ export LIBS="$LIBS $(pkg-config --libs-only-l {{ requirement.ref.name }})"
     $ export LDFLAGS="$LDFLAGS $(pkg-config --libs-only-L --libs-only-other {{ requirement.ref.name }})"
@@ -427,7 +426,7 @@ class MarkdownGenerator(Generator):
             cmake_deps_template = CMakeDepsFileTemplate(cmake_deps,
                                                         requirement,
                                                         self.conanfile,
-                                                        find_module_mode=False)
+                                                        generating_module=False)
 
             cmake_component_alias = {
                 component_name: cmake_deps_template.get_component_alias(requirement, component_name)

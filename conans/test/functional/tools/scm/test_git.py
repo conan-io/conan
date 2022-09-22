@@ -209,6 +209,60 @@ class TestGitBasicClone:
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
 
+class TestGitCloneWithArgs:
+    """ Git cloning passing additional arguments
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def layout(self):
+                self.folders.source = "source"
+
+            def source(self):
+                git = Git(self)
+                git.clone(url="{url}", target=".", args={args})
+                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
+        """)
+
+    def test_clone_specify_branch_or_tag(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder,
+                                                   commits=3, branch="main", tags=["v1.2.3"])
+
+        c = TestClient()
+        git_args = ['--branch', 'main']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+        git_args = ['--branch', 'v1.2.3']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+    def test_clone_invalid_branch_argument(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder,
+                                                   commits=3, branch="main", tags=["v1.2.3"])
+        c = TestClient()
+        git_args = ['--branch', 'foobar']
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit, args=str(git_args))})
+        with pytest.raises(Exception):
+            c.run("create .")
+            assert "Remote branch foobar not found" in c.out
+
 @pytest.mark.skipif(six.PY2, reason="Only Py3")
 class TestGitBasicSCMFlow:
     """ Build the full new SCM approach:
@@ -456,3 +510,78 @@ class TestGitMonorepoSCMFlow:
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
         assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
         assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out
+
+
+class TestConanFileSubfolder:
+    """verify that we can have a conanfile in a subfolder
+        # https://github.com/conan-io/conan/issues/11275
+    """
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import update_conandata, load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, os.path.dirname(self.recipe_folder))
+                url, commit = git.get_url_and_commit()
+                # We store the current url and commit in conandata.yml
+                update_conandata(self, {"sources": {"commit": commit, "url": url}})
+                self.output.info("URL: {}".format(url))
+                self.output.info("COMMIT: {}".format(commit))
+
+            def layout(self):
+                pass # self.folders.source = "source"
+
+            def source(self):
+                git = Git(self)
+                sources = self.conan_data["sources"]
+                url = sources["url"]
+                commit = sources["commit"]
+                git.clone(url=url, target=".")
+                git.checkout(commit=commit)
+                self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
+        """)
+
+    def test_conanfile_subfolder(self):
+        """
+        A local repo, without remote, will have commit, but no URL
+        """
+        c = TestClient()
+        c.save({"conan/conanfile.py": self.conanfile,
+                "CMakeLists.txt": "mycmakelists",
+                "src/myfile.h": "myheader"})
+        commit = c.init_git_repo()
+        c.run("export conan")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: URL: {}".format(c.current_folder.replace("\\", "/")) in c.out
+
+        c.run("create conan")
+        assert "pkg/0.1: MYCMAKE: mycmakelists" in c.out
+        assert "pkg/0.1: MYFILE: myheader" in c.out
+
+    def test_git_run(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.scm import Git
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def export(self):
+                    git = Git(self)
+                    self.output.info(git.run("--version"))
+            """)
+
+        c = TestClient()
+        c.save({"conan/conanfile.py": conanfile})
+        c.init_git_repo()
+        c.run("export conan")
+        assert "pkg/0.1: git version" in c.out

@@ -11,6 +11,8 @@ def test_msbuildtoolchain_props_with_extra_flags():
     """
     profile = textwrap.dedent("""\
     include(default)
+    [settings]
+    arch=x86_64
     [conf]
     tools.build:cxxflags=["--flag1", "--flag2"]
     tools.build:cflags+=["--flag3", "--flag4"]

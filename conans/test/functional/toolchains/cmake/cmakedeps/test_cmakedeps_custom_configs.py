@@ -227,7 +227,7 @@ def test_changing_build_type():
     # in MSVC multi-config -s pkg:build_type=Debug is not really necesary, toolchain do nothing
     # TODO: Challenge how to define consumer build_type for conanfile.txt
     client.run("install . -s pkg:build_type=Debug -s build_type=Release")
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug")
     client.run_command("cmake --build . --config Debug")
     cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
     client.run_command(cmd)

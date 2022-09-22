@@ -1,3 +1,4 @@
+import platform
 from os import chdir
 
 import pytest
@@ -151,7 +152,7 @@ def test_ndebug():
     ("clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("clang", 'libc++', '-stdlib=libc++'),
     ("apple-clang", 'libstdc++', '-stdlib=libstdc++'),
-    ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'),
+    # ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'), # this is invalid input
     ("apple-clang", 'libc++', '-stdlib=libc++'),
     ("sun-cc", 'libCstd', '-library=Cstd'),
     ("sun-cc", 'libstdcxx', '-library=stdcxx4'),
@@ -337,6 +338,23 @@ def test_apple_isysrootflag():
     assert be.apple_isysroot_flag is None
 
 
+def test_sysrootflag():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"build_type": "Debug",
+         "os": {"Darwin": "Macos"}.get(platform.system(), platform.system()),
+         "arch": "x86_64"})
+    be = AutotoolsToolchain(conanfile)
+    expected = "--sysroot /path/to/sysroot"
+    assert be.sysroot_flag == expected
+    env = be.vars()
+    assert expected in env["CXXFLAGS"]
+    assert expected in env["CFLAGS"]
+    assert expected in env["LDFLAGS"]
+
+
 def test_custom_defines():
     conanfile = ConanFileMock()
     conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
@@ -346,7 +364,12 @@ def test_custom_defines():
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    be.defines = ["MyDefine1", "MyDefine2"]
+    be.extra_defines = ["MyDefine1", "MyDefine2"]
+
+    assert "MyDefine1" in be.defines
+    assert "MyDefine2" in be.defines
+    assert "NDEBUG" in be.defines
+
     env = be.vars()
     assert "-DMyDefine1" in env["CPPFLAGS"]
     assert "-DMyDefine2" in env["CPPFLAGS"]
@@ -362,7 +385,14 @@ def test_custom_cxxflags():
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    be.cxxflags = ["MyFlag1", "MyFlag2"]
+    be.extra_cxxflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.cxxflags
+    assert "MyFlag2" in be.cxxflags
+    assert "-mios-version-min=14" in be.cxxflags
+    assert "MyFlag" not in be.cflags
+    assert "MyFlag" not in be.ldflags
+
     env = be.vars()
     assert "MyFlag1" in env["CXXFLAGS"]
     assert "MyFlag2" in env["CXXFLAGS"]
@@ -381,7 +411,14 @@ def test_custom_cflags():
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    be.cflags = ["MyFlag1", "MyFlag2"]
+    be.extra_cflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.cflags
+    assert "MyFlag2" in be.cflags
+    assert "-mios-version-min=14" in be.cflags
+    assert "MyFlag" not in be.cxxflags
+    assert "MyFlag" not in be.ldflags
+
     env = be.vars()
     assert "MyFlag1" in env["CFLAGS"]
     assert "MyFlag2" in env["CFLAGS"]
@@ -400,7 +437,14 @@ def test_custom_ldflags():
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    be.ldflags = ["MyFlag1", "MyFlag2"]
+    be.extra_ldflags = ["MyFlag1", "MyFlag2"]
+
+    assert "MyFlag1" in be.ldflags
+    assert "MyFlag2" in be.ldflags
+    assert "-mios-version-min=14" in be.ldflags
+    assert "MyFlag" not in be.cxxflags
+    assert "MyFlag" not in be.cflags
+
     env = be.vars()
     assert "MyFlag1" in env["LDFLAGS"]
     assert "MyFlag2" in env["LDFLAGS"]

@@ -7,7 +7,7 @@ from conans.util.files import mkdir
 
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
-         ignore_case=True, copy_symlink_folders=True):
+         ignore_case=True):
     """
         It will copy the files matching the pattern from the src folder to the dst, including the
         symlinks to files. If a folder from "src" doesn't contain any file to be copied, it won't be
@@ -27,7 +27,6 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
                          lib dir
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
-        param copy_symlink_folders: Copy the symlink folders at the "dst" folder.
 
         return: list of copied files
         """
@@ -37,12 +36,11 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     # This is necessary to add the trailing / so it is not reported as symlink
     src = os.path.join(src, "")
     excluded_folder = dst
-    files_to_copy, symlinked_folders = _filter_files(src, pattern, excludes, ignore_case,
-                                                     excluded_folder)
+    files_to_copy, files_symlinked_to_folders = _filter_files(src, pattern, excludes, ignore_case,
+                                                           excluded_folder)
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
-    if copy_symlink_folders:
-        _create_symlinked_folders(src, dst, symlinked_folders)
+    copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
 
     # FIXME: Not always passed conanfile
     if conanfile:
@@ -50,29 +48,12 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     return copied_files
 
 
-def _create_symlinked_folders(src, dst, symlinked_folders):
-    """If in the src folder there are folders that are symlinks, create them in the dst folder
-       pointing exactly to the same place."""
-    for folder in symlinked_folders:
-        relative_path = os.path.relpath(folder, src)
-        symlink_path = os.path.join(dst, relative_path)
-        # We create the same symlink in dst, no matter if it is absolute or relative
-        link_dst = os.readlink(folder)  # This could be perfectly broken
-
-        # Create the parent directory that will contain the symlink file
-        mkdir(os.path.dirname(symlink_path))
-        # If the symlink is already there, remove it (multiple copy(*.h) copy(*.dll))
-        if os.path.islink(symlink_path):
-            os.unlink(symlink_path)
-        os.symlink(link_dst, symlink_path)
-
-
 def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     """ return a list of the files matching the patterns
     The list will be relative path names wrt to the root src folder
     """
     filenames = []
-    symlinked_folders = []
+    files_symlinked_to_folders = []
 
     if excludes:
         if not isinstance(excludes, (tuple, list)):
@@ -82,16 +63,17 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     else:
         excludes = []
 
-    for root, subfolders, files in os.walk(src, followlinks=True):
+    for root, subfolders, files in os.walk(src):
         if root == excluded_folder:
             subfolders[:] = []
             continue
 
-        if os.path.islink(root):
-            symlinked_folders.append(root)
-            # This is a symlink folder, the symlink will be copied, so stop iterating this folder
-            subfolders[:] = []
-            continue
+        # Check if any of the subfolders is a symlink
+        for subfolder in subfolders:
+            relative_path = os.path.relpath(os.path.join(root, subfolder), src)
+            if os.path.islink(os.path.join(root, subfolder)):
+                if fnmatch.fnmatch(os.path.normpath(relative_path.lower()), pattern):
+                    files_symlinked_to_folders.append(relative_path)
 
         relative_path = os.path.relpath(root, src)
         compare_relative_path = relative_path.lower() if ignore_case else relative_path
@@ -118,7 +100,7 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
         else:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatchcase(f, exclude)]
 
-    return files_to_copy, symlinked_folders
+    return files_to_copy, files_symlinked_to_folders
 
 
 def _copy_files(files, src, dst, keep_path):
@@ -144,6 +126,26 @@ def _copy_files(files, src, dst, keep_path):
         else:
             shutil.copy2(abs_src_name, abs_dst_name)
         copied_files.append(abs_dst_name)
+    return copied_files
+
+
+def _copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst):
+    """Copy the files that are symlinks to folders from src to dst.
+       The files are already filtered with the specified pattern"""
+    copied_files = []
+    for relative_path in files_symlinked_to_folders:
+        abs_path = os.path.join(src, relative_path)
+        symlink_path = os.path.join(dst, relative_path)
+        # We create the same symlink in dst, no matter if it is absolute or relative
+        link_dst = os.readlink(abs_path)  # This could be perfectly broken
+
+        # Create the parent directory that will contain the symlink file
+        mkdir(os.path.dirname(symlink_path))
+        # If the symlink is already there, remove it (multiple copy(*.h) copy(*.dll))
+        if os.path.islink(symlink_path):
+            os.unlink(symlink_path)
+        os.symlink(link_dst, symlink_path)
+        copied_files.append(symlink_path)
     return copied_files
 
 

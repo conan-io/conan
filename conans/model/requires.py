@@ -119,8 +119,14 @@ class Requirements(OrderedDict):
         new_requirement = Requirement(ref, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            raise ConanException("Duplicated requirement %s != %s"
-                                 % (old_requirement, new_requirement))
+            if old_requirement.override:
+                # If this is a consumer package with requirements() method,
+                # conan install . didn't add the requires yet, so they couldnt be overriden at
+                # the override() method, override now
+                self[name] = Requirement(old_requirement.ref, private, override)
+            else:
+                raise ConanException("Duplicated requirement %s != %s"
+                                     % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
 
@@ -174,7 +180,7 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, reference, private=False, override=False):
+    def __call__(self, reference, private=False, override=False, **kwargs):
         self.add(reference, private, override)
 
     def __repr__(self):

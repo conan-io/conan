@@ -371,7 +371,7 @@ endmacro()""", macro)
 
         generator = CMakeGenerator(conanfile)
         content = generator.content
-        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
+        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS'
                       ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "dummy_root_folder1/Frameworks"\n'
                       '\t\t\t"dummy_root_folder1/path/to/Frameworks1"\n'

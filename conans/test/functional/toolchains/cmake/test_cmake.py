@@ -15,10 +15,35 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.tool_mingw64
+@pytest.mark.tool_cmake(version="3.15")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_mingw():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    assert "hello/1.0: __GNUC__" in client.out
+    assert "hello/1.0: __MINGW" in client.out
+
+
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(r"""
         from conans import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
@@ -36,10 +61,10 @@ class Base(unittest.TestCase):
                 tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
                 tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
                 tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
-                tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions["MYDEFINE"] = "\"MYDEF_VALUE\""
                 tc.preprocessor_definitions["MYDEFINEINT"] = 42
-                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
-                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "\"MYDEF_DEBUG\""
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "\"MYDEF_RELEASE\""
                 tc.preprocessor_definitions.debug["MYDEFINEINT_CONFIG"] = 421
                 tc.preprocessor_definitions.release["MYDEFINEINT_CONFIG"] = 422
                 tc.generate()
@@ -325,7 +350,7 @@ class WinTest(Base):
                        "MYVAR_CONFIG": "MYVAR_{}".format(build_type.upper()),
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_{}".format(build_type.upper())
-                       })
+                       }, subsystem="mingw64")
 
         self._modify_code()
         time.sleep(2)
@@ -411,16 +436,26 @@ class AppleTest(Base):
         vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
-                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
                 "CMAKE_CXX_FLAGS_DEBUG": "-g",
                 "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_C_FLAGS": "-m64",
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "-m64",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
+
+        host_arch = self.client.get_default_host_profile().settings['arch']
+
+        if host_arch == "x86_64":
+            vals.update({
+                "CMAKE_C_FLAGS": "-m64",
+                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                "CMAKE_EXE_LINKER_FLAGS": "-m64",
+            })
+        else:
+            vals.update({
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+            })
 
         def _verify_out(marker=">>"):
             if shared:

@@ -575,10 +575,13 @@ class ConanInfo(object):
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
 
+    # FIXME: Rename this to "clear" in 2.0
     def header_only(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+
+    clear = header_only
 
     def msvc_compatible(self):
         if self.settings.compiler != "msvc":
@@ -603,7 +606,7 @@ class ConanInfo(object):
         # https://github.com/conan-io/conan/pull/10797
         # apple-clang compiler version 13 will be compatible with 13.0
         if not self.settings.compiler or \
-           (self.settings.compiler != "apple-clang" and self.settings.compiler.version != "13"):
+           (self.settings.compiler != "apple-clang" or self.settings.compiler.version != "13"):
             return
 
         compatible = self.clone()

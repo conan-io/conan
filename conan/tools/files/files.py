@@ -11,11 +11,14 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 
 import six
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
+from conans.util.runners import check_output_runner
 
 if six.PY3:  # Remove this IF in develop2
     from shutil import which
@@ -65,7 +68,17 @@ def rmdir(conanfile, path):
     _internal_rmdir(path)
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+def rm(conanfile, pattern, folder, recursive=False):
+    for root, _, filenames in os.walk(folder):
+        for filename in filenames:
+            if fnmatch(filename, pattern):
+                fullname = os.path.join(root, filename)
+                os.unlink(fullname)
+        if not recursive:
+            break
+
+
+def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
@@ -111,7 +124,7 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
@@ -153,10 +166,14 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
-                       user_download=True, url=file_url,
-                       file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
-                       auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+        if file_url.startswith("file:"):
+            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
+                                      sha1=sha1, sha256=sha256)
+        else:
+            run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
+                        user_download=True, url=file_url,
+                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
+                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):
@@ -171,6 +188,23 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                 out.warn(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+
+
+def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):
+    file_origin = _path_from_file_uri(url)
+    shutil.copyfile(file_origin, file_path)
+
+    if md5 is not None:
+        check_md5(conanfile, file_path, md5)
+    if sha1 is not None:
+        check_sha1(conanfile, file_path, sha1)
+    if sha256 is not None:
+        check_sha256(conanfile, file_path, sha256)
+
+
+def _path_from_file_uri(uri):
+    path = urlparse(uri).path
+    return url2pathname(path)
 
 
 def rename(conanfile, src, dst):
@@ -375,6 +409,11 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
                     name = member.name.replace("\\", "/")
                     member.name = name.split("/", 1)[1]
                     member.path = member.name
+                    if member.linkpath.startswith(common_folder):
+                        # https://github.com/conan-io/conan/issues/11065
+                        linkpath = member.linkpath.replace("\\", "/")
+                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkname = member.linkpath
             if pattern:
                 members = list(filter(lambda m: fnmatch(m.name, pattern),
                                       tarredgzippedFile.getmembers()))
@@ -477,24 +516,29 @@ def collect_libs(conanfile, folder=None):
     else:
         lib_folders = [os.path.join(conanfile.package_folder, folder)
                        for folder in conanfile.cpp_info.libdirs]
-    result = []
+
+    ref_libs = {}
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
             conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
                                   "{0}".format(lib_folder))
             continue
+        # In case of symlinks, only keep shortest file name in the same "group"
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
             if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                if name in result:
-                    conanfile.output.warn("Library '%s' was either already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder or appears several "
-                                          "times with a different file extension" % name)
-                else:
-                    result.append(name)
+                real_lib = os.path.basename(os.path.realpath(os.path.join(lib_folder, f)))
+                if real_lib not in ref_libs or len(f) < len(ref_libs[real_lib]):
+                    ref_libs[real_lib] = f
+
+    result = []
+    for f in ref_libs.values():
+        name, ext = os.path.splitext(f)
+        if ext != ".lib" and name.startswith("lib"):
+            name = name[3:]
+        if name not in result:
+            result.append(name)
     result.sort()
     return result
 
