@@ -36,6 +36,12 @@ SFU = 'sfu'  # Windows Services for UNIX
 
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="build"):
     from conan.tools.env.environment import environment_wrap_command
+    if getattr(conanfile, "conf", None) is None:
+        # TODO: No conf, no profile defined!! This happens at ``export()`` time
+        #  Is it possible to run a self.run() in export() in bash?
+        #  Is it necessary? Shouldn't be
+        return command
+
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
 

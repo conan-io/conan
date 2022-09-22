@@ -658,7 +658,7 @@ def test_skip_virtualbuildenv_run():
     # If we pass env=None no "conanbuild" is applied
     # self.run("'{}'".format(path), env=None)
     conanfile = conanfile.replace(".format(path))",
-                                  ".format(path), env=None)")
+                                  ".format(path), scope=None)")
     client.save({"conanfile.py": conanfile})
     # client.run("create . --name consumer --version 1.0")
     client.run("create .  consumer/1.0@ -pr:h=default -pr:b=default")
