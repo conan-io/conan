@@ -160,33 +160,6 @@ def build_type_flags(settings):
     return ""
 
 
-def libcxx_flag(conanfile):
-    libcxx = conanfile.settings.get_safe("compiler.libcxx")
-    if not libcxx:
-        return None
-
-    lib = None
-    compiler = conanfile.settings.get_safe("compiler")
-    if compiler == "apple-clang":
-        # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-        lib = "-stdlib={}".format(libcxx)
-    elif compiler == "clang" or compiler == "intel-cc":
-        if libcxx == "libc++":
-            lib = "-stdlib=libc++"
-        elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-            lib = "-stdlib=libstdc++"
-        # FIXME, something to do with the other values? Android c++_shared?
-    elif compiler == "sun-cc":
-        lib = {"libCstd": "-library=Cstd",
-               "libstdcxx": "-library=stdcxx4",
-               "libstlport": "-library=stlport4",
-               "libstdc++": "-library=stdcpp"
-               }.get(libcxx)
-    elif compiler == "qcc":
-        lib = "-Y _%s" % str(libcxx)
-    return lib
-
-
 def cppstd_flag(settings):
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
