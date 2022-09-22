@@ -73,17 +73,17 @@ def apple_min_version_flag(conanfile):
 def apple_sdk_path(conanfile):
     sdk_path = conanfile.conf.get("tools.apple:sdk_path")
     if not sdk_path:
-        sdk_path = XCRun(conanfile.settings).sdk_path
+        sdk_path = XCRun(conanfile).sdk_path
     return sdk_path
 
 
 class XCRun(object):
 
-    def __init__(self, settings, sdk=None):
+    def __init__(self, conanfile, sdk=None):
         """sdk=False will skip the flag
            sdk=None will try to adjust it automatically"""
-        if sdk is None and settings:
-            sdk = apple_sdk_name(settings)
+        if sdk is None and conanfile.settings:
+            sdk = apple_sdk_name(conanfile.settings)
         self.sdk = sdk
 
     def _invoke(self, args):
