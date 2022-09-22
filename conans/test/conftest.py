@@ -209,7 +209,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         """)
