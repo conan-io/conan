@@ -7,7 +7,7 @@ from jinja2 import Template
 
 from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
 from conan.tools.build import build_jobs
-from conan.tools.build.flags import architecture_flag, libcxx_flag
+from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
@@ -125,25 +125,13 @@ class GLibCXXBlock(Block):
         string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
-        add_compile_definitions(_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        add_compile_definitions({{ glibcxx }})
         {% endif %}
         """)
 
     def context(self):
-        libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return None
-        lib = libcxx_flag(self._conanfile)
-        compiler = self._conanfile.settings.get_safe("compiler")
-        glib = None
-        if compiler in ['clang', 'apple-clang', 'gcc']:
-            # we might want to remove this "1", it is the default in most distros
-            if libcxx == "libstdc++":
-                glib = "0"
-            elif libcxx == "libstdc++11" and \
-                self._conanfile.conf.get("tools.gnu:define_libcxx11_abi", check_type=bool):
-                glib = "1"
-        return {"set_libcxx": lib, "glibcxx": glib}
+        libcxx, stdlib11 = libcxx_flags(self._conanfile)
+        return {"set_libcxx": libcxx, "glibcxx": stdlib11}
 
 
 class SkipRPath(Block):
