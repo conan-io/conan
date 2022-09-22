@@ -23,4 +23,4 @@ def test_xcrun():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("create .")
-    assert "hello/0.1: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer" in client.out
+    assert "Xcode.app/Contents/Developer/Platforms/MacOSX.platform" in client.out
