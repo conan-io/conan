@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._compilers import architecture_flag
+from conan.tools._compilers import architecture_flag, libcxx_flags
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
@@ -159,41 +159,13 @@ class GLibCXXBlock(Block):
         string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
-        add_compile_definitions(_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        add_compile_definitions({{ glibcxx }})
         {% endif %}
         """)
 
     def context(self):
-        libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return None
-        compiler = self._conanfile.settings.get_safe("compiler")
-        lib = glib = None
-        if compiler == "apple-clang":
-            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-            lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang" or compiler == "intel-cc":
-            if libcxx == "libc++":
-                lib = "-stdlib=libc++"
-            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-                lib = "-stdlib=libstdc++"
-            # FIXME, something to do with the other values? Android c++_shared?
-        elif compiler == "sun-cc":
-            lib = {"libCstd": "Cstd",
-                   "libstdcxx": "stdcxx4",
-                   "libstlport": "stlport4",
-                   "libstdc++": "stdcpp"
-                   }.get(libcxx)
-            if lib:
-                lib = "-library={}".format(lib)
-
-        if compiler in ['clang', 'apple-clang', 'gcc']:
-            if libcxx == "libstdc++":
-                glib = "0"
-            elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi",
-                                                                      check_type=bool):
-                glib = "1"
-        return {"set_libcxx": lib, "glibcxx": glib}
+        libcxx, stdlib11 = libcxx_flags(self._conanfile)
+        return {"set_libcxx": libcxx, "glibcxx": stdlib11}
 
 
 class SkipRPath(Block):
@@ -523,8 +495,9 @@ class FindFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         is_apple_ = is_apple_os(self._conanfile)
 
-        # Read information from host context
-        host_req = self._conanfile.dependencies.host.values()
+        # Read information from host context, also including test_requires, which are in host
+        # TODO: Add here in 2.0 the "skip": False trait
+        host_req = self._conanfile.dependencies.filter({"build": False}).values()
         host_build_paths_root = []
         host_build_paths_noroot = []
         host_lib_paths = []

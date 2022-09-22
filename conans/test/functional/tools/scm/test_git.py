@@ -565,3 +565,23 @@ class TestConanFileSubfolder:
         c.run("create conan")
         assert "pkg/0.1: MYCMAKE: mycmakelists" in c.out
         assert "pkg/0.1: MYFILE: myheader" in c.out
+
+    def test_git_run(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.scm import Git
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def export(self):
+                    git = Git(self)
+                    self.output.info(git.run("--version"))
+            """)
+
+        c = TestClient()
+        c.save({"conan/conanfile.py": conanfile})
+        c.init_git_repo()
+        c.run("export conan")
+        assert "pkg/0.1: git version" in c.out

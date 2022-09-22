@@ -116,8 +116,10 @@ def _apple_clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
     if version < "10.0":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    if version < "13.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
 
 
 def _gcc_supported_cppstd(version):

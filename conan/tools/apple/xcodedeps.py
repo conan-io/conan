@@ -77,9 +77,8 @@ class XcodeDeps(object):
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
-        {% for dep in deps %}
-        // Includes for {{dep[0]}}::{{dep[1]}} dependency
-        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        {% for include in deps_includes %}
+        #include "{{include}}"
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
@@ -160,10 +159,18 @@ class XcodeDeps(object):
             content_multi = load(multi_path)
         else:
             content_multi = self._dep_xconfig
+
+            def _get_includes(components):
+                # if we require the root component dep::dep include conan_dep.xcconfig
+                # for components (dep::component) include conan_dep_component.xcconfig
+                return [f"conan_{_format_name(component[0])}.xcconfig" if component[0] == component[1]
+                        else f"conan_{_format_name(component[0])}_{_format_name(component[1])}.xcconfig"
+                        for component in components]
+
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs})
+                                                            "deps_includes": _get_includes(reqs)})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',

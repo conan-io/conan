@@ -105,10 +105,10 @@ def test_xcodedeps_components():
         self.cpp_info.components["core"].includedirs.append("include")
         self.cpp_info.components["core"].libdirs.append("lib")
 
-        self.cpp_info.components["client"].libs = ["client"]
-        self.cpp_info.components["client"].includedirs.append("include")
-        self.cpp_info.components["client"].libdirs.append("lib")
-        self.cpp_info.components["client"].requires.extend(["core", "tcp::tcp"])
+        self.cpp_info.components["client-test"].libs = ["client"]
+        self.cpp_info.components["client-test"].includedirs.append("include")
+        self.cpp_info.components["client-test"].libdirs.append("lib")
+        self.cpp_info.components["client-test"].requires.extend(["core", "tcp::tcp"])
 
         self.cpp_info.components["server"].libs = ["server"]
         self.cpp_info.components["server"].includedirs.append("include")
@@ -136,7 +136,7 @@ def test_xcodedeps_components():
         self.cpp_info.libs = ["chat"]
         self.cpp_info.includedirs.append("include")
         self.cpp_info.libdirs.append("lib")
-        self.cpp_info.requires.append("network::client")
+        self.cpp_info.requires.append("network::client-test")
     """
 
     cmakelists_chat = textwrap.dedent("""
@@ -146,7 +146,7 @@ def test_xcodedeps_components():
         add_library(chat src/chat.cpp include/chat.h)
         target_include_directories(chat PUBLIC include)
         set_target_properties(chat PROPERTIES PUBLIC_HEADER "include/chat.h")
-        target_link_libraries(chat network::client)
+        target_link_libraries(chat network::client-test)
         install(TARGETS chat)
         """)
 
@@ -184,7 +184,7 @@ def test_xcodedeps_components():
     client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan -s build_type=Debug "
                "--build=missing")
     chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
-    assert '#include "conan_network_client.xcconfig"' in chat_xcconfig
+    assert '#include "conan_network_client_test.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
     host_arch = client.get_default_host_profile().settings['arch']
@@ -202,6 +202,78 @@ def test_xcodedeps_components():
     assert "tcp/1.0: Hello World Release!" in client.out
     assert "client/1.0: Hello World Release!" in client.out
     assert "chat/1.0: Hello World Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_cmake
+def test_cpp_info_require_whole_package():
+    """
+    https://github.com/conan-io/conan/issues/12089
+
+    liba has two components liba::cmp1 liba::cmp2
+
+    libb has not components and requires liba::liba so should generate the same info as
+    if it was requiring liba::cmp1 and liba::cmp2
+
+    libc has components and one component requires liba::liba so should generate the same info as if
+    it was requiring liba::cmp1 and liba::cmp2
+    """
+    client = TestClient(path_with_spaces=False)
+
+    liba = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "liba"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs.append("cmp1")
+                self.cpp_info.components["cmp2"].includedirs.append("cmp2")
+        """)
+
+    libb = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "libb"
+            version = "1.0"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.requires = ["liba::liba"]
+        """)
+
+    libc = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "libc"
+            version = "1.0"
+            requires = "liba/1.0"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs.append("cmp1")
+                self.cpp_info.components["cmp2"].includedirs.append("cmp2")
+                self.cpp_info.components["cmp1"].requires = ["liba::liba"]
+        """)
+
+    client.save({"liba.py": liba, "libb.py": libb, "libc.py": libc})
+
+    client.run("create liba.py")
+    client.run("create libb.py")
+    client.run("create libc.py")
+    client.run("install libb/1.0@ -g XcodeDeps --install-folder=libb")
+
+    libb_xcconfig = client.load(os.path.join("libb", "conan_libb_libb.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libb_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
+
+    client.run("install libc/1.0@ -g XcodeDeps --install-folder=libc")
+
+    libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
+    assert '#include "conan_liba.xcconfig"' in libc_comp1_xcconfig
+    assert '#include "conan_liba_liba.xcconfig"' not in libc_comp1_xcconfig
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")

@@ -36,6 +36,9 @@ class MSBuildToolchain(object):
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
             <PlatformToolset>{{ toolset }}</PlatformToolset>
+            {% for k, v in properties.items() %}
+            <{{k}}>{{ v }}</{{k}}>
+            {% endfor %}
           </PropertyGroup>
         </Project>
     """)
@@ -51,6 +54,7 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile)
+        self.properties = {}
         check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
@@ -163,7 +167,8 @@ class MSBuildToolchain(object):
             "runtime_library": runtime_library,
             "toolset": toolset,
             "compile_options": compile_options,
-            "parallel": parallel
+            "parallel": parallel,
+            "properties": self.properties,
         }
 
     def _write_config_toolchain(self, config_filename):
