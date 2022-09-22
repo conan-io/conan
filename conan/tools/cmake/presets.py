@@ -94,8 +94,9 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
         if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
 
     conanfile.output.info(f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
-                          f"'cmake --preset {name}' or if your CMake version is not compatible with "
-                          f"the presets feature (<3.19) call cmake configure like: 'cmake <path> "
+                          f"'cmake --preset {name}'")
+    conanfile.output.info(f"If your CMake version is not compatible with "
+                          f"CMakePresets (<3.19) call cmake like: 'cmake <path> "
                           f"-G {_format_val(generator)} {add_toolchain_cache}"
                           f"{cache_variables_info}'")
     return ret
