@@ -142,5 +142,7 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                "".format(folder=client.current_folder.replace("\\", "/")) in meson_log
         # Flags/Defines from deps and consumer are appearing in meson-log.txt as part
         # of the command-line
-        assert '%s -DVAR="VALUE" -DVAR2="VALUE2" %s' % (flags, deps_flags) in meson_log
+        assert flags in meson_log
+        assert '-DVAR="VALUE" -DVAR2="VALUE2"' in meson_log
+        assert deps_flags in meson_log
         assert '-DDEF3=simple_string -DDEF1=one_string -DDEF2=other_string' in meson_log

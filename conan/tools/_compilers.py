@@ -57,6 +57,39 @@ def architecture_flag(settings):
     return ""
 
 
+def libcxx_flags(conanfile):
+    libcxx = conanfile.settings.get_safe("compiler.libcxx")
+    if not libcxx:
+        return None, None
+    compiler = conanfile.settings.get_safe("compiler")
+    lib = stdlib11 = None
+    if compiler == "apple-clang":
+        # In apple-clang 2 only values atm are "libc++" and "libstdc++"
+        lib = "-stdlib={}".format(libcxx)
+    elif compiler == "clang" or compiler == "intel-cc":
+        if libcxx == "libc++":
+            lib = "-stdlib=libc++"
+        elif libcxx == "libstdc++" or libcxx == "libstdc++11":
+            lib = "-stdlib=libstdc++"
+        # FIXME, something to do with the other values? Android c++_shared?
+    elif compiler == "sun-cc":
+        lib = {"libCstd": "-library=Cstd",
+               "libstdcxx": "-library=stdcxx4",
+               "libstlport": "-library=stlport4",
+               "libstdc++": "-library=stdcpp"
+               }.get(libcxx)
+    elif compiler == "qcc":
+        lib = "-Y _{}".format(libcxx)
+
+    if compiler in ['clang', 'apple-clang', 'gcc']:
+        if libcxx == "libstdc++":
+            stdlib11 = "_GLIBCXX_USE_CXX11_ABI=0"
+        elif libcxx == "libstdc++11" and conanfile.conf.get("tools.gnu:define_libcxx11_abi",
+                                                            check_type=bool):
+            stdlib11 = "_GLIBCXX_USE_CXX11_ABI=1"
+    return lib, stdlib11
+
+
 def build_type_link_flags(settings):
     """
     returns link flags specific to the build type (Debug, Release, etc.)
