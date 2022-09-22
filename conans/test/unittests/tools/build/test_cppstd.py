@@ -67,6 +67,8 @@ def test_supported_cppstd_gcc(compiler, compiler_version, values):
     ("apple-clang", "9.5", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
     ("apple-clang", "10", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17", "20",
                            "gnu20"]),
+    ("apple-clang", "13", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17", "20",
+                           "gnu20", "23", "gnu23"]),
 ])
 def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})

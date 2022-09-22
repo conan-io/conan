@@ -23,10 +23,10 @@ def _condition(configuration, architecture, sdk_name, sdk_version):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.parametrize("configuration, os_version, libcxx, cppstd, arch, sdk_name, sdk_version, clang_cppstd", [
     ("Release", "", "", "", "x86_64", "", "", ""),
-    ("Release", "12.0", "libc++", "20", "x86_64", "", "", "c++2a"),
-    ("Debug", "12.0", "libc++", "20", "x86_64", "", "", "c++2a"),
-    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "11.3", "c++2a"),
-    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "", "c++2a"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "", "", "c++20"),
+    ("Debug", "12.0", "libc++", "20", "x86_64", "", "", "c++20"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "11.3", "c++20"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "macosx", "", "c++20"),
 ])
 def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_name, sdk_version, clang_cppstd):
     client = TestClient()

@@ -254,7 +254,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
 
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
     if Version(clang_version) >= "4.0":
         v98 = "c++98"
@@ -269,24 +269,32 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(clang_version) >= "6.1":
+    # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
+    # Note: cmake allows c++17 since version 10.0
+    if Version(clang_version) >= "9.1":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+    elif Version(clang_version) >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "9.1":
-        # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
-        v17 = "c++17"
-        vgnu17 = "gnu++17"
-
-    if Version(clang_version) >= "10.0":
+    if Version(clang_version) >= "13.0":
+        v20 = "c++20"
+        vgnu20 = "gnu++20"
+    elif Version(clang_version) >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
+
+    if Version(clang_version) >= "13.0":
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd, None)
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
 
     return "-std=%s" % flag if flag else None
 
