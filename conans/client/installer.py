@@ -368,13 +368,15 @@ class BinaryInstaller(object):
         else:
             build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
 
+        search_ref = str(ref)
+        search_ref = search_ref + "@" if "@" not in search_ref else search_ref
         raise ConanException(textwrap.dedent('''\
             Missing prebuilt package for '%s'
             Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
             Or try to build locally from sources with '%s'
 
             More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, ref, build_str)))
+            ''' % (missing_pkgs, search_ref, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
