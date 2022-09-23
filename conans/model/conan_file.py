@@ -411,15 +411,12 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env=None,
-            scope="build"):
+            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
-        if env is None:
-            if scope == "build":
-                env = "conanbuild"
-            elif scope == "run":
-                env = "conanrun"
+        if env == "":  # This default allows not breaking for users with ``env=None`` indicating
+            # they don't want any env-file applied
+            env = "conanbuild" if scope == "build" else "conanrun"
 
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
