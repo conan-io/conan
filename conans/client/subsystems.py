@@ -68,7 +68,7 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
     if not shell_path:
-        raise ConanException("The vconfig 'tools.microsoft.bash:path' is "
+        raise ConanException("The config 'tools.microsoft.bash:path' is "
                              "needed to run commands in a Windows subsystem")
     env = env or []
     if subsystem == MSYS2:
