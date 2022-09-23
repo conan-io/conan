@@ -8,8 +8,7 @@ import unittest
 import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
-    is_apple_os
-from conans.test.utils.apple import XCRun
+    is_apple_os, XCRun
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
@@ -96,27 +95,28 @@ class AppleTest(unittest.TestCase):
             self.assertTrue(xcrun_.find('lipo').endswith('lipo'))
             self.assertTrue(os.path.isdir(xcrun_.sdk_path))
 
-        settings = FakeSettings('Macos', 'x86')
-        xcrun = XCRun(settings)
+        conanfile = ConanFileMock({})
+        conanfile.settings = FakeSettings('Macos', 'x86')
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
 
-        settings = FakeSettings('iOS', 'x86')
-        xcrun = XCRun(settings, sdk='macosx')
+        conanfile.settings = FakeSettings('iOS', 'x86')
+        xcrun = XCRun(conanfile, sdk='macosx')
         _common_asserts(xcrun)
         # Simulator
         self.assertNotIn("iPhoneOS", xcrun.sdk_path)
 
-        settings = FakeSettings('iOS', 'armv7', os_sdk="iphoneos")
-        xcrun = XCRun(settings)
+        conanfile.settings = FakeSettings('iOS', 'armv7', os_sdk="iphoneos")
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
         self.assertIn("iPhoneOS", xcrun.sdk_path)
 
-        settings = FakeSettings('watchOS', 'armv7', os_sdk="watchos")
-        xcrun = XCRun(settings)
+        conanfile.settings = FakeSettings('watchOS', 'armv7', os_sdk="watchos")
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
         self.assertIn("WatchOS", xcrun.sdk_path)
 
         # Default one
-        settings = FakeSettings(None, None)
-        xcrun = XCRun(settings)
+        conanfile.settings = FakeSettings(None, None)
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
