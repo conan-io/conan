@@ -123,8 +123,9 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
         if is_msvc(self._conanfile):
-            env.define("CXX", "cl")
-            env.define("CC", "cl")
+            env.define("CXX", "cl -nologo")
+            env.define("CC", "cl -nologo")
+            env.define("LD", "link -nologo")
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
