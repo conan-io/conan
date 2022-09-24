@@ -123,25 +123,46 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
+
+        # Specific compiler & linker handling on Windows
+        if hasattr(self._conanfile, "settings_build"):
+            os_build = self._conanfile.settings_build.get_safe("os")
+        else:
+            os_build = self._conanfile.settings.get_safe("os")
         if is_msvc(self._conanfile):
             cc = get_env("CC")
             if cc and os.path.exists(cc):
-                cc = f"{unix_path(self._conanfile, cc)} -nologo"
+                cc = unix_path(self._conanfile, cc)
             else:
-                cc = "cl -nologo"
-            env.define("CC", cc)
+                cc = "cl"
+            env.define("CC", f"{cc} -nologo")
+
             cxx = get_env("CXX")
             if cxx and os.path.exists(cxx):
-                cxx = f"{unix_path(self._conanfile, cxx)} -nologo"
+                cxx = unix_path(self._conanfile, cxx)
             else:
-                cxx = "cl -nologo"
-            env.define("CXX", cxx)
-            ld = get_env("CXX")
+                cxx = "cl"
+            env.define("CXX", f"{cxx} -nologo")
+
+            ld = get_env("LD")
             if ld and os.path.exists(ld):
-                ld = f"{unix_path(self._conanfile, ld)} -nologo"
+                ld = unix_path(self._conanfile, ld)
             else:
-                ld = "link -nologo"
-            env.define("LD", ld)
+                ld = "link"
+            env.define("LD", f"{ld} -nologo")
+        elif os_build == "Windows":
+            cc = get_env("CC")
+            if cc and os.path.exists(cc):
+                env.define("CC", unix_path(self._conanfile, cc))
+
+            cxx = get_env("CXX")
+            if cxx and os.path.exists(cxx):
+                env.define("CXX", unix_path(self._conanfile, cxx))
+
+            ld = get_env("LD")
+            if ld and os.path.exists(ld):
+                env.define("LD", unix_path(self._conanfile, ld))
+
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
