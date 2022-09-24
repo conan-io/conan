@@ -6,6 +6,7 @@ from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
 from conan.tools.files import chdir
+from conan.tools.microsoft import unix_path
 from conans.util.runners import check_output_runner
 
 
@@ -55,7 +56,7 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self, args=None):
-        args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
+        args = args if args is not None else ["DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder))]
         self.make(target="install", args=args)
 
     def autoreconf(self, args=None):
