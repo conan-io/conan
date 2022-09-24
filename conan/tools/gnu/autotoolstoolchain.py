@@ -7,9 +7,10 @@ from conan.tools.build.cross_building import cross_building, get_cross_building_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag, unix_path
 from conans.errors import ConanException
-from conans.tools import args_to_string
+from conans.tools import args_to_string, get_env
+import os
 
 
 class AutotoolsToolchain:
@@ -123,9 +124,24 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
         if is_msvc(self._conanfile):
-            env.define("CXX", "cl -nologo")
-            env.define("CC", "cl -nologo")
-            env.define("LD", "link -nologo")
+            cc = get_env("CC")
+            if cc and os.path.exists(cc):
+                cc = f"{unix_path(self._conanfile, cc)} -nologo"
+            else:
+                cc = "cl -nologo"
+            env.define("CC", cc)
+            cxx = get_env("CXX")
+            if cxx and os.path.exists(cxx):
+                cxx = f"{unix_path(self._conanfile, cxx)} -nologo"
+            else:
+                cxx = "cl -nologo"
+            env.define("CXX", cxx)
+            ld = get_env("CXX")
+            if ld and os.path.exists(ld):
+                ld = f"{unix_path(self._conanfile, ld)} -nologo"
+            else:
+                ld = "link -nologo"
+            env.define("LD", ld)
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
