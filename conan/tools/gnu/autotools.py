@@ -6,7 +6,6 @@ from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
 from conan.tools.files import chdir
-from conans.util.runners import check_output_runner
 
 
 class Autotools(object):
