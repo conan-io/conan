@@ -121,47 +121,46 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
+    def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=[]):
+        """
+            Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
+            If env var doesn't exist, returns default.
+        """
+        exe = get_env(env_var)
+        if exe:
+            if os.path.exists(exe):
+                exe = unix_path(self._conanfile, exe)
+        else:
+            exe = default
+        if exe:
+            for option in extra_options:
+                if option not in exe:
+                    exe = f"{exe} {option}"
+        return exe
+
     def environment(self):
         env = Environment()
 
-        # Specific compiler & linker handling on Windows
+        # On Windows or if compiler is msvc, ensure to properly set CC, CXX and LD:
+        # - convert values from profile (if set) to compatible values
+        # - otherwise set to a good default if compiler is not a first class citizen in autotools
         if hasattr(self._conanfile, "settings_build"):
             os_build = self._conanfile.settings_build.get_safe("os")
         else:
             os_build = self._conanfile.settings.get_safe("os")
-        if is_msvc(self._conanfile):
-            cc = get_env("CC")
-            if cc and os.path.exists(cc):
-                cc = unix_path(self._conanfile, cc)
-            else:
-                cc = "cl"
-            env.define("CC", f"{cc} -nologo")
-
-            cxx = get_env("CXX")
-            if cxx and os.path.exists(cxx):
-                cxx = unix_path(self._conanfile, cxx)
-            else:
-                cxx = "cl"
-            env.define("CXX", f"{cxx} -nologo")
-
-            ld = get_env("LD")
-            if ld and os.path.exists(ld):
-                ld = unix_path(self._conanfile, ld)
-            else:
-                ld = "link"
-            env.define("LD", f"{ld} -nologo")
-        elif os_build == "Windows":
-            cc = get_env("CC")
-            if cc and os.path.exists(cc):
-                env.define("CC", unix_path(self._conanfile, cc))
-
-            cxx = get_env("CXX")
-            if cxx and os.path.exists(cxx):
-                env.define("CXX", unix_path(self._conanfile, cxx))
-
-            ld = get_env("LD")
-            if ld and os.path.exists(ld):
-                env.define("LD", unix_path(self._conanfile, ld))
+        if is_msvc(self._conanfile) or os_build == "Windows":
+            default_compiler = "cl" if is_msvc(self._conanfile) else None
+            default_linker = "link" if is_msvc(self._conanfile) else None
+            extra_options = ["-nologo"] if is_msvc(self._conanfile) else []
+            cc = self._exe_env_var_to_unix_path("CC", default_compiler, extra_options)
+            if cc:
+                env.define("CC", cc)
+            cxx = self._exe_env_var_to_unix_path("CXX", default_compiler, extra_options)
+            if cxx:
+                env.define("CXX", cxx)
+            ld = self._exe_env_var_to_unix_path("LD", default_linker, extra_options)
+            if ld:
+                env.define("LD", ld)
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
