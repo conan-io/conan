@@ -14,9 +14,11 @@ import os
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile, namespace=None, compiler_wrapper=None, arlib_wrapper=None):
         self._conanfile = conanfile
         self._namespace = namespace
+        self._compile_wrapper = compiler_wrapper
+        self._arlib_wrapper = arlib_wrapper
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
         self.autoreconf_args = self._default_autoreconf_flags()
@@ -45,18 +47,14 @@ class AutotoolsToolchain:
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
         # standard build toolchains env vars
-        self.cc = self._cc
-        self.cxx = self._cxx
-        self.ld = self._ld
-        self.ar = self._ar
-        self.nm = self._nm
-        self.objdump = self._objdump
-        self.ranlib = self._ranlib
-        self.strip = self._strip
-
-        # Wrappers paths for tools not compatible with autotools, like msvc
-        self.compile_wrapper = None
-        self.arlib_wrapper = None
+        self.cc = self._get_cc()
+        self.cxx = self._get_cxx()
+        self.ld = self._get_ld()
+        self.ar = self._get_ar()
+        self.nm = self._get_nm()
+        self.objdump = self._get_objdump()
+        self.ranlib = self._get_ranlib()
+        self.strip = self._get_strip()
 
         # Cross build
         self._host = None
@@ -135,65 +133,57 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
-    @property
-    def _cc(self):
+    def _get_cc(self):
         return self._exe_env_var_to_unix_path(
             "CC",
             "cl" if is_msvc(self._conanfile) else None,
             ["-nologo"] if is_msvc(self._conanfile) else [],
-            self.compile_wrapper,
+            self._compile_wrapper,
         )
 
-    @property
-    def _cxx(self):
+    def _get_cxx(self):
         return self._exe_env_var_to_unix_path(
             "CXX",
             "cl" if is_msvc(self._conanfile) else None,
             ["-nologo"] if is_msvc(self._conanfile) else [],
-            self.compile_wrapper,
+            self._compile_wrapper,
         )
 
-    @property
-    def _ld(self):
+    def _get_ld(self):
         return self._exe_env_var_to_unix_path(
             "LD",
             "link" if is_msvc(self._conanfile) else None,
             ["-nologo"] if is_msvc(self._conanfile) else [],
         )
 
-    @property
-    def _ar(self):
+    def _get_ar(self):
         return self._exe_env_var_to_unix_path(
             "AR",
             "lib" if is_msvc(self._conanfile) else None,
             ["-nologo"] if is_msvc(self._conanfile) else [],
-            self.arlib_wrapper,
+            self._arlib_wrapper,
         )
 
-    @property
-    def _nm(self):
+    def _get_nm(self):
         return self._exe_env_var_to_unix_path(
             "NM",
             "dumpbin" if is_msvc(self._conanfile) else None,
             ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
         )
 
-    @property
-    def _objdump(self):
+    def _get_objdump(self):
         return self._exe_env_var_to_unix_path(
             "OBJDUMP",
             ":" if is_msvc(self._conanfile) else None,
         )
 
-    @property
-    def _ranlib(self):
+    def _get_ranlib(self):
         return self._exe_env_var_to_unix_path(
             "RANLIB",
             ":" if is_msvc(self._conanfile) else None,
         )
 
-    @property
-    def _strip(self):
+    def _get_strip(self):
         return self._exe_env_var_to_unix_path(
             "STRIP",
             ":" if is_msvc(self._conanfile) else None,
