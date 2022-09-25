@@ -44,6 +44,10 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
+        # Wrappers paths for windows tools not compatible with autotools, like msvc
+        self.compile_wrapper = None
+        self.arlib_wrapper = None
+
         # Cross build
         self._host = None
         self._build = None
@@ -121,7 +125,7 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
-    def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=[]):
+    def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=[], wrapper=None):
         """
             Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
             If env var doesn't exist, returns default.
@@ -133,6 +137,10 @@ class AutotoolsToolchain:
         else:
             exe = default
         if exe:
+            if wrapper:
+                if os.path.exists(wrapper):
+                    wrapper = unix_path(self._conanfile, wrapper)
+                exe = f"{wrapper} {exe}"
             for option in extra_options:
                 if option not in exe:
                     exe += f" {option}"
@@ -145,10 +153,6 @@ class AutotoolsToolchain:
         # - convert values from profile (if set) to compatible values
         # - otherwise set to a good default if compiler is not a first class citizen in autotools
         # msvc: see https://lists.gnu.org/archive/html/automake/2011-09/msg00002.html
-        # TODO: for msvc, allow users to prefix:
-        #       - CC & CXX with path of compile script from automake
-        #       - AR with with path of ar-lib script from automake
-        #       Or provide these scripts in conan client?
         # TODO: handle clang-cl
         if hasattr(self._conanfile, "settings_build"):
             os_build = self._conanfile.settings_build.get_safe("os")
@@ -159,10 +163,12 @@ class AutotoolsToolchain:
                 "CC": {
                     "default": "cl" if is_msvc(self._conanfile) else None,
                     "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                    "wrapper": self.compile_wrapper,
                 },
                 "CXX": {
                     "default": "cl" if is_msvc(self._conanfile) else None,
                     "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                    "wrapper": self.compile_wrapper,
                 },
                 "LD": {
                     "default": "link" if is_msvc(self._conanfile) else None,
@@ -171,6 +177,7 @@ class AutotoolsToolchain:
                 "AR": {
                     "default": "lib" if is_msvc(self._conanfile) else None,
                     "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                    "wrapper": self.arlib_wrapper,
                 },
                 "NM": {
                     "default": "dumpbin" if is_msvc(self._conanfile) else None,
@@ -191,6 +198,7 @@ class AutotoolsToolchain:
                     env_var,
                     env_var_values.get("default"),
                     env_var_values.get("extra_options", []),
+                    env_var_values.get("wrapper"),
                 )
                 if new_env_var and new_env_var != get_env(env_var):
                     env.define(env_var, new_env_var)
