@@ -144,6 +144,11 @@ class AutotoolsToolchain:
         # On Windows or if compiler is msvc, ensure to properly set vars like CC & CXX:
         # - convert values from profile (if set) to compatible values
         # - otherwise set to a good default if compiler is not a first class citizen in autotools
+        # msvc: see https://lists.gnu.org/archive/html/automake/2011-09/msg00002.html
+        # TODO: for msvc, allow users to prefix:
+        #       - CC & CXX with path of compile script from automake
+        #       - AR with with path of ar-lib script from automake
+        #       Or provide these scripts in conan client?
         # TODO: handle clang-cl
         if hasattr(self._conanfile, "settings_build"):
             os_build = self._conanfile.settings_build.get_safe("os")
