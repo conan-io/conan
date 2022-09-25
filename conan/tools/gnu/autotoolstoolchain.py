@@ -135,7 +135,7 @@ class AutotoolsToolchain:
         if exe:
             for option in extra_options:
                 if option not in exe:
-                    exe = f"{exe} {option}"
+                    exe += f" {option}"
         return exe
 
     def environment(self):
