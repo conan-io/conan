@@ -149,25 +149,33 @@ class AutotoolsToolchain:
         else:
             os_build = self._conanfile.settings.get_safe("os")
         if is_msvc(self._conanfile) or os_build == "Windows":
-            default = {
-                "CC": "cl" if is_msvc(self._conanfile) else None,
-                "CXX": "cl" if is_msvc(self._conanfile) else None,
-                "LD": "link" if is_msvc(self._conanfile) else None,
-                "AR": "lib" if is_msvc(self._conanfile) else None,
-                "NM": "dumpbin" if is_msvc(self._conanfile) else None,
+            env_vars = {
+                "CC": {
+                    "default": "cl" if is_msvc(self._conanfile) else None,
+                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                },
+                "CXX": {
+                    "default": "cl" if is_msvc(self._conanfile) else None,
+                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                },
+                "LD": {
+                    "default": "link" if is_msvc(self._conanfile) else None,
+                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                },
+                "AR": {
+                    "default": "lib" if is_msvc(self._conanfile) else None,
+                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
+                },
+                "NM": {
+                    "default": "dumpbin" if is_msvc(self._conanfile) else None,
+                    "extra_options": ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
+                },
             }
-            extra_options = {
-                "CC": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "CXX": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "LD": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "AR": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "NM": ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
-            }
-            for env_var in ["CC", "CXX", "LD", "AR", "NM"]:
+            for env_var, env_var_values in env_vars.items():
                 new_env_var = self._exe_env_var_to_unix_path(
                     env_var,
-                    default.get(env_var),
-                    extra_options.get(env_var, []),
+                    env_var_values.get("default"),
+                    env_var_values.get("extra_options", []),
                 )
                 if new_env_var and new_env_var != get_env(env_var):
                     env.define(env_var, new_env_var)
