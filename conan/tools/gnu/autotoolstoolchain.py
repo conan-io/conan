@@ -144,6 +144,7 @@ class AutotoolsToolchain:
         # On Windows or if compiler is msvc, ensure to properly set vars like CC & CXX:
         # - convert values from profile (if set) to compatible values
         # - otherwise set to a good default if compiler is not a first class citizen in autotools
+        # TODO: handle clang-cl
         if hasattr(self._conanfile, "settings_build"):
             os_build = self._conanfile.settings_build.get_safe("os")
         else:
@@ -169,6 +170,15 @@ class AutotoolsToolchain:
                 "NM": {
                     "default": "dumpbin" if is_msvc(self._conanfile) else None,
                     "extra_options": ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
+                },
+                "OBJDUMP": {
+                    "default": ":" if is_msvc(self._conanfile) else None,
+                },
+                "RANLIB": {
+                    "default": ":" if is_msvc(self._conanfile) else None,
+                },
+                "STRIP": {
+                    "default": ":" if is_msvc(self._conanfile) else None,
                 },
             }
             for env_var, env_var_values in env_vars.items():
