@@ -14,11 +14,11 @@ import os
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None, compile_wrapper=None, arlib_wrapper=None):
+    def __init__(self, conanfile, namespace=None, compile_wrapper=None, ar_wrapper=None):
         self._conanfile = conanfile
         self._namespace = namespace
         self._compile_wrapper = compile_wrapper
-        self._arlib_wrapper = arlib_wrapper
+        self._ar_wrapper = ar_wrapper
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
         self.autoreconf_args = self._default_autoreconf_flags()
@@ -161,7 +161,7 @@ class AutotoolsToolchain:
             "AR",
             "lib" if is_msvc(self._conanfile) else None,
             ["-nologo"] if is_msvc(self._conanfile) else [],
-            self._arlib_wrapper,
+            self._ar_wrapper,
         )
 
     def _get_nm(self):
