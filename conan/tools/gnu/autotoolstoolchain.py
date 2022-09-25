@@ -44,7 +44,17 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
-        # Wrappers paths for windows tools not compatible with autotools, like msvc
+        # standard build toolchains env vars
+        self.cc = self._cc
+        self.cxx = self._cxx
+        self.ld = self._ld
+        self.ar = self._ar
+        self.nm = self._nm
+        self.objdump = self._objdump
+        self.ranlib = self._ranlib
+        self.strip = self._strip
+
+        # Wrappers paths for tools not compatible with autotools, like msvc
         self.compile_wrapper = None
         self.arlib_wrapper = None
 
@@ -125,6 +135,70 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
+    @property
+    def _cc(self):
+        return self._exe_env_var_to_unix_path(
+            "CC",
+            "cl" if is_msvc(self._conanfile) else None,
+            ["-nologo"] if is_msvc(self._conanfile) else [],
+            self.compile_wrapper,
+        )
+
+    @property
+    def _cxx(self):
+        return self._exe_env_var_to_unix_path(
+            "CXX",
+            "cl" if is_msvc(self._conanfile) else None,
+            ["-nologo"] if is_msvc(self._conanfile) else [],
+            self.compile_wrapper,
+        )
+
+    @property
+    def _ld(self):
+        return self._exe_env_var_to_unix_path(
+            "LD",
+            "link" if is_msvc(self._conanfile) else None,
+            ["-nologo"] if is_msvc(self._conanfile) else [],
+        )
+
+    @property
+    def _ar(self):
+        return self._exe_env_var_to_unix_path(
+            "AR",
+            "lib" if is_msvc(self._conanfile) else None,
+            ["-nologo"] if is_msvc(self._conanfile) else [],
+            self.arlib_wrapper,
+        )
+
+    @property
+    def _nm(self):
+        return self._exe_env_var_to_unix_path(
+            "NM",
+            "dumpbin" if is_msvc(self._conanfile) else None,
+            ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
+        )
+
+    @property
+    def _objdump(self):
+        return self._exe_env_var_to_unix_path(
+            "OBJDUMP",
+            ":" if is_msvc(self._conanfile) else None,
+        )
+
+    @property
+    def _ranlib(self):
+        return self._exe_env_var_to_unix_path(
+            "RANLIB",
+            ":" if is_msvc(self._conanfile) else None,
+        )
+
+    @property
+    def _strip(self):
+        return self._exe_env_var_to_unix_path(
+            "STRIP",
+            ":" if is_msvc(self._conanfile) else None,
+        )
+
     def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=[], wrapper=None):
         """
             Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
@@ -148,61 +222,18 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-
-        # On Windows or if compiler is msvc, ensure to properly set vars like CC & CXX:
-        # - convert values from profile (if set) to compatible values
-        # - otherwise set to a good default if compiler is not a first class citizen in autotools
-        # msvc: see https://lists.gnu.org/archive/html/automake/2011-09/msg00002.html
-        # TODO: handle clang-cl
-        if hasattr(self._conanfile, "settings_build"):
-            os_build = self._conanfile.settings_build.get_safe("os")
-        else:
-            os_build = self._conanfile.settings.get_safe("os")
-        if is_msvc(self._conanfile) or os_build == "Windows":
-            env_vars = {
-                "CC": {
-                    "default": "cl" if is_msvc(self._conanfile) else None,
-                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
-                    "wrapper": self.compile_wrapper,
-                },
-                "CXX": {
-                    "default": "cl" if is_msvc(self._conanfile) else None,
-                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
-                    "wrapper": self.compile_wrapper,
-                },
-                "LD": {
-                    "default": "link" if is_msvc(self._conanfile) else None,
-                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
-                },
-                "AR": {
-                    "default": "lib" if is_msvc(self._conanfile) else None,
-                    "extra_options": ["-nologo"] if is_msvc(self._conanfile) else [],
-                    "wrapper": self.arlib_wrapper,
-                },
-                "NM": {
-                    "default": "dumpbin" if is_msvc(self._conanfile) else None,
-                    "extra_options": ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
-                },
-                "OBJDUMP": {
-                    "default": ":" if is_msvc(self._conanfile) else None,
-                },
-                "RANLIB": {
-                    "default": ":" if is_msvc(self._conanfile) else None,
-                },
-                "STRIP": {
-                    "default": ":" if is_msvc(self._conanfile) else None,
-                },
-            }
-            for env_var, env_var_values in env_vars.items():
-                new_env_var = self._exe_env_var_to_unix_path(
-                    env_var,
-                    env_var_values.get("default"),
-                    env_var_values.get("extra_options", []),
-                    env_var_values.get("wrapper"),
-                )
-                if new_env_var and new_env_var != get_env(env_var):
-                    env.define(env_var, new_env_var)
-
+        for env_var, new_env_var_value in [
+            ("CC", self.cc),
+            ("CXX", self.cxx),
+            ("LD", self.ld),
+            ("AR", self.ar),
+            ("NM", self.nm),
+            ("OBJDUMP", self.objdump),
+            ("RANLIB", self.ranlib),
+            ("STRIP", self.strip),
+        ]:
+            if new_env_var_value and new_env_var_value != get_env(env_var):
+                env.define(env_var, new_env_var_value)
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
