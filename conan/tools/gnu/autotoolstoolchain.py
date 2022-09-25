@@ -202,9 +202,7 @@ class AutotoolsToolchain:
             exe = default
         if exe:
             if wrapper:
-                if os.path.exists(wrapper):
-                    wrapper = unix_path(self._conanfile, wrapper)
-                exe = f"{wrapper} {exe}"
+                exe = f"{unix_path(self._conanfile, wrapper)} {exe}"
             if extra_options:
                 for option in extra_options:
                     if option not in exe:
