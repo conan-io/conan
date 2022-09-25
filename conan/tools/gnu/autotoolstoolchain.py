@@ -141,7 +141,7 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
 
-        # On Windows or if compiler is msvc, ensure to properly set CC, CXX and LD:
+        # On Windows or if compiler is msvc, ensure to properly set CC, CXX, LD and NM:
         # - convert values from profile (if set) to compatible values
         # - otherwise set to a good default if compiler is not a first class citizen in autotools
         if hasattr(self._conanfile, "settings_build"):
@@ -149,18 +149,30 @@ class AutotoolsToolchain:
         else:
             os_build = self._conanfile.settings.get_safe("os")
         if is_msvc(self._conanfile) or os_build == "Windows":
-            default_compiler = "cl" if is_msvc(self._conanfile) else None
-            default_linker = "link" if is_msvc(self._conanfile) else None
-            extra_options = ["-nologo"] if is_msvc(self._conanfile) else []
-            cc = self._exe_env_var_to_unix_path("CC", default_compiler, extra_options)
-            if cc:
+            default = {
+                "CC": "cl" if is_msvc(self._conanfile) else None,
+                "CXX": "cl" if is_msvc(self._conanfile) else None,
+                "LD": "link" if is_msvc(self._conanfile) else None,
+                "NM": "dumpbin" if is_msvc(self._conanfile) else None,
+            }
+            extra_options = {
+                "CC": ["-nologo"] if is_msvc(self._conanfile) else [],
+                "CXX": ["-nologo"] if is_msvc(self._conanfile) else [],
+                "LD": ["-nologo"] if is_msvc(self._conanfile) else [],
+                "NM": ["-symbols"] if is_msvc(self._conanfile) else []
+            }
+            cc = self._exe_env_var_to_unix_path("CC", default["CC"], extra_options["CC"])
+            if cc and cc != get_env("CC"):
                 env.define("CC", cc)
-            cxx = self._exe_env_var_to_unix_path("CXX", default_compiler, extra_options)
-            if cxx:
+            cxx = self._exe_env_var_to_unix_path("CXX", default["CXX"], extra_options["CXX"])
+            if cxx and cxx != get_env("CC"):
                 env.define("CXX", cxx)
-            ld = self._exe_env_var_to_unix_path("LD", default_linker, extra_options)
-            if ld:
+            ld = self._exe_env_var_to_unix_path("LD", default["LD"], extra_options["LD"])
+            if ld and ld != get_env("CC"):
                 env.define("LD", ld)
+            nm = self._exe_env_var_to_unix_path("NM", default["NM"], extra_options["NM"])
+            if nm and nm != get_env("NM"):
+                env.define("NM", nm)
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
