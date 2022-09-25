@@ -160,7 +160,7 @@ class AutotoolsToolchain:
         return self._exe_env_var_to_unix_path(
             "AR",
             "lib" if is_msvc(self._conanfile) else None,
-            ["-nologo"] if is_msvc(self._conanfile) else [],
+            None, # do not add any option, ar wrapper may not like this
             self._ar_wrapper,
         )
 
