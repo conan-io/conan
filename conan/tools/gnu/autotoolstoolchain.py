@@ -161,18 +161,14 @@ class AutotoolsToolchain:
                 "LD": ["-nologo"] if is_msvc(self._conanfile) else [],
                 "NM": ["-symbols"] if is_msvc(self._conanfile) else []
             }
-            cc = self._exe_env_var_to_unix_path("CC", default["CC"], extra_options["CC"])
-            if cc and cc != get_env("CC"):
-                env.define("CC", cc)
-            cxx = self._exe_env_var_to_unix_path("CXX", default["CXX"], extra_options["CXX"])
-            if cxx and cxx != get_env("CC"):
-                env.define("CXX", cxx)
-            ld = self._exe_env_var_to_unix_path("LD", default["LD"], extra_options["LD"])
-            if ld and ld != get_env("CC"):
-                env.define("LD", ld)
-            nm = self._exe_env_var_to_unix_path("NM", default["NM"], extra_options["NM"])
-            if nm and nm != get_env("NM"):
-                env.define("NM", nm)
+            for env_var in ["CC", "CXX", "LD", "NM"]:
+                new_env_var = self._exe_env_var_to_unix_path(
+                    env_var,
+                    default.get(env_var),
+                    extra_options.get(env_var, []),
+                )
+                if new_env_var and new_env_var != get_env(env_var):
+                    env.define(env_var, new_env_var)
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
