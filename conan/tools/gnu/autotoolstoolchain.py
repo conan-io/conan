@@ -4,12 +4,12 @@ from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_f
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
-from conan.tools.env import Environment
+from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag, unix_path
 from conans.errors import ConanException
-from conans.tools import args_to_string, get_env
+from conans.tools import args_to_string
 import os
 
 
@@ -194,7 +194,7 @@ class AutotoolsToolchain:
             Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
             If env var doesn't exist, returns default.
         """
-        exe = get_env(env_var)
+        exe = VirtualBuildEnv(self._conanfile).vars().get(env_var)
         if exe:
             if os.path.exists(exe):
                 exe = unix_path(self._conanfile, exe)
@@ -213,6 +213,7 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
+        build_env = VirtualBuildEnv(self._conanfile).vars()
         for env_var, new_env_var_value in [
             ("CC", self.cc),
             ("CXX", self.cxx),
@@ -223,7 +224,7 @@ class AutotoolsToolchain:
             ("RANLIB", self.ranlib),
             ("STRIP", self.strip),
         ]:
-            if new_env_var_value and new_env_var_value != get_env(env_var):
+            if new_env_var_value and new_env_var_value != build_env.get(env_var):
                 env.define(env_var, new_env_var_value)
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
