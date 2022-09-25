@@ -159,7 +159,7 @@ class AutotoolsToolchain:
                 "CC": ["-nologo"] if is_msvc(self._conanfile) else [],
                 "CXX": ["-nologo"] if is_msvc(self._conanfile) else [],
                 "LD": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "NM": ["-symbols"] if is_msvc(self._conanfile) else []
+                "NM": ["-symbols"] if is_msvc(self._conanfile) else [],
             }
             for env_var in ["CC", "CXX", "LD", "NM"]:
                 new_env_var = self._exe_env_var_to_unix_path(
