@@ -189,7 +189,7 @@ class AutotoolsToolchain:
             ":" if is_msvc(self._conanfile) else None,
         )
 
-    def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=[], wrapper=None):
+    def _exe_env_var_to_unix_path(self, env_var, default=None, extra_options=None, wrapper=None):
         """
             Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
             If env var doesn't exist, returns default.
@@ -205,9 +205,10 @@ class AutotoolsToolchain:
                 if os.path.exists(wrapper):
                     wrapper = unix_path(self._conanfile, wrapper)
                 exe = f"{wrapper} {exe}"
-            for option in extra_options:
-                if option not in exe:
-                    exe += f" {option}"
+            if extra_options:
+                for option in extra_options:
+                    if option not in exe:
+                        exe += f" {option}"
         return exe
 
     def environment(self):
