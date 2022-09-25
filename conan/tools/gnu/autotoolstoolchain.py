@@ -14,10 +14,10 @@ import os
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None, compiler_wrapper=None, arlib_wrapper=None):
+    def __init__(self, conanfile, namespace=None, compile_wrapper=None, arlib_wrapper=None):
         self._conanfile = conanfile
         self._namespace = namespace
-        self._compile_wrapper = compiler_wrapper
+        self._compile_wrapper = compile_wrapper
         self._arlib_wrapper = arlib_wrapper
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
