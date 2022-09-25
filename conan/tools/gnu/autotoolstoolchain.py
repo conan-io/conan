@@ -141,7 +141,7 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
 
-        # On Windows or if compiler is msvc, ensure to properly set CC, CXX, LD and NM:
+        # On Windows or if compiler is msvc, ensure to properly set vars like CC & CXX:
         # - convert values from profile (if set) to compatible values
         # - otherwise set to a good default if compiler is not a first class citizen in autotools
         if hasattr(self._conanfile, "settings_build"):
@@ -153,15 +153,17 @@ class AutotoolsToolchain:
                 "CC": "cl" if is_msvc(self._conanfile) else None,
                 "CXX": "cl" if is_msvc(self._conanfile) else None,
                 "LD": "link" if is_msvc(self._conanfile) else None,
+                "AR": "lib" if is_msvc(self._conanfile) else None,
                 "NM": "dumpbin" if is_msvc(self._conanfile) else None,
             }
             extra_options = {
                 "CC": ["-nologo"] if is_msvc(self._conanfile) else [],
                 "CXX": ["-nologo"] if is_msvc(self._conanfile) else [],
                 "LD": ["-nologo"] if is_msvc(self._conanfile) else [],
-                "NM": ["-symbols"] if is_msvc(self._conanfile) else [],
+                "AR": ["-nologo"] if is_msvc(self._conanfile) else [],
+                "NM": ["-nologo", "-symbols"] if is_msvc(self._conanfile) else [],
             }
-            for env_var in ["CC", "CXX", "LD", "NM"]:
+            for env_var in ["CC", "CXX", "LD", "AR", "NM"]:
                 new_env_var = self._exe_env_var_to_unix_path(
                     env_var,
                     default.get(env_var),
