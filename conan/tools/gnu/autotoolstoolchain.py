@@ -198,6 +198,12 @@ class AutotoolsToolchain:
         if exe:
             if os.path.exists(exe):
                 exe = unix_path(self._conanfile, exe)
+            if " " in exe:
+                self._conanfile.output.warn(
+                    f"AutotoolsToolchain {env_var} management: {exe} contains spaces, "
+                    f"sorry it can't work with autotools, fallback to {default}"
+                )
+                exe = default
         else:
             exe = default
         if exe:
