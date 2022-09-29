@@ -2,12 +2,12 @@ from collections import OrderedDict
 
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
-from conan.cli.commands.list import print_list_recipes, json_formatter
+from conan.cli.commands.list import print_list_recipes, default_json_formatter
 from conan.cli.common import get_remote_selection
 
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_formatter})
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": default_json_formatter})
 def search(conan_api: ConanAPIV2, parser, *args):
     """
     Searches for package recipes in a remote or remotes

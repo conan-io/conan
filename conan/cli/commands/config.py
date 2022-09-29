@@ -2,7 +2,7 @@ import sys
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conan.cli.commands import json_formatter, text_formatter
+from conan.cli.commands import default_json_formatter, default_text_formatter
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
@@ -42,13 +42,13 @@ def config_install(conan_api, parser, subparser, *args):
                              target_folder=args.target_folder)
 
 
-def _list_text(confs):
+def list_text_formatter(confs):
     out = ConanOutput(stream=sys.stdout)
     for k, v in confs.items():
         out.writeln(f"{k}: {v}")
 
 
-@conan_subcommand(formatters={"text": text_formatter})
+@conan_subcommand(formatters={"text": default_text_formatter})
 def config_home(conan_api, parser, subparser, *args):
     """
     Gets the Conan home folder
@@ -56,7 +56,7 @@ def config_home(conan_api, parser, subparser, *args):
     return conan_api.config.home()
 
 
-@conan_subcommand(formatters={"text": _list_text, "json": json_formatter})
+@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
     Prints all the Conan available configurations: core and tools.

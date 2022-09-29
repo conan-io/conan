@@ -32,12 +32,12 @@ class ConanJSONEncoder(JSONEncoder):
         return JSONEncoder.default(self, o)
 
 
-def json_formatter(data):
+def default_json_formatter(data):
     myjson = json.dumps(data, indent=4, cls=ConanJSONEncoder)
     ConanOutput(stream=sys.stdout).writeln(myjson)
 
 
-def text_formatter(data):
+def default_text_formatter(data):
     ConanOutput(stream=sys.stdout).info(data)
 
 

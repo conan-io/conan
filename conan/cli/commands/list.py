@@ -1,9 +1,10 @@
 import json
+import sys
 from collections import OrderedDict
 
 from conan.api.output import ConanOutput, Color
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
-from conan.cli.commands import json_formatter
+from conan.cli.commands import default_json_formatter
 from conan.cli.common import get_remote_selection
 from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -18,7 +19,7 @@ value_color = Color.CYAN
 
 
 def print_list_recipes(results):
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         out.writeln(f"{remote}:", fg=remote_color)
         if result.get("error"):
@@ -39,7 +40,7 @@ def print_list_recipes(results):
 
 
 def print_list_recipe_revisions(results):
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
         out.writeln(f"{name}:", fg=remote_color)
@@ -56,7 +57,7 @@ def print_list_recipe_revisions(results):
 
 
 def print_list_package_revisions(results):
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
         out.writeln(f"{name}:", fg=remote_color)
@@ -73,7 +74,7 @@ def print_list_package_revisions(results):
 
 
 def print_list_package_ids(results):
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
         out.writeln(f"{name}:", fg=remote_color)
@@ -105,6 +106,7 @@ def _add_remotes_and_cache_options(subparser):
                                help="Remote names. Accepts wildcards")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
+
 def _selected_cache_remotes(conan_api, args):
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
@@ -115,7 +117,7 @@ def _selected_cache_remotes(conan_api, args):
     return remotes
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+@conan_subcommand(formatters={"text": print_list_recipes, "json": default_json_formatter})
 def list_recipes(conan_api, parser, subparser, *args):
     """
     Search available recipes in the local cache or in the remotes
@@ -140,11 +142,10 @@ def list_recipes(conan_api, parser, subparser, *args):
         except Exception as e:
             results[name] = {"error": str(e)}
 
-    print_list_recipes(results)
     return results
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+@conan_subcommand(formatters={"text": print_list_recipe_revisions, "json": default_json_formatter})
 def list_recipe_revisions(conan_api, parser, subparser, *args):
     """
     List all the revisions of a recipe reference.
@@ -170,11 +171,10 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         except Exception as e:
             results[name] = {"error": str(e)}
 
-    print_list_recipe_revisions(results)
     return results
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+@conan_subcommand(formatters={"text": print_list_package_revisions, "json": default_json_formatter})
 def list_package_revisions(conan_api, parser, subparser, *args):
     """
     List all the revisions of a package ID reference.
@@ -207,11 +207,11 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         except Exception as e:
             results[name] = {"error": str(e)}
 
-    print_list_package_revisions(results)
     return results
 
 
 def _list_packages_json(data):
+    out = ConanOutput(stream=sys.stdout)
     for remote, d in data.items():
         d["reference"] = repr(d["reference"])
         try:
@@ -219,10 +219,10 @@ def _list_packages_json(data):
         except KeyError:
             pass
     myjson = json.dumps(data, indent=4)
-    return myjson
+    out.writeln(myjson)
 
 
-@conan_subcommand(formatters={"json": _list_packages_json})
+@conan_subcommand(formatters={"text": print_list_package_ids, "json": _list_packages_json})
 def list_packages(conan_api, parser, subparser, *args):
     """
     List all the package IDs for a given recipe revision.
@@ -274,7 +274,6 @@ def list_packages(conan_api, parser, subparser, *args):
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
 
-    print_list_package_ids(results)
     return results
 
 
