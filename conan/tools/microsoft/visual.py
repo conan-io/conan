@@ -83,7 +83,7 @@ class VCVars:
                           "v142": "16",
                           "v143": "17"}.get(toolset_version)
             if vs_version is None:
-                raise ConanException("Visual Runtime version (v140-v143) not defined")
+                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
             vcvars_ver = {"v140": "14.0",
                           "v141": "14.1",
                           "v142": "14.2",
