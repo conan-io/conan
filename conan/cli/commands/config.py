@@ -1,6 +1,8 @@
-from conan.api.output import ConanOutput, Color
+import sys
+
+from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conan.cli.commands import json_formatter
+from conan.cli.commands import json_formatter, text_formatter
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
@@ -40,25 +42,23 @@ def config_install(conan_api, parser, subparser, *args):
                              target_folder=args.target_folder)
 
 
-@conan_subcommand(formatters={"text": lambda x: x})
+def _list_text(confs):
+    out = ConanOutput(stream=sys.stdout)
+    for k, v in confs.items():
+        out.writeln(f"{k}: {v}")
+
+
+@conan_subcommand(formatters={"text": text_formatter})
 def config_home(conan_api, parser, subparser, *args):
     """
     Gets the Conan home folder
     """
-    home = conan_api.config.home()
-    ConanOutput().info(f"Current Conan home: {home}")
-    return home
+    return conan_api.config.home()
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+@conan_subcommand(formatters={"text": _list_text, "json": json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
     Prints all the Conan available configurations: core and tools.
     """
-    out = ConanOutput()
-    confs = BUILT_IN_CONFS
-    out.writeln(f"Supported Conan global.conf and [conf] properties:",
-                fg=Color.BRIGHT_CYAN)
-    for k, v in confs.items():
-        out.writeln(f"{k}: {v}")
-    return confs
+    return BUILT_IN_CONFS

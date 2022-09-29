@@ -1,11 +1,13 @@
 import json
 import os
+import sys
 from json import JSONEncoder
 
 from conan.api.model import Remote
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conan.api.output import ConanOutput
 
 
 def make_abs_path(path, cwd=None):
@@ -32,7 +34,11 @@ class ConanJSONEncoder(JSONEncoder):
 
 def json_formatter(data):
     myjson = json.dumps(data, indent=4, cls=ConanJSONEncoder)
-    return myjson
+    ConanOutput(stream=sys.stdout).writeln(myjson)
+
+
+def text_formatter(data):
+    ConanOutput(stream=sys.stdout).info(data)
 
 
 def add_log_level_args(subparser):

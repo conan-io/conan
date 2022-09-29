@@ -75,7 +75,7 @@ class SmartFormatter(argparse.HelpFormatter):
 
 class BaseConanCommand(object):
     def __init__(self, method, formatters=None):
-        self._formatters = {}
+        self._formatters = {"text": lambda x: None}
         self._method = method
         self._name = None
         self._parser = None
@@ -96,9 +96,13 @@ class BaseConanCommand(object):
     def _init_log_levels(self):
         add_log_level_args(self._parser)
 
+    @property
+    def _help_formatters(self):
+        return [formatter for formatter in list(self._formatters) if formatter != "text"]
+
     def _init_formatters(self):
-        if self._formatters:
-            help_message = "Select the output format: {}".format(", ".join(list(self._formatters)))
+        if self._help_formatters:
+            help_message = "Select the output format: {}".format(", ".join(list(self._help_formatters)))
             self._parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
 
     @property
@@ -119,25 +123,20 @@ class BaseConanCommand(object):
 
     def _format(self, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
-        try:
-            formatarg = parser_args.format
-        except AttributeError:
-            return
 
-        if formatarg is None:
-            return
+        default_format = "text"
+        try:
+            formatarg = parser_args.format or default_format
+        except AttributeError:
+            formatarg = default_format
 
         try:
             formatter = self._formatters[formatarg]
         except KeyError:
-            raise ConanException("{} is not a known format: {}".format(formatarg,
-                                                                       list(self._formatters)))
+            raise ConanException("{} is not a known format. Supported formatters are: {}".format(
+                formatarg, ", ".join(self._help_formatters)))
 
-        if info is None:
-            raise ConanException(f"Format {formatarg} was specified, but command didn't return "
-                                 "anything to format")
-        result = formatter(info)
-        cli_out_write(result, endline="")
+        formatter(info)
 
 
 class ConanArgumentParser(argparse.ArgumentParser):

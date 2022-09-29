@@ -21,9 +21,7 @@ def test_config_home_default():
     """
     client = TestClient()
     client.run("config home")
-    assert client.cache.cache_folder in client.out
-    client.run("config home --format=text")
-    assert client.cache.cache_folder == client.stdout
+    assert f"{client.cache.cache_folder}\n" == client.stdout
 
 
 def test_config_home_custom_home_dir():
