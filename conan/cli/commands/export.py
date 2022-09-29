@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
@@ -13,7 +14,8 @@ def common_args_export(parser):
 
 
 def json_export(ref):
-    return json.dumps({"reference": ref.repr_notime()})
+    out = ConanOutput(stream=sys.stdout)
+    out.write(json.dumps({"reference": ref.repr_notime()}))
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export})

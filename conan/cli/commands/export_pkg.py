@@ -1,6 +1,8 @@
 import json
 import os
+import sys
 
+from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
@@ -8,8 +10,9 @@ from conan.cli.common import get_lockfile, add_profiles_args, get_profiles_from_
 
 
 def json_export_pkg(info):
+    out = ConanOutput(stream=sys.stdout)
     deps_graph = info
-    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
+    out.writeln(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export_pkg})

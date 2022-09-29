@@ -7,7 +7,7 @@ from conan.cli.common import get_remote_selection
 
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": default_json_formatter})
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"text": print_list_recipes, "json": default_json_formatter})
 def search(conan_api: ConanAPIV2, parser, *args):
     """
     Searches for package recipes in a remote or remotes
@@ -28,5 +28,4 @@ def search(conan_api: ConanAPIV2, parser, *args):
             results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
         except Exception as e:
             results[name] = {"error": str(e)}
-    print_list_recipes(results)
     return results

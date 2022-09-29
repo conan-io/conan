@@ -1,5 +1,6 @@
 import fnmatch
 import json
+import sys
 
 from conan.api.output import ConanOutput, Color
 from conan.cli.formatters import get_template
@@ -103,7 +104,7 @@ def print_graph_info(deps_graph, field_filter, package_filter):
     """ More complete graph output, including information for every node in the graph
     Used for 'graph info' command
     """
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     out.title("Basic graph information")
     serial = deps_graph.serialize()
     for n in serial["nodes"]:
@@ -215,19 +216,22 @@ def _render_graph(graph, template, template_folder):
 
 
 def format_graph_html(info):
+    out = ConanOutput(stream=sys.stdout)
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
-    return _render_graph(graph, template, template_folder)
+    out.writeln(_render_graph(graph, template, template_folder))
 
 
 def format_graph_dot(info):
+    out = ConanOutput(stream=sys.stdout)
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
-    return _render_graph(graph, template, template_folder)
+    out.writeln(_render_graph(graph, template, template_folder))
 
 
 def format_graph_json(info):
+    out = ConanOutput(stream=sys.stdout)
     deps_graph, _ = info
     serialized = deps_graph.serialize()
     json_result = json.dumps(serialized, indent=4)
-    return json_result
+    out.writeln(json_result)

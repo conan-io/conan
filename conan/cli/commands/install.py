@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
@@ -13,8 +14,9 @@ from conans.model.recipe_ref import RecipeReference
 
 
 def json_install(info):
+    out = ConanOutput(stream=sys.stdout)
     deps_graph = info
-    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
+    out.writeln(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 def _get_conanfile_path(path, cwd, py):

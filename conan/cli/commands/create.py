@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
@@ -17,8 +18,9 @@ from conans.util.files import chdir, mkdir
 
 
 def json_create(info):
+    out = ConanOutput(stream=sys.stdout)
     deps_graph = info
-    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
+    out.writeln(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
