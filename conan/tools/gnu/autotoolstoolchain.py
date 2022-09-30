@@ -8,6 +8,8 @@ from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag, unix_path
+if os.name == "nt":
+    from conan.tools.microsoft.win32api import win32api
 from conans.errors import ConanException
 from conans.tools import args_to_string
 import os
@@ -160,7 +162,7 @@ class AutotoolsToolchain:
         return self._exe_env_var_to_unix_path(
             "AR",
             "lib" if is_msvc(self._conanfile) else None,
-            [], # do not add any option, ar wrapper may not like this
+            ["-nologo"],
             self._ar_wrapper,
         )
 
@@ -194,25 +196,26 @@ class AutotoolsToolchain:
             Convenient method to convert env vars like CC, CXX or LD to values compatible with autotools.
             If env var doesn't exist, returns default.
         """
-        exe = VirtualBuildEnv(self._conanfile).vars().get(env_var)
+        env_var_value = VirtualBuildEnv(self._conanfile).vars().get(env_var)
+        exe = env_var_value
         if exe:
             if os.path.exists(exe):
+                if " " in exe and os.name == "nt":
+                    exe = win32api.get_short_path_name(exe)
                 exe = unix_path(self._conanfile, exe)
-            if " " in exe:
-                self._conanfile.output.warn(
-                    f"AutotoolsToolchain {env_var} management: {exe} contains spaces, "
-                    f"sorry it can't work with autotools, fallback to {default}"
-                )
-                exe = default
+                if " " in exe:
+                    exe = default
         else:
             exe = default
         if exe:
-            if wrapper:
-                exe = f"{unix_path(self._conanfile, wrapper)} {exe}"
             if extra_options:
                 for option in extra_options:
                     if option not in exe:
                         exe += f" {option}"
+            if wrapper:
+                if extra_options:
+                    exe = f"\"{exe}\""
+                exe = f"{unix_path(self._conanfile, wrapper)} {exe}"
         return exe
 
     def environment(self):
@@ -228,8 +231,15 @@ class AutotoolsToolchain:
             ("RANLIB", self.ranlib),
             ("STRIP", self.strip),
         ]:
-            if new_env_var_value and new_env_var_value != build_env.get(env_var):
-                env.define(env_var, new_env_var_value)
+            if new_env_var_value:
+                previous_env_var_value = build_env.get(env_var)
+                if new_env_var_value != previous_env_var_value:
+                    env.define(env_var, new_env_var_value)
+                    if previous_env_var_value:
+                        self._conanfile.output.info(
+                            f"{self.__class__.__name__}: {env_var} env var set to "
+                            f"{new_env_var_value}, instead of {previous_env_var_value}"
+                        )
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
