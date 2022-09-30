@@ -136,14 +136,14 @@ tools_locations = {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {

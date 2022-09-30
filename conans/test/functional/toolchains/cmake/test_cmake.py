@@ -31,13 +31,17 @@ def test_simple_cmake_mingw():
         compiler.libcxx=libstdc++11
         compiler.threads=win32
         compiler.version=11.2
-        cppstd=17
+        compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
-    assert "hello/1.0: __GNUC__" in client.out
-    assert "hello/1.0: __MINGW" in client.out
+    check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
+                  subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
+    check_vs_runtime("test_package/build/Release/example.exe", client, "15", build_type="Release",
+                     static_runtime=False, subsystem="mingw64")
+
+# TODO: How to link with mingw statically?
 
 
 @pytest.mark.tool_cmake
