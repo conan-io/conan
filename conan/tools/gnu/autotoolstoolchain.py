@@ -8,8 +8,6 @@ from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag, unix_path
-if os.name == "nt":
-    from conan.tools.microsoft.win32api import win32api
 from conans.errors import ConanException
 from conans.tools import args_to_string
 import os
@@ -201,6 +199,7 @@ class AutotoolsToolchain:
         if exe:
             if os.path.exists(exe):
                 if " " in exe and os.name == "nt":
+                    from conan.tools.microsoft.win32api import win32api
                     exe = win32api.get_short_path_name(exe)
                 exe = unix_path(self._conanfile, exe)
                 if " " in exe:
