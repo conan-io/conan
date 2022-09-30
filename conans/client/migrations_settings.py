@@ -3889,7 +3889,7 @@ arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, arm
 # - For building cross compilation tools: Where the cross compiler will run.
 os:
     Windows:
-        subsystem: [None, cygwin, msys, msys2, mingw32, mingw64, wsl]
+        subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
     WindowsCE:

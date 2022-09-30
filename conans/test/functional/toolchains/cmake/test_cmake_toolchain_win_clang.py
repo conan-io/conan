@@ -198,7 +198,8 @@ class TestMsysClang:
         For 32 bits, it doesn't seem possible to install the toolchain
         For 64 bits require "pacman -S mingw-w64-x86-clang++"
         """
-        client.run('create . pkg/0.1@ -pr=clang -s os.subsystem=mingw64 '
+        # TODO: This should probably go to the ``os.subsystem=ming64" but lets do it in other PR
+        client.run('create . pkg/0.1@ -pr=clang '
                    '-s compiler.libcxx=libstdc++')
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out

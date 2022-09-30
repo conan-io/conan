@@ -27,7 +27,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     # - For building cross compilation tools: Where the cross compiler will run.
     os:
         Windows:
-            subsystem: [None, cygwin, msys, msys2, mingw32, mingw64, wsl]
+            subsystem: [None, cygwin, msys, msys2, wsl]
         WindowsStore:
             version: ["8.1", "10.0"]
         WindowsCE:

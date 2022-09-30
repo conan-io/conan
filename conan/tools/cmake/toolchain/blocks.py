@@ -711,7 +711,8 @@ class GenericSystemBlock(Block):
                 if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
                     toolset = "ClangCL"
                 else:
-                    raise ConanException("CMakeToolchain compiler=clang only supported VS >=16")
+                    raise ConanException("CMakeToolchain with compiler=clang and a CMake "
+                                         "'Visual Studio' generator requires VS16 or VS17")
         toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
