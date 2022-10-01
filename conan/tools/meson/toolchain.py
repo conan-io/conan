@@ -163,13 +163,13 @@ class MesonToolchain(object):
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
 
-        # Read the VirtualBuildEnv to update the variables
+        # Read the VirtualBuildEnv to update the variables. Values from conf have precedence.
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        self.c = build_env.get("CC") or default_comp
-        self.cpp = build_env.get("CXX") or default_comp_cpp
-        self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
-        self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
-        self.ar = build_env.get("AR")
+        self.c = self._conanfile.conf.get("tools.build:c_compiler", default=build_env.get("CC") or default_comp)
+        self.cpp = self._conanfile.conf.get("tools.build:cxx_compiler", default=build_env.get("CXX") or default_comp_cpp)
+        self.c_ld = self._conanfile.conf.get("tools.build:linker", default=build_env.get("CC_LD") or build_env.get("LD"))
+        self.cpp_ld = self._conanfile.conf.get("tools.build:linker", default=build_env.get("CXX_LD") or build_env.get("LD"))
+        self.ar = self._conanfile.conf.get("tools.build:archiver", default=build_env.get("AR"))
         self.strip = build_env.get("STRIP")
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")

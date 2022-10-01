@@ -647,14 +647,10 @@ class GenericSystemBlock(Block):
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
         {% if compiler %}
-        if(NOT DEFINED ENV{CC})
         set(CMAKE_C_COMPILER {{ compiler }})
-        endif()
         {% endif %}
         {% if compiler_cpp %}
-        if(NOT DEFINED ENV{CXX})
         set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        endif()
         {% endif %}
         {% if compiler_rc %}
         if(NOT DEFINED ENV{RC})
@@ -734,6 +730,9 @@ class GenericSystemBlock(Block):
             compiler_rc = "clang"
             compiler_c = "clang"
             compiler_cpp = "clang++"
+
+        compiler_c = self._conanfile.conf.get("tools.build:c_compiler", default=compiler_c)
+        compiler_cpp = self._conanfile.conf.get("tools.build:cxx_compiler", default=compiler_cpp)
 
         return compiler_c, compiler_cpp, compiler_rc
 
