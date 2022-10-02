@@ -55,7 +55,10 @@ class VirtualRunEnv:
         very occasional
         """
         runenv = Environment()
-        # FIXME: Missing profile info
+
+        # Top priority: profile
+        profile_env = self._conanfile.runenv
+        runenv.compose_env(profile_env)
         # FIXME: Cache value?
 
         host_req = self._conanfile.dependencies.host
