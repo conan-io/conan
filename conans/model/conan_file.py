@@ -220,7 +220,7 @@ class ConanFile(object):
             self._conan_runenv = self._conan_runenv.get_profile_env(ref_str)
         return self._conan_runenv
 
-    def initialize(self, settings, env, buildenv=None, runenv=True):
+    def initialize(self, settings, env, buildenv=None, runenv=None):
         self._conan_buildenv = buildenv
         self._conan_runenv = runenv
         if isinstance(self.generators, str):
