@@ -12,6 +12,7 @@ import time
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
@@ -31,6 +32,18 @@ def clean_dirty(folder):
 def is_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
     return os.path.exists(dirty_file)
+
+
+def remove_if_dirty(item):
+    # TODO: Apply to other places this pattern is common
+    if is_dirty(item):
+        if os.path.exists(item):
+            ConanOutput().warning(f"{item} is dirty, removing it")
+            if os.path.isfile(item):
+                os.remove(item)
+            else:
+                rmdir(item)
+        clean_dirty(item)
 
 
 @contextmanager

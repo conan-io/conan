@@ -457,11 +457,11 @@ class ConfigInstallTest(unittest.TestCase):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, file_path, **kwargs):  # @UnusedVariable
-            self.assertFalse(obj._verify_ssl)
+            assert kwargs["verify_ssl"] is False
             self._create_zip(file_path)
 
         def download_verify_true(obj, url, file_path, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj._verify_ssl)
+            assert kwargs["verify_ssl"] is True
             self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
