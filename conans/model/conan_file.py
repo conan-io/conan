@@ -212,7 +212,7 @@ class ConanFile(object):
 
     @property
     def runenv(self):
-        # Lazy computation of the package buildenv based on the profileone
+        # Lazy computation of the package runenv based on the profile one
         from conan.tools.env import Environment
         if not isinstance(self._conan_runenv, Environment):
             # TODO: missing user/channel
