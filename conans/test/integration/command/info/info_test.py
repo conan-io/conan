@@ -227,3 +227,29 @@ class TestInfoTestPackage:
             client.run("graph info . " + args)
             assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
                    not in client.out
+
+
+class TestDeployers:
+
+    def test_custom_deploy(self):
+        c = TestClient()
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute("license = 'MIT'")
+        c.save({"conanfile.py": conanfile})
+        c.run("create .")
+        collectlicenses = textwrap.dedent(r"""
+            from conan.tools.files import save
+
+            def deploy(conanfile, output_folder, **kwargs):
+                contents = []
+                for r, d in conanfile.dependencies.items():
+                    contents.append("LICENSE {}: {}!".format(d.ref, d.license))
+                contents = "\n".join(contents)
+                conanfile.output.info(contents)
+                save(conanfile, "licenses.txt", contents)
+            """)
+        c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1"),
+                "collectlicenses.py": collectlicenses})
+        c.run("graph info . --deploy=collectlicenses")
+        assert "conanfile.py: LICENSE pkg/0.1: MIT!" in c.out
+        contents = c.load("licenses.txt")
+        assert "LICENSE pkg/0.1: MIT!" in contents
