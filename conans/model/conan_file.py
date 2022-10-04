@@ -163,6 +163,7 @@ class ConanFile(object):
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_runenv = None
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
@@ -209,8 +210,19 @@ class ConanFile(object):
             self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
-    def initialize(self, settings, env, buildenv=None):
+    @property
+    def runenv(self):
+        # Lazy computation of the package runenv based on the profile one
+        from conan.tools.env import Environment
+        if not isinstance(self._conan_runenv, Environment):
+            # TODO: missing user/channel
+            ref_str = "{}/{}".format(self.name, self.version)
+            self._conan_runenv = self._conan_runenv.get_profile_env(ref_str)
+        return self._conan_runenv
+
+    def initialize(self, settings, env, buildenv=None, runenv=None):
         self._conan_buildenv = buildenv
+        self._conan_runenv = runenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
