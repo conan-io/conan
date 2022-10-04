@@ -4,7 +4,7 @@ import textwrap
 import pytest
 from mock import Mock
 
-from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime, is_clang_cl
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.env_info import EnvValues
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions, MockConanfile
@@ -294,3 +294,40 @@ def test_msbuildtoolchain_changing_flags_via_attributes():
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain
     assert expected_resource_compile in toolchain
+
+
+@pytest.mark.parametrize("compiler,os,toolset,expected", [
+    ("Visual Studio", "Windows", None, False),
+    ("msvc", "Windows", None, False),
+    ("clang", "Windows", None, True),
+    ("clang", "Linux", None, False),
+    ("Visual Studio", "Windows", "ClangCL", True),
+])
+def test_is_clang_cl(compiler, os, toolset, expected):
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": {compiler: {"version": ["14"], "toolset": [toolset]}},
+                         "os": [os],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.compiler = compiler
+    conanfile.settings.compiler.toolset = toolset
+    conanfile.settings.os = os
+    assert is_clang_cl(conanfile) == expected
+
+
+def test_is_clang_cl_build():
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": ["clang", "msvc"],
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.compiler = "msvc"
+    conanfile.settings.os = "Windows"
+    conanfile.settings_build = conanfile.settings.copy()
+    conanfile.settings_build.compiler = "clang"
+    assert is_clang_cl(conanfile) is False
+    assert is_clang_cl(conanfile, build_context=True) is True
