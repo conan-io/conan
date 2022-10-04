@@ -253,7 +253,7 @@ class _ProfileValueParser(object):
     def get_profile(profile_text, base_profile=None):
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
                                                          "settings",
-                                                         "options", "conf", "buildenv"])
+                                                         "options", "conf", "buildenv", "runenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -266,6 +266,7 @@ class _ProfileValueParser(object):
         else:
             conf = None
         buildenv = ProfileEnvironment.loads(doc.buildenv) if doc.buildenv else None
+        runenv = ProfileEnvironment.loads(doc.runenv) if doc.runenv else None
 
         # Create or update the profile
         base_profile = base_profile or Profile()
@@ -276,11 +277,12 @@ class _ProfileValueParser(object):
             base_profile.tool_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
             base_profile.options.update_options(options)
-
         if conf is not None:
             base_profile.conf.update_conf_definition(conf)
         if buildenv is not None:
             base_profile.buildenv.update_profile_env(buildenv)
+        if runenv is not None:
+            base_profile.runenv.update_profile_env(runenv)
         return base_profile
 
     @staticmethod
