@@ -65,7 +65,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
 
 
 class _EnvValue:
-    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
+    def __init__(self, name, value=None, separator=" ", path=False):
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
@@ -222,7 +222,7 @@ class Environment:
         :param value: New value
         :param separator: The character to separate the appended value with the previous value. By default it will use a blank space.
         """
-        self._values.setdefault(name, _EnvValue(name)).append(value, separator)
+        self._values.setdefault(name, _EnvValue(name, _EnvVarPlaceHolder)).append(value, separator)
 
     def append_path(self, name, value):
         """
@@ -231,7 +231,7 @@ class Environment:
         :param name: Name of the variable to append a new value
         :param value: New value
         """
-        self._values.setdefault(name, _EnvValue(name, path=True)).append(value)
+        self._values.setdefault(name, _EnvValue(name, _EnvVarPlaceHolder, path=True)).append(value)
 
     def prepend(self, name, value, separator=None):
         """
@@ -241,7 +241,7 @@ class Environment:
         :param value: New value
         :param separator: The character to separate the prepended value with the previous value
         """
-        self._values.setdefault(name, _EnvValue(name)).prepend(value, separator)
+        self._values.setdefault(name, _EnvValue(name, _EnvVarPlaceHolder)).prepend(value, separator)
 
     def prepend_path(self, name, value):
         """
@@ -250,7 +250,7 @@ class Environment:
         :param name: Name of the variable to prepend a new value
         :param value: New value
         """
-        self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
+        self._values.setdefault(name, _EnvValue(name, _EnvVarPlaceHolder, path=True)).prepend(value)
 
     def remove(self, name, value):
         """
@@ -294,7 +294,7 @@ class Environment:
         :param scope: Determine the scope of the declared variables.
         :return:
         """
-        return EnvVars(conanfile, self, scope)
+        return EnvVars(conanfile, self._values, scope)
 
     def deploy_base_folder(self, package_folder, deploy_folder):
         """Make the paths relative to the deploy_folder"""
@@ -307,8 +307,8 @@ class EnvVars:
     Represents an instance of environment variables for a given system. It is obtained from the generic Environment class.
 
     """
-    def __init__(self, conanfile, env, scope):
-        self._values = env._values  # {var_name: _EnvValue}, just a reference to the Environment
+    def __init__(self, conanfile, values, scope):
+        self._values = values # {var_name: _EnvValue}, just a reference to the Environment
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
@@ -358,7 +358,6 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo Capturing current environment in {deactivate_file}
             setlocal
             echo @echo off > "{deactivate_file}"
             echo echo Restoring environment >> "{deactivate_file}"
@@ -379,7 +378,6 @@ class EnvVars:
         capture = textwrap.dedent("""\
             @echo off
             {deactivate}
-            echo Configuring environment variables
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
@@ -393,8 +391,6 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-            echo "Capturing current environment in {deactivate_file}"
-
             "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
             $vars = (Get-ChildItem env:*).name
             $updated_vars = @({vars})
@@ -418,7 +414,6 @@ class EnvVars:
 
         capture = textwrap.dedent("""\
             {deactivate}
-            echo "Configuring environment variables"
         """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
@@ -436,7 +431,6 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo Capturing current environment in "{deactivate_file}"
            echo "echo Restoring environment" >> "{deactivate_file}"
            for v in {vars}
            do
@@ -452,7 +446,6 @@ class EnvVars:
            """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
               {deactivate}
-              echo Configuring environment variables
               """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():

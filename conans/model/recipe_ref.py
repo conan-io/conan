@@ -3,7 +3,6 @@ import fnmatch
 import re
 from functools import total_ordering
 
-from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.dates import timestamp_to_str
@@ -138,6 +137,7 @@ class RecipeReference:
 
         # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
         pattern = re.compile(r'[.+-]')
+        from conan.api.output import ConanOutput
         if pattern.search(self.name):
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
         if self.user and pattern.search(self.user):

@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -46,3 +47,52 @@ def test_layout_generate():
     assert os.path.exists(os.path.join(c.current_folder, "mybuild", "bin", "myfile.txt"))
     assert os.path.exists(os.path.join(c.current_folder, "mybuild", "lib", "myfile.txt"))
     assert os.path.exists(os.path.join(c.current_folder, "mybuild", "include", "myfile.txt"))
+
+
+def test_generate_source_folder():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                self.output.info("PKG_CONFIG_PATH {}!".format(os.path.exists(self.source_folder)))
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .")
+    assert "PKG_CONFIG_PATH True!" in c.out
+
+
+def test_generate_source_folder_test_package():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                self.output.info("PKG_CONFIG_PATH {}!".format(os.path.exists(self.source_folder)))
+
+            def test(self):
+                pass
+        """)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+            "test_package/conanfile.py": conanfile})
+    c.run("create .")
+    assert "PKG_CONFIG_PATH True!" in c.out

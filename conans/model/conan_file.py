@@ -220,6 +220,7 @@ class ConanFile:
         self.conf_info = Conf()
         self.info = None
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_runenv = None
         self._conan_node = None  # access to container Node object, to access info, context, deps...
 
         if isinstance(self.generators, str):
@@ -301,6 +302,15 @@ class ConanFile:
             self._conan_buildenv = self._conan_buildenv.get_profile_env(self.ref,
                                                                         self._conan_is_consumer)
         return self._conan_buildenv
+
+    @property
+    def runenv(self):
+        # Lazy computation of the package runenv based on the profile one
+        from conan.tools.env import Environment
+        if not isinstance(self._conan_runenv, Environment):
+            self._conan_runenv = self._conan_runenv.get_profile_env(self.ref,
+                                                                    self._conan_is_consumer)
+        return self._conan_runenv
 
     @property
     def cpp_info(self):

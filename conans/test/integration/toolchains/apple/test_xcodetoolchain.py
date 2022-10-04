@@ -23,10 +23,10 @@ def _condition(configuration, architecture, sdk_version):
 @pytest.mark.parametrize("configuration, os_version, libcxx, cppstd, arch, sdk_version, clang_cppstd", [
     ("Release", "", "", "", "x86_64", "", ""),
     ("Debug", "", "", "", "armv8", "", ""),
-    ("Release", "12.0", "libc++", "20", "x86_64", "", "c++2a"),
-    ("Debug", "12.0", "libc++", "20", "x86_64", "", "c++2a"),
-    ("Release", "12.0", "libc++", "20", "x86_64", "11.3", "c++2a"),
-    ("Release", "12.0", "libc++", "20", "x86_64", "", "c++2a"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "", "c++20"),
+    ("Debug", "12.0", "libc++", "20", "x86_64", "", "c++20"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "11.3", "c++20"),
+    ("Release", "12.0", "libc++", "20", "x86_64", "", "c++20"),
 ])
 def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_version, clang_cppstd):
     client = TestClient()

@@ -138,14 +138,14 @@ tools_locations = {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {
@@ -209,7 +209,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         """)
