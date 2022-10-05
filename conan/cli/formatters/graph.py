@@ -121,7 +121,7 @@ def print_graph_info(deps_graph, field_filter, package_filter):
 
 
 def _serial_pretty_printer(data, field_filter, indent=""):
-    out = ConanOutput()
+    out = ConanOutput(stream=sys.stdout)
     for k, v in data.items():
         if field_filter is not None and k not in field_filter:
             continue
