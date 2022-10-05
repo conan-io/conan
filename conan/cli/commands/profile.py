@@ -1,8 +1,8 @@
 import os
 
-from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS, cli_out_write
-from conan.cli.commands import json_formatter
+from conan.api.output import ConanOutput, cli_out_write
+from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
+from conan.cli.commands import default_text_formatter, default_json_formatter
 from conan.cli.common import add_profiles_args, get_profiles_from_args
 from conans.errors import ConanException
 from conans.util.files import save
@@ -10,27 +10,24 @@ from conans.util.files import save
 
 def print_profiles(profiles):
     host, build = profiles
-    out = ConanOutput()
-    out.writeln("Host profile:")
-    out.writeln(host.dumps())
-    out.writeln("Build profile:")
-    out.writeln(build.dumps())
+    cli_out_write("Host profile:")
+    cli_out_write(host.dumps())
+    cli_out_write("Build profile:")
+    cli_out_write(build.dumps())
 
 
 def profiles_list_cli_output(profiles):
-    out = ConanOutput()
-    out.writeln("Profiles found in the cache:")
+    cli_out_write("Profiles found in the cache:")
     for p in profiles:
-        out.writeln(p)
+        cli_out_write(p)
 
 
 def detected_profile_cli_output(detect_profile):
-    out = ConanOutput()
-    out.writeln("Detected profile:")
-    out.writeln(detect_profile.dumps())
+    cli_out_write("Detected profile:")
+    cli_out_write(detect_profile.dumps())
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_profiles})
 def profile_show(conan_api, parser, subparser, *args):
     """
     Show profiles
@@ -38,11 +35,10 @@ def profile_show(conan_api, parser, subparser, *args):
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
     result = get_profiles_from_args(conan_api, args)
-    print_profiles(result)
     return result
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": default_text_formatter})
 def profile_path(conan_api, parser, subparser, *args):
     """
     Show profile path location
@@ -50,8 +46,7 @@ def profile_path(conan_api, parser, subparser, *args):
     add_profiles_args(subparser)
     subparser.add_argument("name", help="Profile name")
     args = parser.parse_args(*args)
-    result = conan_api.profiles.get_path(args.name)
-    cli_out_write(result)
+    return conan_api.profiles.get_path(args.name)
 
 
 @conan_subcommand()
@@ -78,13 +73,12 @@ def profile_detect(conan_api, parser, subparser, *args):
     save(profile_pathname, contents)
 
 
-@conan_subcommand(formatters={"json": json_formatter})
+@conan_subcommand(formatters={"text": profiles_list_cli_output, "json": default_json_formatter})
 def profile_list(conan_api, parser, subparser, *args):
     """
     List all profiles in the cache
     """
     result = conan_api.profiles.list()
-    profiles_list_cli_output(result)
     return result
 
 

@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
@@ -12,13 +12,12 @@ from conan.api.conan_app import ConanApp
 from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.graph_lock import Lockfile
 from conans.util.files import chdir, mkdir
 
 
 def json_create(info):
     deps_graph = info
-    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
+    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
