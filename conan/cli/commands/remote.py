@@ -29,7 +29,7 @@ def print_remote_user_list(results):
         if result["user_name"] is None:
             cli_out_write("  No user", fg=error_color)
         else:
-            cli_out_write("  Username: ", fg=recipe_color,)
+            cli_out_write("  Username: ", fg=recipe_color, endline="")
             cli_out_write(result["user_name"], fg=reference_color)
             cli_out_write("  authenticated: ", fg=recipe_color, endline="")
             cli_out_write(result["authenticated"], fg=reference_color)
