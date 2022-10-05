@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput
-from conan.api.subapi.install import _do_deploys
+from conan.api.subapi.install import do_deploys
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
     Extender
 from conan.cli.commands import make_abs_path
@@ -111,6 +111,6 @@ def graph_info(conan_api, parser, subparser, *args):
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
     if args.deploy:
         base_folder = os.getcwd()
-        _do_deploys(conan_api, deps_graph, args.deploy, base_folder)
+        do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")

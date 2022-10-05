@@ -239,17 +239,22 @@ class TestDeployers:
         collectlicenses = textwrap.dedent(r"""
             from conan.tools.files import save
 
-            def deploy(conanfile, output_folder, **kwargs):
+            def deploy(graph, output_folder, **kwargs):
                 contents = []
-                for r, d in conanfile.dependencies.items():
+                conanfile = graph.root.conanfile
+                for pkg in graph.nodes:
+                    d = pkg.conanfile
                     contents.append("LICENSE {}: {}!".format(d.ref, d.license))
                 contents = "\n".join(contents)
                 conanfile.output.info(contents)
                 save(conanfile, "licenses.txt", contents)
             """)
-        c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1"),
+        c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                              .with_class_attribute("license='GPL'"),
                 "collectlicenses.py": collectlicenses})
         c.run("graph info . --deploy=collectlicenses")
-        assert "conanfile.py: LICENSE pkg/0.1: MIT!" in c.out
+        assert "conanfile.py: LICENSE : GPL!" in c.out
+        assert "LICENSE pkg/0.1: MIT!" in c.out
         contents = c.load("licenses.txt")
         assert "LICENSE pkg/0.1: MIT!" in contents
+        assert "LICENSE : GPL!" in contents
