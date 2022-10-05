@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
-from conan.cli.commands import default_text_formatter, default_json_formatter
+from conan.cli.commands import default_text_formatter
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

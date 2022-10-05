@@ -1,8 +1,7 @@
 import json
 import os
-import sys
 
-from conan.api.output import ConanOutput, cli_out_write
+from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \

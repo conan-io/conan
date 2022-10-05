@@ -1,5 +1,4 @@
 import json
-import sys
 from collections import OrderedDict
 
 from conan.api.output import cli_out_write

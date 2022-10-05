@@ -1,8 +1,7 @@
-import json
 import inspect as python_inspect
-import sys
 
-from conan.api.output import ConanOutput, cli_out_write
+
+from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conan.cli.commands import default_json_formatter
 

@@ -1,5 +1,4 @@
 import os
-import sys
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS

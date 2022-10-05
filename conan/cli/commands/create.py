@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import sys
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
@@ -13,7 +12,6 @@ from conan.api.conan_app import ConanApp
 from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.graph_lock import Lockfile
 from conans.util.files import chdir, mkdir
 
 

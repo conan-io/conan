@@ -1,8 +1,7 @@
 import json
-import sys
 from collections import OrderedDict
 
-from conan.api.output import ConanOutput, Color, cli_out_write
+from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import default_json_formatter
 from conan.cli.common import get_remote_selection

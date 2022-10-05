@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from json import JSONEncoder
 
 from conan.api.model import Remote
@@ -8,7 +7,6 @@ from conan.api.output import cli_out_write
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conan.api.output import ConanOutput
 
 
 def make_abs_path(path, cwd=None):

@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
