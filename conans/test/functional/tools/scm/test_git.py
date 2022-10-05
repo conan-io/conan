@@ -604,20 +604,25 @@ class TestGitIncluded:
                     git = Git(self)
                     included = git.included_files()
                     for i in included:
-                        shutil.copy2(i, self.export_sources_folder)
+                        dst =  os.path.join(self.export_sources_folder, i)
+                        os.makedirs(os.path.dirname(dst), exist_ok=True)
+                        shutil.copy2(i, dst)
 
                 def source(self):
                     self.output.info("SOURCES: {}!!".format(sorted(os.listdir("."))))
+                    self.output.info("SOURCES_SUB: {}!!".format(sorted(os.listdir("sub"))))
             """)
 
         c = TestClient()
         c.save({"conanfile.py": conanfile,
                 ".gitignore": "*.txt",
                 "myfile.txt": "test",
-                "myfile.other": "othertest"})
+                "myfile.other": "othertest",
+                "sub/otherfile": "other"})
         c.init_git_repo()
         c.run("create .")
-        assert "pkg/0.1: SOURCES: ['.gitignore', 'conanfile.py', 'myfile.other']!!" in c.out
+        assert "pkg/0.1: SOURCES: ['.gitignore', 'conanfile.py', 'myfile.other', 'sub']!!" in c.out
+        assert "pkg/0.1: SOURCES_SUB: ['otherfile']!!" in c.out
 
     def test_git_included_subfolder(self):
         conanfile = textwrap.dedent("""
