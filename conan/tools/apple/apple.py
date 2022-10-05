@@ -158,8 +158,8 @@ def fix_apple_shared_install_name(conanfile):
         install_name = check_output_runner(command).strip().split(":")[1].strip()
         return install_name
 
-    def _osx_collect_dylibs(lib_folder):
-        return [os.path.join(full_folder, f) for f in os.listdir(lib_folder) if f.endswith(".dylib")
+    def _darwin_collect_dylibs(lib_folder):
+        return [os.path.join(lib_folder, f) for f in os.listdir(lib_folder) if f.endswith(".dylib")
                 and not os.path.islink(os.path.join(lib_folder, f))]
 
     def _fix_install_name(dylib_path, new_name):
@@ -170,16 +170,34 @@ def fix_apple_shared_install_name(conanfile):
         command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
         conanfile.run(command)
 
-    substitutions = {}
+    def _darwin_collect_executables(bin_folder):
+        ret = []
+        for f in os.listdir(bin_folder):
+            full_path = os.path.join(bin_folder, f)
 
-    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+            # Run "otool -hv" to verify it is an executable
+            check_bin = "otool -hv {}".format(full_path)
+            if "EXECUTE" in check_output_runner(check_bin):
+                ret.append(full_path)
+        return ret
+
+    def _get_shared_dependencies(binary_file):
+        command = "otool -L {}".format(binary_file)
+        all_shared = check_output_runner(command).strip().split(":")[1].strip()
+        ret = [s.split("(")[0].strip() for s in all_shared.splitlines()]
+        return ret
+
+    def _fix_dylib_files(conanfile):
+        substitutions = {}
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
-            shared_libs = _osx_collect_dylibs(full_folder)
+            shared_libs = _darwin_collect_dylibs(full_folder)
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
                 install_name = _get_install_name(shared_lib)
+                #TODO: we probably only want to fix the install the name if
+                # it starts with `/`.
                 rpath_name = f"@rpath/{os.path.basename(install_name)}"
                 _fix_install_name(shared_lib, rpath_name)
                 substitutions[install_name] = rpath_name
@@ -188,3 +206,34 @@ def fix_apple_shared_install_name(conanfile):
             for shared_lib in shared_libs:
                 for old, new in substitutions.items():
                     _fix_dep_name(shared_lib, old, new)
+
+        return substitutions
+
+    def _fix_executables(conanfile, substitutions):
+        # Fix the install name for executables inside the package
+        # that reference libraries we just patched
+        bindirs = getattr(conanfile.cpp.package, "bindirs")
+        for bindir in bindirs:
+            full_folder = os.path.join(conanfile.package_folder, bindir)
+            executables = _darwin_collect_executables(full_folder)
+            for executable in executables:
+
+                # Fix install names of libraries from within the same package
+                deps = _get_shared_dependencies(executable)
+                for dep in deps:
+                    dep_base = os.path.join(os.path.dirname(dep), os.path.basename(dep).split('.')[0])
+                    match = [k for k in substitutions.keys() if k.startswith(dep_base)]
+                    if match:
+                        _fix_dep_name(executable, dep, substitutions[match[0]])
+
+                # Add relative rpath to library directories
+                libdirs = getattr(conanfile.cpp.package, "libdirs")
+                libdirs = [os.path.join(conanfile.package_folder, dir) for dir in libdirs]
+                rel_paths = [os.path.relpath(dir, full_folder) for dir in libdirs]
+                for entry in rel_paths:
+                    command = f"install_name_tool {executable} -add_rpath @executable_path/{entry}"
+                    conanfile.run(command)
+
+    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+        substitutions = _fix_dylib_files(conanfile)
+        _fix_executables(conanfile, substitutions)
