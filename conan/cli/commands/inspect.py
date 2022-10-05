@@ -2,22 +2,21 @@ import json
 import inspect as python_inspect
 import sys
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conan.cli.commands import default_json_formatter
 
 
 def inspect_text_formatter(data):
-    out = ConanOutput(stream=sys.stdout)
     for name, value in data.items():
         if value is None:
             continue
         if isinstance(value, dict):
-            out.writeln(f"{name}:")
+            cli_out_write(f"{name}:")
             for k, v in value.items():
-                out.writeln(f"    {k}: {v}")
+                cli_out_write(f"    {k}: {v}")
         else:
-            out.writeln("{}: {}".format(name, value))
+            cli_out_write("{}: {}".format(name, value))
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])

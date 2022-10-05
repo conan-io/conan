@@ -2,7 +2,7 @@ import json
 import sys
 from collections import OrderedDict
 
-from conan.api.output import ConanOutput
+from conan.api.output import cli_out_write
 from conan.api.conan_api import ConanAPIV2
 from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -13,34 +13,30 @@ from conans.errors import ConanException
 
 
 def formatter_remote_list_json(remotes):
-    output = ConanOutput(stream=sys.stdout)
     info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
             for r in remotes]
-    output.writeln(json.dumps(info, indent=4))
+    cli_out_write(json.dumps(info, indent=4))
 
 
 def print_remote_list(remotes):
-    output = ConanOutput(stream=sys.stdout)
     for r in remotes:
         output_str = str(r)
-        output.writeln(output_str)
+        cli_out_write(output_str)
 
 
 def print_remote_user_list(results):
-    output = ConanOutput(stream=sys.stdout)
     for remote_name, result in results.items():
-        output.writeln(f"{remote_name}:", fg=remote_color)
+        cli_out_write(f"{remote_name}:", fg=remote_color)
         if result["user_name"] is None:
-            output.writeln("  No user", fg=error_color)
+            cli_out_write("  No user", fg=error_color)
         else:
-            output.write("  Username: ", fg=recipe_color,)
-            output.writeln(result["user_name"], fg=reference_color)
-            output.write("  authenticated: ", fg=recipe_color)
-            output.writeln(result["authenticated"], fg=reference_color)
+            cli_out_write("  Username: ", fg=recipe_color,)
+            cli_out_write(result["user_name"], fg=reference_color)
+            cli_out_write("  authenticated: ", fg=recipe_color, endline="")
+            cli_out_write(result["authenticated"], fg=reference_color)
 
 
 def print_remote_user_set(results):
-    output = ConanOutput(stream=sys.stdout)
     for remote_name, result in results.items():
         from_user = "'{}'".format(result["previous_info"]["user_name"])
         from_user += " (anonymous)" \
@@ -49,12 +45,11 @@ def print_remote_user_set(results):
         to_user += " (anonymous)" \
             if not result["info"]["authenticated"] else " (authenticated)"
         message = "Changed user of remote '{}' from {} to {}".format(remote_name, from_user, to_user)
-        output.writeln(message)
+        cli_out_write(message)
 
 
 def output_remotes_json(results):
-    output = ConanOutput(stream=sys.stdout)
-    output.writeln(json.dumps(list(results.values())))
+    cli_out_write(json.dumps(list(results.values())))
 
 
 @conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})

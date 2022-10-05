@@ -1,7 +1,7 @@
 import os
 import sys
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
 from conan.cli.commands import default_text_formatter, default_json_formatter
 from conan.cli.common import add_profiles_args, get_profiles_from_args
@@ -11,24 +11,21 @@ from conans.util.files import save
 
 def print_profiles(profiles):
     host, build = profiles
-    out = ConanOutput(stream=sys.stdout)
-    out.writeln("Host profile:")
-    out.writeln(host.dumps())
-    out.writeln("Build profile:")
-    out.writeln(build.dumps())
+    cli_out_write("Host profile:")
+    cli_out_write(host.dumps())
+    cli_out_write("Build profile:")
+    cli_out_write(build.dumps())
 
 
 def profiles_list_cli_output(profiles):
-    out = ConanOutput(stream=sys.stdout)
-    out.writeln("Profiles found in the cache:")
+    cli_out_write("Profiles found in the cache:")
     for p in profiles:
-        out.writeln(p)
+        cli_out_write(p)
 
 
 def detected_profile_cli_output(detect_profile):
-    out = ConanOutput(stream=sys.stdout)
-    out.writeln("Detected profile:")
-    out.writeln(detect_profile.dumps())
+    cli_out_write("Detected profile:")
+    cli_out_write(detect_profile.dumps())
 
 
 @conan_subcommand(formatters={"text": print_profiles})

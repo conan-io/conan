@@ -4,6 +4,7 @@ import sys
 from json import JSONEncoder
 
 from conan.api.model import Remote
+from conan.api.output import cli_out_write
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -34,11 +35,11 @@ class ConanJSONEncoder(JSONEncoder):
 
 def default_json_formatter(data):
     myjson = json.dumps(data, indent=4, cls=ConanJSONEncoder)
-    ConanOutput(stream=sys.stdout).writeln(myjson)
+    cli_out_write(myjson)
 
 
 def default_text_formatter(data):
-    ConanOutput(stream=sys.stdout).writeln(data)
+    cli_out_write(data)
 
 
 def add_log_level_args(subparser):

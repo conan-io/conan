@@ -1,6 +1,6 @@
 import sys
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conan.cli.commands import default_json_formatter, default_text_formatter
 from conans.model.conf import BUILT_IN_CONFS
@@ -43,9 +43,8 @@ def config_install(conan_api, parser, subparser, *args):
 
 
 def list_text_formatter(confs):
-    out = ConanOutput(stream=sys.stdout)
     for k, v in confs.items():
-        out.writeln(f"{k}: {v}")
+        cli_out_write(f"{k}: {v}")
 
 
 @conan_subcommand(formatters={"text": default_text_formatter})

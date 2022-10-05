@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conan.cli.commands import make_abs_path
 from conan.cli.common import _add_common_install_arguments, _help_build_policies, \
@@ -14,9 +14,8 @@ from conans.model.recipe_ref import RecipeReference
 
 
 def json_install(info):
-    out = ConanOutput(stream=sys.stdout)
     deps_graph = info
-    out.writeln(json.dumps({"graph": deps_graph.serialize()}, indent=4))
+    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 def _get_conanfile_path(path, cwd, py):

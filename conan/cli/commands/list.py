@@ -2,7 +2,7 @@ import json
 import sys
 from collections import OrderedDict
 
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import default_json_formatter
 from conan.cli.common import get_remote_selection
@@ -19,85 +19,81 @@ value_color = Color.CYAN
 
 
 def print_list_recipes(results):
-    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
-        out.writeln(f"{remote}:", fg=remote_color)
+        cli_out_write(f"{remote}:", fg=remote_color)
         if result.get("error"):
-            out.writeln(f"  ERROR: {result.get('error')}", fg=error_color)
+            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
         else:
             recipes = result.get("recipes", [])
             if not recipes:
                 # FIXME: this should be an error message, NOT FOUND
-                out.writeln("  There are no matching recipe references")
+                cli_out_write("  There are no matching recipe references")
             else:
                 current_recipe = None
                 for ref in recipes:
                     if ref.name != current_recipe:
                         current_recipe = ref.name
-                        out.writeln(f"  {current_recipe}", fg=recipe_color)
+                        cli_out_write(f"  {current_recipe}", fg=recipe_color)
 
-                    out.writeln(f"    {ref}", fg=reference_color)
+                    cli_out_write(f"    {ref}", fg=reference_color)
 
 
 def print_list_recipe_revisions(results):
-    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
-        out.writeln(f"{name}:", fg=remote_color)
+        cli_out_write(f"{name}:", fg=remote_color)
         if result.get("error"):
-            out.writeln(f"  ERROR: {result.get('error')}", fg=error_color)
+            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
         else:
             revisions = result.get("revisions", [])
             if not revisions:
                 # FIXME: this should be an error message, NOT FOUND
-                out.writeln("  There are no matching recipe references")
+                cli_out_write("  There are no matching recipe references")
             else:
                 for ref in revisions:
-                    out.writeln(f"  {ref.repr_humantime()}", fg=recipe_color)
+                    cli_out_write(f"  {ref.repr_humantime()}", fg=recipe_color)
 
 
 def print_list_package_revisions(results):
-    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
-        out.writeln(f"{name}:", fg=remote_color)
+        cli_out_write(f"{name}:", fg=remote_color)
         if result.get("error"):
-            out.writeln(f"  ERROR: {result.get('error')}", fg=error_color)
+            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
         else:
             revisions = result.get("revisions", [])
             if not revisions:
                 # FIXME: this should be an error message, NOT FOUND
-                out.writeln(f"  There are no matching package references")
+                cli_out_write(f"  There are no matching package references")
             else:
                 for pref in revisions:
-                    out.writeln(f"  {pref.repr_humantime()}", fg=recipe_color)
+                    cli_out_write(f"  {pref.repr_humantime()}", fg=recipe_color)
 
 
 def print_list_package_ids(results):
-    out = ConanOutput(stream=sys.stdout)
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
-        out.writeln(f"{name}:", fg=remote_color)
+        cli_out_write(f"{name}:", fg=remote_color)
         if result.get("error"):
-            out.writeln(f"  ERROR: {result.get('error')}", fg=error_color)
+            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
         else:
             packages = result.get("packages", [])
             if not packages:
                 # It is legal not to have binaries
-                out.writeln("  There are no packages")
+                cli_out_write("  There are no packages")
             else:
                 for pref, binary_info in packages.items():
-                    out.writeln(f"  {pref.repr_notime()}", fg=reference_color)
+                    cli_out_write(f"  {pref.repr_notime()}", fg=reference_color)
                     for item, contents in binary_info.items():
                         if not contents:
                             continue
-                        out.writeln(f"    {item}:", fg=field_color)
+                        cli_out_write(f"    {item}:", fg=field_color)
                         if not isinstance(contents, dict):
                             for c in contents:
-                                out.writeln(f"      {c}", fg=value_color)
+                                cli_out_write(f"      {c}", fg=value_color)
                         else:
                             for k, v in contents.items():
-                                out.writeln(f"      {k}={v}", fg=value_color)
+                                cli_out_write(f"      {k}={v}", fg=value_color)
 
 
 def _add_remotes_and_cache_options(subparser):
@@ -211,7 +207,6 @@ def list_package_revisions(conan_api, parser, subparser, *args):
 
 
 def _list_packages_json(data):
-    out = ConanOutput(stream=sys.stdout)
     for remote, d in data.items():
         d["reference"] = repr(d["reference"])
         try:
@@ -219,7 +214,7 @@ def _list_packages_json(data):
         except KeyError:
             pass
     myjson = json.dumps(data, indent=4)
-    out.writeln(myjson)
+    cli_out_write(myjson)
 
 
 @conan_subcommand(formatters={"text": print_list_package_ids, "json": _list_packages_json})

@@ -3,6 +3,7 @@ import json
 import sys
 
 from conan.api.output import ConanOutput, Color
+from conan.api.output import cli_out_write
 from conan.cli.formatters import get_template
 from conans.assets import templates
 from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_CACHE, \
@@ -104,7 +105,7 @@ def print_graph_info(deps_graph, field_filter, package_filter):
     """ More complete graph output, including information for every node in the graph
     Used for 'graph info' command
     """
-    out = ConanOutput(stream=sys.stdout)
+    out = ConanOutput()
     out.title("Basic graph information")
     serial = deps_graph.serialize()
     for n in serial["nodes"]:
@@ -121,7 +122,7 @@ def print_graph_info(deps_graph, field_filter, package_filter):
 
 
 def _serial_pretty_printer(data, field_filter, indent=""):
-    out = ConanOutput(stream=sys.stdout)
+    out = ConanOutput()
     for k, v in data.items():
         if field_filter is not None and k not in field_filter:
             continue
@@ -216,22 +217,19 @@ def _render_graph(graph, template, template_folder):
 
 
 def format_graph_html(info):
-    out = ConanOutput(stream=sys.stdout)
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
-    out.writeln(_render_graph(graph, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_dot(info):
-    out = ConanOutput(stream=sys.stdout)
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
-    out.writeln(_render_graph(graph, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_json(info):
-    out = ConanOutput(stream=sys.stdout)
     deps_graph, _ = info
     serialized = deps_graph.serialize()
     json_result = json.dumps(serialized, indent=4)
-    out.writeln(json_result)
+    cli_out_write(json_result)
