@@ -98,6 +98,10 @@ class BaseConanCommand(object):
 
     @property
     def _help_formatters(self):
+        """
+        Formatters that are shown as available in help, 'text' formatter
+        should not appear
+        """
         return [formatter for formatter in list(self._formatters) if formatter != "text"]
 
     def _init_formatters(self):
