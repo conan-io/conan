@@ -38,7 +38,7 @@ def default_json_formatter(data):
 
 
 def default_text_formatter(data):
-    ConanOutput(stream=sys.stdout).info(data)
+    ConanOutput(stream=sys.stdout).writeln(data)
 
 
 def add_log_level_args(subparser):
