@@ -9,8 +9,8 @@ from difflib import get_close_matches
 from inspect import getmembers
 
 from conan.api.conan_api import ConanAPIV2
-from conan.api.output import ConanOutput, Color
-from conan.cli.command import ConanSubCommand, cli_out_write
+from conan.api.output import ConanOutput, Color, cli_out_write
+from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans import __version__ as client_version

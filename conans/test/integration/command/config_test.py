@@ -21,9 +21,7 @@ def test_config_home_default():
     """
     client = TestClient()
     client.run("config home")
-    assert client.cache.cache_folder in client.out
-    client.run("config home --format=text")
-    assert client.cache.cache_folder == client.stdout
+    assert f"{client.cache.cache_folder}\n" == client.stdout
 
 
 def test_config_home_custom_home_dir():
@@ -35,7 +33,7 @@ def test_config_home_custom_home_dir():
         client.run("config home")
         assert cache_folder in client.out
         client.run("config home --format=text")
-        assert client.cache.cache_folder == client.stdout
+        assert f"{client.cache.cache_folder}\n" == client.stdout
 
 
 def test_config_home_custom_install():
@@ -58,4 +56,4 @@ def test_config_list():
     for k, v in BUILT_IN_CONFS.items():
         assert f"{k}: {v}" in client.out
     client.run("config list --format=json")
-    assert json.dumps(BUILT_IN_CONFS, indent=4) == client.stdout
+    assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
