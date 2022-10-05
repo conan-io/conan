@@ -181,6 +181,17 @@ def fix_apple_shared_install_name(conanfile):
                 ret.append(full_path)
         return ret
 
+    def _get_rpath_entries(binary_file):
+        entries = []
+        command = "otool -l {}".format(binary_file)
+        otool_output = check_output_runner(command).splitlines()
+        for count, text in enumerate(otool_output):
+            pass
+            if "LC_RPATH" in text:
+                rpath_entry = otool_output[count+2].split("path ")[1].split(" ")[0]
+                entries.append(rpath_entry)
+        return entries
+
     def _get_shared_dependencies(binary_file):
         command = "otool -L {}".format(binary_file)
         all_shared = check_output_runner(command).strip().split(":")[1].strip()
@@ -226,12 +237,15 @@ def fix_apple_shared_install_name(conanfile):
                     if match:
                         _fix_dep_name(executable, dep, substitutions[match[0]])
 
-                # Add relative rpath to library directories
+                # Add relative rpath to library directories, avoiding possible
+                # existing duplicates
                 libdirs = getattr(conanfile.cpp.package, "libdirs")
                 libdirs = [os.path.join(conanfile.package_folder, dir) for dir in libdirs]
-                rel_paths = [os.path.relpath(dir, full_folder) for dir in libdirs]
-                for entry in rel_paths:
-                    command = f"install_name_tool {executable} -add_rpath @executable_path/{entry}"
+                rel_paths = [f"@executable_path/{os.path.relpath(dir, full_folder)}" for dir in libdirs]
+                existing_rpaths = _get_rpath_entries(executable)
+                rpaths_to_add = list(set(rel_paths) - set(existing_rpaths))
+                for entry in rpaths_to_add:
+                    command = f"install_name_tool {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
     if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
