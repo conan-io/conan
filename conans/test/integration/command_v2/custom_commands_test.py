@@ -26,13 +26,13 @@ class TestCustomCommands:
             import os
 
             from conan.cli.command import conan_command
-            from conan.api.output import ConanOutput
+            from conan.api.output import cli_out_write
 
             def output_mycommand_cli(info):
-                ConanOutput().writeln(f"Conan cache folder is: {info.get('cache_folder')}")
+                cli_out_write(f"Conan cache folder is: {info.get('cache_folder')}")
 
             def output_mycommand_json(info):
-                ConanOutput().writeln(json.dumps(info))
+                cli_out_write(json.dumps(info))
 
             @conan_command(group="custom commands",
                            formatters={"cli": output_mycommand_cli,
@@ -57,7 +57,7 @@ class TestCustomCommands:
 
     def test_command_layer(self):
         myhello = textwrap.dedent("""
-            from conan.api.output import ConanOutput
+            from conan.api.output import cli_out_write
             from conan.cli.command import conan_command
 
             @conan_command(group="custom commands")
@@ -65,10 +65,10 @@ class TestCustomCommands:
                 '''
                 My Hello doc
                 '''
-                ConanOutput().info("Hello {}!")
+                cli_out_write("Hello {}!")
             """)
         mybye = textwrap.dedent("""
-            from conan.api.output import ConanOutput
+            from conan.api.output import cli_out_write
             from conan.cli.command import conan_command, conan_subcommand
 
             @conan_command(group="custom commands")
@@ -82,7 +82,7 @@ class TestCustomCommands:
                 '''
                 My bye say doc
                 '''
-                ConanOutput().info("Bye!")
+                cli_out_write("Bye!")
             """)
 
         client = TestClient()
@@ -105,13 +105,13 @@ class TestCustomCommands:
             import json
 
             from conan.cli.command import conan_command, conan_subcommand
-            from conan.api.output import ConanOutput
+            from conan.api.output import cli_out_write
 
             def output_cli(info):
-                ConanOutput().writeln(f"{info.get('argument1')}")
+                cli_out_write(f"{info.get('argument1')}")
 
             def output_json(info):
-                 ConanOutput().writeln(json.dumps(info))
+                 cli_out_write(json.dumps(info))
 
             @conan_subcommand(formatters={"cli": output_cli, "json": output_json})
             def complex_sub1(conan_api, parser, subparser, *args):
