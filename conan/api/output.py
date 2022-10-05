@@ -58,8 +58,8 @@ if get_env("CONAN_COLOR_DARK", 0):
 
 
 class ConanOutput:
-    def __init__(self, scope="", stream=sys.stderr):
-        self.stream = stream
+    def __init__(self, scope="", stream=None):
+        self.stream = stream or sys.stderr
         self._scope = scope
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
