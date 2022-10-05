@@ -586,3 +586,35 @@ class TestConanFileSubfolder:
         c.init_git_repo()
         c.run("export conan")
         assert "pkg/0.1: git version" in c.out
+
+
+class TestGitIncluded:
+    def test_git_included(self):
+        conanfile = textwrap.dedent("""
+            import os
+            import shutil
+            from conan import ConanFile
+            from conan.tools.scm import Git
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def export_sources(self):
+                    git = Git(self)
+                    included = git.included_files()
+                    for i in included:
+                        shutil.copy2(i, self.export_sources_folder)
+
+                def source(self):
+                    self.output.info("SOURCES: {}!!".format(sorted(os.listdir("."))))
+            """)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile,
+                ".gitignore": "*.txt",
+                "myfile.txt": "test",
+                "myfile.other": "othertest"})
+        c.init_git_repo()
+        c.run("create .")
+        assert "pkg/0.1: SOURCES: ['.gitignore', 'conanfile.py', 'myfile.other']!!" in c.out
