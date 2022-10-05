@@ -25,13 +25,14 @@ class TestCustomCommands:
             import json
             import os
 
-            from conan.cli.command import conan_command, cli_out_write
+            from conan.cli.command import conan_command
+            from conan.api.output import ConanOutput
 
             def output_mycommand_cli(info):
-                return f"Conan cache folder is: {info.get('cache_folder')}"
+                ConanOutput().writeln(f"Conan cache folder is: {info.get('cache_folder')}")
 
             def output_mycommand_json(info):
-                return json.dumps(info)
+                ConanOutput().writeln(json.dumps(info))
 
             @conan_command(group="custom commands",
                            formatters={"cli": output_mycommand_cli,
@@ -103,13 +104,14 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.cli.command import conan_command, conan_subcommand, cli_out_write
+            from conan.cli.command import conan_command, conan_subcommand
+            from conan.api.output import ConanOutput
 
             def output_cli(info):
-                return f"{info.get('argument1')}"
+                ConanOutput().writeln(f"{info.get('argument1')}")
 
             def output_json(info):
-                return json.dumps(info)
+                 ConanOutput().writeln(json.dumps(info))
 
             @conan_subcommand(formatters={"cli": output_cli, "json": output_json})
             def complex_sub1(conan_api, parser, subparser, *args):
