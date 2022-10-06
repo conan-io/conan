@@ -203,6 +203,10 @@ def fix_apple_shared_install_name(conanfile):
         libdirs = getattr(conanfile.cpp.package, "libdirs")
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
+            if not os.path.exists(full_folder):
+                # as method package is running before package_info, the cpp.package might be
+                # wrong
+                continue
             shared_libs = _darwin_collect_dylibs(full_folder)
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
@@ -226,6 +230,10 @@ def fix_apple_shared_install_name(conanfile):
         bindirs = getattr(conanfile.cpp.package, "bindirs")
         for bindir in bindirs:
             full_folder = os.path.join(conanfile.package_folder, bindir)
+            if not os.path.exists(full_folder):
+                # as method package is running before package_info, the cpp.package might be
+                # wrong
+                continue
             executables = _darwin_collect_executables(full_folder)
             for executable in executables:
 
