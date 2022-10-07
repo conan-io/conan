@@ -30,8 +30,6 @@ def create(conan_api, parser, *args):
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
-    parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                        help='Working directory for the build of the test project.')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "None" to skip the test stage')
