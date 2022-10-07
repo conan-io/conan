@@ -38,7 +38,6 @@ def lock_create(conan_api, parser, subparser, *args):
         path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
         lock_folder = os.path.dirname(path) if path else cwd
         args.lockfile_out = os.path.join(lock_folder, "conan.lock")
-        print("NEW!!!!", args.lockfile_out)
 
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
 
