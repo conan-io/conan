@@ -396,8 +396,7 @@ class TestLockTestPackage:
             assert "package tested" in c.out
 
     def test_partial_approach(self):
-        """ do not include it in the lockfile, but apply it partially, only to the
-        test_package expansion
+        """ do not include it in the lockfile, but apply it partially
         """
         # https://github.com/conan-io/conan/issues/11763
         c = TestClient()
@@ -430,9 +429,24 @@ class TestLockTestPackage:
         c.run("create cmake --version=2.0")
         c.run("create dep --version=2.0")
         with c.chdir("app"):
-            c.run("create . --lockfile=conan.lock --lockfile-partial-test")
+            c.run("create . --lockfile=conan.lock --lockfile-partial")
             assert "cmake/2.0" in c.out
             assert "dep/1.0" in c.out
             assert "cmake/1.0" not in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" in c.out
+
+        # or to be more guaranteed
+        with c.chdir("app"):
+            c.run("create . --lockfile=conan.lock -tf=None")
+            assert "cmake" not in c.out
+            assert "dep/1.0" in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" not in c.out
+
+            c.run("test test_package app/1.0 --lockfile=conan.lock --lockfile-partial")
+            assert "cmake/1.0" not in c.out
+            assert "cmake/2.0" in c.out
+            assert "dep/1.0" in c.out
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out

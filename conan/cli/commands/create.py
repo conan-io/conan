@@ -30,8 +30,6 @@ def create(conan_api, parser, *args):
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
-    parser.add_argument("--lockfile-partial-test", action='store_true', default=False,
-                        help='Allow test_package to have non-locked dependencies')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "None" to skip the test stage')
@@ -97,8 +95,6 @@ def create(conan_api, parser, *args):
         #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
         from conan.cli.commands.test import run_test
-        if args.lockfile_partial_test:  # Just for the ``test_package`` functionality
-            lockfile.partial = True
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
                               remotes, lockfile, update=False, build_modes=None)
 
