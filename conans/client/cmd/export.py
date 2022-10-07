@@ -101,6 +101,11 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
+        with chdir(path):
+            if bool(check_output_runner('git status -s').strip()):
+                raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
+                                     " 'conan export', please commit the changes and run again.")
+
         revision = rev_detected
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
