@@ -5,8 +5,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
-from conans.test.utils.apple import XCRun
+from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.utils.tools import TestClient
 
 _conanfile_py = textwrap.dedent("""
@@ -138,4 +137,4 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
 
     lipo = xcrun.find('lipo')
     t.run_command('"%s" -info "%s"' % (lipo, demo))
-    assert "architecture: %s" % to_apple_arch(arch) in t.out
+    assert "architecture: %s" % _to_apple_arch(arch) in t.out

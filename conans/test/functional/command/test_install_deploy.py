@@ -6,6 +6,7 @@ import pytest
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -20,7 +21,8 @@ def test_install_deploy():
         import os, shutil
 
         # USE **KWARGS to be robust against changes
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             for r, d in conanfile.dependencies.items():
                 new_folder = os.path.join(output_folder, d.ref.name)
                 shutil.copytree(d.package_folder, new_folder)
@@ -45,6 +47,26 @@ def test_install_deploy():
     c.run_command("cmake --build . --config Release")
 
 
+def test_copy_files_deploy():
+    c = TestClient()
+    deploy = textwrap.dedent("""
+        import os, shutil
+
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
+            for r, d in conanfile.dependencies.items():
+                bindir = os.path.join(d.package_folder, "bin")
+                for f in os.listdir(bindir):
+                    shutil.copy2(os.path.join(bindir, f), os.path.join(output_folder, f))
+        """)
+    c.save({"conanfile.txt": "[requires]\nhello/0.1",
+            "deploy.py": deploy,
+            "hello/conanfile.py": GenConanfile("hello", "0.1").with_package_file("bin/file.txt",
+                                                                                 "content!!")})
+    c.run("create hello")
+    c.run("install . --deploy=deploy.py -of=mydeploy")
+
+
 def test_multi_deploy():
     """ check that we can add more than 1 deployer in the command line, both in local folders
     and in cache.
@@ -53,15 +75,18 @@ def test_multi_deploy():
     """
     c = TestClient()
     deploy1 = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("deploy1!!")
         """)
     deploy2 = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("sub/deploy2!!")
         """)
     deploy_cache = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("deploy cache!!")
         """)
     save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
@@ -168,9 +193,11 @@ def test_deploy_editable():
             "src/include/hi.h": "hi"})
     c.run("editable add . pkg/1.0")
 
-    c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/src/include/hi.h")
-    assert "hi" in header
+    # If we don't change to another folder, the full_deploy will be recursive and fail
+    with c.chdir(temp_folder()):
+        c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
+        header = c.load("output/host/pkg/1.0/src/include/hi.h")
+        assert "hi" in header
 
 
 def test_deploy_single_package():

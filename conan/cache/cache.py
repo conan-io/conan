@@ -1,7 +1,8 @@
 import hashlib
 import os
 
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout, EXPORT_SRC_FOLDER, \
+    EXPORT_FOLDER
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
@@ -200,23 +201,25 @@ class DataCache:
         ref.timestamp = revision_timestamp_now()
 
         # TODO: here maybe we should block the recipe and all the packages too
-        new_path = self._get_path(ref)
+        # This is the destination path for the temporary created export and export_sources folders
+        # with the hash created based on the recipe revision
+        new_path_relative = self._get_path(ref)
 
-        # TODO: Here we are always overwriting the contents of the rrev folder where
-        #  we are putting the exported files for the reference, but maybe we could
-        #  just check the the files in the destination folder are the same so we don't
-        #  have to do write operations (maybe other process is reading these files, this could
-        #  also be managed by locks anyway)
-        # TODO: cache2.0 probably we should not check this and move to other place or just
-        #  avoid getting here if old and new paths are the same
-        full_path = self._full_path(new_path)
-        rmdir(full_path)
-        renamedir(self._full_path(layout.base_folder), full_path)
-        layout._base_folder = os.path.join(self.base_folder, new_path)
+        new_path_absolute = self._full_path(new_path_relative)
+
+        if os.path.exists(new_path_absolute):
+            # If there source folder exists, export and export_sources 
+            # folders are already copied so we can remove the tmp ones
+            rmdir(self._full_path(layout.base_folder))
+        else:
+            # Destination folder is empty, move all the tmp contents
+            renamedir(self._full_path(layout.base_folder), new_path_absolute)
+
+        layout._base_folder = os.path.join(self.base_folder, new_path_relative)
 
         # Wait until it finish to really update the DB
         try:
-            self._db.create_recipe(new_path, ref)
+            self._db.create_recipe(new_path_relative, ref)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
             ref = layout.reference

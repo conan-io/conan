@@ -15,7 +15,7 @@ from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conans.client.downloaders.download import run_downloader
+from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
 from conans.util.sha import check_with_algorithm_sum
@@ -109,7 +109,7 @@ def rm(conanfile, pattern, folder, recursive=False):
             break
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
         auth=None, headers=None, strip_root=False):
     """
@@ -186,7 +186,7 @@ def ftp_download(conanfile, host, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None):
     """
     Retrieves a file from a given URL into a file with a given filename. It uses certificates from
     a list of known verifiers for https downloads, but this can be optionally disabled.
@@ -197,8 +197,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
-                the follow URLs will be used as mirror in case of download error.  Files accessible 
-                in the local filesystem can be referenced with a URL starting with ``file:///`` 
+                the follow URLs will be used as mirror in case of download error.  Files accessible
+                in the local filesystem can be referenced with a URL starting with ``file:///``
                 followed by an absolute path to a file (where the third ``/`` implies ``localhost``).
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
@@ -218,14 +218,16 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     out = ConanOutput()
     overwrite = True
 
-    config_retry = config.get("tools.files.download:retry", check_type=int, default=None)
-    retry = config_retry if config_retry is not None else retry if retry is not None else 2
-    config_retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=None)
-    retry_wait = config_retry_wait if config_retry_wait is not None \
-        else retry_wait if retry_wait is not None else 5
+    retry = retry if retry is not None else 2
+    retry = config.get("tools.files.download:retry", check_type=int, default=retry)
+    retry_wait = retry_wait if retry_wait is not None else 5
+    retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
     # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
-    download_cache = False
+    checksum = md5 or sha1 or sha256
+    download_cache = config.get("tools.files.download:download_cache") if checksum else None
+    if download_cache and not os.path.isabs(download_cache):
+        raise ConanException("core.download:download_cache must be an absolute path")
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
@@ -233,10 +235,10 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
             _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
                                       sha1=sha1, sha256=sha256)
         else:
-            run_downloader(requester=requester, verify=verify, download_cache=download_cache,
-                           url=file_url, overwrite=overwrite,
-                           file_path=filename, retry=retry, retry_wait=retry_wait,
-                           auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+            downloader = CachingFileDownloader(requester, download_cache=download_cache)
+            downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
+                                verify_ssl=verify, retry=retry, retry_wait=retry_wait,
+                                headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):
@@ -257,12 +259,13 @@ def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sh
     file_origin = _path_from_file_uri(url)
     shutil.copyfile(file_origin, file_path)
 
-    if md5:
+    if md5 is not None:
         check_md5(conanfile, file_path, md5)
-    if sha1:
+    if sha1 is not None:
         check_sha1(conanfile, file_path, sha1)
-    if sha256:
+    if sha256 is not None:
         check_sha256(conanfile, file_path, sha256)
+
 
 def _path_from_file_uri(uri):
     path = urlparse(uri).path

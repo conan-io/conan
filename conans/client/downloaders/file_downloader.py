@@ -12,35 +12,19 @@ from conans.util.sha import check_with_algorithm_sum
 from conans.util.tracer import log_download
 
 
-def check_checksum(file_path, md5, sha1, sha256):
-    if md5:
-        check_with_algorithm_sum("md5", file_path, md5)
-    if sha1:
-        check_with_algorithm_sum("sha1", file_path, sha1)
-    if sha256:
-        check_with_algorithm_sum("sha256", file_path, sha256)
+class FileDownloader:
 
-
-class FileDownloader(object):
-
-    def __init__(self, requester,  verify, config_retry, config_retry_wait):
+    def __init__(self, requester):
         self._output = ConanOutput()
         self._requester = requester
-        self._verify_ssl = verify
-        self._config_retry = config_retry
-        self._config_retry_wait = config_retry_wait
 
-    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
-                 headers=None, md5=None, sha1=None, sha256=None):
-        retry = retry if retry is not None else self._config_retry
-        retry = retry if retry is not None else 2
-        retry_wait = retry_wait if retry_wait is not None else self._config_retry_wait
-        retry_wait = retry_wait if retry_wait is not None else 0
+    def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
+                 overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
 
-        if file_path and not os.path.isabs(file_path):
+        if not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
 
-        if file_path and os.path.exists(file_path):
+        if os.path.exists(file_path):
             if overwrite:
                 self._output.warning("file '%s' already exists, overwriting" % file_path)
             else:
@@ -49,10 +33,9 @@ class FileDownloader(object):
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         try:
-            r = None
             for counter in range(retry + 1):
                 try:
-                    r = self._download_file(url, auth, headers, file_path)
+                    self._download_file(url, auth, headers, file_path, verify_ssl)
                     break
                 except (NotFoundException, ForbiddenException, AuthenticationException,
                         RequestErrorException):
@@ -64,15 +47,23 @@ class FileDownloader(object):
                         self._output.error(exc)
                         self._output.info(f"Waiting {retry_wait} seconds to retry...")
                         time.sleep(retry_wait)
-            if file_path:
-                check_checksum(file_path, md5, sha1, sha256)
-            return r
+
+            self._check_checksum(file_path, md5, sha1, sha256)
         except Exception:
-            if file_path and os.path.exists(file_path):
+            if os.path.exists(file_path):
                 os.remove(file_path)
             raise
 
-    def _download_file(self, url, auth, headers, file_path, try_resume=False):
+    @staticmethod
+    def _check_checksum(file_path, md5, sha1, sha256):
+        if md5 is not None:
+            check_with_algorithm_sum("md5", file_path, md5)
+        if sha1 is not None:
+            check_with_algorithm_sum("sha1", file_path, sha1)
+        if sha256 is not None:
+            check_with_algorithm_sum("sha256", file_path, sha256)
+
+    def _download_file(self, url, auth, headers, file_path, verify_ssl, try_resume=False):
         t1 = time.time()
         if try_resume and file_path and os.path.exists(file_path):
             range_start = os.path.getsize(file_path)
@@ -82,7 +73,7 @@ class FileDownloader(object):
             range_start = 0
 
         try:
-            response = self._requester.get(url, stream=True, verify=self._verify_ssl, auth=auth,
+            response = self._requester.get(url, stream=True, verify=verify_ssl, auth=auth,
                                            headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
@@ -144,7 +135,7 @@ class FileDownloader(object):
             if total_downloaded_size != total_length and not gzip:
                 if (file_path and total_length > total_downloaded_size > range_start
                         and response.headers.get("Accept-Ranges") == "bytes"):
-                    written_chunks = self._download_file(url, auth, headers, file_path,
+                    written_chunks = self._download_file(url, auth, headers, file_path, verify_ssl,
                                                          try_resume=True)
                 else:
                     raise ConanException("Transfer interrupted before complete: %s < %s"

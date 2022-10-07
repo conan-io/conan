@@ -7,6 +7,7 @@ from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -275,3 +276,20 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
+
+
+def test_remove_require():
+    c = TestClient()
+    remove = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "dep/1.0"
+            def build_id(self):
+                self.info_build.requires.remove("dep")
+        """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+            "consumer/conanfile.py": remove})
+    c.run("create dep")
+    c.run("create consumer")

@@ -37,12 +37,13 @@ class MSBuild(object):
         #: Defines the platform name, e.g., ``ARM`` if ``settings.arch == "armv7"``.
         self.platform = msvc_arch
 
-    def command(self, sln):
+    def command(self, sln, targets=None):
         """
         Gets the ``msbuild`` command line. For instance,
         :command:`msbuild "MyProject.sln" /p:Configuration=<conf> /p:Platform=<platform>`.
 
         :param sln: ``str`` name of Visual Studio ``*.sln`` file
+        :param targets: ``targets`` is an optional argument, defaults to ``None``, and otherwise it is a list of targets to build
         :return: ``str`` msbuild command line.
         """
         # TODO: Enable output_binary_log via config
@@ -58,15 +59,21 @@ class MSBuild(object):
         if maxcpucount:
             cmd += " /m:{}".format(maxcpucount)
 
+        if targets:
+            if not isinstance(targets, list):
+                raise ConanException("targets argument should be a list")
+            cmd += " /target:{}".format(";".join(targets))
+
         return cmd
 
-    def build(self, sln):
+    def build(self, sln, targets=None):
         """
         Runs the ``msbuild`` command line obtained from ``self.command(sln)``.
 
         :param sln: ``str`` name of Visual Studio ``*.sln`` file
+        :param targets: ``targets`` is an optional argument, defaults to ``None``, and otherwise it is a list of targets to build
         """
-        cmd = self.command(sln)
+        cmd = self.command(sln, targets=targets)
         self._conanfile.run(cmd)
 
     @staticmethod

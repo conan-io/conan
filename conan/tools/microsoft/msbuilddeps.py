@@ -10,7 +10,6 @@ from conans.errors import ConanException
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
-EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[\.+\-]")
 
 
 class MSBuildDeps(object):
@@ -143,7 +142,7 @@ class MSBuildDeps(object):
 
     @staticmethod
     def _get_valid_xml_format(name):
-        return EXCLUDED_SYMBOLS_PATTERN.sub("_", name)
+        return re.compile(r"[.+]").sub("_", name)
 
     def _vars_props_file(self, require, dep, name, cpp_info, deps, build):
         """
@@ -178,19 +177,44 @@ class MSBuildDeps(object):
 
         package_folder = escape_path(dep.package_folder)
 
+        bin_dirs = join_paths(cpp_info.bindirs)
+        res_dirs = join_paths(cpp_info.resdirs)
+        include_dirs = join_paths(cpp_info.includedirs)
+        lib_dirs = join_paths(cpp_info.libdirs)
+        libs = "".join([add_valid_ext(lib) for lib in cpp_info.libs])
+        # TODO: Missing objects
+        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs])
+        definitions = "".join("%s;" % d for d in cpp_info.defines)
+        compiler_flags = " ".join(cpp_info.cxxflags + cpp_info.cflags)
+        linker_flags = " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags)
+
+        # traits logic
+        if require and not require.headers:
+            include_dirs = ""
+        if require and not require.libs:
+            lib_dirs = ""
+            libs = ""
+            system_libs = ""
+        if require and not require.libs and not require.headers:
+            definitions = ""
+            compiler_flags = ""
+            linker_flags = ""
+        if require and not require.run:
+            bin_dirs = ""
+
         fields = {
             'name': name,
             'root_folder': package_folder,
-            'bin_dirs': join_paths(cpp_info.bindirs) if require.run else "",
-            'res_dirs': join_paths(cpp_info.resdirs),
-            'include_dirs': join_paths(cpp_info.includedirs) if require.headers else "",
-            'lib_dirs': join_paths(cpp_info.libdirs) if require.libs else "",
-            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]) if require.libs else "",
+            'bin_dirs': bin_dirs,
+            'res_dirs': res_dirs,
+            'include_dirs': include_dirs,
+            'lib_dirs': lib_dirs,
+            'libs': libs,
             # TODO: Missing objects
-            'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
-            'definitions': "".join("%s;" % d for d in cpp_info.defines),
-            'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
+            'system_libs': system_libs,
+            'definitions': definitions,
+            'compiler_flags': compiler_flags,
+            'linker_flags': linker_flags,
             'dependencies': ";".join(deps),
             'host_context': not build
         }

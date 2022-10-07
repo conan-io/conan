@@ -38,6 +38,9 @@ class MSBuildToolchain(object):
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
             <PlatformToolset>{{ toolset }}</PlatformToolset>
+            {% for k, v in properties.items() %}
+            <{{k}}>{{ v }}</{{k}}>
+            {% endfor %}
           </PropertyGroup>
         </Project>
     """)
@@ -66,6 +69,7 @@ class MSBuildToolchain(object):
         #: VS IDE Toolset, e.g., ``"v140"``. If ``compiler=msvc``, you can use ``compiler.toolset``
         #: setting, else, it'll be based on ``msvc`` version.
         self.toolset = self._msvs_toolset(conanfile)
+        self.properties = {}
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
@@ -169,7 +173,8 @@ class MSBuildToolchain(object):
             "runtime_library": runtime_library,
             "toolset": toolset,
             "compile_options": compile_options,
-            "parallel": parallel
+            "parallel": parallel,
+            "properties": self.properties,
         }
 
     def _write_config_toolchain(self, config_filename):

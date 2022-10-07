@@ -187,3 +187,18 @@ class ConanOutput:
 
     def flush(self):
         self.stream.flush()
+
+
+def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
+    """
+    Output to be used by formatters to dump information to stdout
+    """
+
+    fg_ = fg or ''
+    bg_ = bg or ''
+    if color_enabled(sys.stdout):
+        data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
+    else:
+        data = f"{' ' * indentation}{data}{endline}"
+
+    sys.stdout.write(data)

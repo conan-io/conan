@@ -2,8 +2,7 @@ from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
-    build_type_link_flags
+from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
@@ -37,7 +36,6 @@ class AutotoolsToolchain:
         self.extra_defines = []
 
         # Defines
-        self.gcc_cxx11_abi = self._get_cxx11_abi_define()
         self.ndebug = None
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
@@ -49,7 +47,7 @@ class AutotoolsToolchain:
 
         self.cppstd = cppstd_flag(self._conanfile.settings)
         self.arch_flag = architecture_flag(self._conanfile.settings)
-        self.libcxx = libcxx_flag(conanfile)
+        self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
@@ -82,7 +80,7 @@ class AutotoolsToolchain:
                 sdk_path = conanfile.conf["tools.apple:sdk_path"]
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
-                apple_arch = to_apple_arch(arch_host)
+                apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
@@ -91,22 +89,6 @@ class AutotoolsToolchain:
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
-
-    def _get_cxx11_abi_define(self):
-        # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
-        # The default is libstdc++11, only specify the contrary '_GLIBCXX_USE_CXX11_ABI=0'
-        settings = self._conanfile.settings
-        libcxx = settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return
-
-        compiler = settings.get_safe("compiler")
-        if compiler in ['clang', 'apple-clang', 'gcc']:
-            if libcxx == 'libstdc++':
-                return '_GLIBCXX_USE_CXX11_ABI=0'
-            elif libcxx == "libstdc++11" and self._conanfile.conf.get("tools.gnu:define_libcxx11_abi",
-                                                                      check_type=bool):
-                return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)

@@ -1,6 +1,7 @@
 import os
 import shutil
 import stat
+import textwrap
 import unittest
 
 import pytest
@@ -215,6 +216,47 @@ class ConfigInstallTest(unittest.TestCase):
         content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
+    def test_install_remotes_json(self):
+        folder = temp_folder()
+
+        remotes_json = textwrap.dedent("""
+            {
+                "remotes": [
+                    { "name": "repojson1", "url": "https://repojson1.net", "verify_ssl": false },
+                    { "name": "repojson2", "url": "https://repojson2.com", "verify_ssl": true }
+                ]
+            }
+        """)
+
+        remotes_txt = textwrap.dedent("""\
+            repotxt1 https://repotxt1.net False
+            repotxt2 https://repotxt2.com True
+        """)
+
+        # remotes.txt is ignored
+        save_files(folder, {"remotes.json": remotes_json,
+                            "remotes.txt": remotes_txt})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repojson1: https://repojson1.net [Verify SSL: False, Enabled: True]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
+
+        # We only install remotes.json
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": remotes_json})
+
+        self.client.run(f'config install "{folder}"')
+        assert "Defining remotes from remotes.json" in self.client.out
+
+        self.client.run('remote list')
+
+        assert "repojson1: https://repojson1.net [Verify SSL: False, Enabled: True]" in self.client.out
+        assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in self.client.out
+
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)
         zippath = self._create_zip()
@@ -415,11 +457,11 @@ class ConfigInstallTest(unittest.TestCase):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, file_path, **kwargs):  # @UnusedVariable
-            self.assertFalse(obj._verify_ssl)
+            assert kwargs["verify_ssl"] is False
             self._create_zip(file_path)
 
         def download_verify_true(obj, url, file_path, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj._verify_ssl)
+            assert kwargs["verify_ssl"] is True
             self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):

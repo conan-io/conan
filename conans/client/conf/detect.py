@@ -144,12 +144,13 @@ def _get_profile_compiler_version(compiler, version):
     return version
 
 
-def _detect_gcc_libcxx(version):
+def _detect_gcc_libcxx(version, executable):
     output = ConanOutput()
     # Assumes a working g++ executable
-    new_abi_available = version >= "5.1"
-    if not new_abi_available:
-        return "libstdc++"
+    if executable == "g++":  # we can rule out old gcc versions
+        new_abi_available = version >= "5.1"
+        if not new_abi_available:
+            return "libstdc++"
 
     main = textwrap.dedent("""
         #include <string>
@@ -164,7 +165,6 @@ def _detect_gcc_libcxx(version):
     old_path = os.getcwd()
     os.chdir(t)
     try:
-        executable = "g++"
         error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
             if "using libstdc++" in out_str:
@@ -198,7 +198,7 @@ def _detect_compiler_version(result):
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
-        libcxx = _detect_gcc_libcxx(version)
+        libcxx = _detect_gcc_libcxx(version, "g++")
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -207,7 +207,17 @@ def _detect_compiler_version(result):
         if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
         else:
-            result.append(("compiler.libcxx", "libstdc++"))
+            if platform.system() == "Windows":
+                # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
+                result.append(("compiler.runtime", "dynamic"))
+                result.append(("compiler.runtime_type", "Release"))
+                result.append(("compiler.runtime_version", "v143"))
+                ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
+                ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
+                                      "define compiler.libcxx")
+            else:
+                libcxx = _detect_gcc_libcxx(version, "clang++")
+                result.append(("compiler.libcxx", libcxx))
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
@@ -374,6 +384,8 @@ def _cppstd_default(compiler, compiler_version):
 
 
 def _clang_cppstd_default(compiler_version):
+    if compiler_version >= "16":
+        return "gnu17"
     # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
     return "gnu98" if compiler_version < "6" else "gnu14"
 

@@ -2,6 +2,7 @@ import os
 
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
+from conan.tools.build import cmd_args_to_string
 
 
 def is_apple_os(conanfile):
@@ -10,7 +11,7 @@ def is_apple_os(conanfile):
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch, default=None):
+def _to_apple_arch(arch, default=None):
     """converts conan-style architecture into Apple-style arch"""
     return {'x86': 'i386',
             'x86_64': 'x86_64',
@@ -19,7 +20,13 @@ def to_apple_arch(arch, default=None):
             'armv8_32': 'arm64_32',
             'armv8.3': 'arm64e',
             'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(arch, default)
+            'armv7k': 'armv7k'}.get(str(arch), default)
+
+
+def to_apple_arch(conanfile, default=None):
+    """converts conan-style architecture into Apple-style arch"""
+    arch_ = conanfile.settings.get_safe("arch")
+    return _to_apple_arch(arch_, default)
 
 
 def get_apple_sdk_fullname(conanfile):
@@ -68,6 +75,88 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
         flag = '-mios-version-min'
 
     return f"{flag}={os_version}" if flag else ''
+
+
+class XCRun(object):
+    """
+    XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
+    """
+
+    def __init__(self, conanfile, sdk=None):
+        """
+        :param conanfile: Conanfile instance.
+        :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the sdk it
+        automatically if ``None`` is passed.
+        """
+        if sdk is None and conanfile and conanfile.settings:
+            sdk = conanfile.settings.get_safe('os.sdk')
+        self.sdk = sdk
+
+    def _invoke(self, args):
+        def cmd_output(cmd):
+            from conans.util.runners import check_output_runner
+            cmd_str = cmd_args_to_string(cmd)
+            return check_output_runner(cmd_str).strip()
+
+        command = ['xcrun']
+        if self.sdk:
+            command.extend(['-sdk', self.sdk])
+        command.extend(args)
+        return cmd_output(command)
+
+    def find(self, tool):
+        """find SDK tools (e.g. clang, ar, ranlib, lipo, codesign, etc.)"""
+        return self._invoke(['--find', tool])
+
+    @property
+    def sdk_path(self):
+        """obtain sdk path (aka apple sysroot or -isysroot"""
+        return self._invoke(['--show-sdk-path'])
+
+    @property
+    def sdk_version(self):
+        """obtain sdk version"""
+        return self._invoke(['--show-sdk-version'])
+
+    @property
+    def sdk_platform_path(self):
+        """obtain sdk platform path"""
+        return self._invoke(['--show-sdk-platform-path'])
+
+    @property
+    def sdk_platform_version(self):
+        """obtain sdk platform version"""
+        return self._invoke(['--show-sdk-platform-version'])
+
+    @property
+    def cc(self):
+        """path to C compiler (CC)"""
+        return self.find('clang')
+
+    @property
+    def cxx(self):
+        """path to C++ compiler (CXX)"""
+        return self.find('clang++')
+
+    @property
+    def ar(self):
+        """path to archiver (AR)"""
+        return self.find('ar')
+
+    @property
+    def ranlib(self):
+        """path to archive indexer (RANLIB)"""
+        return self.find('ranlib')
+
+    @property
+    def strip(self):
+        """path to symbol removal utility (STRIP)"""
+        return self.find('strip')
+
+    @property
+    def libtool(self):
+        """path to libtool"""
+        return self.find('libtool')
 
 
 def fix_apple_shared_install_name(conanfile):

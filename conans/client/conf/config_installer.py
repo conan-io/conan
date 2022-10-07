@@ -76,7 +76,7 @@ def _process_file(directory, filename, config, cache, folder):
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
     elif filename == "remotes.json":
-        output.info("Installing remotes.json")
+        output.info("Defining remotes from remotes.json")
         _filecopy(directory, filename, cache.cache_folder)
     else:
         relpath = os.path.relpath(directory, folder)
@@ -113,9 +113,9 @@ def _process_download(config, cache, requester):
         filename = os.path.basename(path)
         zippath = os.path.join(tmp_folder, filename)
         try:
-            downloader = FileDownloader(requester=requester, verify=config.verify_ssl,
-                                        config_retry=None, config_retry_wait=None)
-            downloader.download(url=config.uri, file_path=zippath)
+            downloader = FileDownloader(requester=requester)
+            downloader.download(url=config.uri, file_path=zippath, verify_ssl=config.verify_ssl,
+                                retry=1)
             _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))

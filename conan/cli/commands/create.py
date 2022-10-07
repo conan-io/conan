@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
@@ -17,7 +17,7 @@ from conans.util.files import chdir, mkdir
 
 def json_create(info):
     deps_graph = info
-    return json.dumps({"graph": deps_graph.serialize()}, indent=4)
+    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
 @conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
@@ -58,19 +58,7 @@ def create(conan_api, parser, *args):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    if args.test_folder == "None":
-        # Now if parameter --test-folder=None (string None) we have to skip tests
-        args.test_folder = False
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
-    if test_conanfile_path:
-        if args.build_require:
-            raise ConanException("--build-require should not be specified, test_package does it")
-        root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
-                                                             profile_host, profile_build,
-                                                             remotes=remotes,
-                                                             update=args.update,
-                                                             lockfile=lockfile)
-    else:
+    if True:  # just to keep diff shorter now
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
@@ -79,13 +67,11 @@ def create(conan_api, parser, *args):
                                                                 profile_host=profile_host)
 
     out.title("Computing dependency graph")
-    check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
                                             remotes=remotes,
-                                            update=args.update,
-                                            check_update=check_updates)
+                                            update=args.update)
     print_graph_basic(deps_graph)
     out.title("Computing necessary packages")
     if args.build is None:  # Not specified, force build the tested library
@@ -100,11 +86,19 @@ def create(conan_api, parser, *args):
     out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
-    save_lockfile_out(args, deps_graph, lockfile, cwd)
-
+    if args.test_folder == "None":
+        # Now if parameter --test-folder=None (string None) we have to skip tests
+        args.test_folder = False
+    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     if test_conanfile_path:
-        _check_tested_reference_matches(deps_graph, ref, out)
-        test_package(conan_api, deps_graph, test_conanfile_path)
+        # TODO: We need arguments for:
+        #  - decide build policy for test_package deps "--test_package_build=missing"
+        #  - decide update policy "--test_package_update"
+        from conan.cli.commands.test import run_test
+        deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
+                              remotes, lockfile, update=False, build_modes=None)
+
+    save_lockfile_out(args, deps_graph, lockfile, cwd)
 
     return deps_graph
 

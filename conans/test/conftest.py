@@ -1,4 +1,5 @@
 import os
+import pathlib
 import platform
 import textwrap
 import uuid
@@ -25,6 +26,12 @@ tools_locations = {
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
+        # To explicitly skip one tool for one version, define the path as 'skip-tests'
+        # if you don't define the path for one platform it will run the test with the
+        # tool in the path. For example here it will skip the test with CMake in Darwin but
+        # in Linux it will run with the version found in the path if it's not specified
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin",
+                          "Darwin": "skip-tests"}},
     },
     'ninja': {
         "1.10.2": {}
@@ -35,6 +42,9 @@ tools_locations = {
     }
 }
 """
+
+MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
+homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
 
 
 tools_locations = {
@@ -48,8 +58,10 @@ tools_locations = {
         "default": "0.28",
         "0.28": {
             "path": {
-                # Using chocolatey in Windows -> choco install --requires=pkgconfiglite --version 0.28
-                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin",
+                'Darwin': f"{homebrew_root}/bin",
+                'Linux': "/usr/bin"
             }
         }},
     'autotools': {"exe": "autoconf"},
@@ -77,9 +89,10 @@ tools_locations = {
         },
         "3.23": {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin'
+                               if not MacOS_arm else "skip-tests",
                      # Not available in Linux
-                     'Linux': None}
+                     'Linux': "skip-tests"}
         }
     },
     'ninja': {
@@ -87,6 +100,14 @@ tools_locations = {
         "1.10.2": {
             "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
         }
+    },
+    # This is the non-msys2 mingw, which is 32 bits x86 arch
+    'mingw': {
+        "disabled": True,
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/mingw"}},
     },
     'mingw32': {
         "platform": "Windows",
@@ -117,14 +138,14 @@ tools_locations = {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
         "disabled": True,
         "platform": "Windows",
         "default": "system",
-        "exe": "mingw32-make",
+        "exe": "clang",
         "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {
@@ -145,7 +166,6 @@ tools_locations = {
             "path": {'Linux': '/usr/local/bin/premake5'}
         }
     },
-    'premake': {},
     'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
     'brew': {},
@@ -189,7 +209,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13
         compiler.libcxx=libc++
         build_type=Release
         """)
@@ -210,6 +230,7 @@ try:
 except ImportError as e:
     user_tool_locations = None
 
+
 try:
     from conans.test.conftest_user import default_profiles as user_default_profiles
     default_profiles.update(user_default_profiles)
@@ -217,6 +238,7 @@ except ImportError as e:
     user_default_profiles = None
 
 homebrew_root = "/opt/homebrew" if platform.machine() == "arm64" else "/usr/local"
+
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
@@ -263,14 +285,17 @@ def _get_individual_tool(name, version):
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
+        tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
         # To allow to skip for a platform, we can put the path to None
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
         #                        'Linux': None}}
         #          }
-        if tool_path is None:
+        if tool_path == "skip-tests":
             return False
+        elif tool_path is not None and not os.path.isdir(tool_path):
+            return True
     else:
         if version is not None:  # if the version is specified, it should be in the conf
             return True
@@ -290,8 +315,18 @@ def _get_individual_tool(name, version):
         os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
     exe = tool.get("exe", name)
     exe_found = which(exe)  # TODO: This which doesn't detect version either
+    exe_path = str(pathlib.Path(exe_found).parent) if exe_found else None
     if not exe_found:
         cached = True
+        if tool_path is None:
+            # will fail the test, not exe found and path None
+            cached = True
+    elif tool_path is not None and tool_path not in exe_found:
+        # finds the exe in a path that is not the one set in the conf -> fail
+        cached = True
+    elif tool_path is None:
+        cached = exe_path, tool_env
+
     if old_environ is not None:
         os.environ.clear()
         os.environ.update(old_environ)

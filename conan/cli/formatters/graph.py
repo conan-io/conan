@@ -1,7 +1,9 @@
 import fnmatch
 import json
+import sys
 
 from conan.api.output import ConanOutput, Color
+from conan.api.output import cli_out_write
 from conan.cli.formatters import get_template
 from conans.assets import templates
 from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_CACHE, \
@@ -217,17 +219,17 @@ def _render_graph(graph, template, template_folder):
 def format_graph_html(info):
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
-    return _render_graph(graph, template, template_folder)
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_dot(info):
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
-    return _render_graph(graph, template, template_folder)
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_json(info):
     deps_graph, _ = info
     serialized = deps_graph.serialize()
     json_result = json.dumps(serialized, indent=4)
-    return json_result
+    cli_out_write(json_result)

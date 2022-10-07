@@ -12,6 +12,23 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import load
 
 
+def test_msbuild_targets():
+    c = ConfDefinition()
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "7",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.conf = c.get_conanfile_conf(None)
+
+    msbuild = MSBuild(conanfile)
+    cmd = msbuild.command('project.sln', targets=["static", "shared"])
+
+    assert '/target:static;shared' in cmd
+
+
 def test_msbuild_cpu_count():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
@@ -187,6 +204,20 @@ def test_is_msvc(compiler, expected):
     conanfile.settings = settings
     conanfile.settings.compiler = compiler
     assert is_msvc(conanfile) == expected
+
+
+def test_is_msvc_build():
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": ["gcc", "msvc"],
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile()
+    conanfile.settings = settings
+    conanfile.settings.compiler = "gcc"
+    conanfile.settings_build = conanfile.settings.copy()
+    conanfile.settings_build.compiler = "msvc"
+    assert is_msvc(conanfile) is False
+    assert is_msvc(conanfile, build_context=True) is True
 
 
 @pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [

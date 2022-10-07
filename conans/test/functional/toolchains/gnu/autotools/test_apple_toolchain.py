@@ -4,10 +4,9 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
-from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 makefile = gen_makefile(apps=["app"], libs=["hello"])
@@ -80,7 +79,7 @@ def test_makefile_arch(config):
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out
@@ -141,7 +140,7 @@ def test_catalyst(arch):
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out

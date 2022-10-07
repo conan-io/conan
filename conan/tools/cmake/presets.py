@@ -84,6 +84,21 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
         # we don't even have a conanfile with a `layout()` to determine the build folder.
         # If we install a local conanfile: "conan install ." with a layout(), it will be available.
         ret["binaryDir"] = conanfile.build_folder
+
+    def _format_val(val):
+        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+
+    # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
+    cache_variables_info = " ".join([f"-D{var}={_format_val(value)}" for var, value in cache_variables.items()])
+    add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
+        if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
+
+    conanfile.output.info(f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
+                          f"'cmake --preset {name}'")
+    conanfile.output.info(f"If your CMake version is not compatible with "
+                          f"CMakePresets (<3.19) call cmake like: 'cmake <path> "
+                          f"-G {_format_val(generator)} {add_toolchain_cache}"
+                          f"{cache_variables_info}'")
     return ret
 
 
@@ -133,13 +148,18 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
         if "CMAKE_SH" not in cache_variables:
             cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
 
-        cmake_make_program = conanfile.conf.get("tools.gnu:make_program", default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
+                                                default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
         if cmake_make_program:
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
     if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
         cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
+
+    if "BUILD_TESTING" not in cache_variables:
+        if conanfile.conf.get("tools.build:skip_test", check_type=bool):
+            cache_variables["BUILD_TESTING"] = "OFF"
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)

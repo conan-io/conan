@@ -34,7 +34,7 @@ class XcodeToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         arch = conanfile.settings.get_safe("arch")
-        self.architecture = to_apple_arch(arch) or arch
+        self.architecture = to_apple_arch(self._conanfile, default=arch)
         self.configuration = conanfile.settings.build_type
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self.os_version = conanfile.settings.get_safe("os.version")

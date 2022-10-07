@@ -169,6 +169,7 @@ def save_lockfile_out(args, graph, lockfile, cwd):
         lockfile.update_lock(graph, args.lockfile_packages)
     lockfile.save(lockfile_out)
     ConanOutput().info(f"Generated lockfile: {lockfile_out}")
+    return lockfile
 
 
 def get_multiple_remotes(conan_api, remote_names=None):
