@@ -37,5 +37,7 @@ def export(conan_api, parser, *args):
                                   name=args.name, version=args.version,
                                   user=args.user, channel=args.channel,
                                   lockfile=lockfile)
+    # TODO: Can ``conan export`` modify a lockfile, and thus, have a --lockfile-out arg?
+    #  ``conan create`` does it at export time
     ConanOutput().success("Exported recipe: {}".format(ref.repr_humantime()))
     return ref
