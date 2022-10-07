@@ -167,12 +167,13 @@ class MyPackage(ConanFile):
 
 def test_build_policy_installer():
     c = TestClient(default_server_user=True)
-    conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "installer"')
+    conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "missing"')\
+                                          .with_class_attribute('upload_policy = "skip"')
     c.save({"conanfile.py": conanfile})
     c.run("export .")
     c.run("install pkg/1.0@")
     assert "pkg/1.0: Calling build()" in c.out
-    assert "pkg/1.0: Building package from source as defined by build_policy='installer'" in c.out
+    assert "pkg/1.0: Building package from source as defined by build_policy='missing'" in c.out
 
     # If binary already there it should do nothing
     c.run("install pkg/1.0@")
@@ -181,4 +182,4 @@ def test_build_policy_installer():
 
     c.run("upload * -r=default -c --all")
     assert "Uploading package" not in c.out
-    assert "pkg/1.0: Skipping upload of binaries, because build_policy='installer'" in c.out
+    assert "pkg/1.0: Skipping upload of binaries, because upload_policy='skip'" in c.out

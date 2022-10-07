@@ -97,10 +97,6 @@ class BuildMode(object):
             return False
         if self.missing or self.outdated:
             return True
-        if conan_file.build_policy == "installer":
-            conan_file.output.info("Building package from source as defined by "
-                                   "build_policy='installer'")
-            return True
         if conan_file.build_policy_missing:
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='missing'")
