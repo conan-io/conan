@@ -87,3 +87,8 @@ class Git(object):
     def checkout(self, commit):
         self._conanfile.output.info("Checkout: {}".format(commit))
         self.run('checkout {}'.format(commit))
+
+    def included_files(self):
+        files = self.run("ls-files --full-name --others --cached --exclude-standard")
+        files = files.splitlines()
+        return files
