@@ -21,7 +21,8 @@ def test_install_deploy():
         import os, shutil
 
         # USE **KWARGS to be robust against changes
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             for r, d in conanfile.dependencies.items():
                 new_folder = os.path.join(output_folder, d.ref.name)
                 shutil.copytree(d.package_folder, new_folder)
@@ -51,7 +52,8 @@ def test_copy_files_deploy():
     deploy = textwrap.dedent("""
         import os, shutil
 
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             for r, d in conanfile.dependencies.items():
                 bindir = os.path.join(d.package_folder, "bin")
                 for f in os.listdir(bindir):
@@ -73,15 +75,18 @@ def test_multi_deploy():
     """
     c = TestClient()
     deploy1 = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("deploy1!!")
         """)
     deploy2 = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("sub/deploy2!!")
         """)
     deploy_cache = textwrap.dedent("""
-        def deploy(conanfile, output_folder, **kwargs):
+        def deploy(graph, output_folder, **kwargs):
+            conanfile = graph.root.conanfile
             conanfile.output.info("deploy cache!!")
         """)
     save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)

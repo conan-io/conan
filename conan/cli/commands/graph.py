@@ -2,6 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
+from conan.api.subapi.install import do_deploys
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
     Extender
 from conan.cli.commands import make_abs_path
@@ -86,6 +87,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", nargs=1, action=Extender,
                            help='Print information only for packages that match the patterns')
+    subparser.add_argument("--deploy", action=Extender,
+                           help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -102,6 +105,8 @@ def graph_info(conan_api, parser, subparser, *args):
         print_graph_info(deps_graph, args.filter, args.package_filter)
 
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
+    if args.deploy:
+        base_folder = os.getcwd()
+        do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")
-
