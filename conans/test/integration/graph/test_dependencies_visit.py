@@ -284,3 +284,63 @@ def test_dependency_interface_validate():
     c.run("install user")
     assert "conanfile.py: HOME: myhome" in c.out
     assert "conanfile.py: PKG FOLDER: True" in c.out
+
+
+def test_validate_visibility():
+    # https://github.com/conan-io/conan/issues/12027
+    c = TestClient()
+    t1 = textwrap.dedent("""
+        from conan import ConanFile
+        class t1Conan(ConanFile):
+            name = "t1"
+            version = "0.1"
+            package_type = "static-library"
+
+            def package_info(self):
+                self.cpp_info.libs = ["mylib"]
+        """)
+    t2 = textwrap.dedent("""
+        from conan import ConanFile
+        class t2Conan(ConanFile):
+            name = "t2"
+            version = "0.1"
+            requires = "t1/0.1"
+            package_type = "shared-library"
+
+            def validate(self):
+                self.output.info("VALID: {}".format(self.dependencies["t1"]))
+        """)
+    t3 = textwrap.dedent("""
+        from conan import ConanFile
+        class t3Conan(ConanFile):
+            name = "t3"
+            version = "0.1"
+            requires = "t2/0.1"
+            package_type = "application"
+
+            def validate(self):
+                self.output.info("VALID: {}".format(self.dependencies["t1"]))
+                self.output.info("VALID: {}".format(self.dependencies["t2"]))
+
+            def generate(self):
+                self.output.info("GENERATE: {}".format(self.dependencies["t1"]))
+                self.output.info("GENERATE: {}".format(self.dependencies["t2"]))
+        """)
+
+    c.save({"t1/conanfile.py": t1,
+            "t2/conanfile.py": t2,
+            "t3/conanfile.py": t3})
+    c.run("create t1")
+    c.run("create t2")
+    c.run("install t3")
+    assert "t2/0.1: VALID: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): VALID: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): VALID: t2/0.1" in c.out
+    assert "conanfile.py (t3/0.1): GENERATE: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): GENERATE: t2/0.1" in c.out
+    c.run("create t3")
+    assert "t2/0.1: VALID: t1/0.1" in c.out
+    assert "t3/0.1: VALID: t1/0.1" in c.out
+    assert "t3/0.1: VALID: t2/0.1" in c.out
+    assert "t3/0.1: GENERATE: t1/0.1" in c.out
+    assert "t3/0.1: GENERATE: t2/0.1" in c.out

@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 
 import pytest
@@ -13,10 +14,16 @@ def _transitive_libraries():
     c = TestClient()
 
     c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
+    if platform.system() != "Windows":
+        c.run("create . -o liba/*:fPIC=True")
+    else:
+        c.run("create .")
     c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
     c.run("create .")
-    c.run("create . -o libb/*:shared=True")
+    if platform.system() != "Windows":
+        c.run("create . -o libb/*:shared=True")
+    else:
+        c.run("create . -o libb/*:shared=True -o liba/*:fPIC=True")
     return c
 
 
