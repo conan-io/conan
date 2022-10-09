@@ -124,7 +124,7 @@ class RecipeReference:
         if self_str != self_str.lower():
             raise ConanException(f"Conan packages names '{self_str}' must be all lowercase")
         if len(self_str) > 200:
-            raise ConanException(f"Package reference too long >250 {self_str}")
+            raise ConanException(f"Package reference too long >200 {self_str}")
         validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}$")
         if validation_pattern.match(self.name) is None:
             raise ConanException(f"Invalid package name '{self.name}'")
@@ -134,6 +134,17 @@ class RecipeReference:
             raise ConanException(f"Invalid package user '{self.user}'")
         if self.channel and validation_pattern.match(self.channel) is None:
             raise ConanException(f"Invalid package channel '{self.channel}'")
+
+        # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
+        pattern = re.compile(r'[.+-]')
+        from conan.api.output import ConanOutput
+        if pattern.search(self.name):
+            ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
+        if self.user and pattern.search(self.user):
+            ConanOutput().warning(f"User containing special chars is discouraged '{self.user}'")
+        if self.channel and pattern.search(self.channel):
+            ConanOutput().warning(f"Channel containing special chars is discouraged "
+                                  f"'{self.channel}'")
 
     def matches(self, pattern, is_consumer):
         negate = False

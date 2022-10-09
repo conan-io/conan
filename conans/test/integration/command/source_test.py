@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -176,3 +177,62 @@ class ConanLib(ConanFile):
         client.run("install --requires=hello/0.1@ -r server0 --build='*'")
         self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
+
+    def test_source_method_called_once(self):
+
+        """
+        Test that the source() method will be executed just once, and the source code will
+        be shared for all the package builds.
+        """
+
+        conanfile = textwrap.dedent('''
+            import os
+            from conan import ConanFile
+            from conans.util.files import save
+
+            class ConanLib(ConanFile):
+
+                def source(self):
+                    save(os.path.join(self.source_folder, "main.cpp"), "void main() {}")
+                    self.output.info("Running source!")
+            ''')
+
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+
+        client.run("create . --name=lib --version=1.0")
+        assert "Running source!" in client.out
+
+        client.run("create . --name=lib --version=1.0")
+        assert "Running source!" not in client.out
+
+        client.run("create . --name=lib --version=1.0 -s build_type=Debug")
+        assert "Running source!" not in client.out
+
+    def test_source_method_called_again_if_left_dirty(self):
+
+        """
+        If we fail in retreiving sources make sure the source() method will be called
+        next time we create
+        """
+
+        conanfile = textwrap.dedent('''
+            import os
+            from conan import ConanFile
+
+            class ConanLib(ConanFile):
+
+                def source(self):
+                    self.output.info("Running source!")
+                    assert False
+            ''')
+
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+
+        client.run("create . --name=lib --version=1.0", assert_error=True)
+        assert "Running source!" in client.out
+
+        client.run("create . --name=lib --version=1.0", assert_error=True)
+        assert "Running source!" in client.out
+        assert "Source folder is corrupted, forcing removal" in client.out

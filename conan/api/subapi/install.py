@@ -49,7 +49,7 @@ class InstallAPI:
         if deploy:
             base_folder = conanfile.folders.base_build
             mkdir(base_folder)
-            _do_deploys(self.conan_api, deps_graph, deploy, base_folder)
+            do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         app = ConanApp(self.conan_api.cache_folder)
@@ -87,17 +87,16 @@ def _find_deployer(d, cache_deploy_folder):
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
-def _do_deploys(conan_api, graph, deploy, deploy_folder):
+def do_deploys(conan_api, graph, deploy, deploy_folder):
     # Handle the deploys
     cache = ClientCache(conan_api.cache_folder)
     for d in deploy or []:
         deployer = _find_deployer(d, cache.deployers_path)
         # IMPORTANT: Use always kwargs to not break if it changes in the future
-        conanfile = graph.root.conanfile
-        deployer(conanfile=conanfile, output_folder=deploy_folder)
+        deployer(graph=graph, output_folder=deploy_folder)
 
 
-def full_deploy(conanfile, output_folder):
+def full_deploy(graph, output_folder):
     """
     Deploys to output_folder + host/dep/0.1/Release/x86_64 subfolder
     """
@@ -106,8 +105,11 @@ def full_deploy(conanfile, output_folder):
     import os
     import shutil
 
+    conanfile = graph.root.conanfile
     conanfile.output.info(f"Conan built-in full deployer to {output_folder}")
     for dep in conanfile.dependencies.values():
+        if dep.package_folder is None:
+            continue
         folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
         build_type = dep.info.settings.get_safe("build_type")
         arch = dep.info.settings.get_safe("arch")
@@ -121,7 +123,7 @@ def full_deploy(conanfile, output_folder):
         dep.set_deploy_folder(new_folder)
 
 
-def direct_deploy(conanfile, output_folder):
+def direct_deploy(graph, output_folder):
     """
     Deploys to output_folder a single package,
     """
@@ -130,6 +132,7 @@ def direct_deploy(conanfile, output_folder):
     import os
     import shutil
 
+    conanfile = graph.root.conanfile
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
     # If the argument is --requires, the current conanfile is a virtual one with 1 single
     # dependency, the "reference" package. If the argument is a local path, then all direct

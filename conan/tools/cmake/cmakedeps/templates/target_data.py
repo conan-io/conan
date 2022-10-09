@@ -5,6 +5,8 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
+from conans.model.dependencies import get_transitive_requires
+
 """
 
 foo-release-x86_64-data.cmake
@@ -168,8 +170,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
-                                                                  "direct": True})
+        transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for comp_name, comp in sorted_comps.items():
             # TODO: Read a property from the component to discard this is shared
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
@@ -179,7 +180,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
-                    req = direct_visible_host[pkg]
+                    req = transitive_requires[pkg]
                     public_comp_deps.append(self.get_component_alias(req, cmp_name))
                 else:  # Points to a component of same package
                     public_comp_deps.append(self.get_component_alias(self.conanfile, require))
@@ -192,30 +193,18 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_dependency_filenames(self):
         if self.conanfile.is_build_context:
             return []
-        ret = []
-        direct_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
-                                                          "direct": True})
-        if self.conanfile.cpp_info.required_components:
-            for dep_name, _ in self.conanfile.cpp_info.required_components:
-                if dep_name and dep_name not in ret:  # External dep
-                    try:
-                        req = direct_host[dep_name]
-                    except KeyError:
-                        # if it raises it means the required component is not in the direct_host
-                        # dependencies, maybe it has been filtered out by traits => Skip
-                        pass
-                    else:
-                        ret.append(get_cmake_package_name(req))
-        elif direct_host:
-            ret = [get_cmake_package_name(r, self.generating_module) for r in direct_host.values()]
-
+        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        # Previously it was filtering here components, but not clear why the file dependency
+        # should be skipped if components are not being required, why would it declare a
+        # dependency to it?
+        ret = [get_cmake_package_name(r, self.generating_module) for r in transitive_reqs.values()]
         return ret
 
     def _get_dependencies_find_modes(self):
         ret = {}
         if self.conanfile.is_build_context:
             return ret
-        deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
+        deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for dep in deps.values():
             dep_file_name = get_cmake_package_name(dep, self.generating_module)
             find_mode = get_find_mode(dep)
@@ -273,8 +262,6 @@ class _TargetDataContext(object):
                                    for v in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        if require and not require.headers:
-            self.include_paths = ""
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
@@ -287,11 +274,6 @@ class _TargetDataContext(object):
         self.compile_definitions = join_defines(cpp_info.defines)
         self.library_type = library_type
         self.is_host_windows = "1" if is_host_windows else "0"
-        if require and not require.libs:
-            self.lib_paths = ""
-            self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
@@ -309,6 +291,14 @@ class _TargetDataContext(object):
 
         self.objects_list = join_paths(cpp_info.objects)
 
+        # traits logic
+        if require and not require.headers:
+            self.include_paths = ""
+        if require and not require.libs:
+            self.lib_paths = ""
+            self.libs = ""
+            self.system_libs = ""
+            self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""
@@ -317,6 +307,8 @@ class _TargetDataContext(object):
             self.sharedlinkflags_list = ""
             self.exelinkflags_list = ""
             self.objects_list = ""
+        if require and not require.run:
+            self.bin_paths = ""
 
         build_modules = cpp_info.get_property("cmake_build_modules") or []
         self.build_modules_paths = join_paths(build_modules)

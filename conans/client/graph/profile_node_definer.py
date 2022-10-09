@@ -60,6 +60,7 @@ def _initialize_conanfile(conanfile, profile, ref):
             conanfile.display_name, str(e)))
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile.buildenv
+    conanfile._conan_runenv = profile.runenv
     conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
 
 
@@ -76,4 +77,5 @@ def consumer_definer(conanfile, profile_host):
 
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile_host.buildenv
+    conanfile._conan_runenv = profile_host.runenv
     conanfile.conf = profile_host.conf.get_conanfile_conf(None, is_consumer=True)

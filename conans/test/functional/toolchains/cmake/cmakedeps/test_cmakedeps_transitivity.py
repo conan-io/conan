@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -124,3 +125,31 @@ def test_transitive_binary_skipped(transitive_libraries):
     c.save({"src/main.cpp": main})
     c.run("build .", assert_error=True)
     assert "Cannot open include file: 'liba.h'" in c.out
+
+
+@pytest.mark.tool("cmake")
+def test_shared_requires_static_build_all(transitive_libraries):
+    c = transitive_libraries
+
+    conanfile = textwrap.dedent("""\
+       from conan import ConanFile
+
+       class Pkg(ConanFile):
+           requires = "libb/0.1"
+           settings = "os", "compiler", "arch", "build_type"
+           generators = "CMakeDeps"
+        """)
+
+    c.save({"conanfile.py": conanfile}, clean_first=True)
+
+    arch = c.get_default_host_profile().settings['arch']
+
+    c.run("install . -o libb*:shared=True")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
+    assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake
+
+    c.run("install . -o libb*:shared=True --build=libb*")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
+    assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake

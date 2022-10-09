@@ -807,21 +807,21 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 class SCMRevisions(unittest.TestCase):
 
     def test_auto_revision_even_without_scm_git(self):
-        """Even without using the scm feature, the revision is detected from repo.
-         Also while we continue working in local, the revision doesn't change, so the packages
-         can be found"""
+        """
+        Can't do conan create/export with uncommited changes if using revision_mode=scm
+        """
         ref = RecipeReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
         conanfile = GenConanfile().with_revision_mode("scm")
-        commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
+        commit = client.init_git_repo(files={"file.txt": "hey", "conanfile.py": str(conanfile)},
+                                      origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
         self.assertEqual(client.recipe_revision(ref), commit)
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-        self.assertIn("New changes!", client.out)
+        client.create(ref, conanfile=conanfile, assert_error=True)
+        self.assertIn("Can't have a dirty repository using revision_mode='scm' and doing", client.out)
 
     def test_auto_revision_without_commits(self):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""

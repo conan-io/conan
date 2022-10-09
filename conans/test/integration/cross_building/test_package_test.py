@@ -59,7 +59,9 @@ class TestPackageTestCase(unittest.TestCase):
                 'profile_host': '[settings]\nos=Host',
                 'profile_build': '[settings]\nos=Build', })
         t.run("export br.py --name=br1 --version=version")
-        t.run("export br.py --name=br2 --version=version")
+        # It is necessary to build first the test_package build_requires br2
+        t.run("create br.py --name=br2 --version=version -tf=None --build-require "
+              "--profile:host=profile_host --profile:build=profile_build")
 
         t.run("create conanfile.py --name=name --version=version --build=missing"
               " --profile:host=profile_host --profile:build=profile_build")
@@ -67,9 +69,6 @@ class TestPackageTestCase(unittest.TestCase):
         # Build requires are built in the 'build' context:
         self.assertIn("br1/version: >> settings.os: Build", t.out)
         self.assertIn("br1/version: >> settings_build.os: Build", t.out)
-
-        self.assertIn("br2/version: >> settings.os: Build", t.out)
-        self.assertIn("br2/version: >> settings_build.os: Build", t.out)
 
         # Package 'name' is built for the 'host' context (br1 as build_requirement)
         self.assertIn("name/version: >> settings.os: Host", t.out)

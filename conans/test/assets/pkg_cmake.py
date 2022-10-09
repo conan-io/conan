@@ -21,9 +21,14 @@ def pkg_cmake(name, version, requires=None, exe=False):
             exports_sources = "CMakeLists.txt", "src/*", "include/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
-            options = {{"shared": [True, False]}}
-            default_options = {{"shared": False}}
+            options = {{"shared": [True, False],
+                        "fPIC": [True, False]}}
+            default_options = {{"shared": False, "fPIC": True}}
             generators = "CMakeToolchain", "CMakeDeps"
+
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    del self.options.fPIC
 
             def layout(self):
                 cmake_layout(self)
@@ -90,7 +95,7 @@ def pkg_cmake_test(require_name):
                 cmake.build()
 
             def test(self):
-                cmd = os.path.join(self.cpp.build.bindirs[0], "test")
+                cmd = os.path.join(self.cpp.build.bindir, "test")
                 self.run(cmd, env="conanrun")
         """)
 

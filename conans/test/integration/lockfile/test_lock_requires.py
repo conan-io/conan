@@ -349,3 +349,104 @@ def test_ux_defaults():
     c.save({"conanfile.txt": ""})
     c.run("install . --lockfile=conan.lock", assert_error=True)
     assert "ERROR: Lockfile doesn't exist" in c.out
+
+
+class TestLockTestPackage:
+    def test_lock_tool_requires_test(self):
+        # https://github.com/conan-io/conan/issues/11763
+        c = TestClient()
+        test_package = textwrap.dedent("""
+            from conan import ConanFile
+
+            class TestPackageConan(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def build_requirements(self):
+                    self.tool_requires("cmake/[*]")
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
+                def test(self):
+                    print("package tested")
+        """)
+
+        c.save({"cmake/conanfile.py": GenConanfile("cmake"),
+                "dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("dep/[*]"),
+                "app/test_package/conanfile.py": test_package})
+
+        c.run("create cmake --version=1.0")
+        c.run("create dep --version=1.0")
+        with c.chdir("app"):
+            c.run("lock create .")
+            lock = c.load("conan.lock")
+            assert "cmake/1.0" not in lock
+            assert "dep/1.0" in lock
+            c.run("lock create test_package --lockfile=conan.lock --lockfile-out=conan.lock")
+            lock = c.load("conan.lock")
+            assert "cmake/1.0" in lock
+            assert "dep/1.0" in lock
+
+        c.run("create cmake --version=2.0")
+        c.run("create dep --version=2.0")
+        with c.chdir("app"):
+            c.run("create . --lockfile=conan.lock")
+            assert "cmake/1.0" in c.out
+            assert "dep/1.0" in c.out
+            assert "cmake/2.0" not in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" in c.out
+
+    def test_partial_approach(self):
+        """ do not include it in the lockfile, but apply it partially
+        """
+        # https://github.com/conan-io/conan/issues/11763
+        c = TestClient()
+        test_package = textwrap.dedent("""
+                   from conan import ConanFile
+
+                   class TestPackageConan(ConanFile):
+                       settings = "os", "compiler", "arch", "build_type"
+                       def build_requirements(self):
+                           self.tool_requires("cmake/[*]")
+                       def requirements(self):
+                           self.requires(self.tested_reference_str)
+                       def test(self):
+                           print("package tested")
+               """)
+
+        c.save({"cmake/conanfile.py": GenConanfile("cmake"),
+                "dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("dep/[*]"),
+                "app/test_package/conanfile.py": test_package})
+
+        c.run("create cmake --version=1.0")
+        c.run("create dep --version=1.0")
+        with c.chdir("app"):
+            c.run("lock create .")
+            lock = c.load("conan.lock")
+            assert "cmake/1.0" not in lock
+            assert "dep/1.0" in lock
+
+        c.run("create cmake --version=2.0")
+        c.run("create dep --version=2.0")
+        with c.chdir("app"):
+            c.run("create . --lockfile=conan.lock --lockfile-partial")
+            assert "cmake/2.0" in c.out
+            assert "dep/1.0" in c.out
+            assert "cmake/1.0" not in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" in c.out
+
+        # or to be more guaranteed
+        with c.chdir("app"):
+            c.run("create . --lockfile=conan.lock -tf=None")
+            assert "cmake" not in c.out
+            assert "dep/1.0" in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" not in c.out
+
+            c.run("test test_package app/1.0 --lockfile=conan.lock --lockfile-partial")
+            assert "cmake/1.0" not in c.out
+            assert "cmake/2.0" in c.out
+            assert "dep/1.0" in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" in c.out
