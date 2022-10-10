@@ -498,6 +498,36 @@ class CppInfo(object):
             self._aggregated.components[None] = result
         return self._aggregated
 
+    def check_component_requires(self, conanfile):
+        """ quality check for component requires:
+        - Check that all recipe ``requires`` are used if consumer recipe explicit opt-in to use
+          component requires
+        - Check that component external dep::comp dependency "dep" is a recipe "requires"
+        - Check that every internal component require actually exist
+        """
+        # Accumulate all external requires
+        external = set()
+        internal = set()
+        for key, comp in self.components.items():
+            external.update(r.split("::")[0] for r in comp.requires if "::" in r)
+            internal.update(r for r in comp.requires if "::" not in r)
+
+        missing_internal = list(internal.difference(self.components))
+        if missing_internal:
+            raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
+        if not external:
+            return
+        direct_dependencies = [d.ref.name
+                               for d, _ in conanfile.dependencies.filter({"direct": True}).items()]
+        for e in external:
+            if e not in direct_dependencies:
+                raise ConanException(
+                    f"{conanfile}: required component package '{e}::' not in dependencies")
+        for e in direct_dependencies:
+            if e not in external:
+                raise ConanException(
+                    f"{conanfile}: Required package '{e}' not in component 'requires'")
+
     def copy(self):
         # Only used at the moment by layout() editable merging build+source .cpp data
         ret = CppInfo()

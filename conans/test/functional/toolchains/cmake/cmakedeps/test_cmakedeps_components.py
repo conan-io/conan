@@ -84,7 +84,6 @@ def top_conanfile():
         from conan import ConanFile
 
         class Recipe(ConanFile):
-            name = "top"
 
             def package_info(self):
                 self.cpp_info.components["cmp1"].libs = ["top_cmp1"]
@@ -98,7 +97,7 @@ def test_wrong_component(top_conanfile, from_component):
         We can only raise this error after the graph is fully resolved, it is when we
         know the actual components that the requirement is going to provide.
     """
-
+    # TODO: This test is specific of CMakeDeps, could be made general?
     consumer = textwrap.dedent("""
         from conan import ConanFile
 
@@ -117,7 +116,7 @@ def test_wrong_component(top_conanfile, from_component):
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
-@pytest.mark.xfail(reason="Check for components usage has been commented")
+# TODO: This is CMakeDeps Independent, move it out of here
 def test_unused_requirement(top_conanfile):
     """ Requires should include all listed requirements
         This error is known when creating the package if the requirement is consumed.
@@ -126,19 +125,19 @@ def test_unused_requirement(top_conanfile):
         from conan import ConanFile
 
         class Recipe(ConanFile):
-            requires = "top/version"
+            requires = "top/version", "top2/version"
             def package_info(self):
-                self.cpp_info.requires = ["other::other"]
+                self.cpp_info.requires = ["top::other"]
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
     t.run('create top.py --name=top --version=version')
+    t.run('create top.py --name=top2 --version=version')
     t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "wrong/version package_info(): Package require 'top' not used in components " \
-           "requires" in t.out
+    assert "ERROR: wrong/version: Required package 'top2' not in component 'requires" in t.out
 
 
-@pytest.mark.xfail(reason="Check for components usage has been commented")
+# TODO: This is CMakeDeps Independent, move it out of here
 def test_wrong_requirement(top_conanfile):
     """ If we require a wrong requirement, we get a meaninful error.
         This error is known when creating the package if the requirement is not there.
@@ -155,8 +154,22 @@ def test_wrong_requirement(top_conanfile):
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
     t.run('create top.py --name=top --version=version')
     t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "wrong/version package_info(): Package require 'other' declared in " \
-           "components requires but not defined as a recipe requirement" in t.out
+    assert "ERROR: wrong/version: required component package 'other::' not in dependencies" in t.out
+
+
+# TODO: This is CMakeDeps Independent, move it out of here
+def test_missing_internal():
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["cmp1"].requires = ["other"]
+    """)
+    t = TestClient()
+    t.save({'conanfile.py': consumer})
+    t.run('create . --name=wrong --version=version', assert_error=True)
+    assert "ERROR: wrong/version: Internal components not found: ['other']" in t.out
 
 
 @pytest.mark.tool("cmake")
