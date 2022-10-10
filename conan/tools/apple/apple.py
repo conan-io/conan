@@ -85,8 +85,8 @@ class XCRun(object):
     def __init__(self, conanfile, sdk=None):
         """
         :param conanfile: Conanfile instance.
-        :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the sdk it
-        automatically if ``None`` is passed.
+        :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
+            sdk it automatically if ``None`` is passed.
         """
         if sdk is None and conanfile and conanfile.settings:
             sdk = conanfile.settings.get_safe('os.sdk')
