@@ -109,7 +109,14 @@ class _UploadCollecter(object):
 
                 # TODO: This search of binary packages has to be improved, more robust
                 # So only real packages are retrieved
-                if all_packages or query:
+                if conanfile.upload_policy == "skip":
+                    # TODO: This build_policy CANNOT be conditional, so all binaries will be skipped
+                    #   this could be a future feature, but will require annotating/metadata of the
+                    #   binaries created with this policy value for each binary
+                    self._output.info("{}: Skipping upload of binaries, because "
+                                      "upload_policy='skip'".format(ref))
+                    packages_ids = []
+                elif all_packages or query:
                     if all_packages:
                         query = None
                     # better to do a search, that will retrieve real packages with ConanInfo

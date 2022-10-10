@@ -110,6 +110,7 @@ class ConanFile(object):
     topics = None
     homepage = None
     build_policy = None
+    upload_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
