@@ -504,6 +504,7 @@ class CppInfo(object):
           component requires
         - Check that component external dep::comp dependency "dep" is a recipe "requires"
         - Check that every internal component require actually exist
+        It doesn't check that external components do exist
         """
         # Accumulate all external requires
         external = set()
