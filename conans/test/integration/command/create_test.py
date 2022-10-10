@@ -207,18 +207,6 @@ class MyPkg(ConanFile):
         self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: pkg",
                       client.out)
 
-    def test_build_policy(self):
-        # https://github.com/conan-io/conan/issues/1956
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "always"')})
-        client.run("create . --name=bar --version=0.1")
-        self.assertIn("bar/0.1: Forced build from source", client.out)
-
-        # Transitive too
-        client.save({"conanfile.py": GenConanfile().with_require("bar/0.1@")})
-        client.run("create . --name=pkg --version=0.1")
-        self.assertIn("bar/0.1: Forced build from source", client.out)
-
     @pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
     def test_build_folder_handling(self):
         # FIXME: The "test_package" layout has changed, we need to discuss this redirection of

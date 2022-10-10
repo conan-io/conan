@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.client.userio import UserInput
@@ -39,7 +41,6 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     remote = conan_api.remotes.get(args.remote)
 
     upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
-
     if not upload_bundle.recipes:
         raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 

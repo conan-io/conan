@@ -146,15 +146,9 @@ class PackagePreparator:
 
             if recipe.upload:
                 self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
-            if conanfile.build_policy == "always":
-                recipe.build_always = True
-                for package in recipe.packages:
-                    package.upload = False
-            else:
-                recipe.build_always = False
-                for package in recipe.packages:
-                    if package.upload:
-                        self._prepare_package(package)
+            for package in recipe.packages:
+                if package.upload:
+                    self._prepare_package(package)
 
     def _prepare_recipe(self, recipe, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
@@ -288,10 +282,6 @@ class UploadExecutor:
         for recipe in upload_data.recipes:
             if recipe.upload:
                 self.upload_recipe(recipe, remote)
-            if recipe.build_always and recipe.packages:
-                # TODO: Maybe do not raise? Allow it with --force?
-                raise ConanException("Conanfile '%s' has build_policy='always', "
-                                     "no packages can be uploaded" % str(recipe.ref))
             for package in recipe.packages:
                 if package.upload:
                     self.upload_package(package, remote)

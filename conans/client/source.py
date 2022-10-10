@@ -62,9 +62,6 @@ def config_source(export_source_folder, conanfile, hook_manager):
         conanfile.output.warning("Trying to remove corrupted source folder")
         remove_source()
         clean_dirty(conanfile.folders.base_source)
-    elif conanfile.build_policy == "always":
-        conanfile.output.warning("Detected build_policy 'always', trying to remove source folder")
-        remove_source()
 
     if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it
         with set_dirty_context_manager(conanfile.folders.base_source):

@@ -1,4 +1,5 @@
 from conan.api.model import UploadBundle
+from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
@@ -36,6 +37,17 @@ class UploadAPI:
                     ret.add_prefs(pkg_ids)
                 else:
                     ret.add_ref(ref)
+
+        # This is necessary to upload_policy = "skip"
+        app = ConanApp(self.conan_api.cache_folder)
+        for recipe in ret.recipes:
+            layout = app.cache.ref_layout(recipe.ref)
+            conanfile_path = layout.conanfile()
+            conanfile = app.loader.load_basic(conanfile_path)
+            if conanfile.upload_policy == "skip":
+                ConanOutput().info(f"{recipe.ref}: Skipping upload of binaries, "
+                                   "because upload_policy='skip'")
+                recipe.packages = []
         return ret
 
     @api_method
