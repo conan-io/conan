@@ -337,7 +337,9 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
                                         compresslevel=compresslevel)
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
         for filename, abs_path in sorted(files.items()):
-            info = tarfile.TarInfo(name=filename)
+            # recursive is False in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=False)
+            """info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
@@ -347,7 +349,7 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
                 tgz.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:
-                    tgz.addfile(tarinfo=info, fileobj=file_handler)
+                    tgz.addfile(tarinfo=info, fileobj=file_handler)"""
         tgz.close()
 
     duration = time.time() - t1
