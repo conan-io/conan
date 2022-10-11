@@ -50,5 +50,6 @@ def test_component_error():
     c.run("create t2")
     c.run("install t3")
 
-    assert 'set(t2_FIND_DEPENDENCY_NAMES "")' in c.load("t3/t2-release-x86_64-data.cmake")
+    arch = c.get_default_host_profile().settings['arch']
+    assert 'set(t2_FIND_DEPENDENCY_NAMES "")' in c.load(f"t3/t2-release-{arch}-data.cmake")
     assert not os.path.exists(os.path.join(c.current_folder, "t3/t1-config.cmake"))
