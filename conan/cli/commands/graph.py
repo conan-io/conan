@@ -1,7 +1,8 @@
 import json
 import os
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
+from conan.api.subapi.install import do_deploys
 from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
     Extender
 from conan.cli.commands import make_abs_path
@@ -22,19 +23,18 @@ def graph(conan_api, parser, *args):
 
 def cli_build_order(build_order):
     # TODO: Very simple cli output, probably needs to be improved
-    output = ConanOutput()
     for level in build_order:
         for item in level:
             for package_level in item['packages']:
                 for package in package_level:
-                    output.writeln(f"{item['ref']}:{package['package_id']} - {package['binary']}")
+                    cli_out_write(f"{item['ref']}:{package['package_id']} - {package['binary']}")
 
 
 def json_build_order(build_order):
-    return json.dumps(build_order, indent=4)
+    cli_out_write(json.dumps(build_order, indent=4))
 
 
-@conan_subcommand(formatters={"json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
     Computes the build order of a dependency graph
@@ -53,11 +53,10 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out.title("Computing the build order")
     install_graph = InstallGraph(deps_graph)
     install_order_serialized = install_graph.install_build_order()
-    cli_build_order(install_order_serialized)
     return install_order_serialized
 
 
-@conan_subcommand(formatters={"json": json_build_order})
+@conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merges more than 1 build-order file
@@ -72,7 +71,6 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
         result.merge(install_graph)
 
     install_order_serialized = result.install_build_order()
-    cli_build_order(install_order_serialized)
     return install_order_serialized
 
 
@@ -89,6 +87,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", nargs=1, action=Extender,
                            help='Print information only for packages that match the patterns')
+    subparser.add_argument("--deploy", action=Extender,
+                           help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -105,6 +105,8 @@ def graph_info(conan_api, parser, subparser, *args):
         print_graph_info(deps_graph, args.filter, args.package_filter)
 
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
+    if args.deploy:
+        base_folder = os.getcwd()
+        do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")
-

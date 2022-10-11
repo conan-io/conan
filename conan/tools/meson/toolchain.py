@@ -5,6 +5,7 @@ from jinja2 import Template
 
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
 from conan.tools.build.cross_building import cross_building
+from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -138,6 +139,9 @@ class MesonToolchain(object):
 
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
+
+        self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
+
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
         default_comp = ""
@@ -349,6 +353,11 @@ class MesonToolchain(object):
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
         self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+
+        if self.libcxx:
+            self.cpp_args.append(self.libcxx)
+        if self.gcc_cxx11_abi:
+            self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties

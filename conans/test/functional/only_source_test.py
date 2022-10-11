@@ -2,7 +2,6 @@ import os
 import unittest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -53,35 +52,6 @@ class OnlySourceTest(unittest.TestCase):
         client.run("create . --user=lasote --channel=stable")
         self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
-    def test_build_policies_update(self):
-        client = TestClient(default_server_user=True)
-        conanfile = """
-from conan import ConanFile
-
-class MyPackage(ConanFile):
-    name = "test"
-    version = "1.9"
-    build_policy = 'always'
-
-    def source(self):
-        self.output.info("Getting sources")
-    def build(self):
-        self.output.info("Building sources")
-    def package(self):
-        self.output.info("Packaging this test package")
-        """
-
-        files = {CONANFILE: conanfile}
-        client.save(files, clean_first=True)
-        client.run("export . --user=lasote --channel=stable")
-        client.run("install --requires=test/1.9@lasote/stable")
-        self.assertIn("Getting sources", client.out)
-        self.assertIn("Building sources", client.out)
-        self.assertIn("Packaging this test package", client.out)
-        self.assertIn("Building package from source as defined by build_policy='always'",
-                      client.out)
-        client.run("upload test/1.9@lasote/stable -r default --only-recipe")
-
     def test_build_policies_in_conanfile(self):
         client = TestClient(default_server_user=True)
         base = GenConanfile("hello0", "1.0").with_exports("*")
@@ -106,20 +76,9 @@ class MyPackage(ConanFile):
         client.run("export . --user=lasote --channel=stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
-        client.run("install --requires=hello0/1.0@lasote/stable")
-        self.assertIn("Detected build_policy 'always', trying to remove source folder",
+        client.run("install --requires=hello0/1.0@lasote/stable", assert_error=True)
+        self.assertIn("ERROR: hello0/1.0@lasote/stable: build_policy='always' has been removed",
                       client.out)
-        self.assertIn("Building", client.out)
-
-        # Try to do it again, now we have the package, but we build again
-        client.run("install --requires=hello0/1.0@lasote/stable")
-        self.assertIn("Building", client.out)
-        self.assertIn("Detected build_policy 'always', trying to remove source folder",
-                      client.out)
-
-        # Try now to upload all packages, should crash because of the "always" build policy
-        client.run("upload hello0/1.0@lasote/stable -r default", assert_error=True)
-        self.assertIn("no packages can be uploaded", client.out)
 
     def test_reuse(self):
         client = TestClient(default_server_user=True)
@@ -167,3 +126,21 @@ class MyPackage(ConanFile):
 
         other_client.run("install --requires=%s" % str(ref))
         self.assertNotIn("Copying sources to build folder", other_client.out)
+
+
+def test_build_policy_installer():
+    c = TestClient(default_server_user=True)
+    conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "missing"')\
+                                          .with_class_attribute('upload_policy = "skip"')
+    c.save({"conanfile.py": conanfile})
+    c.run("export .")
+    c.run("install --requires=pkg/1.0@")
+    assert "pkg/1.0: Building package from source as defined by build_policy='missing'" in c.out
+
+    # If binary already there it should do nothing
+    c.run("install --requires=pkg/1.0@")
+    assert "pkg/1.0: Building package from source" not in c.out
+
+    c.run("upload * -r=default -c")
+    assert "Uploading package" not in c.out
+    assert "pkg/1.0: Skipping upload of binaries, because upload_policy='skip'" in c.out

@@ -36,7 +36,6 @@ class _RecipeUploadData:
         self.upload = True
         self.force = None
         self.dirty = None
-        self.build_always = None
         self.files = None
         self.packages = [_PackageUploadData(p) for p in prefs or []]
 
@@ -46,7 +45,6 @@ class _RecipeUploadData:
             "dirty": self.dirty,
             "upload": self.upload,
             "force": self.force,
-            "build_always": self.build_always,
             "files": self.files,
             "packages": [r.serialize() for r in self.packages]
         }

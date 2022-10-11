@@ -1,18 +1,18 @@
 from conan.api.conan_api import ConanAPIV2
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, cli_out_write
-from conan.cli.commands.list import json_formatter
+from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.commands import default_text_formatter
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_formatter})
+@conan_command(group=COMMAND_GROUPS['consumer'])
 def cache(conan_api: ConanAPIV2, parser, *args):
     """Performs file operations in the local cache (of recipes and packages)"""
     pass
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": default_text_formatter})
 def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
     """
         Shows the path af a given reference
@@ -48,8 +48,7 @@ def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
             path = method(pref.ref)
         else:
             path = method(pref)
-
-    cli_out_write(path)
+    return path
 
 
 def _get_recipe_reference(reference):

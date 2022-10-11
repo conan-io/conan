@@ -84,6 +84,8 @@ def write_generators(conanfile, hook_manager):
 
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
+    if conanfile.generators:
+        conanfile.output.info(f"Writing generators to {new_gen_folder}")
     for generator_name in set(conanfile.generators):
         generator_class = _get_generator_class(generator_name)
         if generator_class:

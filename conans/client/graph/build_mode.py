@@ -78,9 +78,8 @@ class BuildMode:
             return True
 
         if conan_file.build_policy == "always":
-            conan_file.output.info("Building package from source as defined by "
-                                   "build_policy='always'")
-            return True
+            raise ConanException("{}: build_policy='always' has been removed. "
+                                 "Please use 'missing' only".format(conan_file))
 
         if self.cascade and with_deps_to_build:
             return True

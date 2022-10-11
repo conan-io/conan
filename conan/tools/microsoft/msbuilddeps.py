@@ -7,10 +7,10 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conans.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
-EXCLUDED_SYMBOLS_PATTERN = re.compile(r"[.+\-]")
 
 
 class MSBuildDeps(object):
@@ -143,7 +143,7 @@ class MSBuildDeps(object):
 
     @staticmethod
     def _get_valid_xml_format(name):
-        return EXCLUDED_SYMBOLS_PATTERN.sub("_", name)
+        return re.compile(r"[.+]").sub("_", name)
 
     def _vars_props_file(self, require, dep, name, cpp_info, deps, build):
         """
@@ -350,8 +350,9 @@ class MSBuildDeps(object):
             vars_filename = "conan_%s_vars%s.props" % (dep_name, conf_name)
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
-            public_deps = [self._dep_name(d, build)
-                           for r, d in dep.dependencies.direct_host.items() if r.visible]
+            pkg_deps = get_transitive_requires(self._conanfile, dep)
+            public_deps = [self._dep_name(d, build) for d in pkg_deps.values()]
+
             result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           public_deps, build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,

@@ -379,3 +379,5 @@ class BinaryInstaller:
                     conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
+
+        conanfile.cpp_info.check_component_requires(conanfile)

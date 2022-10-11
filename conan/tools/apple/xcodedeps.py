@@ -5,6 +5,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conans.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
 
@@ -77,9 +78,8 @@ class XcodeDeps(object):
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{pkg_name}}::{{comp_name}}
         // Includes all configurations for each dependency
-        {% for dep in deps %}
-        // Includes for {{dep[0]}}::{{dep[1]}} dependency
-        #include "conan_{{dep[0]}}_{{dep[1]}}.xcconfig"
+        {% for include in deps_includes %}
+        #include "{{include}}"
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
@@ -177,10 +177,18 @@ class XcodeDeps(object):
             content_multi = load(multi_path)
         else:
             content_multi = self._dep_xconfig
+
+            def _get_includes(components):
+                # if we require the root component dep::dep include conan_dep.xcconfig
+                # for components (dep::component) include conan_dep_component.xcconfig
+                return [f"conan_{_format_name(component[0])}.xcconfig" if component[0] == component[1]
+                        else f"conan_{_format_name(component[0])}_{_format_name(component[1])}.xcconfig"
+                        for component in components]
+
             content_multi = Template(content_multi).render({"pkg_name": pkg_name,
                                                             "comp_name": comp_name,
                                                             "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps": reqs})
+                                                            "deps_includes": _get_includes(reqs)})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',
@@ -189,11 +197,11 @@ class XcodeDeps(object):
 
         return content_multi
 
-    def _all_xconfig_file(self, deps):
+    def _all_xconfig_file(self, deps, content):
         """
         this is a .xcconfig file including all declared dependencies
         """
-        content_multi = self._all_xconfig
+        content_multi = content or self._all_xconfig
 
         for req, dep in deps.items():
             dep_name = _format_name(dep.ref.name)
@@ -239,8 +247,8 @@ class XcodeDeps(object):
         # All components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-
-        for require, dep in list(host_req.items()) + list(test_req.items()):
+        requires = list(host_req.items()) + list(test_req.items())
+        for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
@@ -306,9 +314,14 @@ class XcodeDeps(object):
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
-        # Include all direct build_requires for host context.
-        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
-        result[self.general_name] = self._all_xconfig_file(direct_deps)
+        # Include transitive requires
+        all_file_content = ""
+        for require, dep in requires:
+            all_file_content = self._all_xconfig_file(get_transitive_requires(self._conanfile, dep), all_file_content)
+
+        # Include direct requires
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})
+        result[self.general_name] = self._all_xconfig_file(direct_deps, all_file_content)
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content
 

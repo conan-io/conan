@@ -60,12 +60,18 @@ class ConanFile:
     #: The allowed values are:
     #:
     #: - ``"missing"``: Conan builds it from source if there is no binary available.
-    #: - ``"always"``: Conan always builds it from source.
     #: - ``"never"``: This package cannot be built from sources, it is always created with
     #:   ``conan export-pkg``
     #: - ``None`` (default value): This package won't be build unless the policy is specified
     #:   in the command line (e.g ``--build=foo*``)
     build_policy = None
+
+    #: Controls when the current package built binaries are uploaded or not
+    #:
+    #: - ``"skip"``: The precompiled binaries are not uploaded. This is useful for "installer"
+    #:   packages that just download and unzip something heavy (e.g. android-ndk), and is useful
+    #:   together with the ``build_policy = "missing"``
+    upload_policy = None
 
     #: List or tuple of strings with `file names` or
     #: `fnmatch <https://docs.python.org/3/library/fnmatch.html>`_ patterns that should be exported
@@ -220,6 +226,7 @@ class ConanFile:
         self.conf_info = Conf()
         self.info = None
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_runenv = None
         self._conan_node = None  # access to container Node object, to access info, context, deps...
 
         if isinstance(self.generators, str):
@@ -301,6 +308,15 @@ class ConanFile:
             self._conan_buildenv = self._conan_buildenv.get_profile_env(self.ref,
                                                                         self._conan_is_consumer)
         return self._conan_buildenv
+
+    @property
+    def runenv(self):
+        # Lazy computation of the package runenv based on the profile one
+        from conan.tools.env import Environment
+        if not isinstance(self._conan_runenv, Environment):
+            self._conan_runenv = self._conan_runenv.get_profile_env(self.ref,
+                                                                    self._conan_is_consumer)
+        return self._conan_runenv
 
     @property
     def cpp_info(self):

@@ -1,6 +1,7 @@
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
+from conans.model.dependencies import get_transitive_requires
 
 """
 
@@ -245,19 +246,20 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         # Get a list of dependencies target names
         # Declared cppinfo.requires or .components[].requires
-        visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True})
-        visible_host_direct = visible_host.filter({"direct": True})
+        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         if self.conanfile.cpp_info.required_components:
             for dep_name, component_name in self.conanfile.cpp_info.required_components:
-                if not dep_name:
-                    # Internal dep (no another component)
-                    req = self.conanfile
+                try:
+                    # if not dep_name, it is internal, from current self.conanfile
+                    req = transitive_reqs[dep_name] if dep_name is not None else self.conanfile
+                except KeyError:
+                    # if it raises it means the required component is not in the direct_host
+                    # dependencies, maybe it has been filtered out by traits => Skip
+                    pass
                 else:
-                    req = visible_host[dep_name]
-
-                component_name = self.get_component_alias(req, component_name)
-                ret.append(component_name)
-        elif visible_host_direct:
+                    component_name = self.get_component_alias(req, component_name)
+                    ret.append(component_name)
+        elif transitive_reqs:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = [self.get_root_target_name(r) for r in visible_host_direct.values()]
+            ret = [self.get_root_target_name(r) for r in transitive_reqs.values()]
         return ret
