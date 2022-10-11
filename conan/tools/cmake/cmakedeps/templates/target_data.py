@@ -193,16 +193,11 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_dependency_filenames(self):
         if self.conanfile.is_build_context:
             return []
-        ret = []
         transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
-        if self.conanfile.cpp_info.required_components:
-            for dep_name, _ in self.conanfile.cpp_info.required_components:
-                if dep_name and dep_name not in ret:  # External dep
-                    req = transitive_reqs[dep_name]
-                    ret.append(get_cmake_package_name(req))
-        elif transitive_reqs:
-            ret = [get_cmake_package_name(r, self.generating_module) for r in transitive_reqs.values()]
-
+        # Previously it was filtering here components, but not clear why the file dependency
+        # should be skipped if components are not being required, why would it declare a
+        # dependency to it?
+        ret = [get_cmake_package_name(r, self.generating_module) for r in transitive_reqs.values()]
         return ret
 
     def _get_dependencies_find_modes(self):
