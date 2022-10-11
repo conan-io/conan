@@ -5,6 +5,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conans.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
 
@@ -246,8 +247,8 @@ class XcodeDeps(object):
         # All components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-
-        for require, dep in list(host_req.items()) + list(test_req.items()):
+        requires = list(host_req.items()) + list(test_req.items())
+        for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
@@ -313,10 +314,16 @@ class XcodeDeps(object):
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
-        # Include all direct build_requires for host context.
-        # FIXME: This needs to be fixed, using the transitive dependencies
-        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
-        result[self.general_name] = self._all_xconfig_file(direct_deps)
+        # Include transitive requires
+        general_content = ""
+        for require, dep in requires:
+            general_content = general_content + self._all_xconfig_file(get_transitive_requires(self._conanfile, dep))
+
+        # Include direct requires
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})
+        general_content = general_content + self._all_xconfig_file(direct_deps)
+
+        result[self.general_name] = general_content
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content
 
