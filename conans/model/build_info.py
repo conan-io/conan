@@ -182,7 +182,6 @@ class _Component(object):
         assert len(includedirs) == 1
         return includedirs[0]
 
-
     @property
     def system_libs(self):
         if self._system_libs is None:
@@ -506,9 +505,12 @@ class CppInfo(object):
         - Check that every internal component require actually exist
         It doesn't check that external components do exist
         """
+        if not self.has_components and not self.requires:
+            return
         # Accumulate all external requires
         external = set()
         internal = set()
+        # TODO: Cache this, this is computed in different places
         for key, comp in self.components.items():
             external.update(r.split("::")[0] for r in comp.requires if "::" in r)
             internal.update(r for r in comp.requires if "::" not in r)
@@ -518,8 +520,10 @@ class CppInfo(object):
             raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
         if not external:
             return
+        # Only direct host dependencies can be used with components
         direct_dependencies = [d.ref.name
-                               for d, _ in conanfile.dependencies.filter({"direct": True}).items()]
+                               for d, _ in conanfile.dependencies.filter({"direct": True,
+                                                                          "build": False}).items()]
         for e in external:
             if e not in direct_dependencies:
                 raise ConanException(
@@ -543,10 +547,14 @@ class CppInfo(object):
         """Returns a list of tuples with (require, component_name) required by the package
         If the require is internal (to another component), the require will be None"""
         # FIXME: Cache the value
+        # First aggregate without repetition, respecting the order
         ret = []
-        for key, comp in self.components.items():
-            ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
-            ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
+        for comp in self.components.values():
+            for r in comp.requires:
+                if r not in ret:
+                    ret.append(r)
+        # Then split the names
+        ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
 
     def __str__(self):
