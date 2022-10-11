@@ -197,11 +197,11 @@ class XcodeDeps(object):
 
         return content_multi
 
-    def _all_xconfig_file(self, deps):
+    def _all_xconfig_file(self, deps, content):
         """
         this is a .xcconfig file including all declared dependencies
         """
-        content_multi = self._all_xconfig
+        content_multi = content or self._all_xconfig
 
         for req, dep in deps.items():
             dep_name = _format_name(dep.ref.name)
@@ -315,15 +315,13 @@ class XcodeDeps(object):
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
         # Include transitive requires
-        general_content = ""
+        all_file_content = ""
         for require, dep in requires:
-            general_content = general_content + self._all_xconfig_file(get_transitive_requires(self._conanfile, dep))
+            all_file_content = self._all_xconfig_file(get_transitive_requires(self._conanfile, dep), all_file_content)
 
         # Include direct requires
         direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})
-        general_content = general_content + self._all_xconfig_file(direct_deps)
-
-        result[self.general_name] = general_content
+        result[self.general_name] = self._all_xconfig_file(direct_deps, all_file_content)
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content
 
