@@ -8,8 +8,8 @@ from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
 from conan.cli.common import save_lockfile_out
-from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot, \
-    print_graph_info
+from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
+from conan.cli.printers.graph import print_graph_info
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
 
