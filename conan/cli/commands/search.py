@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conan.cli.commands.list import print_list_recipes, default_json_formatter
-from conan.cli.common import get_remote_selection
+from conan.api.subapi.remotes import get_remote_selection
 
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??

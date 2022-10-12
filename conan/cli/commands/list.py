@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import default_json_formatter
-from conan.cli.common import get_remote_selection
+from conan.api.subapi.remotes import get_remote_selection
 from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

@@ -18,21 +18,6 @@ def get_profiles_from_args(conan_api, args):
     return profile_host, profile_build
 
 
-def get_remote_selection(conan_api, remote_patterns):
-    """
-    Return a list of Remote() objects matching the specified patterns. If a pattern doesn't match
-    anything, it fails
-    """
-    ret_remotes = []
-    for pattern in remote_patterns:
-        tmp = conan_api.remotes.list(pattern=pattern, only_active=True)
-        if not tmp:
-            raise ConanException("Remotes for pattern '{}' can't be found or are "
-                                 "disabled".format(pattern))
-        ret_remotes.extend(tmp)
-    return ret_remotes
-
-
 def get_lockfile(lockfile_path, cwd, conanfile_path, partial=False):
     if lockfile_path == "None":
         # Allow a way with ``--lockfile=None`` to opt-out automatic usage of conan.lock
@@ -65,14 +50,6 @@ def save_lockfile_out(args, graph, lockfile, cwd):
     lockfile.save(lockfile_out)
     ConanOutput().info(f"Generated lockfile: {lockfile_out}")
     return lockfile
-
-
-def get_multiple_remotes(conan_api, remote_names=None):
-    if remote_names:
-        return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
-    elif remote_names is None:
-        # if we don't pass any remotes we want to retrieve only the enabled ones
-        return conan_api.remotes.list(only_active=True)
 
 
 def scope_options(profile, requires, tool_requires):

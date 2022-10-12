@@ -7,6 +7,32 @@ from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.errors import ConanException
 
 
+# TODO: Redesign these, why not part of the API?
+#  Why selection logic is different for "conan list" and "conan install"
+def get_remote_selection(conan_api, remote_patterns):
+    """
+    Return a list of Remote() objects matching the specified patterns. If a pattern doesn't match
+    anything, it fails
+    """
+    ret_remotes = []
+    for pattern in remote_patterns:
+        tmp = conan_api.remotes.list(pattern=pattern, only_active=True)
+        if not tmp:
+            raise ConanException("Remotes for pattern '{}' can't be found or are "
+                                 "disabled".format(pattern))
+        ret_remotes.extend(tmp)
+    return ret_remotes
+
+
+def get_multiple_remotes(conan_api, remote_names=None):
+    if remote_names:
+        # FIXME: Check this, this can get disabled remotes, it is intended?
+        return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
+    elif remote_names is None:
+        # if we don't pass any remotes we want to retrieve only the enabled ones
+        return conan_api.remotes.list(only_active=True)
+
+
 class RemotesAPI:
 
     def __init__(self, conan_api):
