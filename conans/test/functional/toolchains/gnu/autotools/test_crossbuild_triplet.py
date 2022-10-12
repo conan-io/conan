@@ -11,7 +11,7 @@ def test_crossbuild_triplet_from_conf():
         os:
             Linux:
             Windows:
-        arch: [x86_64, moxie]
+        arch: [x86_64, hexagon]
         compiler:
             gcc:
                 version: ["10", "11"]
@@ -22,13 +22,13 @@ def test_crossbuild_triplet_from_conf():
     host_profile = textwrap.dedent("""
         [settings]
         os=Linux
-        arch=moxie
+        arch=hexagon
         compiler=gcc
         compiler.version=10
         compiler.libcxx=libstdc++11
         build_type=Release
         [conf]
-        tools.gnu:host_triplet=moxie-acme-linux-gnu
+        tools.gnu:host_triplet=hexagon-acme-linux-gnu
     """)
 
     build_profile = textwrap.dedent("""
@@ -49,5 +49,5 @@ def test_crossbuild_triplet_from_conf():
     client.run("new hello/0.1 --template=autotools_lib")
     client.run("create . --profile:build=build_profile --profile:host=host_profile -tf None")
 
-    assert "--host=moxie-acme-linux-gnu" in client.out
-    assert "checking host system type... moxie-acme-linux-gnu" in client.out
+    assert "--host=hexagon-acme-linux-gnu" in client.out
+    assert "checking host system type... hexagon-acme-linux-gnu" in client.out
