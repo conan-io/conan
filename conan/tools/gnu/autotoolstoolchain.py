@@ -56,7 +56,8 @@ class AutotoolsToolchain:
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
-            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler) if self._host is None else self._host
+            if not self._host:
+                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
