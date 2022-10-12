@@ -6,10 +6,10 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
-    _help_build_policies, get_multiple_remotes, add_lockfile_args, scope_options, save_lockfile_out
+from conan.cli.common import get_lockfile, get_profiles_from_args, get_multiple_remotes, scope_options, save_lockfile_out
+from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
 from conan.api.conan_app import ConanApp
-from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
+from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir

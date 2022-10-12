@@ -4,7 +4,8 @@ import os
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_lockfile, add_reference_args
+from conan.cli.common import get_lockfile
+from conan.cli.args import add_reference_args
 
 
 def common_args_export(parser):

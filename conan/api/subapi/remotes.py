@@ -16,6 +16,8 @@ class RemotesAPI:
     def list(self, pattern=None, only_active=False):
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
+        if only_active:
+            remotes = [r for r in remotes if not r.disabled]
         if pattern:
             filtered_remotes = []
             for remote in remotes:
@@ -26,8 +28,6 @@ class RemotesAPI:
                 raise ConanException(f"Remote '{pattern}' not found in remotes")
 
             remotes = filtered_remotes
-        if only_active:
-            remotes = [r for r in remotes if not r.disabled]
         return remotes
 
     @api_method

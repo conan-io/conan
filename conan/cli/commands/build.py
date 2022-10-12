@@ -4,8 +4,9 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, _get_conanfile_path
-from conan.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_multiple_remotes, add_lockfile_args, add_reference_args, save_lockfile_out
+from conan.cli.common import get_multiple_remotes, save_lockfile_out
+from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
+    _help_build_policies
 from conan.api.conan_app import ConanApp
 from conans.client.conanfile.build import run_build_method
 
