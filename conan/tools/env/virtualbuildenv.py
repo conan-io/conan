@@ -23,9 +23,9 @@ class VirtualBuildEnv:
     def _filename(self):
         f = self.basename
         if self.configuration:
-            f += "-" + self.configuration
+            f += "-" + self.configuration.replace(".", "_")
         if self.arch:
-            f += "-" + self.arch
+            f += "-" + self.arch.replace(".", "_")
         return f
 
     def environment(self):
