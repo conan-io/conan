@@ -220,22 +220,21 @@ def _render_graph(graph, template, template_folder):
     return template.render(graph=graph, base_template_path=template_folder, version=client_version)
 
 
-def format_graph_html(info):
-    graph, template_folder = info
+def format_graph_html(graph, conan_api):
+    template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
     cli_out_write(_render_graph(graph, template, template_folder))
 
 
-def format_graph_dot(info):
-    graph, template_folder = info
+def format_graph_dot(graph, conan_api):
+    template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
     cli_out_write(_render_graph(graph, template, template_folder))
 
 
-def format_graph_json(info):
-    deps_graph, _ = info
-    serialized = deps_graph.serialize()
+def format_graph_json(graph):
+    serialized = graph.serialize()
     json_result = json.dumps(serialized, indent=4)
     cli_out_write(json_result)

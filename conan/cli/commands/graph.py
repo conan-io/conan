@@ -110,4 +110,4 @@ def graph_info(conan_api, parser, subparser, *args):
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
-    return deps_graph, os.path.join(conan_api.cache_folder, "templates")
+    return deps_graph

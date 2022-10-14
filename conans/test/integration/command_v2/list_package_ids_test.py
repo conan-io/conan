@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import textwrap
 from unittest.mock import Mock, patch
@@ -397,3 +398,30 @@ class TestListPackages:
         assert "tools.build:cxxflags=['--flag1', '--flag2']" in client.out
         assert "tools.build:cflags=['--flag3', '--flag4']" in client.out
         assert "sharedlinkflags" not in client.out
+
+
+class TestListPackagesHTML:
+    def test_list_packages_html(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
+                "pkg/conanfile.py": GenConanfile("pkg", "2.3.4").with_requires("dep/1.2.3")
+                .with_settings("os", "arch").with_shared_option(False)})
+        c.run("create dep")
+        c.run("create pkg -s os=Windows -s arch=x86")
+        # Revision is needed explicitly!
+        c.run("list packages pkg/2.3.4#latest --format=html", redirect_stdout="table.html")
+        table = c.load("table.html")
+        assert "<!DOCTYPE html>" in table
+        # TODO: The actual good html is missing
+
+    def test_list_packages_html_custom(self):
+        """ test that tools.info.package_id:confs works, affecting the package_id and
+        can be listed when we are listing packages
+        """
+        c = TestClient()
+        c.save({'lib.py': GenConanfile("lib", "0.1")})
+        c.run("create lib.py")
+        template_folder = os.path.join(c.cache_folder, 'templates')
+        c.save({"list_packages.html": '{{ base_template_path }}'}, path=template_folder)
+        c.run("list packages lib/0.1#latest --format=html")
+        assert template_folder in c.stdout
