@@ -1,8 +1,8 @@
-content = r"""
+list_packages_html = r"""
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Conan | {{ search.reference }}</title>
+        <title>Conan | {{ reference }}</title>
         <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
         <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap.min.css"/>
         <style>
@@ -13,7 +13,7 @@ content = r"""
     </head>
     <body>
         <div class="container-fluid">
-        <h1>{{ search.reference }}</h1>
+        <h1>{{ reference }}</h1>
         <div class="info">
             <p>
                 Depending on your package_id_mode, any combination of settings, options and requirements

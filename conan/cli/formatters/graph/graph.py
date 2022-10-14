@@ -1,14 +1,17 @@
 import fnmatch
 import json
-import sys
+import os
+
+from jinja2 import Template, select_autoescape
 
 from conan.api.output import ConanOutput, Color
 from conan.api.output import cli_out_write
-from conan.cli.formatters import get_template
-from conans.assets import templates
+from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
+from conan.cli.formatters.graph.info_graph_html import graph_info_html
 from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
 from conans.client.installer import build_id
+from conans.util.files import load
 
 
 def print_graph_basic(graph):
@@ -213,18 +216,21 @@ class Grapher(object):
 def _render_graph(graph, template, template_folder):
     graph = Grapher(graph)
     from conans import __version__ as client_version
+    template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(graph=graph, base_template_path=template_folder, version=client_version)
 
 
 def format_graph_html(info):
     graph, template_folder = info
-    template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
+    user_template = os.path.join(template_folder, "graph.html")
+    template = load(user_template) if os.path.isfile(user_template) else graph_info_html
     cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_dot(info):
     graph, template_folder = info
-    template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
+    user_template = os.path.join(template_folder, "graph.dot")
+    template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
     cli_out_write(_render_graph(graph, template, template_folder))
 
 

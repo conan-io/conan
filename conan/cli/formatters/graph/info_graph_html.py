@@ -1,4 +1,4 @@
-content = """
+graph_info_html = """
 <html lang="en">
     <head>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"></script>

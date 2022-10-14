@@ -1,6 +1,6 @@
 import unittest
 
-from conans.search.binary_html_table import RowResult, Headers, Results
+from conan.cli.formatters.list.binary_html_table import RowResult, Headers, Results
 
 
 class RowResultTestCase(unittest.TestCase):
