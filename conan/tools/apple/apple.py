@@ -83,13 +83,10 @@ class XCRun(object):
         """sdk=False will skip the flag
            sdk=None will try to adjust it automatically"""
 
-        if hasattr(conanfile, "settings_target"):
-            settings_target = conanfile.settings_target
-        else:
-            settings_target = conanfile.settings
+        settings = conanfile.settings_target if hasattr(conanfile, "settings_target") else conanfile.settings
 
-        if sdk is None and settings_target:
-            sdk = apple_sdk_name(settings_target)
+        if sdk is None and settings:
+            sdk = apple_sdk_name(settings)
         self.sdk = sdk
 
     def _invoke(self, args):
