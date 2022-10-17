@@ -79,14 +79,15 @@ def apple_sdk_path(conanfile):
 
 class XCRun(object):
 
-    def __init__(self, conanfile, sdk=None):
+    def __init__(self, conanfile, sdk=None, use_target_settings=True):
         """sdk=False will skip the flag
-           sdk=None will try to adjust it automatically"""
+           sdk=None will try to adjust it automatically
+           target_settings=True try to use settings_target in case they exist"""
 
-        if hasattr(conanfile, "settings_target") and conanfile.settings_target is not None:
+        # FIXME: 2.0: remove "hasattr()" condition
+        settings = conanfile.settings
+        if use_target_settings and hasattr(conanfile, "settings_target") and conanfile.settings_target is not None:
             settings = conanfile.settings_target
-        else:
-            settings = conanfile.settings
 
         if sdk is None and settings:
             sdk = apple_sdk_name(settings)
