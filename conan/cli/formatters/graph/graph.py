@@ -1,11 +1,16 @@
 import json
+import os
+
+from jinja2 import Template, select_autoescape
+
 
 from conan.api.output import cli_out_write
-from conan.cli.formatters import get_template
-from conans.assets import templates
+from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
+from conan.cli.formatters.graph.info_graph_html import graph_info_html
 from conans.client.graph.graph import BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
 from conans.client.installer import build_id
+from conans.util.files import load
 
 
 class _PrinterGraphItem(object):
@@ -87,23 +92,25 @@ class _Grapher(object):
 def _render_graph(graph, template, template_folder):
     graph = _Grapher(graph)
     from conans import __version__ as client_version
+    template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(graph=graph, base_template_path=template_folder, version=client_version)
 
 
-def format_graph_html(info):
-    graph, template_folder = info
-    template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
+def format_graph_html(graph, field_filter, package_filter, conan_api):
+    template_folder = os.path.join(conan_api.cache_folder, "templates")
+    user_template = os.path.join(template_folder, "graph.html")
+    template = load(user_template) if os.path.isfile(user_template) else graph_info_html
     cli_out_write(_render_graph(graph, template, template_folder))
 
 
-def format_graph_dot(info):
-    graph, template_folder = info
-    template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
+def format_graph_dot(graph, field_filter, package_filter, conan_api):
+    template_folder = os.path.join(conan_api.cache_folder, "templates")
+    user_template = os.path.join(template_folder, "graph.dot")
+    template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
     cli_out_write(_render_graph(graph, template, template_folder))
 
 
-def format_graph_json(info):
-    deps_graph, _ = info
-    serialized = deps_graph.serialize()
+def format_graph_json(graph, field_filter, package_filter):
+    serialized = graph.serialize()
     json_result = json.dumps(serialized, indent=4)
     cli_out_write(json_result)

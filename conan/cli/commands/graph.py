@@ -9,7 +9,7 @@ from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
 from conan.cli.common import save_lockfile_out
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
-from conan.cli.printers.graph import print_graph_info
+from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
 
@@ -74,7 +74,8 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     return install_order_serialized
 
 
-@conan_subcommand(formatters={"html": format_graph_html,
+@conan_subcommand(formatters={"text": format_graph_info,
+                              "html": format_graph_html,
                               "json": format_graph_json,
                               "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
@@ -101,12 +102,10 @@ def graph_info(conan_api, parser, subparser, *args):
 
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
                                          allow_error=True)
-    if not args.format:
-        print_graph_info(deps_graph, args.filter, args.package_filter)
 
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
     if args.deploy:
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
-    return deps_graph, os.path.join(conan_api.cache_folder, "templates")
+    return deps_graph, args.filter, args.package_filter
