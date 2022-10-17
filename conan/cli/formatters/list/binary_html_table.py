@@ -1,9 +1,6 @@
-import os
 from collections import OrderedDict, defaultdict
 
 from conans.model.package_ref import PkgReference
-from conans.util.files import save
-from conans import __version__ as client_version
 
 
 class RowResult(object):
@@ -141,13 +138,4 @@ class Results(object):
                 yield r
 
 
-def html_binary_graph(search_info, reference, table_filename, template):
-    # Adapt data to the template (think twice about the format before documenting)
-    search = {'reference': str(reference)}
-    results = Results(search_info)
 
-    # Render and save
-    template_folder = os.path.dirname(template.filename)
-    content = template.render(search=search, results=results, base_template_path=template_folder,
-                              version=client_version)
-    save(table_filename, content)

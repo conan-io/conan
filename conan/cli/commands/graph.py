@@ -102,6 +102,7 @@ def graph_info(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
                                          allow_error=True)
     if not args.format:
+        # TODO: Convert to text formatter
         print_graph_info(deps_graph, args.filter, args.package_filter)
 
     save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
@@ -109,4 +110,4 @@ def graph_info(conan_api, parser, subparser, *args):
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
-    return deps_graph, os.path.join(conan_api.cache_folder, "templates")
+    return deps_graph
