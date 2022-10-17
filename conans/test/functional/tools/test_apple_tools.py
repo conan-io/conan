@@ -24,3 +24,44 @@ def test_xcrun():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("create .")
     assert "Xcode.app/Contents/Developer/Platforms/MacOSX.platform" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+def test_xcrun_in_tool_requires():
+    # https://github.com/conan-io/conan/issues/12260
+    client = TestClient()
+    tool = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XCRun
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package_info(self):
+                xcrun = XCRun(self)
+                self.output.info(f"sdk: {xcrun.sdk}")
+        """)
+    client.save({"conanfile.py": tool})
+    client.run("export . br/0.1@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XCRun
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            tool_requires = "br/0.1"
+        """)
+
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+
+    client.save({"conanfile.py": conanfile, "profile_ios": profile_ios})
+    client.run("create . pkg/1.0@ -pr:h=./profile_ios -pr:b=default --build=missing")
+    assert "br/0.1: sdk: iphoneos15.0" in client.out
+    assert "br/0.1: sdk: macosx" not in client.out
