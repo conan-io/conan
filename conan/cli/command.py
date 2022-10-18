@@ -143,7 +143,11 @@ class BaseConanCommand(object):
         kwargs = {}
         if "conan_api" in parameters:
             kwargs["conan_api"] = conan_api
-        formatter(info, **kwargs)
+        if isinstance(info, CommandResult):
+            kwargs.update(info.filter(parameters))
+            formatter(**kwargs)
+        else:
+            formatter(info, **kwargs)
 
 
 class ConanArgumentParser(argparse.ArgumentParser):
@@ -228,3 +232,11 @@ def conan_subcommand(formatters=None):
         return cmd
 
     return decorator
+
+
+class CommandResult:
+    def __init__(self, data):
+        self._data = data
+
+    def filter(self, parameters):
+        return {k: v for k, v in self._data.items() if k in parameters}

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import default_json_formatter
-from conan.cli.common import get_remote_selection
+from conan.api.subapi.remotes import get_remote_selection
 from conan.cli.formatters.list import list_packages_html
 from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -206,14 +206,14 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     return results
 
 
-def _list_packages_json(data):
-    for remote, d in data.items():
+def _list_packages_json(results):
+    for remote, d in results.items():
         d["reference"] = repr(d["reference"])
         try:
             d["packages"] = {k.repr_notime(): v for k, v in d["packages"].items()}
         except KeyError:
             pass
-    myjson = json.dumps(data, indent=4)
+    myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
 
 
