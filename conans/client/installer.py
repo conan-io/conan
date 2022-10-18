@@ -627,7 +627,24 @@ class BinaryInstaller(object):
         if using_build_profile:
             conan_file.user_info_build = DepsUserInfo()
 
+        refs_direct = [n.ref for n in node.id_direct_prefs]
+        refs_indirect = [n.ref for n in node.id_direct_prefs]
+        
+        node_order_direct = []
+        node_order_indirect = []
+        node_order_others = []
+        
+        # prefer direct and indirect nodes over build_requires from a profile
         for n in node_order:
+            if n.ref in refs_direct:
+                node_order_direct.append(n)
+            elif n.ref in refs_indirect:
+                node_order_indirect.append(n)
+            else:
+                node_order_others.append(n)
+        node_order_evaluated = node_order_direct + node_order_indirect + node_order_others
+
+        for n in node_order_evaluated:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 

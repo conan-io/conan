@@ -142,13 +142,13 @@ class MyLib(ConanFile):
         assert(os.environ["ENV_VAR_ONLY_PARENT"] == "0")
         assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert(os.environ.get("ENV_VAR_REQ2", None) == None)
-        tmp = os.pathsep.join(["ENV_VALUE_MULTI_FROM_BUILD_REQUIRE",
-                               "ENV_VALUE_MULTI_FROM_MYLIB_PARENT",
+        tmp = os.pathsep.join(["ENV_VALUE_MULTI_FROM_MYLIB_PARENT",
+                               "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE",
                                "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT"])
         assert(os.environ["ENV_VAR_MULTI"] == tmp)
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
-                                             "A_C_FLAG_FROM_MYLIB_PARENT",
-                                             "A_C_FLAG_FROM_BUILD_REQUIRE"])
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE"],
+                                             "A_C_FLAG_FROM_MYLIB_PARENT")
         assert(self.deps_cpp_info.sysroot == "path/to/folder")
 
         assert(os.environ["FOO_VAR"] == "1")

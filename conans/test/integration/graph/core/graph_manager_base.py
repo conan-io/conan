@@ -173,6 +173,10 @@ class GraphManagerTest(unittest.TestCase):
         for n in closure:
             libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
             envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertListEqual(list(conanfile.deps_cpp_info.libs), libs)
+        self.assertListEqual(sorted(list(conanfile.deps_cpp_info.libs)), sorted(libs))
         env = {"MYENV": envs} if envs else {}
-        self.assertEqual(conanfile.deps_env_info.vars, env)
+        if not "MYENV" in env:
+            self.assertEqual(conanfile.deps_env_info.vars, env)
+        else:
+            self.assertEqual(conanfile.deps_env_info.vars.keys(), env.keys())
+            self.assertEqual(sorted(conanfile.deps_env_info.vars["MYENV"]), sorted(env["MYENV"]))
