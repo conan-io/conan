@@ -143,7 +143,11 @@ class BaseConanCommand(object):
         kwargs = {}
         if "conan_api" in parameters:
             kwargs["conan_api"] = conan_api
-        formatter(info, **kwargs)
+        if isinstance(info, dict):
+            kwargs.update({k: v for k, v in info.items() if k in parameters})
+            formatter(**kwargs)
+        else:
+            formatter(info, **kwargs)
 
 
 class ConanArgumentParser(argparse.ArgumentParser):

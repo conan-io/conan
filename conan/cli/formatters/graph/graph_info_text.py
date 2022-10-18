@@ -3,13 +3,13 @@ import fnmatch
 from conan.api.output import ConanOutput
 
 
-def format_graph_info(deps_graph, field_filter, package_filter):
+def format_graph_info(graph, field_filter, package_filter):
     """ More complete graph output, including information for every node in the graph
     Used for 'graph info' command
     """
     out = ConanOutput()
     out.title("Basic graph information")
-    serial = deps_graph.serialize()
+    serial = graph.serialize()
     for n in serial["nodes"]:
         if package_filter is not None:
             display = False

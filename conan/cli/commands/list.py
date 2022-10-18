@@ -206,14 +206,14 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     return results
 
 
-def _list_packages_json(data):
-    for remote, d in data.items():
+def _list_packages_json(results):
+    for remote, d in results.items():
         d["reference"] = repr(d["reference"])
         try:
             d["packages"] = {k.repr_notime(): v for k, v in d["packages"].items()}
         except KeyError:
             pass
-    myjson = json.dumps(data, indent=4)
+    myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
 
 
@@ -270,7 +270,7 @@ def list_packages(conan_api, parser, subparser, *args):
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
 
-    return results
+    return {"results": results}
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
