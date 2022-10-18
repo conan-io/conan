@@ -108,6 +108,6 @@ def graph_info(conan_api, parser, subparser, *args):
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
-    return {"graph": deps_graph,
-            "field_filter": args.filter,
-            "package_filter": args.package_filter}
+    return CommandResult({"graph": deps_graph,
+                          "field_filter": args.filter,
+                          "package_filter": args.package_filter})

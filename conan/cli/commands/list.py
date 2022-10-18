@@ -270,7 +270,7 @@ def list_packages(conan_api, parser, subparser, *args):
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
 
-    return {"results": results}
+    return results
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
