@@ -189,4 +189,3 @@ def test_jinja_global_conf(client):
         assert "user.mycompany:dist={}".format(distro.id()) in client.out
     else:
         assert "user.mycompany:dist=42" in client.out
-
