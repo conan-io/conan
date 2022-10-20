@@ -570,7 +570,7 @@ class PkgConfigBlock(Block):
         pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", default=False, check_type=str)
         if pkg_config:
             pkg_config = pkg_config.replace("\\", "/")
-        return pkg_config
+        return {"pkg_config": pkg_config}
 
 
 class UserToolchain(Block):
