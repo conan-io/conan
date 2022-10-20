@@ -11,7 +11,7 @@ from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
-    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, SkipRPath, \
+    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, SkipRPath, \
     SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -139,6 +139,7 @@ class CMakeToolchain(object):
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindFiles),
+                                       ("pkg_config", PkgConfigBlock),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock),
                                        ("output_dirs", OutputDirsBlock)])
