@@ -18,6 +18,12 @@ def test_legacy_names_filenames():
                 self.cpp_info.names["cmake_find_package_multi"] = "absl"
                 self.cpp_info.filenames["cmake_find_package"] = "tensorflowlite"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "tensorflowlite"
+
+                self.cpp_info.env_info.whatever = "whatever-env_info"
+                self.cpp_info.user_info.whatever = "whatever-user_info"
+
+                fake_user_info = self.deps_cpp_info["fake_dependency"].does_not_exist
+                fake_env_info = self.deps_env_info["fake_dependency"].does_not_exist
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")

@@ -1,9 +1,11 @@
 import os
+from collections import defaultdict
 from pathlib import Path
 
 from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
+from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
@@ -212,6 +214,11 @@ class ConanFile:
     #: Configuration variables to be passed to the dependant recipes.
     #: Should be only filled in the ``package_info()`` method.
     conf_info = None
+
+    # LEGACY 1.X fields, can be removed in 2.X
+    deps_cpp_info = defaultdict(MockInfoProperty)
+    deps_env_info = defaultdict(MockInfoProperty)
+
 
     def __init__(self, display_name=""):
         self.display_name = display_name

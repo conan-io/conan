@@ -30,6 +30,15 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class MockInfoProperty(dict):
+    """
+    # TODO: Remove in 2.X
+    to mock user_info and env_info
+    """
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+
+
 class _Component(object):
 
     def __init__(self, set_defaults=False):
@@ -62,6 +71,8 @@ class _Component(object):
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = {}
         self.filenames = {}
+        self.user_info = MockInfoProperty()
+        self.env_info = MockInfoProperty()
 
         if set_defaults:
             self.includedirs = ["include"]
