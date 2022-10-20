@@ -97,9 +97,8 @@ def print_list_package_ids(results):
 
 
 def _add_remotes_and_cache_options(subparser):
-    remotes_group = subparser.add_mutually_exclusive_group()
-    remotes_group.add_argument("-r", "--remote", default=None, action=Extender,
-                               help="Remote names. Accepts wildcards")
+    subparser.add_argument("-r", "--remote", default=None, action=Extender,
+                           help="Remote names. Accepts wildcards")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
 
