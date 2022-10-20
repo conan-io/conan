@@ -559,6 +559,20 @@ class FindFiles(Block):
         }
 
 
+class PkgConfigBlock(Block):
+    template = textwrap.dedent("""
+        {% if pkg_config %}
+        set(PKG_CONFIG_EXECUTABLE {{ pkg_config }} CACHE FILEPATH "pkg-config executable")
+        {% endif %}
+        """)
+
+    def context(self):
+        pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", default=False, check_type=str)
+        if pkg_config:
+            pkg_config = pkg_config.replace("\\", "/")
+        return pkg_config
+
+
 class UserToolchain(Block):
     template = textwrap.dedent("""
         {% for user_toolchain in paths %}
