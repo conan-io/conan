@@ -25,7 +25,6 @@ class MSBuildDeps(object):
           <PropertyGroup Label="ConanVariables">
             <Conan{{name}}RootFolder>{{root_folder}}</Conan{{name}}RootFolder>
             <Conan{{name}}BinaryDirectories>{{bin_dirs}}</Conan{{name}}BinaryDirectories>
-            <Conan{{name}}Dependencies>{{dependencies}}</Conan{{name}}Dependencies>
             {% if host_context %}
             <Conan{{name}}CompilerFlags>{{compiler_flags}}</Conan{{name}}CompilerFlags>
             <Conan{{name}}LinkerFlags>{{linker_flags}}</Conan{{name}}LinkerFlags>
@@ -134,7 +133,7 @@ class MSBuildDeps(object):
     def _get_valid_xml_format(name):
         return re.compile(r"[.+]").sub("_", name)
 
-    def _vars_props_file(self, dep, name, cpp_info, deps, build):
+    def _vars_props_file(self, dep, name, cpp_info, build):
         """
         content for conan_vars_poco_x86_release.props, containing the variables for 1 config
         This will be for 1 package or for one component of a package
@@ -180,7 +179,6 @@ class MSBuildDeps(object):
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
-            'dependencies': ";".join(deps),
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
@@ -291,15 +289,16 @@ class MSBuildDeps(object):
                 comp_filename = "conan_%s.props" % full_comp_name
                 pkg_filename = "conan_%s.props" % dep_name
 
-                public_deps = []
+                public_deps = []  # To store the xml dependencies/file names
                 for r in comp_info.requires:
                     if "::" in r:  # Points to a component of a different package
                         pkg, cmp_name = r.split("::")
                         public_deps.append(pkg if pkg == cmp_name else "{}_{}".format(pkg, cmp_name))
                     else:  # Points to a component of same package
                         public_deps.append("{}_{}".format(dep_name, r))
+                public_deps = [self._get_valid_xml_format(d) for d in public_deps]
                 result[vars_filename] = self._vars_props_file(dep, full_comp_name, comp_info,
-                                                              public_deps, build=build)
+                                                              build=build)
                 result[activate_filename] = self._activate_props_file(full_comp_name, vars_filename,
                                                                       public_deps, build=build)
                 result[comp_filename] = self._dep_props_file(full_comp_name, comp_filename,
@@ -317,7 +316,7 @@ class MSBuildDeps(object):
             public_deps = [self._dep_name(d, build)
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             result[vars_filename] = self._vars_props_file(dep, dep_name, cpp_info,
-                                                          public_deps, build=build)
+                                                          build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
                                                                   public_deps, build=build)
             result[pkg_filename] = self._dep_props_file(dep_name, pkg_filename, activate_filename,
