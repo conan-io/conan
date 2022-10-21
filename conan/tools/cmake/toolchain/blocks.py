@@ -567,7 +567,7 @@ class PkgConfigBlock(Block):
         """)
 
     def context(self):
-        pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", default=False, check_type=str)
+        pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str)
         if pkg_config:
             pkg_config = pkg_config.replace("\\", "/")
         return {"pkg_config": pkg_config}
