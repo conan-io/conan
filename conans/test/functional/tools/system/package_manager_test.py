@@ -50,7 +50,6 @@ def test_apt_install_substitutes():
     client.save({"conanfile.py": conanfile_py.format(installs)})
     client.run("create . test/1.0@ -c tools.system.package_manager:mode=install "
                "-c tools.system.package_manager:sudo=True", assert_error=True)
-    print(client.out)
     assert "dpkg-query: no packages found matching non-existing1" in client.out
     assert "dpkg-query: no packages found matching non-existing2" in client.out
     assert "dpkg-query: no packages found matching non-existing3" in client.out
@@ -88,9 +87,8 @@ def test_build_require():
             tool_requires = "tool_require/1.0"
         """)})
     client.run("create consumer.py consumer/1.0@ -s:b arch=armv8 -s:h arch=x86 --build=missing")
-    print(client.out)
-    assert "dpkg-query: no packages found matching non-existing1:arm64" in client.out
-    assert "dpkg-query: no packages found matching non-existing2:arm64" in client.out
+    assert "dpkg-query: no packages found matching non-existing1" in client.out
+    assert "dpkg-query: no packages found matching non-existing2" in client.out
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
