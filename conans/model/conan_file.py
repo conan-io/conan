@@ -259,8 +259,8 @@ class ConanFile:
         self.cpp = Infos()
 
         # LEGACY 1.X fields, can be removed in 2.X
-        self.deps_cpp_info = defaultdict(MockInfoProperty)
-        self.deps_env_info = defaultdict(MockInfoProperty)
+        self.deps_cpp_info = defaultdict(lambda: MockInfoProperty("ConanFile.deps_cpp_info"))
+        self.deps_env_info = defaultdict(lambda: MockInfoProperty("ConanFile.deps_env_info"))
 
 
 
