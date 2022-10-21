@@ -215,10 +215,6 @@ class ConanFile:
     #: Should be only filled in the ``package_info()`` method.
     conf_info = None
 
-    # LEGACY 1.X fields, can be removed in 2.X
-    deps_cpp_info = defaultdict(MockInfoProperty)
-    deps_env_info = defaultdict(MockInfoProperty)
-
 
     def __init__(self, display_name=""):
         self.display_name = display_name
@@ -261,6 +257,12 @@ class ConanFile:
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
+
+        # LEGACY 1.X fields, can be removed in 2.X
+        self.deps_cpp_info = defaultdict(MockInfoProperty)
+        self.deps_env_info = defaultdict(MockInfoProperty)
+
+
 
     def serialize(self):
         result = {}
