@@ -66,20 +66,23 @@ def app_compat(conanfile):
         return
 
     compiler = conanfile.settings.get_safe("compiler")
-    compiler = compiler or {"Windows": "msvc", "Macos": "apple-clang"}.get(os_, "gcc")
-    configuration = {"compiler": compiler}
+    if compiler is None:
+        compiler = {"Windows": "msvc", "Macos": "apple-clang"}.get(os_, "gcc")
+        configuration = {"compiler": compiler}
 
     compiler_version = conanfile.settings.get_safe("compiler.version")
-    if not compiler_version:
+    if compiler_version is None:
         # Latest compiler version
         definition = conanfile.settings.get_definition()
         compiler_versions = definition["compiler"][compiler]["version"]
         compiler_version = compiler_versions[-1] # Latest
+        configuration["compiler.version"] = compiler_version
 
-    configuration["compiler.version"] = compiler_version
-
-    build_type = conanfile.settings.get_safe("build_type")
-    configuration["build_type"] = build_type or "Release"
+    try:
+        if not conanfile.settings.build_type:
+            configuration["build_type"] = "Release"
+    except:
+        pass
 
     if compiler == "msvc":
         runtime = conanfile.settings.get_safe("compiler.runtime")
@@ -87,7 +90,12 @@ def app_compat(conanfile):
             configuration["compiler.runtime"] = "dynamic"
             configuration["compiler.runtime_type"] = configuration["build_type"]
 
-    configuration["compiler.cppstd"] = conanfile.settings.get_safe("compiler.cppstd") or default_cppstd(conanfile, compiler, compiler_version)
+    # Check if it is defined
+    definitions = conanfile.settings.compiler.get_definition()[compiler]
+    if "cppstd" in definitions:
+        if not conanfile.settings.get_safe("compiler.cppstd"):
+            configuration["compiler.cppstd"] = default_cppstd(conanfile, compiler, compiler_version)
+
     return [{"settings": [(k, v) for k, v in configuration.items()]}]
 """
 

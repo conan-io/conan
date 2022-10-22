@@ -156,6 +156,7 @@ class TestDefaultCompat:
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
               f"-s compiler.runtime={runtime} -pr:b=profile_build")
+        print(c.out)
         package_id = c.created_package_id("app/1.0")
         c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch} -pr:b=profile_build")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
@@ -172,11 +173,9 @@ class TestDefaultCompat:
                 package_type = "application"
                 settings = "os", "arch", "compiler", "build_type"
 
-                def package_id(self):
-                    try:  # This might not be defined if compiler=None
-                        del self.info.settings.compiler.cppstd
-                    except:
-                        pass
+                def configure(self):
+                    self.settings.rm_safe("compiler.cppstd")
+                    self.settings.rm_safe("compiler.libcxx")
             """)
         c.save({"conanfile.py": conanfile, "profile_build": "[settings]\nos=Windows\narch=x86_64"})
         os_ = "Windows"
