@@ -450,13 +450,14 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(MyHello)
+        find_package(hello_host REQUIRED)
         find_program(HELLOPROG hello)
         if(HELLOPROG)
             message("Found hello prog: ${HELLOPROG}")
         endif()
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain -pr:b default {}".format(settings))
+    client.run(f"install . pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b default {settings}")
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found hello prog" in client.out
