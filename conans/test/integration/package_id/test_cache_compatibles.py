@@ -156,7 +156,6 @@ class TestDefaultCompat:
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd={cppstd} "
               f"-s compiler.runtime={runtime} -pr:b=profile_build")
-        print(c.out)
         package_id = c.created_package_id("app/1.0")
         c.run(f"install --requires=app/1.0@ -s os={os_} -s arch={arch} -pr:b=profile_build")
         assert "app/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\

@@ -160,6 +160,12 @@ class SettingsItem(object):
             ret[key] = value.get_definition()
         return ret
 
+    def rm_safe(self, name):
+        if isinstance(self._definition, list):
+            return
+        for subsetting in self._definition.values():
+            subsetting.rm_safe(name)
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value="settings"):
@@ -199,17 +205,14 @@ class Settings(object):
         return default
 
     def rm_safe(self, name):
-        try:
-            tmp = self
-            attr_ = name
-            if "." in name:
-                fields = name.split(".")
-                attr_ = fields.pop()
-                for prop in fields:
-                    tmp = getattr(tmp, prop)
-            delattr(tmp, attr_)
-        except ConanException:
-            pass
+        if "." in name:
+            setting, remainder = name.split(".", 1)
+            try:
+                self._data[setting].rm_safe(remainder)
+            except KeyError:
+                pass
+        else:
+            self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive
