@@ -1,11 +1,8 @@
 import argparse
-import sys
+import inspect
 import textwrap
 
-from colorama import Style
-
 from conan.cli.commands import add_log_level_args, process_log_level_args
-from conans.client.userio import color_enabled
 from conans.errors import ConanException
 
 COMMAND_GROUPS = {
@@ -125,7 +122,7 @@ class BaseConanCommand(object):
     def parser(self):
         return self._parser
 
-    def _format(self, parser, info, *args):
+    def _format(self, conan_api, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
 
         default_format = "text"
@@ -140,7 +137,17 @@ class BaseConanCommand(object):
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        formatter(info)
+        # If the formatter requires a conan_api to help, it will be passed, no
+        # need for the command to ugly pass a tuple (results, api), and then unpack
+        parameters = inspect.signature(formatter).parameters
+        kwargs = {}
+        if "conan_api" in parameters:
+            kwargs["conan_api"] = conan_api
+        if isinstance(info, CommandResult):
+            kwargs.update(info.filter(parameters))
+            formatter(**kwargs)
+        else:
+            formatter(info, **kwargs)
 
 
 class ConanArgumentParser(argparse.ArgumentParser):
@@ -179,7 +186,7 @@ class ConanCommand(BaseConanCommand):
         info = self._method(conan_api, parser, *args)
 
         if not self._subcommands:
-            self._format(self._parser, info, *args)
+            self._format(conan_api, self._parser, info, *args)
         else:
             subcommand = args[0][0] if args[0] else None
             if subcommand in self._subcommands:
@@ -202,7 +209,7 @@ class ConanSubCommand(BaseConanCommand):
     def run(self, conan_api, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         # It is necessary to do it after calling the "method" otherwise parser not complete
-        self._format(self._parent_parser, info, *args)
+        self._format(conan_api, self._parent_parser, info, *args)
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
@@ -225,3 +232,11 @@ def conan_subcommand(formatters=None):
         return cmd
 
     return decorator
+
+
+class CommandResult:
+    def __init__(self, data):
+        self._data = data
+
+    def filter(self, parameters):
+        return {k: v for k, v in self._data.items() if k in parameters}
