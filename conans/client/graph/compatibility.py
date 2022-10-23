@@ -65,10 +65,11 @@ def app_compat(conanfile):
     if os_ is None or arch is None:
         return
 
+    configuration = {}
     compiler = conanfile.settings.get_safe("compiler")
     if compiler is None:
         compiler = {"Windows": "msvc", "Macos": "apple-clang"}.get(os_, "gcc")
-        configuration = {"compiler": compiler}
+        configuration["compiler"] = compiler
 
     compiler_version = conanfile.settings.get_safe("compiler.version")
     if compiler_version is None:
