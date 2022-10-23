@@ -266,8 +266,10 @@ class Requirement:
                 downstream_require = Requirement(require.ref, headers=False, libs=True, run=True)
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=True, libs=True, run=True)
             else:
-                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
@@ -277,8 +279,10 @@ class Requirement:
                 downstream_require = Requirement(require.ref, headers=False, libs=True, run=False)
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=True, libs=True, run=False)
             else:
-                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
@@ -300,15 +304,16 @@ class Requirement:
         if require.transitive_libs is not None:
             downstream_require.libs = require.transitive_libs
 
-        # If non-default, then the consumer requires has priority
-        if self.visible is False:
-            downstream_require.visible = False
+        if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
+            # If non-default, then the consumer requires has priority
+            if self.visible is False:
+                downstream_require.visible = False
 
-        if self.headers is False:
-            downstream_require.headers = False
+            if self.headers is False:
+                downstream_require.headers = False
 
-        if self.libs is False:
-            downstream_require.libs = False
+            if self.libs is False:
+                downstream_require.libs = False
 
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:
