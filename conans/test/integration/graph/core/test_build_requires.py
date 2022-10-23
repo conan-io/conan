@@ -155,7 +155,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True)])
-        _check_transitive(cmake, [(zlib, True, True, False, True)])
+        _check_transitive(cmake, [(zlib, True, True, False, False)])
 
 
 class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
