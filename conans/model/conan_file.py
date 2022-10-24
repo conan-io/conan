@@ -258,12 +258,6 @@ class ConanFile:
         self.folders = Folders()
         self.cpp = Infos()
 
-        # LEGACY 1.X fields, can be removed in 2.X
-        self.deps_cpp_info = defaultdict(lambda: MockInfoProperty("ConanFile.deps_cpp_info"))
-        self.deps_env_info = defaultdict(lambda: MockInfoProperty("ConanFile.deps_env_info"))
-
-
-
     def serialize(self):
         result = {}
         for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
