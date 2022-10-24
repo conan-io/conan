@@ -2,6 +2,7 @@ import copy
 import os
 from collections import OrderedDict
 
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
@@ -28,6 +29,32 @@ class DefaultOrderedDict(OrderedDict):
         for key, value in super(DefaultOrderedDict, self).items():
             the_copy[key] = value
         return the_copy
+
+
+class MockInfoProperty(object):
+    """
+    # TODO: Remove in 2.X
+    to mock user_info and env_info
+    """
+    def __init__(self, name):
+        self._message = f"The use of '{name}' is deprecated in Conan 2.0 and will be removed in " \
+                        f"Conan 2.X. Please, update your recipes unless you are maintaining " \
+                        f"compatibility with Conan 1.X"
+
+    def __getitem__(self, key):
+        ConanOutput().warning(self._message)
+
+    def __setitem__(self, key, value):
+        ConanOutput().warning(self._message)
+
+    def __getattr__(self, attr):
+        if attr != "_message":
+            ConanOutput().warning(self._message)
+
+    def __setattr__(self, attr, value):
+        if attr != "_message":
+            ConanOutput().warning(self._message)
+        return super(MockInfoProperty, self).__setattr__(attr, value)
 
 
 class _Component(object):
@@ -60,8 +87,10 @@ class _Component(object):
         self._requires = None
 
         # LEGACY 1.X fields, can be removed in 2.X
-        self.names = {}
-        self.filenames = {}
+        self.names = MockInfoProperty("cpp_info.names")
+        self.filenames = MockInfoProperty("cpp_info.filenames")
+        self.user_info = MockInfoProperty("cpp_info.user_info")
+        self.env_info = MockInfoProperty("cpp_info.env_info")
 
         if set_defaults:
             self.includedirs = ["include"]
