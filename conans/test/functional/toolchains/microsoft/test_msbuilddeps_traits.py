@@ -34,6 +34,6 @@ def test_shared_requires_static(transitive_libraries):
 
     c.run("install . -o libb*:shared=True")
     assert not os.path.exists(os.path.join(c.current_folder, "conan_liba_vars_release_x64.props"))
-    libb_data = c.load("conan_libb_vars_release_x64.props")
+    libb_data = c.load("conan_libb_release_x64.props")
     # No dependency to liba, it has been skipped as unnecessary
-    assert "<ConanlibbDependencies></ConanlibbDependencies>" in libb_data
+    assert "conan_liba.props" not in libb_data
