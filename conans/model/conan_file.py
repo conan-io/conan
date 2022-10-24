@@ -1,11 +1,9 @@
 import os
-from collections import defaultdict
 from pathlib import Path
 
 from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
-from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
