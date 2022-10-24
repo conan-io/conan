@@ -215,7 +215,6 @@ class ConanFile:
     #: Should be only filled in the ``package_info()`` method.
     conf_info = None
 
-
     def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
