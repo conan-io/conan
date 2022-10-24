@@ -164,7 +164,7 @@ class Requirement:
             return RecipeReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
                                    self.ref.revision)
 
-    def process_package_type(self, node):
+    def process_package_type(self, src_node, node):
         """If the requirement traits have not been adjusted, then complete them with package type
         definition"""
 
@@ -192,6 +192,11 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package
+
+        src_pkg_type = src_node.conanfile.package_type
+        if src_pkg_type is PackageType.HEADER:
+            set_if_none("_transitive_headers", self.headers)
+            set_if_none("_transitive_libs", self.libs)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))

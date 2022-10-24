@@ -430,6 +430,80 @@ class TestLinear(GraphManagerTest):
         _check_transitive(liba, [(libb, True, True, False, False),
                                  (libc, True, True, False, True)])
 
+    def test_multiple_header_only_with_transitives(self):
+        # app -> libd0.1(header) -> liba0.1(header) -> libb0.1 (static)
+        #                               \-----------> libc0.1 (shared)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("libb/0.1", "libc/0.1"))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("liba/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        liba = libd.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", dependents=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[liba])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, False, False, False),
+                                (liba, True, False, False, False),
+                                (libb, True, True, False, False),
+                                (libc, True, True, False, True)])
+        _check_transitive(libd, [(liba, True, False, False, False),
+                                 (libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+        _check_transitive(liba, [(libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+
+    def test_static_multiple_header_only_with_transitives(self):
+        # app -> libd0.1(static) -> liba0.1(header) -> libb0.1 (static)
+        #                               \-----------> libc0.1 (shared)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("libb/0.1", "libc/0.1"))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_package_type("static-library")
+                              .with_requires("liba/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        liba = libd.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", dependents=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[liba])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, True, False, False),
+                                (liba, False, False, False, False),
+                                (libb, False, True, False, False),
+                                (libc, False, True, False, True)])
+        _check_transitive(libd, [(liba, True, False, False, False),
+                                 (libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+        _check_transitive(liba, [(libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+
     def test_multiple_levels_transitive_headers(self):
         # app -> libcc0.1 -> libb0.1  -> liba0.1
         self.recipe_cache("liba/0.1")

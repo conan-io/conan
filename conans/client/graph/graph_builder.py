@@ -86,7 +86,7 @@ class DepsGraphBuilder(object):
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
-            require.process_package_type(prev_node)
+            require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
@@ -247,7 +247,7 @@ class DepsGraphBuilder(object):
             down_options = node.conanfile.up_options if require.visible else Options()
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
-        require.process_package_type(new_node)
+        require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
         if node.propagate_downstream(require, new_node):
