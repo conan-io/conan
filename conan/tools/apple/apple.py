@@ -204,8 +204,7 @@ def fix_apple_shared_install_name(conanfile):
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
             if not os.path.exists(full_folder):
-                # as method package is running before package_info, the cpp.package might be
-                # wrong
+                # Should this be an error?
                 continue
             shared_libs = _darwin_collect_dylibs(full_folder)
             # fix LC_ID_DYLIB in first pass
@@ -231,8 +230,8 @@ def fix_apple_shared_install_name(conanfile):
         for bindir in bindirs:
             full_folder = os.path.join(conanfile.package_folder, bindir)
             if not os.path.exists(full_folder):
-                # as method package is running before package_info, the cpp.package might be
-                # wrong
+                # Skip if the folder does not exist inside the package
+                # (e.g. package does not contain executables but bindirs is defined)
                 continue
             executables = _darwin_collect_executables(full_folder)
             for executable in executables:
@@ -258,4 +257,8 @@ def fix_apple_shared_install_name(conanfile):
 
     if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         substitutions = _fix_dylib_files(conanfile)
+
+        # Only "fix" executables if dylib files were patched, otherwise 
+        # there is nothing to do.
+        if substitutions:
         _fix_executables(conanfile, substitutions)

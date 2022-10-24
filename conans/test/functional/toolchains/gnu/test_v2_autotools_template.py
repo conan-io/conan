@@ -26,6 +26,23 @@ def test_autotools_lib_template():
     package_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
+    # Local flow for shared library works
+    client.save({}, clean_first=True)
+    client.run("new hello/0.1 --template=autotools_lib")
+    client.run("install . -if install_shared -o hello:shared=True")
+    client.run("build . -if=install_shared")
+    client.run("export-pkg . hello/0.1@ -if=install_shared -o hello:shared=True")
+    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+
+    if platform.system() == "Darwin":
+        # Ensure that install name of dylib is patched
+        client.run_command(f"otool -L {package_folder}/lib/libhello.0.dylib")
+        assert "@rpath/libhello.0.dylib" in client.out
+    elif platform.system() == "Linux":
+        assert os.path.exists(os.path.join(package_folder, "lib", "libhello.so.0"))
+
     # Create works
     client.run("create .")
     assert "hello/0.1: Hello World Release!" in client.out
