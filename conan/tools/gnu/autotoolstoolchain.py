@@ -51,8 +51,8 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
-        # Cross build
-        self._host = None
+        # Cross build triplets
+        self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
         self._build = None
         self._target = None
 
@@ -71,7 +71,8 @@ class AutotoolsToolchain:
             os_build = conanfile.settings_build.get_safe('os')
             arch_build = conanfile.settings_build.get_safe('arch')
             compiler = self._conanfile.settings.get_safe("compiler")
-            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            if not self._host:
+                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
