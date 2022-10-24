@@ -66,7 +66,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
     @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
@@ -134,81 +134,12 @@ class BuildRequiresGraphTest(GraphManagerTest):
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
 
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_transitive_build_require_recipe_profile(self):
-        # app -> lib -(br)-> gtest
-        # profile \---(br)-> mingw
-        # app -(br)-> mingw
-        mingw_ref = RecipeReference.loads("mingw/0.1@user/testing")
-        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
-        self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
-        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(gtest_ref))
-        profile_build_requires = {"*": [mingw_ref]}
-        deps_graph = self.build_graph(GenConanfile("app", "0.1")
-                                                    .with_require(lib_ref),
-                                      profile_build_requires=profile_build_requires)
-
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[0].dst
-
-        mingw_lib = lib.dependencies[1].dst
-        mingw_app = app.dependencies[1].dst
-
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[], dependents=[app])
-        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], dependents=[lib])
-        # MinGW leaf nodes
-        self._check_node(mingw_lib, "mingw/0.1@user/testing#123", deps=[], dependents=[lib])
-        self._check_node(mingw_app, "mingw/0.1@user/testing#123", deps=[], dependents=[app])
-
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_not_conflict_transitive_build_requires(self):
-        # Same as above, but gtest->(build_require)->zlib2
-        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
-        zlib_ref2 = RecipeReference.loads("zlib/0.2@user/testing")
-        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
-        self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
-
-        self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1")
-                                                    .with_tool_requires(zlib_ref2))
-        self._cache_recipe(lib_ref, GenConanfile().with_require(zlib_ref)
-                                                  .with_tool_requires(gtest_ref))
-
-        graph = self.build_graph(GenConanfile("app", "0.1")
-                                               .with_require(lib_ref))
-
-        self.assertEqual(5, len(graph.nodes))
-        app = graph.root
-        lib = app.dependencies[0].dst
-        zlib = lib.dependencies[0].dst
-        gtest = lib.dependencies[1].dst
-        zlib2 = gtest.dependencies[0].dst
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], dependents=[app])
-
-        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], dependents=[lib])
-
-    @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_private(self):
         # app -> lib -(br)-> cmake -(private)-> zlib
-        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
-        cmake_ref = RecipeReference.loads("cmake/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
-        self._cache_recipe(cmake_ref, GenConanfile().with_require(zlib_ref, private=True))
-        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(cmake_ref))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require(lib_ref))
+        self._cache_recipe("zlib/0.1", GenConanfile())
+        self._cache_recipe("cmake/0.1", GenConanfile().with_requirement("zlib/0.1", visible=False))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -216,13 +147,15 @@ class BuildRequiresGraphTest(GraphManagerTest):
         cmake = lib.dependencies[0].dst
         zlib = cmake.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(app, "app/0.1", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
+        self._check_node(cmake, "cmake/0.1#123", deps=[zlib], dependents=[lib])
+        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[cmake])
 
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[], dependents=[app])
-
-        self._check_node(cmake, "cmake/0.1@user/testing#123", deps=[zlib], dependents=[lib])
-
-        self._check_node(zlib, "zlib/0.1@user/testing#123", deps=[], dependents=[cmake])
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(cmake, False, False, True, True)])
+        _check_transitive(cmake, [(zlib, True, True, False, False)])
 
 
 class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
