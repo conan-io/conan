@@ -37,7 +37,7 @@ def test_component_error():
         class t3Conan(ConanFile):
             name = "t3"
             version = "0.1.0"
-            requires = "t2/0.1.0"
+            requires = "t1/0.1.0", "t2/0.1.0"
             package_type = "application"
             generators = "CMakeDeps"
             settings = "os", "arch", "compiler", "build_type"
