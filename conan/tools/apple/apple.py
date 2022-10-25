@@ -4,6 +4,7 @@ import os
 
 from conans.util.runners import check_output_runner
 from conans.client.tools.apple import to_apple_arch as _to_apple_arch
+from conans.errors import ConanException
 
 
 def is_apple_os(conanfile):
@@ -204,8 +205,8 @@ def fix_apple_shared_install_name(conanfile):
         for libdir in libdirs:
             full_folder = os.path.join(conanfile.package_folder, libdir)
             if not os.path.exists(full_folder):
-                # Should this be an error?
-                continue
+                raise ConanException(f"Trying to locate shared libraries, but `{libdir}` "
+                                     f" not found inside package folder {conanfile.package_folder}")
             shared_libs = _darwin_collect_dylibs(full_folder)
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
@@ -261,4 +262,4 @@ def fix_apple_shared_install_name(conanfile):
         # Only "fix" executables if dylib files were patched, otherwise 
         # there is nothing to do.
         if substitutions:
-        _fix_executables(conanfile, substitutions)
+            _fix_executables(conanfile, substitutions)
