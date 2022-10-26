@@ -1061,3 +1061,66 @@ def test_resdirs_none_cmake_install():
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
     client.run("create .", assert_error=True)
     assert "Cannot install stuff" in client.out
+
+
+def test_cmake_tooclahin_vars_when_option_declared():
+    t = TestClient()
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 2.8) # <---- set this to an old version for old policies
+    project(mylib CXX)
+
+    # Set the options AFTER the call to project, that is, after toolchain is loaded
+    option(BUILD_SHARED_LIBDS "" ON)
+    option(CMAKE_POSITION_INDEPENDENT_CODE "" OFF)
+
+    add_library(mylib src/mylib.cpp)
+    target_include_directories(mylib PUBLIC include)
+
+    get_target_property(MYLIB_TARGET_TYPE mylib TYPE)
+    get_target_property(MYLIB_PIC mylib POSITION_INDEPENDENT_CODE)
+    message("mylib target type: ${MYLIB_TARGET_TYPE}")
+    message("MYLIB_PIC value: ${MYLIB_PIC}")
+    if(MYLIB_PIC)
+        #Note: the value is "True"/"False" if set by cmake,
+        #       and "ON"/"OFF" if set by Conan
+        message("mylib position independent code: ON")
+    else()
+        message("mylib position independent code: OFF")
+    endif()
+
+    set_target_properties(mylib PROPERTIES PUBLIC_HEADER "include/mylib.h")
+    install(TARGETS mylib)
+    """)
+
+    t.run("new mylib/1.0 --template cmake_lib")
+    t.save({"CMakeLists.txt": cmakelists})
+    
+    # The generated toolchain should set this `BUILD_SHARED_LIBS` to `OFF`
+    # and othe call to `option()` should respect the pre-existing value
+    t.run("create . -o mylib:shared=False -o mylib:fPIC=True --test-folder=None")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
+
+    t.run("create . -o mylib:shared=True -o mylib:fPIC=False --test-folder=None")
+    assert "mylib target type: SHARED_LIBRARY" in t.out
+    # Note: cmake will set the target property as to `ON` because being a shared library
+    # takes precedence (won't produce a shared library with fPIC=false)
+    assert "mylib position independent code: ON" in t.out
+
+    # When building manually, ensure the value passed by the toolchain overrides the ones in 
+    # the CMakeLists
+    t.run("install . -o mylib:shared=False -o mylib:fPIC=False")
+    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert "mylib position independent code: OFF" in t.out
+
+    # When explicitly overriding `BUILD_SHARED_LIBS` via command line, ensure
+    # this takes precedence to the value defined by the toolchain
+    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
+
+    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake -DBUILD_SHARED_LIBS=ON")
+    assert "mylib target type: SHARED_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
