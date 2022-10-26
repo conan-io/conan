@@ -47,9 +47,6 @@ def test_autotools_bash_complete():
                 autotools = Autotools(self)
                 autotools.configure()
                 autotools.make()
-
-            def package(self):
-                autotools = Autotools(self)
                 autotools.install()
         """)
 
