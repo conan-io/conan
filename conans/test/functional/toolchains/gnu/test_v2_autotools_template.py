@@ -26,6 +26,23 @@ def test_autotools_lib_template():
     package_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
+    # Local flow for shared library works
+    client.save({}, clean_first=True)
+    client.run("new hello/0.1 --template=autotools_lib")
+    client.run("install . -if install_shared -o hello:shared=True")
+    client.run("build . -if=install_shared")
+    client.run("export-pkg . hello/0.1@ -if=install_shared -o hello:shared=True")
+    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+
+    if platform.system() == "Darwin":
+        # Ensure that install name of dylib is patched
+        client.run_command(f"otool -L {package_folder}/lib/libhello.0.dylib")
+        assert "@rpath/libhello.0.dylib" in client.out
+    elif platform.system() == "Linux":
+        assert os.path.exists(os.path.join(package_folder, "lib", "libhello.so.0"))
+
     # Create works
     client.run("create .")
     assert "hello/0.1: Hello World Release!" in client.out
@@ -269,6 +286,10 @@ def test_autotools_fix_shared_libs():
         libbye_la_HEADERS = bye.h
         libbye_ladir = $(includedir)
         libbye_la_LIBADD = libhello.la
+
+        bin_PROGRAMS = main
+        main_SOURCES = main.cpp
+        main_LDADD = libhello.la libbye.la
     """)
 
     test_src = textwrap.dedent("""
@@ -280,6 +301,7 @@ def test_autotools_fix_shared_libs():
         "src/makefile.am": makefile_am,
         "src/bye.cpp": bye_cpp,
         "src/bye.h": bye_h,
+        "src/main.cpp": test_src,
         "test_package/main.cpp": test_src,
         "conanfile.py": conanfile,
     })
@@ -304,5 +326,13 @@ def test_autotools_fix_shared_libs():
     assert "@rpath/libhello.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
     assert "@rpath/libbye.dylib (compatibility version 1.0.0, current version 1.0.0)" in client.out
 
+    # app rpath fixed in executable
+    exe_path = os.path.join(package_folder, "bin", "main")
+    client.run_command("otool -L {}".format(exe_path))
+    assert "@rpath/libhello.dylib" in client.out
+    client.run_command(exe_path)
+    assert "Bye, bye!" in client.out
+
+    # Running the test-package also works
     client.run("test test_package hello/0.1@ -o hello:shared=True")
     assert "Bye, bye!" in client.out
