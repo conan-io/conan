@@ -28,10 +28,10 @@ class Meson(object):
         if os.path.exists(deps_flags):
             meson_filenames.append(deps_flags)
 
-        user_filenames = self._conanfile.conf.get("tools.meson.mesontoolchain:user_filenames",
-                                                  default=[], check_type=list)
-        if user_filenames:
-            meson_filenames.extend(user_filenames)
+        machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
+                                                 default=[], check_type=list)
+        if machine_files:
+            meson_filenames.extend(machine_files)
 
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)

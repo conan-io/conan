@@ -173,9 +173,9 @@ class MesonToolchainTest(TestMesonBase):
 
 
 @pytest.mark.tool_meson
-def test_meson_and_user_filenames_composition():
+def test_meson_and_additional_machine_files_composition():
     """
-    Testing when users wants to append their own meson files and override/complement some
+    Testing when users wants to append their own meson machine files and override/complement some
     sections from Conan file ones.
 
     See more information in Meson web page: https://mesonbuild.com/Machine-files.html
@@ -193,12 +193,11 @@ def test_meson_and_user_filenames_composition():
         build_type=Release
 
         [conf]
-        tools.meson.mesontoolchain:user_filenames=["myfilename.ini"]
+        tools.meson.mesontoolchain:extra_machine_files=["myfilename.ini"]
    """)
     myfilename = textwrap.dedent("""
-    [binaries]
-    c = '/usr/fake/path/gcc'
-    cpp = '/usr/fake/path/g++'
+    [project options]
+    my_option = 'fake-option'
     """)
     conanfile = textwrap.dedent("""
     from conan import ConanFile
@@ -218,9 +217,9 @@ def test_meson_and_user_filenames_composition():
                  "profile": profile})
 
     client.run("install . -pr=profile -if build")
-    client.run("build . -bf build", assert_error=True)  # fails because of the fake compiler
+    client.run("build . -bf build")
     # Checking the order of the appended user file (the order matters)
     conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
     assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
-    # Meson is trying to use the c and cpp binary paths from user file
-    assert "Unknown compiler(s): [['/usr/fake/path/g++']]" in client.out
+    # Meson warns about an unknown option
+    assert 'WARNING: Unknown options: "my_option"' in client.out
