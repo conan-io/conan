@@ -49,9 +49,11 @@ class GraphAPI:
 
     @api_method
     def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
-                                 update=None, remotes=None, lockfile=None):
+                                 update=None, remotes=None, lockfile=None,
+                                 tested_python_requires=None):
         """ Create and initialize a root node from a test_package/conanfile.py consumer
 
+        :param tested_python_requires:
         :param lockfile: Might be good to lock python-requires, build-requires
         :param path: The full path to the test_package/conanfile.py being used
         :param tested_reference: The full RecipeReference of the tested package
@@ -72,7 +74,8 @@ class GraphAPI:
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
                                          channel=tested_reference.channel,
-                                         graph_lock=lockfile)
+                                         graph_lock=lockfile,
+                                         tested_python_requires=tested_python_requires)
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
         conanfile.output.scope = conanfile.display_name
