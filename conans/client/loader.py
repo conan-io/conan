@@ -271,7 +271,7 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def parse_conanfile(conanfile_path, tested_reference_str=None):
+def parse_conanfile(conanfile_path):
     module, filename = load_python_file(conanfile_path)
     try:
         conanfile = _parse_module(module, filename)
