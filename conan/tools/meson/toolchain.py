@@ -317,6 +317,7 @@ class MesonToolchain(object):
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
+            self.cpp_link_args.append(self.libcxx)
         if self.gcc_cxx11_abi:
             self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
