@@ -30,13 +30,14 @@ def test_autotools_lib_template():
 
     # Local flow for shared library works
     client.save({}, clean_first=True)
-    client.run("new hello/0.1 --template=autotools_lib")
-    client.run("install . -if install_shared -o hello:shared=True")
-    client.run("build . -if=install_shared")
-    client.run("export-pkg . hello/0.1@ -if=install_shared -o hello:shared=True")
+    client.run("new autotools_lib -d name=hello -d version=0.1")
+    client.run("install . -o hello/*:shared=True")
+    client.run("build . -o hello/*:shared=True")
+    client.run("export-pkg . -o hello/*:shared=True")
+    ref = RecipeReference.loads("hello/0.1")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
-    package_folder = client.cache.package_layout(pref.ref).package(pref)
+    pref = client.get_latest_package_reference(ref, package_id)
+    package_folder = client.get_latest_pkg_layout(pref).package()
 
     if platform.system() == "Darwin":
         # Ensure that install name of dylib is patched
@@ -59,7 +60,7 @@ def test_autotools_lib_template():
     assert "hello/0.1: Hello World Release!" in client.out
     if platform.system() == "Darwin":
         client.run_command("otool -l test_package/test_output/build-release/main")
-        assert "libhello.0.dylib" in client.out
+        assert "@rpath/libhello.0.dylib" in client.out
     else:
         client.run_command("ldd test_package/test_output/build-release/main")
         assert "libhello.so.0" in client.out
