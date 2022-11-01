@@ -147,7 +147,8 @@ class BazelDeps(object):
 
         dependencies = []
         for req, dep in dependency.dependencies.items():
-            dependencies.append(dep.ref.name)
+            if not dep.is_build_context:
+                dependencies.append(dep.ref.name)
 
         shared_library = dependency.options.get_safe("shared") if dependency.options else False
 
