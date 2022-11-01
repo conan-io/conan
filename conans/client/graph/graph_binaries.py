@@ -47,6 +47,7 @@ class GraphBinariesAnalyzer(object):
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
+            node.should_build = True
             conanfile.output.info('Forced build from source')
             if node.cant_build:
                 node.binary = BINARY_INVALID
@@ -181,6 +182,7 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+                node.should_build = True
                 if node.cant_build:
                     node.binary = BINARY_INVALID
                 else:
@@ -206,7 +208,7 @@ class GraphBinariesAnalyzer(object):
             assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary in (BINARY_MISSING, BINARY_INVALID):
+            if node.binary in (BINARY_MISSING, BINARY_INVALID) and not node.should_build:
                 conanfile = node.conanfile
                 self._compatibility.compatibles(conanfile)
                 if node.conanfile.compatible_packages:
@@ -237,6 +239,7 @@ class GraphBinariesAnalyzer(object):
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+                    node.should_build = True
                     if node.cant_build:
                         node.binary = BINARY_INVALID
                     else:
@@ -258,7 +261,8 @@ class GraphBinariesAnalyzer(object):
 
         if pref.id == PACKAGE_ID_INVALID:
             # annotate pattern, so unused patterns in --build are not displayed as errors
-            build_mode.forced(node.conanfile, node.ref)
+            if build_mode.forced(node.conanfile, node.ref):
+                node.should_build = True
             node.binary = BINARY_INVALID
             return
 
@@ -304,6 +308,7 @@ class GraphBinariesAnalyzer(object):
                 local_recipe_hash = package_layout.recipe_manifest().summary_hash
                 if local_recipe_hash != recipe_hash:
                     conanfile.output.info("Outdated package!")
+                    node.should_build = True
                     if node.cant_build:
                         node.binary = BINARY_INVALID
                     else:
@@ -399,12 +404,6 @@ class GraphBinariesAnalyzer(object):
         if apple_clang_compatible:
             conanfile.compatible_packages.append(apple_clang_compatible)
 
-        # Once we are done, call package_id() to narrow and change possible values
-        with conanfile_exception_formatter(str(conanfile), "package_id"):
-            with conan_v2_property(conanfile, 'cpp_info',
-                                   "'self.cpp_info' access in package_id() method is deprecated"):
-                conanfile.package_id()
-
         if hasattr(conanfile, "validate") and callable(conanfile.validate):
             with conanfile_exception_formatter(str(conanfile), "validate"):
                 try:
@@ -421,6 +420,12 @@ class GraphBinariesAnalyzer(object):
                 except ConanInvalidConfiguration as e:
                     # This 'cant_build' will be ignored if we don't have to build the node.
                     node.cant_build = str(e)
+
+            # Once we are done, call package_id() to narrow and change possible values
+        with conanfile_exception_formatter(str(conanfile), "package_id"):
+            with conan_v2_property(conanfile, 'cpp_info',
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
+                conanfile.package_id()
 
         info = conanfile.info
         node.package_id = info.package_id()
