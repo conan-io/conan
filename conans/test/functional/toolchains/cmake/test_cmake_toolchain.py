@@ -1071,7 +1071,7 @@ def test_cmake_tooclahin_vars_when_option_declared():
     project(mylib CXX)
 
     # Set the options AFTER the call to project, that is, after toolchain is loaded
-    option(BUILD_SHARED_LIBDS "" ON)
+    option(BUILD_SHARED_LIBS "" ON)
     option(CMAKE_POSITION_INDEPENDENT_CODE "" OFF)
 
     add_library(mylib src/mylib.cpp)
