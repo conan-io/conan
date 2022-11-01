@@ -302,7 +302,7 @@ def test_fpic_when_shared_true(conanfile_linux_shared, fPIC):
     toolchain = CMakeToolchain(conanfile_linux_shared)
     cmake_value = 'ON' if fPIC else 'OFF'
     content = toolchain.content
-    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE {})'.format(cmake_value) in content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE {} CACHE BOOL'.format(cmake_value) in content
 
 
 def test_fpic_when_not_shared(conanfile_linux_shared):
