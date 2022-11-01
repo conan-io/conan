@@ -16,7 +16,7 @@ def get_remote_selection(conan_api, remote_patterns):
     """
     ret_remotes = []
     for pattern in remote_patterns:
-        tmp = conan_api.remotes.list(pattern=pattern, only_active=True)
+        tmp = conan_api.remotes.list(pattern=pattern, only_enabled=True)
         if not tmp:
             raise ConanException("Remotes for pattern '{}' can't be found or are "
                                  "disabled".format(pattern))
@@ -30,7 +30,7 @@ def get_multiple_remotes(conan_api, remote_names=None):
         return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
     elif remote_names is None:
         # if we don't pass any remotes we want to retrieve only the enabled ones
-        return conan_api.remotes.list(only_active=True)
+        return conan_api.remotes.list(only_enabled=True)
 
 
 class RemotesAPI:
@@ -39,7 +39,7 @@ class RemotesAPI:
         self.conan_api = conan_api
 
     @api_method
-    def list(self, pattern=None, only_active=False):
+    def list(self, pattern=None, only_enabled=False):
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
         if pattern:
@@ -52,7 +52,7 @@ class RemotesAPI:
                 raise ConanException(f"Remote '{pattern}' not found in remotes")
 
             remotes = filtered_remotes
-        if only_active:
+        if only_enabled:
             remotes = [r for r in remotes if not r.disabled]
         return remotes
 

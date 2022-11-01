@@ -35,8 +35,9 @@ def build_id(conan_file):
 
 class _PackageBuilder(object):
 
-    def __init__(self, app):
+    def __init__(self, app, conan_api):
         self._app = app
+        self._conan_api = conan_api
         self._cache = app.cache
         self._hook_manager = app.hook_manager
         self._remote_manager = app.remote_manager
@@ -77,7 +78,6 @@ class _PackageBuilder(object):
 
     def _prepare_sources(self, conanfile, pref, recipe_layout):
         export_source_folder = recipe_layout.export_sources()
-        conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
         remotes = self._app.enabled_remotes
@@ -192,8 +192,9 @@ class BinaryInstaller:
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, app):
+    def __init__(self, app, conan_api):
         self._app = app
+        self._conan_api = conan_api
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
@@ -333,7 +334,7 @@ class BinaryInstaller:
         with pkg_layout.package_lock():
             pkg_layout.package_remove()
             with pkg_layout.set_dirty_context_manager():
-                builder = _PackageBuilder(self._app)
+                builder = _PackageBuilder(self._app, self._conan_api)
                 pref = builder.build_package(node, pkg_layout)
             assert node.prev, "Node PREV shouldn't be empty"
             assert node.pref.revision, "Node PREF revision shouldn't be empty"

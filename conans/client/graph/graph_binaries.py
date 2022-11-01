@@ -63,8 +63,8 @@ class GraphBinariesAnalyzer(object):
             except NotFoundException:
                 pass
 
-        if not self._app.enabled_remotes and self._app.update:
-            node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
+        if not self._app.selected_remotes and self._app.update:
+            node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
             remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)

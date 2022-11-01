@@ -60,14 +60,10 @@ class ConanApp(object):
 
         # Remotes
         self.selected_remotes = []
-        self.enabled_remotes = []
-        self.all_remotes = []
         self.update = False
         self.check_updates = False
 
     def load_remotes(self, remotes=None, update=False, check_updates=False):
-        self.all_remotes = self.cache.remotes_registry.list()
-        self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
         self.update = update
         self.check_updates = check_updates
         self.selected_remotes = []
