@@ -1070,6 +1070,8 @@ def test_cmake_tooclahin_vars_when_option_declared():
     cmake_minimum_required(VERSION 2.8) # <---- set this to an old version for old policies
     project(mylib CXX)
 
+    message("CMake version: ${CMAKE_VERSION}")
+
     # Set the options AFTER the call to project, that is, after toolchain is loaded
     option(BUILD_SHARED_LIBS "" ON)
     option(CMAKE_POSITION_INDEPENDENT_CODE "" OFF)
@@ -1100,12 +1102,6 @@ def test_cmake_tooclahin_vars_when_option_declared():
     # and othe call to `option()` should respect the pre-existing value
     t.run("create . -o mylib:shared=False -o mylib:fPIC=True --test-folder=None")
     assert "mylib target type: STATIC_LIBRARY" in t.out
-    assert "mylib position independent code: ON" in t.out
-
-    t.run("create . -o mylib:shared=True -o mylib:fPIC=False --test-folder=None")
-    assert "mylib target type: SHARED_LIBRARY" in t.out
-    # Note: cmake will set the target property as to `ON` because being a shared library
-    # takes precedence (won't produce a shared library with fPIC=false)
     assert "mylib position independent code: ON" in t.out
 
     # When building manually, ensure the value passed by the toolchain overrides the ones in 
