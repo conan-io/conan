@@ -79,7 +79,7 @@ def apple_sdk_path(conanfile):
 
 class XCRun(object):
 
-    def __init__(self, conanfile, sdk=None, use_target_settings=True):
+    def __init__(self, conanfile, sdk=None, use_target_settings=False):
         """sdk=False will skip the flag
            sdk=None will try to adjust it automatically
            target_settings=True try to use settings_target in case they exist"""

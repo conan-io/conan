@@ -40,7 +40,7 @@ def test_xcrun_in_tool_requires():
                 xcrun = XCRun(self{})
                 self.output.info("sdk: %s" % xcrun.sdk)
         """)
-    client.save({"br.py": tool.format("")})
+    client.save({"br.py": tool.format(", use_target_settings=True")})
     client.run("export br.py br/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -66,7 +66,7 @@ def test_xcrun_in_tool_requires():
     assert "br/0.1: sdk: iphoneos15.0" in client.out
     assert "br/0.1: sdk: macosx" not in client.out
 
-    client.save({"br.py": tool.format(", use_target_settings=False")})
+    client.save({"br.py": tool.format("")})
     client.run("export br.py br/0.1@")
     client.run("create . pkg/1.0@ -pr:h=./profile_ios -pr:b=default --build")
     assert "br/0.1: sdk: iphoneos15.0" not in client.out
