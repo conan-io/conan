@@ -125,4 +125,4 @@ def test_generate_build_folder_test_package():
             "test_package/conanfile.py": conanfile})
     c.run("create .")
     build_folder = os.path.join(c.current_folder, "test_package", "build", "Release")
-    assert f"build_folder: {build_folder}" in c.out
+    assert f"build_folder in test_package: {build_folder}" in c.out
