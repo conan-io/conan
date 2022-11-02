@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockOptions
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
+from conans.client.graph.graph import CONTEXT_BUILD
 
 
 class MockConanFileDeps(ConanFile):
@@ -95,8 +96,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
             assert 'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",' in dependency_content
 
-
-def test_bazeldeps_dependency_transitive():
+def create_bazeldeps_with_transitive_dependency(build = False):
     # Create main ConanFile
     conanfile = ConanFile(Mock(), None)
 
@@ -120,7 +120,7 @@ def test_bazeldeps_dependency_transitive():
 
     cpp_info_transitive = CppInfo("mypkg_t", "dummy_root_folder1")
     cpp_info_transitive.defines = ["DUMMY_DEFINE=\"string/value\""]
-    cpp_info_transitive.system_libs = ["system_lib1"]
+    cpp_info_transitive.system_libs = ["system_lib2"]
     cpp_info_transitive.libs = ["lib_t1"]
 
     # Create a ConanFile for a transitive dependency
@@ -128,14 +128,23 @@ def test_bazeldeps_dependency_transitive():
     conanfile_dep_transitive.cpp_info = cpp_info_transitive
     conanfile_dep_transitive._conan_node = Mock()
     conanfile_dep_transitive._conan_node.ref = ConanFileReference.loads("TransitiveDepName/1.0")
+
+    if build:
+        conanfile_dep_transitive._conan_node.context = CONTEXT_BUILD
+
     conanfile_dep_transitive.folders.set_base_package("/path/to/folder_dep_t")
 
     # Add dependency from the direct dependency to the transitive dependency
-    req = Requirement(ConanFileReference.loads("TransitiveDepName/1.0"))
+    req = Requirement(ConanFileReference.loads("TransitiveDepName/1.0"), build=build)
     conanfile_dep._conan_dependencies = ConanFileDependencies(
         {req: ConanFileInterface(conanfile_dep_transitive)})
 
     bazeldeps = BazelDeps(conanfile)
+
+    return bazeldeps
+
+def test_bazeldeps_dependency_transitive():
+    bazeldeps = create_bazeldeps_with_transitive_dependency(build=False)
 
     for dependency in bazeldeps._conanfile.dependencies.host.values():
         dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
@@ -151,6 +160,21 @@ def test_bazeldeps_dependency_transitive():
         assert re.search(r'deps =\s*\[\s*# do not sort\s*":lib1_precompiled",\s*"@TransitiveDepName"',
                          dependency_content)
 
+def test_bazeldeps_dependency_transitive_build():
+    bazeldeps = create_bazeldeps_with_transitive_dependency(build=True)
+
+    for dependency in bazeldeps._conanfile.dependencies.host.values():
+        dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
+        assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
+        assert 'defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""],' in dependency_content
+        if platform.system() == "Windows":
+            assert 'linkopts = ["/DEFAULTLIB:system_lib1"],' in dependency_content
+        else:
+            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+
+        # Ensure that transitive dependency is referenced by the 'deps' attribute of the direct
+        # dependency
+        assert "@TransitiveDepName" not in dependency_content
 
 def test_bazeldeps_interface_buildfiles():
     conanfile = ConanFile(Mock(), None)
