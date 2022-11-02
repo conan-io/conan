@@ -1114,11 +1114,10 @@ def test_cmake_toolchain_vars_when_option_declared():
     # When building manually, ensure the value passed by the toolchain overrides the ones in 
     # the CMakeLists
     fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
-    fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
     t.run(f"install . -o mylib:shared=False {fpic_option}")
     t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
     assert "mylib target type: STATIC_LIBRARY" in t.out
-    assert f"mylib position independent code: {fpic_cmake_value}" in t.out
+    assert f"mylib position independent code: OFF" in t.out
 
     # Note: from this point forward, the CMakeCache is already initialised.
     # When explicitly overriding `CMAKE_POSITION_INDEPENDENT_CODE` via command line, ensure
