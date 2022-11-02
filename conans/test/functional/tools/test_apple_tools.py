@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -45,7 +46,6 @@ def test_xcrun_in_tool_requires():
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.tools.apple import XCRun
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             tool_requires = "br/0.1"
@@ -71,3 +71,45 @@ def test_xcrun_in_tool_requires():
     client.run("create . pkg/1.0@ -pr:h=./profile_ios -pr:b=default --build")
     assert "br/0.1: sdk: iphoneos15.0" not in client.out
     assert "br/0.1: sdk: macosx" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
+def test_xcrun_in_required_by_tool_requires():
+    client = TestClient()
+
+    openssl = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.apple import XCRun
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def build(self):
+                xcrun = XCRun(self)
+                self.output.info("sdk for building openssl: %s" % xcrun.sdk)
+        """)
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            tool_requires = "cmake/1.0"
+        """)
+
+    profile_ios = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=15.4
+        os.sdk=iphoneos
+        os.sdk_version=15.0
+        arch=armv8
+    """)
+
+    client.save({"cmake.py": GenConanfile("cmake", "1.0").with_requires("openssl/1.0"),
+                 "openssl.py": openssl,
+                 "consumer.py": consumer,
+                 "profile_ios": profile_ios})
+
+    client.run("export openssl.py openssl/1.0@")
+    client.run("export cmake.py")
+    client.run("create consumer.py consumer/1.0@ --build -pr:h=./profile_ios -pr:b=default --build")
+    assert "sdk for building openssl: macosx" in client.out
