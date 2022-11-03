@@ -285,5 +285,5 @@ def test_editable_package_folder():
     c.save({"conanfile.py": conanfile})
     c.run("create .")
     c.run("editable add . pkg/0.1")
-    c.run("install pkg/0.1@")
+    c.run("install --requires=pkg/0.1@")
     assert "pkg/0.1: PKG FOLDER=None!!!"
