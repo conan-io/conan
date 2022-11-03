@@ -32,7 +32,7 @@ def test_xcrun_in_tool_requires():
     # https://github.com/conan-io/conan/issues/12260
     client = TestClient()
     tool = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.apple import XCRun
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
