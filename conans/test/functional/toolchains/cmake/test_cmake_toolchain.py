@@ -69,7 +69,8 @@ def test_cmake_toolchain_custom_toolchain():
     assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
     presets = load_cmake_presets(client.current_folder)
     assert "mytoolchain.cmake" in presets["configurePresets"][0]["toolchainFile"]
-    assert "binaryDir" not in presets["configurePresets"][0]
+    # Now that we define the build_folder even if not layout() binaryDir is defined
+    assert "binaryDir" in presets["configurePresets"][0]
 
 
 @pytest.mark.skipif(platform.system() != "Darwin",
