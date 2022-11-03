@@ -90,13 +90,14 @@ class XCRun(object):
             sdk it automatically if ``None`` is passed.
         :param target_settings: Try to use ``settings_target`` in case they exist (``False`` by default)
         """
+        if conanfile:
+            settings = conanfile.settings
+            if use_settings_target and conanfile.settings_target is not None:
+                settings = conanfile.settings_target
 
-        settings = conanfile.settings
-        if use_settings_target and conanfile.settings_target is not None:
-            settings = conanfile.settings_target
+            if sdk is None and settings:
+                sdk = settings.get_safe('os.sdk')
 
-        if sdk is None and settings:
-            sdk = settings.get_safe('os.sdk')
         self.sdk = sdk
 
     def _invoke(self, args):
