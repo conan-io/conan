@@ -116,5 +116,5 @@ def test_xcrun_in_required_by_tool_requires():
 
     client.run("export openssl.py openssl/1.0@")
     client.run("export cmake.py")
-    client.run("create consumer.py consumer/1.0@ --build -pr:h=./profile_ios -pr:b=default --build")
+    client.run("create consumer.py consumer/1.0@ -pr:h=./profile_ios -pr:b=default --build")
     assert "sdk for building openssl: macosx" in client.out
