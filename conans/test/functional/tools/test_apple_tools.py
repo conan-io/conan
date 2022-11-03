@@ -45,7 +45,7 @@ def test_xcrun_in_tool_requires():
     client.run("export br.py br/0.1@")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             tool_requires = "br/0.1"
