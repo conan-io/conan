@@ -4,7 +4,6 @@ from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
-from conans.util.runners import check_output_runner
 
 
 def join_arguments(args):
