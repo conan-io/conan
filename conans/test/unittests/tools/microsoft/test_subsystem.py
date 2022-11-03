@@ -18,6 +18,7 @@ def test_unix_path(subsystem, expected_path):
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
         tools.microsoft.bash:subsystem={}
+        tools.microsoft.bash:active=True
     """.format(subsystem)))
 
     settings = MockSettings({"os": "Windows"})
@@ -25,7 +26,6 @@ def test_unix_path(subsystem, expected_path):
     conanfile.conf = c.get_conanfile_conf(None)
     conanfile.settings = settings
     conanfile.settings_build = settings
-    conanfile.win_bash = True
 
     path = unix_path(conanfile, "c:/path/to/stuff")
     assert expected_path == path

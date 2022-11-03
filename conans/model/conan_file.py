@@ -144,6 +144,7 @@ class ConanFile(object):
 
     # Run in windows bash
     win_bash = None
+    win_bash_run = None  # For run scope
     tested_reference_str = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
@@ -423,8 +424,12 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuild"):
+            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
+
+        if env == "":  # This default allows not breaking for users with ``env=None`` indicating
+            # they don't want any env-file applied
+            env = "conanbuild" if scope == "build" else "conanrun"
 
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
@@ -434,7 +439,8 @@ class ConanFile(object):
                                                      msys_mingw=msys_mingw, with_login=with_login)
             envfiles_folder = self.generators_folder or os.getcwd()
             _env = [_env] if _env and isinstance(_env, str) else []
-            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder)
+            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder,
+                                              scope=scope)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
