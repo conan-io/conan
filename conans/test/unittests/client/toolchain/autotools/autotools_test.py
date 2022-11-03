@@ -20,7 +20,8 @@ def test_configure_arguments():
     runner = RunnerMock()
     conanfile = ConanFile()
     conanfile.run = runner
-    conanfile.settings = MockSettings({})
+    conanfile.settings = MockSettings({"os": "Linux"})
+    conanfile.settings_build = conanfile.settings
     conanfile.folders.set_base_source(tmp)
     conanfile.conf = Conf()
     conanfile.conf.define("tools.gnu:make_program", "my_make")
