@@ -1096,25 +1096,25 @@ def test_cmake_toolchain_vars_when_option_declared():
     install(TARGETS mylib)
     """)
 
-    t.run("new mylib/1.0 --template cmake_lib")
+    t.run("new cmake_lib -d name=mylib -d version=1.0")
     t.save({"CMakeLists.txt": cmakelists})
-    
+
     # The generated toolchain should set `BUILD_SHARED_LIBS` to `OFF`,
     # and `CMAKE_POSITION_INDEPENDENT_CODE` to `ON` and the calls to
     # `option()` in the CMakeLists.txt should respect the existing values.
     # Note: on *WINDOWS* `fPIC` is not an option for this recipe, so it's invalid
     #       to pass it to Conan, in which case the value in CMakeLists.txt
     #       takes precedence.
-    fpic_option = "-o mylib:fPIC=True" if platform.system() != "Windows" else ""
+    fpic_option = "-o mylib/*:fPIC=True" if platform.system() != "Windows" else ""
     fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
-    t.run(f"create . -o mylib:shared=False {fpic_option} --test-folder=None")
+    t.run(f"create . -o mylib/*:shared=False {fpic_option} --test-folder=None")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: {fpic_cmake_value}" in t.out
 
-    # When building manually, ensure the value passed by the toolchain overrides the ones in 
+    # When building manually, ensure the value passed by the toolchain overrides the ones in
     # the CMakeLists
-    fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
-    t.run(f"install . -o mylib:shared=False {fpic_option}")
+    fpic_option = "-o mylib/*:fPIC=False" if platform.system() != "Windows" else ""
+    t.run(f"install . -o mylib/*:shared=False {fpic_option}")
     t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: OFF" in t.out
