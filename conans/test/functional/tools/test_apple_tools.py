@@ -83,7 +83,7 @@ def test_xcrun_in_required_by_tool_requires():
     client = TestClient()
 
     openssl = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.apple import XCRun
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
