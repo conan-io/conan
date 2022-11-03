@@ -93,7 +93,7 @@ def test_xcrun_in_required_by_tool_requires():
         """)
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             tool_requires = "cmake/1.0"
