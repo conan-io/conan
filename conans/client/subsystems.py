@@ -81,7 +81,10 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         if os.path.isabs(shell_path):
             msys2_mode_env.prepend_path("PATH", os.path.dirname(shell_path))
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
+        # Make sure we save pure .bat files, without sh stuff
+        wb, conanfile.win_bash = conanfile.win_bash, None
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
+        conanfile.win_bash = wb
         env.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
