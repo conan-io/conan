@@ -41,7 +41,7 @@ def test_xcrun_in_tool_requires():
                 xcrun = XCRun(self{})
                 self.output.info("sdk: %s" % xcrun.sdk)
         """)
-    client.save({"br.py": tool.format(", use_target_settings=True")})
+    client.save({"br.py": tool.format(", use_settings_target=True")})
     client.run("export br.py br/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -78,7 +78,7 @@ def test_xcrun_in_required_by_tool_requires():
     """
     ConanCenter case, most typical, openssl builds with autotools so needs the sysroot
     and is a require by cmake so in the build context it needs the settings_build, not
-    the settings_target, that's why the use_target_settings default is False
+    the settings_target, that's why the use_settings_target default is False
     """
     client = TestClient()
 
