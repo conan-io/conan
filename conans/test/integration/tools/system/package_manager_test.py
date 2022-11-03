@@ -9,6 +9,7 @@ from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil
     PacMan, _SystemPackageManagerTool
 from conans.errors import ConanException
 from conans.model.conf import Conf
+from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
@@ -252,7 +253,7 @@ def test_tools_install_archless(tool_class, result):
     conanfile.settings_build = MockSettings({"arch": "x86_64"})
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "install"
-    with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile, arch_names={})
 
