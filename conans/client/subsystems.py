@@ -118,10 +118,9 @@ def deduce_subsystem(conanfile, scope):
     - unix_path: util for recipes
     """
     if scope.startswith("build"):
-        if hasattr(conanfile, "settings_build"):
-            the_os = conanfile.settings_build.get_safe("os")
-        else:
-            the_os = platform.system()  # FIXME: Temporary fallback until 2.0
+        the_os = conanfile.settings_build.get_safe("os")
+        if the_os is None:
+            raise ConanException("The 'build' profile must have a 'os' declared")
     else:
         the_os = conanfile.settings.get_safe("os")
 
