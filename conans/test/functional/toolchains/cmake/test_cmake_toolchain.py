@@ -1141,7 +1141,10 @@ def test_find_program_for_tool_requires():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
+        import os
+
         from conan import ConanFile
+        from conan.tools.files import copy
         class TestConan(ConanFile):
             name = "foobar"
             version = "1.0"
@@ -1150,8 +1153,8 @@ def test_find_program_for_tool_requires():
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="lib*", dst="lib")
-                self.copy(pattern="*bin", dst="bin")
+                copy(self, pattern="lib*", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
+                copy(self, pattern="*bin", src=self.build_folder, dst=os.path.join(self.package_folder, "bin"))
     """)
 
     host_profile = textwrap.dedent("""
@@ -1181,6 +1184,8 @@ def test_find_program_for_tool_requires():
                 "build_profile": build_profile
                 })
 
+    xxx = client.get_default_build_profile()
+
     client.run("create . -pr:b build_profile -pr:h build_profile")
     client.run("create . -pr:b build_profile -pr:h host_profile")
 
@@ -1201,9 +1206,8 @@ def test_find_program_for_tool_requires():
     """)
 
     cmakelists_consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
         cmake_minimum_required(VERSION 3.15)
-        project(Hello LANGUAGES CXX)
+        project(Hello LANGUAGES NONE)
         find_package(foobar CONFIG REQUIRED)
         find_program(FOOBIN_EXECUTABLE foobin)
         message("foobin executable: ${FOOBIN_EXECUTABLE}")
