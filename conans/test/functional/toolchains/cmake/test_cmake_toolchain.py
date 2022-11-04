@@ -1141,7 +1141,7 @@ def test_find_program_for_tool_requires():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             name = "foobar"
             version = "1.0"
