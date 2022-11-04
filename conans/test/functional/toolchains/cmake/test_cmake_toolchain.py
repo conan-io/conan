@@ -1178,11 +1178,11 @@ def test_find_program_for_tool_requires():
                 "libfoo.so": "",
                 "foobin": "",
                 "host_profile": host_profile,
-                "default": build_profile
+                "build_profile": build_profile
                 })
 
-    client.run("create . -pr:b default -pr:h default")
-    client.run("create . -pr:b default -pr:h host_profile")
+    client.run("create . -pr:b build_profile -pr:h build_profile")
+    client.run("create . -pr:b build_profile -pr:h host_profile")
 
     conanfile_consumer = textwrap.dedent("""
         from conan import ConanFile
@@ -1214,10 +1214,10 @@ def test_find_program_for_tool_requires():
         "conanfile_consumer.py": conanfile_consumer,
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
-        "default": build_profile}, clean_first=True)
-    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b default -pr:h host_profile")
+        "build_profile": build_profile}, clean_first=True)
+    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
-    build_context_package_id = "87a1781cf3e271d7a6db8e73b9c785c0edbe76dc"
+    build_context_package_id = "581814504b2e960b35df487e5bdb32b1ecf02253"
     host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
 
     with client.chdir("build"):
