@@ -1185,7 +1185,7 @@ def test_find_program_for_tool_requires():
     client.run("create . -pr:b default -pr:h host_profile")
 
     conanfile_consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import cmake_layout
         class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
