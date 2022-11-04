@@ -102,8 +102,15 @@ class VSRuntimeBlock(Block):
     def context(self):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
+        if settings.get_safe("os") != "Windows":
+            return
+
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
+        if compiler not in ("Visual Studio", "msvc", "clang", "intel-cc"):
+            return
+
+        runtime = settings.get_safe("compiler.runtime")
+        if runtime is None:
             return
 
         config_dict = {}
@@ -119,18 +126,26 @@ class VSRuntimeBlock(Block):
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
         if build_type is None:
             return None
-        runtime = settings.get_safe("compiler.runtime")
+
         if compiler == "Visual Studio":
             config_dict[build_type] = {"MT": "MultiThreaded",
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc" or compiler == "intel-cc":
+        elif compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
                 rt += "DLL"
             config_dict[build_type] = rt
+
+            # If clang is being used the CMake check of compiler will try to create a simple
+            # test application, and will fail because the Debug runtime is not there
+            if compiler == "clang":
+                if config_dict.get("Debug") is None:
+                    clang_rt = "MultiThreadedDebug" + ("DLL" if runtime != "static" else "")
+                    config_dict["Debug"] = clang_rt
+
         return {"vs_runtimes": config_dict}
 
 
@@ -138,7 +153,7 @@ class FPicBlock(Block):
     template = textwrap.dedent("""
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }} CACHE BOOL "Position independent code") 
         {% endif %}
         """)
 
@@ -224,7 +239,7 @@ class CppStdBlock(Block):
 class SharedLibBock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS = {{ shared_libs }}")
-        set(BUILD_SHARED_LIBS {{ shared_libs }})
+        set(BUILD_SHARED_LIBS {{ shared_libs }} CACHE BOOL "Build shared libraries")
         """)
 
     def context(self):
@@ -693,10 +708,11 @@ class GenericSystemBlock(Block):
                     toolset = msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator:
+                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
                     toolset = "ClangCL"
                 else:
-                    raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
+                    raise ConanException("CMakeToolchain with compiler=clang and a CMake "
+                                         "'Visual Studio' generator requires VS16 or VS17")
         toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
@@ -713,7 +729,7 @@ class GenericSystemBlock(Block):
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
+        if (compiler in ("Visual Studio", "msvc", "clang") or compiler_base == "Visual Studio") and \
                 generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
@@ -730,7 +746,8 @@ class GenericSystemBlock(Block):
         # TODO: Check if really necessary now that conanvcvars is used
         if "Ninja" in str(generator) and is_msvc(self._conanfile):
             compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in str(generator):
+        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
+            # definition of compiler only if not using the VS Clang toolset
             compiler_rc = "clang"
             compiler_c = "clang"
             compiler_cpp = "clang++"

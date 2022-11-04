@@ -254,6 +254,7 @@ def write_toolchain(conanfile, path, output):
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
     if conanfile.conf["tools.env.virtualenv:auto_use"]:
+        mkdir(path)
         with chdir(path):
             if conanfile.virtualbuildenv:
                 from conan.tools.env.virtualbuildenv import VirtualBuildEnv

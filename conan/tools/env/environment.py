@@ -350,7 +350,7 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo "echo Restoring environment" >> "{deactivate_file}"
+           echo "echo Restoring environment" > "{deactivate_file}"
            for v in {vars}
            do
                is_defined="true"

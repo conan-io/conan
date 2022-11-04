@@ -69,7 +69,8 @@ def test_cmake_toolchain_custom_toolchain():
     assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
     presets = load_cmake_presets(client.current_folder)
     assert "mytoolchain.cmake" in presets["configurePresets"][0]["toolchainFile"]
-    assert "binaryDir" not in presets["configurePresets"][0]
+    # Now that we define the build_folder even if not layout() binaryDir is defined
+    assert "binaryDir" in presets["configurePresets"][0]
 
 
 @pytest.mark.skipif(platform.system() != "Darwin",
@@ -1061,3 +1062,71 @@ def test_resdirs_none_cmake_install():
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
     client.run("create .", assert_error=True)
     assert "Cannot install stuff" in client.out
+
+
+def test_cmake_toolchain_vars_when_option_declared():
+    t = TestClient()
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 2.8) # <---- set this to an old version for old policies
+    cmake_policy(SET CMP0091 NEW) # <-- Needed on Windows
+    project(mylib CXX)
+
+    message("CMake version: ${CMAKE_VERSION}")
+
+    # Set the options AFTER the call to project, that is, after toolchain is loaded
+    option(BUILD_SHARED_LIBS "" ON)
+    option(CMAKE_POSITION_INDEPENDENT_CODE "" OFF)
+
+    add_library(mylib src/mylib.cpp)
+    target_include_directories(mylib PUBLIC include)
+
+    get_target_property(MYLIB_TARGET_TYPE mylib TYPE)
+    get_target_property(MYLIB_PIC mylib POSITION_INDEPENDENT_CODE)
+    message("mylib target type: ${MYLIB_TARGET_TYPE}")
+    message("MYLIB_PIC value: ${MYLIB_PIC}")
+    if(MYLIB_PIC)
+        #Note: the value is "True"/"False" if set by cmake,
+        #       and "ON"/"OFF" if set by Conan
+        message("mylib position independent code: ON")
+    else()
+        message("mylib position independent code: OFF")
+    endif()
+
+    set_target_properties(mylib PROPERTIES PUBLIC_HEADER "include/mylib.h")
+    install(TARGETS mylib)
+    """)
+
+    t.run("new mylib/1.0 --template cmake_lib")
+    t.save({"CMakeLists.txt": cmakelists})
+    
+    # The generated toolchain should set `BUILD_SHARED_LIBS` to `OFF`,
+    # and `CMAKE_POSITION_INDEPENDENT_CODE` to `ON` and the calls to
+    # `option()` in the CMakeLists.txt should respect the existing values.
+    # Note: on *WINDOWS* `fPIC` is not an option for this recipe, so it's invalid
+    #       to pass it to Conan, in which case the value in CMakeLists.txt
+    #       takes precedence.
+    fpic_option = "-o mylib:fPIC=True" if platform.system() != "Windows" else ""
+    fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
+    t.run(f"create . -o mylib:shared=False {fpic_option} --test-folder=None")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert f"mylib position independent code: {fpic_cmake_value}" in t.out
+
+    # When building manually, ensure the value passed by the toolchain overrides the ones in 
+    # the CMakeLists
+    fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
+    t.run(f"install . -o mylib:shared=False {fpic_option}")
+    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert f"mylib position independent code: OFF" in t.out
+
+    # Note: from this point forward, the CMakeCache is already initialised.
+    # When explicitly overriding `CMAKE_POSITION_INDEPENDENT_CODE` via command line, ensure
+    # this takes precedence to the value defined by the toolchain
+    t.run_command("cmake -S . -B build/ -DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
+
+    t.run_command("cmake -S . -B build/ -DBUILD_SHARED_LIBS=ON")
+    assert "mylib target type: SHARED_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out

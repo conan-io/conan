@@ -45,6 +45,19 @@ def test_msbuilddeps_format_names():
     c.run("install pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
     # loading all .props and xml parse them to check no errors
+    pkg_more = c.load("conan_pkg_name-more_.props")
+    assert "$(conan_pkg_name-more__libmpdecimal___props_imported)" in pkg_more
+    assert "$(conan_pkg_name-more__mycomp_some-comp__props_imported)" in pkg_more
+
+    some_comp = c.load("conan_pkg_name-more__mycomp_some-comp_.props")
+    assert "<conan_pkg_name-more__mycomp_some-comp__props_imported>" in some_comp
+
+    libmpdecimal = c.load("conan_pkg_name-more__libmpdecimal__.props")
+    assert "<conan_pkg_name-more__libmpdecimal___props_imported>" in libmpdecimal
+
+    libmpdecimal_release = c.load("conan_pkg_name-more__libmpdecimal___release_x64.props")
+    assert "$(conan_pkg_name-more__mycomp_some-comp__props_imported)" in libmpdecimal_release
+
     counter = 0
     for f in os.listdir(c.current_folder):
         if f.endswith(".props"):

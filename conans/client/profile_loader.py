@@ -162,7 +162,7 @@ def _load_profile(text, profile_path, default_folder):
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "tool_requires", "settings", "env",
-                                           "options", "conf", "buildenv"])
+                                           "options", "conf", "buildenv", "runenv"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -244,6 +244,10 @@ def _apply_inner_profile(doc, base_profile):
     if doc.buildenv:
         buildenv = ProfileEnvironment.loads(doc.buildenv)
         base_profile.buildenv.update_profile_env(buildenv)
+
+    if doc.runenv:
+        runenv = ProfileEnvironment.loads(doc.runenv)
+        base_profile.runenv.update_profile_env(runenv)
 
 
 def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_profile=False):

@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -62,3 +63,6 @@ def test_autotools_bash_complete():
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
 
+    # To check that the ``autotools.install()`` has worked correctly
+    # FIXME IN CONAN 2.0 this will break, no local `package_folder`
+    assert os.path.exists(os.path.join(client.current_folder, "package", "bin", "main.exe"))

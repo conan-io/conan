@@ -3955,7 +3955,7 @@ compiler:
                   "8", "8.1", "8.2", "8.3", "8.4",
                   "9", "9.1", "9.2", "9.3", "9.4",
                   "10", "10.1", "10.2", "10.3",
-                  "11", "11.1", "11.2",
+                  "11", "11.1", "11.2", "11.3",
                   "12"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32]  # Windows MinGW
@@ -3985,6 +3985,7 @@ compiler:
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [None, MD, MT, MTd, MDd, static, dynamic]
         runtime_type: [None, Debug, Release]
+        runtime_version: [None, v140, v141, v142, v143]
     apple-clang: &apple_clang
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0"]
         libcxx: [libstdc++, libc++]
@@ -4026,3 +4027,5 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]  # Deprecated, use compiler.cppstd
 """
+
+settings_1_54_0 = settings_1_53_0

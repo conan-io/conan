@@ -96,3 +96,32 @@ def test_generate_source_folder_test_package():
             "test_package/conanfile.py": conanfile})
     c.run("create .")
     assert "PKG_CONFIG_PATH True!" in c.out
+
+
+def test_generate_build_folder_test_package():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                self.output.info(f"build_folder in test_package: {bool(self.build_folder)}")
+
+            def test(self):
+                pass
+        """)
+
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+            "test_package/conanfile.py": conanfile})
+    c.run("create .")
+    assert f"build_folder in test_package: True" in c.out

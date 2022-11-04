@@ -177,10 +177,15 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
     assert "tools.microsoft.msbuildtoolchain:compile_options${'ExceptionHandling': 'Async'}" in client.out
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_jinja_global_conf(client):
     save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
-                                       "user.mycompany:other = {{platform.system()}}\n")
+                                       "user.mycompany:other = {{platform.system()}}\n"
+                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n")
     client.run("install .")
     assert "user.mycompany:parallel={}".format(os.cpu_count()/2) in client.out
     assert "user.mycompany:other={}".format(platform.system()) in client.out
+    if platform.system() == "Linux":
+        import distro
+        assert "user.mycompany:dist={}".format(distro.id()) in client.out
+    else:
+        assert "user.mycompany:dist=42" in client.out

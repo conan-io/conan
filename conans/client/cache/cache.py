@@ -170,7 +170,10 @@ class ClientCache(object):
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):
                 text = load(self.new_config_path)
-                content = Template(text).render({"platform": platform, "os": os})
+                distro = None
+                if platform.system() in ["Linux", "FreeBSD"]:
+                    import distro
+                content = Template(text).render({"platform": platform, "os": os, "distro": distro})
                 self._new_config.loads(content)
         return self._new_config
 
