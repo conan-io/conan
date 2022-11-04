@@ -1,7 +1,7 @@
 import pytest
 
-from conan.tools.build import supported_cppstd
-from conans.errors import ConanException
+from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd, default_cppstd
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.test.utils.mocks import MockSettings, MockConanfile
 
 
@@ -102,3 +102,107 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
     conanfile = MockConanfile(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
+
+
+@pytest.mark.parametrize("compiler,compiler_version,result", [
+    ("gcc", "5", 'gnu98'),
+    ("gcc", "8", "gnu14"),
+    ("msvc", "190", "14"),
+    ("apple-clang", "12.0", "gnu98"),
+    ("clang", "6", "gnu14"),
+])
+def test_default_cppstd_gcc(compiler, compiler_version, result):
+    settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
+    conanfile = MockConanfile(settings)
+    sot = default_cppstd(conanfile)
+    assert sot == result
+
+
+def test_check_cppstd_type():
+    """ cppstd must be a number
+    """
+    conanfile = MockConanfile(MockSettings({}))
+    with pytest.raises(ConanException) as exc:
+        check_min_cppstd(conanfile, "gnu17", False)
+
+    assert "cppstd parameter must be a number", str(exc)
+
+
+def _create_conanfile(compiler, version, os, cppstd, libcxx=None):
+    settings = MockSettings({"arch": "x86_64",
+                             "build_type": "Debug",
+                             "os": os,
+                             "compiler": compiler,
+                             "compiler.version": version,
+                             "compiler.cppstd": cppstd})
+    if libcxx:
+        settings.values["compiler.libcxx"] = libcxx
+    conanfile = MockConanfile(settings)
+    return conanfile
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14", "17"])
+def test_check_min_cppstd_from_settings(cppstd):
+    """ check_min_cppstd must accept cppstd less/equal than cppstd in settings
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", "17", "libstdc++")
+    check_min_cppstd(conanfile, cppstd, False)
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14"])
+def test_check_min_cppstd_from_outdated_settings(cppstd):
+    """ check_min_cppstd must raise when cppstd is greater when supported on settings
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", cppstd, "libstdc++")
+    with pytest.raises(ConanInvalidConfiguration) as exc:
+        check_min_cppstd(conanfile, "17", False)
+    assert "Current cppstd ({}) is lower than the required C++ standard (17)." \
+           "".format(cppstd) == str(exc.value)
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14", "17"])
+def test_check_min_cppstd_from_settings_with_extension(cppstd):
+    """ current cppstd in settings must has GNU extension when extensions is enabled
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", "gnu17", "libstdc++")
+    check_min_cppstd(conanfile, cppstd, True)
+
+    conanfile.settings.values["compiler.cppstd"] = "17"
+    with pytest.raises(ConanException) as raises:
+        check_min_cppstd(conanfile, cppstd, True)
+    assert "The cppstd GNU extension is required" == str(raises.value)
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14", "17"])
+def test_valid_min_cppstd_from_settings(cppstd):
+    """ valid_min_cppstd must accept cppstd less/equal than cppstd in settings
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", "17", "libstdc++")
+    assert valid_min_cppstd(conanfile, cppstd, False)
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14"])
+def test_valid_min_cppstd_from_outdated_settings(cppstd):
+    """ valid_min_cppstd returns False when cppstd is greater when supported on settings
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", cppstd, "libstdc++")
+    assert not valid_min_cppstd(conanfile, "17", False)
+
+
+@pytest.mark.parametrize("cppstd", ["98", "11", "14", "17"])
+def test_valid_min_cppstd_from_settings_with_extension(cppstd):
+    """ valid_min_cppstd must returns True when current cppstd in settings has GNU extension and
+        extensions is enabled
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", "gnu17", "libstdc++")
+    assert valid_min_cppstd(conanfile, cppstd, True)
+
+    conanfile.settings.values["compiler.cppstd"] = "17"
+    assert not valid_min_cppstd(conanfile, cppstd, True)
+
+
+def test_valid_min_cppstd_unsupported_standard():
+    """ valid_min_cppstd must returns False when the compiler does not support a standard
+    """
+    conanfile = _create_conanfile("gcc", "9", "Linux", None, "libstdc++")
+    assert not valid_min_cppstd(conanfile, "42", False)
