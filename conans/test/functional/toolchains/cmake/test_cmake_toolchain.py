@@ -1129,3 +1129,100 @@ def test_cmake_toolchain_vars_when_option_declared():
     t.run_command("cmake -S . -B build/ -DBUILD_SHARED_LIBS=ON")
     assert "mylib target type: SHARED_LIBRARY" in t.out
     assert "mylib position independent code: ON" in t.out
+
+
+#@pytest.mark.tool_cmake()
+def test_find_program_for_tool_requires():
+    """Test that the same reference can be both a tool_requires and a regular requires,
+    and that find_program (executables) and find_package (libraries) find the correct ones
+    when cross building.
+    """
+
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            name = "foobar"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "*"
+            def layout(self):
+                pass
+            def package(self):
+                self.copy(pattern="lib*", dst="lib")
+                self.copy(pattern="*bin", dst="bin")
+    """)
+
+    host_profile = textwrap.dedent("""
+    [settings]
+        os=Linux
+        arch=armv8
+        compiler=gcc
+        compiler.version=12
+        compiler.libcxx=libstdc++11
+        build_type=Release
+    """)
+
+    build_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=12
+        compiler.libcxx=libstdc++11
+        build_type=Release
+    """)
+
+    client.save({"conanfile.py": conanfile,
+                "libfoo.so": "",
+                "foobin": "",
+                "host_profile": host_profile,
+                "default": build_profile
+                })
+
+    client.run("create . -pr:b default -pr:h default")
+    client.run("create . -pr:b default -pr:h host_profile")
+
+    conanfile_consumer = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class PkgConan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                cmake_layout(self)
+            
+            def requirements(self):
+                self.requires("foobar/1.0")
+            
+            def build_requirements(self):
+                self.tool_requires("foobar/1.0")
+    """)
+
+    cmakelists_consumer = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(Hello LANGUAGES CXX)
+        find_package(foobar CONFIG REQUIRED)
+        find_program(FOOBIN_EXECUTABLE foobin)
+        message("foobin executable: ${FOOBIN_EXECUTABLE}")
+        message("foobar include dir: ${foobar_INCLUDE_DIR}")
+    """)
+
+    client.save({
+        "conanfile_consumer.py": conanfile_consumer,
+        "CMakeLists.txt": cmakelists_consumer,
+        "host_profile": host_profile,
+        "default": build_profile}, clean_first=True)
+    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b default -pr:h host_profile")
+
+    build_context_package_id = "87a1781cf3e271d7a6db8e73b9c785c0edbe76dc"
+    host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
+
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+        # Verify binary executable is found from build context package, 
+        # and library comes from host context package
+        assert f"package/{build_context_package_id}/bin/foobin" in client.out
+        assert f"package/{host_context_package_id}/include" in client.out
