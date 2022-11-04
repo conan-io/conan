@@ -105,10 +105,8 @@ def build_windows_subsystem(profile, make_program, subsystem):
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, subsystem=subsystem)
     assert "hello/0.1: Hello World Release!" in client.out
-    check_vs_runtime("app.exe", client, vs_version="16", build_type="Release", architecture="amd64",
+    check_vs_runtime("app.exe", client, vs_version="15", build_type="Release", architecture="amd64",
                      static_runtime=False, subsystem=subsystem)
-    if subsystem == "cygwin":
-        raise Exception("UNSUPPORTED TEST!!!")
 
     client.save({"app.cpp": gen_function_cpp(name="main", msg="main2",
                                              includes=["hello"], calls=["hello"])})
