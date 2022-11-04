@@ -83,14 +83,21 @@ class XCRun(object):
     XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
     """
 
-    def __init__(self, conanfile, sdk=None):
+    def __init__(self, conanfile, sdk=None, use_settings_target=False):
         """
         :param conanfile: Conanfile instance.
         :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
             sdk it automatically if ``None`` is passed.
+        :param target_settings: Try to use ``settings_target`` in case they exist (``False`` by default)
         """
-        if sdk is None and conanfile and conanfile.settings:
-            sdk = conanfile.settings.get_safe('os.sdk')
+        if conanfile:
+            settings = conanfile.settings
+            if use_settings_target and conanfile.settings_target is not None:
+                settings = conanfile.settings_target
+
+            if sdk is None and settings:
+                sdk = settings.get_safe('os.sdk')
+
         self.sdk = sdk
 
     def _invoke(self, args):
@@ -272,7 +279,7 @@ def fix_apple_shared_install_name(conanfile):
     if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         substitutions = _fix_dylib_files(conanfile)
 
-        # Only "fix" executables if dylib files were patched, otherwise 
+        # Only "fix" executables if dylib files were patched, otherwise
         # there is nothing to do.
         if substitutions:
             _fix_executables(conanfile, substitutions)
