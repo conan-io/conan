@@ -13,10 +13,10 @@ class ConanProxy(object):
         self._remote_manager = conan_app.remote_manager
         self._conan_app = conan_app
 
-    def get_recipe(self, ref):
+    def get_recipe(self, ref, remotes):
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
-        result = self._get_recipe(ref)
+        result = self._get_recipe(ref, remotes)
         conanfile_path, status, remote, new_ref = result
 
         if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
@@ -25,7 +25,7 @@ class ConanProxy(object):
         return conanfile_path, status, remote, new_ref
 
     # return the remote where the recipe was found or None if the recipe was not found
-    def _get_recipe(self, reference):
+    def _get_recipe(self, reference, remotes):
         output = ConanOutput(scope=str(reference))
 
         conanfile_path = self._cache.editable_packages.get_path(reference)
@@ -38,7 +38,7 @@ class ConanProxy(object):
         # NOT in disk, must be retrieved from remotes
         if not ref:
             # we will only check all servers for latest revision if we did a --update
-            remote, new_ref = self._download_recipe(reference, output)
+            remote, new_ref = self._download_recipe(reference, remotes, output)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -51,7 +51,7 @@ class ConanProxy(object):
         # TODO: If the revision is given, then we don't need to check for updates?
         if self._conan_app.check_updates or self._conan_app.update:
 
-            remote, remote_ref = self._find_newest_recipe_in_remotes(reference)
+            remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes)
             if remote_ref:
                 # check if we already have the latest in local cache
                 # TODO: cache2.0 here if we already have a revision in the cache but we add the
@@ -65,7 +65,7 @@ class ConanProxy(object):
                         # the remote one is newer
                         if self._conan_app.update:
                             output.info("Retrieving from remote '%s'..." % remote.name)
-                            remote, new_ref = self._download_recipe(remote_ref, output)
+                            remote, new_ref = self._download_recipe(remote_ref, remotes, output)
                             new_recipe_layout = self._cache.ref_layout(new_ref)
                             new_conanfile_path = new_recipe_layout.conanfile()
                             status = RECIPE_UPDATED
@@ -92,11 +92,11 @@ class ConanProxy(object):
             status = RECIPE_INCACHE
             return conanfile_path, status, None, ref
 
-    def _find_newest_recipe_in_remotes(self, reference):
+    def _find_newest_recipe_in_remotes(self, reference, remotes):
         output = ConanOutput(scope=str(reference))
 
         results = []
-        for remote in self._conan_app.selected_remotes:
+        for remote in remotes:
             output.info(f"Checking remote: {remote.name}")
             if not reference.revision:
                 try:
@@ -123,7 +123,7 @@ class ConanProxy(object):
         return found_rrev.get("remote"), found_rrev.get("ref")
 
     # searches in all the remotes and downloads the latest from all of them
-    def _download_recipe(self, ref, scoped_output):
+    def _download_recipe(self, ref, remotes, scoped_output):
         def _retrieve_from_remote(the_remote, reference):
             scoped_output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
@@ -135,11 +135,10 @@ class ConanProxy(object):
             return reference
 
         scoped_output.info("Not found in local cache, looking in remotes...")
-        remotes = self._conan_app.selected_remotes
         if not remotes:
             raise ConanException("No remote defined")
 
-        remote, latest_rref = self._find_newest_recipe_in_remotes(ref)
+        remote, latest_rref = self._find_newest_recipe_in_remotes(ref, remotes)
 
         if not latest_rref:
             msg = "Unable to find '%s' in remotes" % repr(ref)

@@ -137,7 +137,7 @@ class PackagePreparator:
         self._app = app
         self._output = ConanOutput()
 
-    def prepare(self, upload_bundle):
+    def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
         for recipe in upload_bundle.recipes:
             layout = self._app.cache.ref_layout(recipe.ref)
@@ -145,7 +145,7 @@ class PackagePreparator:
             conanfile = self._app.loader.load_basic(conanfile_path)
 
             if recipe.upload:
-                self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
+                self._prepare_recipe(recipe, conanfile, enabled_remotes)
             for package in recipe.packages:
                 if package.upload:
                     self._prepare_package(package)

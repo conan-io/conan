@@ -23,7 +23,7 @@ class RangeResolver(object):
             pattern_cached.update({remote.name: results})
         return results
 
-    def resolve(self, require, base_conanref):
+    def resolve(self, require, base_conanref, remotes):
         version_range = require.version_range
         if version_range is None:
             return require.ref
@@ -40,7 +40,7 @@ class RangeResolver(object):
 
         resolved_ref = self._resolve_local(search_ref, version_range)
         if resolved_ref is None or self._conan_app.update:
-            remote_resolved_ref = self._resolve_remote(search_ref, version_range)
+            remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
                 resolved_ref = remote_resolved_ref
@@ -64,9 +64,9 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_and_resolve_remotes(self, search_ref, version_range):
+    def _search_and_resolve_remotes(self, search_ref, version_range, remotes):
         results = []
-        for remote in self._conan_app.selected_remotes:
+        for remote in remotes:
             remote_results = self._search_remote_recipes(remote, search_ref)
             remote_results = [ref for ref in remote_results
                               if ref.user == search_ref.user
@@ -86,9 +86,9 @@ class RangeResolver(object):
         else:
             return None
 
-    def _resolve_remote(self, search_ref, version_range):
+    def _resolve_remote(self, search_ref, version_range, remotes):
         # Searching for just the name is much faster in remotes like Artifactory
-        resolved_ref  = self._search_and_resolve_remotes(search_ref, version_range)
+        resolved_ref  = self._search_and_resolve_remotes(search_ref, version_range, remotes)
         # We don't want here to resolve the revision that should be done in the proxy
         # as any other regular flow
         # FIXME: refactor all this and update for 2.0

@@ -3,7 +3,6 @@ from collections import OrderedDict
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conan.cli.commands.list import print_list_recipes, default_json_formatter
-from conan.api.subapi.remotes import get_remote_selection
 
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
@@ -19,7 +18,7 @@ def search(conan_api: ConanAPIV2, parser, *args):
                              "in all remotes")
     args = parser.parse_args(*args)
 
-    remotes = get_remote_selection(conan_api, args.remote)
+    remotes = conan_api.remotes.list(args.remote)
 
     results = OrderedDict()
     for remote in remotes:

@@ -7,54 +7,57 @@ from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.errors import ConanException
 
 
-# TODO: Redesign these, why not part of the API?
-#  Why selection logic is different for "conan list" and "conan install"
-def get_remote_selection(conan_api, remote_patterns):
-    """
-    Return a list of Remote() objects matching the specified patterns. If a pattern doesn't match
-    anything, it fails
-    """
-    ret_remotes = []
-    for pattern in remote_patterns:
-        tmp = conan_api.remotes.list(pattern=pattern, only_enabled=True)
-        if not tmp:
-            raise ConanException("Remotes for pattern '{}' can't be found or are "
-                                 "disabled".format(pattern))
-        ret_remotes.extend(tmp)
-    return ret_remotes
-
-
-def get_multiple_remotes(conan_api, remote_names=None):
-    if remote_names:
-        # FIXME: Check this, this can get disabled remotes, it is intended?
-        return [conan_api.remotes.get(remote_name) for remote_name in remote_names]
-    elif remote_names is None:
-        # if we don't pass any remotes we want to retrieve only the enabled ones
-        return conan_api.remotes.list(only_enabled=True)
-
-
 class RemotesAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
     @api_method
-    def list(self, pattern=None, only_enabled=False):
+    def list(self, pattern=None, only_enabled=True):
+        """
+        :param pattern: if None, all remotes will be listed
+                        it can be a single value or a list of values
+        :param only_enabled:
+        :return:
+        """
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
-        if pattern:
-            filtered_remotes = []
-            for remote in remotes:
-                if fnmatch.fnmatch(remote.name, pattern):
-                    filtered_remotes.append(remote)
-
-            if not filtered_remotes and "*" not in pattern:
-                raise ConanException(f"Remote '{pattern}' not found in remotes")
-
-            remotes = filtered_remotes
         if only_enabled:
             remotes = [r for r in remotes if not r.disabled]
+        if pattern:
+            filtered_remotes = []
+            patterns = [pattern] if isinstance(pattern, str) else pattern
+            for p in patterns:
+                is_match = False
+                for remote in remotes:
+                    if fnmatch.fnmatch(remote.name, p):
+                        is_match = True
+                        if remote not in filtered_remotes:
+                            filtered_remotes.append(remote)
+                if not is_match:
+                    if "*" in p or "?" in p:
+                        if only_enabled:
+                            raise ConanException(
+                                f"Remotes for pattern '{p}' can't be found or are disabled")
+                    else:
+                        raise ConanException(f"Remote '{p}' can't be found or is disabled")
+
+            remotes = filtered_remotes
         return remotes
+
+    @api_method
+    def disable(self, pattern):
+        remotes = self.list(pattern, only_enabled=False)
+        for r in remotes:
+            r.disabled = True
+            self.update(r)
+
+    @api_method
+    def enable(self, pattern):
+        remotes = self.list(pattern, only_enabled=False)
+        for r in remotes:
+            r.disabled = False
+            self.update(r)
 
     @api_method
     def get(self, remote_name):

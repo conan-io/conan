@@ -193,7 +193,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "ERROR: Remote 'wrong_remote' not found in remotes"
+        expected_output = "ERROR: Remotes for pattern 'wrong_remote' can't be found or are disabled"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)
