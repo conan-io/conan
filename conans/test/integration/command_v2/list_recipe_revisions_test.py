@@ -101,7 +101,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         # disbaled remote won't appear
         self.client.run("list recipe-revisions whatever/1.0 -r remote1 -r remote2",
                         assert_error=True)
-        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
+        assert "ERROR: Remote 'remote1' can't be found or is disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
@@ -187,7 +187,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "ERROR: Remotes for pattern 'wrong_remote' can't be found or are disabled"
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)

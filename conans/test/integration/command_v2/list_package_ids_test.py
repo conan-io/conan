@@ -175,7 +175,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
         self.client.run("list packages whatever/1.0#123 -r remote1 -r remote2", assert_error=True)
-        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
+        assert "ERROR: Remote 'remote1' can't be found or is disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"), "ERROR: Review your network!"),
@@ -335,7 +335,7 @@ class TestRemotes(TestListPackageIdsBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "ERROR: Remotes for pattern 'wrong_remote' can't be found or are disabled"
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)

@@ -45,7 +45,7 @@ class TestSearch:
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1", assert_error=True)
-        expected_output = "ERROR: Remotes for pattern 'remote1' can't be found or are disabled"
+        expected_output = "ERROR: Remote 'remote1' can't be found or is disabled"
         assert expected_output in self.client.out
 
 
@@ -212,7 +212,7 @@ class TestRemotes:
         self._add_recipe(remote1, remote1_recipe2)
 
         self.client.run("search -r wrong_remote test_recipe", assert_error=True)
-        expected_output = "ERROR: Remotes for pattern 'wrong_remote' can't be found or are disabled"
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
         assert expected_output in self.client.out
 
     def test_search_wildcard(self):
