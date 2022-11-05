@@ -89,7 +89,7 @@ class ConanFileLoader:
                    remotes=None):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes)
+        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes=remotes)
 
         # Export does a check on existing name & version
         if name:

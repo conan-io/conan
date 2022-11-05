@@ -27,7 +27,7 @@ class DownloadAPI:
 
         layout = app.cache.ref_layout(ref)
         conan_file_path = layout.conanfile()
-        conanfile = app.loader.load_basic(conan_file_path, display=ref)
+        conanfile = app.loader.load_basic(conan_file_path, display=ref, remotes=[remote])
 
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
