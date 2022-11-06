@@ -232,7 +232,7 @@ class Requirement:
         self.run = self.run or other.run
         self.visible |= other.visible
         self.force |= other.force
-        # self.direct |= other.direct
+        self.direct |= other.direct
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
         # TODO: self.package_id_mode => Choose more restrictive?
