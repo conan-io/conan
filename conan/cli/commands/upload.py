@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.client.userio import UserInput
