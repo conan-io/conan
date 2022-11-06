@@ -3,9 +3,12 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import save
 
 
 class SourceTest(unittest.TestCase):
@@ -236,3 +239,46 @@ class ConanLib(ConanFile):
         client.run("create . --name=lib --version=1.0", assert_error=True)
         assert "Running source!" in client.out
         assert "Source folder is corrupted, forcing removal" in client.out
+
+
+class TestSourceWithoutDefaultProfile:
+    # https://github.com/conan-io/conan/issues/12371
+    @pytest.fixture()
+    def client(self):
+        c = TestClient()
+        # The ``source()`` should still receive necessary configuration
+        save(c.cache.new_config_path, "tools.files.download:download_cache=MYCACHE")
+        # Make sure we don't have default profile
+        os.remove(c.cache.default_profile_path)
+        return c
+
+    def test_source_without_default_profile(self, client):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                def source(self):
+                    c = self.conf.get("tools.files.download:download_cache")
+                    self.output.info("CACHE:{}!!".format(c))
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        assert "conanfile.py: Calling source()" in client.out
+        assert "CACHE:MYCACHE!!" in client.out
+
+    def test_source_with_layout(self, client):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def layout(self):
+                    cmake_layout(self)
+                def source(self):
+                    c = self.conf.get("tools.files.download:download_cache")
+                    self.output.info("CACHE:{}!!".format(c))
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        assert "conanfile.py: Calling source()" in client.out
+        assert "CACHE:MYCACHE!!" in client.out
