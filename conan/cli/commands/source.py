@@ -15,7 +15,7 @@ from conans.model.options import Options
 @conan_command(group=COMMAND_GROUPS['creator'])
 def source(conan_api, parser, *args):
     """
-    Install + calls the build() method
+    Calls the source() method
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
