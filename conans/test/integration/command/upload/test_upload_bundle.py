@@ -33,12 +33,12 @@ def test_upload_bundle():
 
             remote = conan_api.remotes.get(args.remote)
 
-            upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query)
+            upload_bundle = conan_api.upload.get_bundle(args.reference)
             if not upload_bundle.recipes:
                 raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
             # Check if the recipes/packages are in the remote
-            conan_api.upload.check_upstream(upload_bundle, remote, args.force)
+            conan_api.upload.check_upstream(upload_bundle, remote)
 
             if not upload_bundle.any_upload:
                 return
@@ -52,7 +52,7 @@ def test_upload_bundle():
     c.save({command_file_path: mycommand})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
-    c.run("upload-bundle * -r=default", redirect_stdout="mybundle.json")
+    c.run('upload-bundle "*" -r=default', redirect_stdout="mybundle.json")
     bundle = c.load("mybundle.json")
     # print(bundle)
     bundle = json.loads(bundle)
