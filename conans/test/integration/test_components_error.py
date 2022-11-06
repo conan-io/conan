@@ -1,4 +1,4 @@
-import os.path
+import os
 import textwrap
 
 from conans.test.utils.tools import TestClient
@@ -37,7 +37,7 @@ def test_component_error():
         class t3Conan(ConanFile):
             name = "t3"
             version = "0.1.0"
-            requires = "t1/0.1.0", "t2/0.1.0"
+            requires = "t2/0.1.0"
             package_type = "application"
             generators = "CMakeDeps"
             settings = "os", "arch", "compiler", "build_type"
@@ -51,4 +51,23 @@ def test_component_error():
     c.run("install t3")
 
     arch = c.get_default_host_profile().settings['arch']
-    assert 'list(APPEND t2_FIND_DEPENDENCY_NAMES t1)' in c.load(f"t3/t2-release-{arch}-data.cmake")
+    assert 'set(t2_FIND_DEPENDENCY_NAMES "")' in c.load(f"t3/t2-release-{arch}-data.cmake")
+    assert not os.path.exists(os.path.join(c.current_folder, "t3/t1-config.cmake"))
+
+    t4 = textwrap.dedent("""
+        from conan import ConanFile
+
+        class t4Conan(ConanFile):
+            name = "t4"
+            version = "0.1.0"
+            requires = "t1/0.1.0", "t2/0.1.0"
+            package_type = "application"
+            generators = "CMakeDeps"
+            settings = "os", "arch", "compiler", "build_type"
+        """)
+
+    c.save({"t4/conanfile.py": t4})
+    c.run("install t4")
+
+    arch = c.get_default_host_profile().settings['arch']
+    assert 'list(APPEND t2_FIND_DEPENDENCY_NAMES t1)' in c.load(f"t4/t2-release-{arch}-data.cmake")
