@@ -182,7 +182,6 @@ class ConanLib(ConanFile):
         self.assertIn("Sources downloaded from 'server0'", client.out)
 
     def test_source_method_called_once(self):
-
         """
         Test that the source() method will be executed just once, and the source code will
         be shared for all the package builds.
@@ -213,7 +212,6 @@ class ConanLib(ConanFile):
         assert "Running source!" not in client.out
 
     def test_source_method_called_again_if_left_dirty(self):
-
         """
         If we fail in retreiving sources make sure the source() method will be called
         next time we create
