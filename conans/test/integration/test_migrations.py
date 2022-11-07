@@ -9,8 +9,7 @@ from conans.util.files import save, load
 @pytest.mark.parametrize(["plugin_path", "string_replace", "new_string"],
                          [("profile.py", "msvc", "EME_ESE_VC"),
                           ("compatibility/compatibility.py", "conanfile", "conian_file"),
-                          ("compatibility/cppstd_compat.py", "conanfile", "conian_file"),
-                          ("compatibility/app_compat.py", "conanfile", "conian_file")])
+                          ("compatibility/cppstd_compat.py", "conanfile", "conian_file")])
 def test_migration_profile_checker_plugin(plugin_path, string_replace, new_string):
     t = TestClient()
     # Any command generates the profile and compatibility plugin files
