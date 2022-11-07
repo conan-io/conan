@@ -1131,7 +1131,7 @@ def test_cmake_toolchain_vars_when_option_declared():
     assert "mylib position independent code: ON" in t.out
 
 
-#@pytest.mark.tool_cmake()
+@pytest.mark.tool_cmake
 def test_find_program_for_tool_requires():
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
