@@ -12,7 +12,6 @@ from conan.api.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.pkg_type import PackageType
 from conans.util.files import chdir, mkdir
 
 
@@ -53,12 +52,7 @@ def create(conan_api, parser, *args):
     is_python_require = conanfile.package_type == "python-require"
 
     if lockfile:
-        if is_python_require:
-            lockfile.add(python_requires=[ref])
-        elif args.build_require:
-            lockfile.add(build_requires=[ref])
-        else:
-            lockfile.add(requires=[ref])
+        lockfile.add(requires=[ref])
 
     out.title("Input profiles")
     out.info("Profile host:")
