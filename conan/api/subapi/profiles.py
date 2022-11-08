@@ -31,7 +31,7 @@ class ProfilesAPI:
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
         """
-        assert profiles and isinstance(profiles, list), "Please provide at least 1 profile"
+        assert isinstance(profiles, list), "Please provide a list of profiles"
         loader = ProfileLoader(self._cache)
         env = None  # TODO: Not handling environment
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
