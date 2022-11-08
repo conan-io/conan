@@ -55,10 +55,10 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def install(self, args=None):
+    def install(self, args=None, target="install"):
         args = args if args is not None else \
             ["DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder))]
-        self.make(target="install", args=args)
+        self.make(target=target, args=args)
 
     def autoreconf(self, args=None):
         args = args or []
