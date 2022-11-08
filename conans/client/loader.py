@@ -31,12 +31,12 @@ class ConanFileLoader:
         self._conanfile_helpers = conanfile_helpers
         invalidate_caches()
 
-    def load_basic(self, conanfile_path, graph_lock=None, display=""):
+    def load_basic(self, conanfile_path, graph_lock=None, display="", remotes=None):
         """ loads a conanfile basic object without evaluating anything
         """
-        return self.load_basic_module(conanfile_path, graph_lock, display)[0]
+        return self.load_basic_module(conanfile_path, graph_lock, display, remotes)[0]
 
-    def load_basic_module(self, conanfile_path, graph_lock=None, display=""):
+    def load_basic_module(self, conanfile_path, graph_lock=None, display="", remotes=None):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
@@ -52,7 +52,7 @@ class ConanFileLoader:
             module, conanfile = parse_conanfile(conanfile_path)
 
             if self._pyreq_loader:
-                self._pyreq_loader.load_py_requires(conanfile, self, graph_lock)
+                self._pyreq_loader.load_py_requires(conanfile, self, graph_lock, remotes)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
             conanfile.recipe_path = Path(conanfile.recipe_folder)
@@ -85,10 +85,11 @@ class ConanFileLoader:
 
         return data or {}
 
-    def load_named(self, conanfile_path, name, version, user, channel, graph_lock=None):
+    def load_named(self, conanfile_path, name, version, user, channel, graph_lock=None,
+                   remotes=None):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock)
+        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes=remotes)
 
         # Export does a check on existing name & version
         if name:
@@ -143,10 +144,11 @@ class ConanFileLoader:
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
-                      channel=None, graph_lock=None):
+                      channel=None, graph_lock=None, remotes=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
-        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
+        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock,
+                                    remotes)
 
         ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):
@@ -160,12 +162,12 @@ class ConanFileLoader:
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile(self, conanfile_path, ref, graph_lock=None):
+    def load_conanfile(self, conanfile_path, ref, graph_lock=None, remotes=None):
         """ load a conanfile with a full reference, name, version, user and channel are obtained
         from the reference, not evaluated. Main way to load from the cache
         """
         try:
-            conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, str(ref))
+            conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, str(ref), remotes)
         except Exception as e:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
