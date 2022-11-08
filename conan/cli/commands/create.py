@@ -12,7 +12,6 @@ from conan.api.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.pkg_type import PackageType
 from conans.util.files import chdir, mkdir
 
 
@@ -66,7 +65,7 @@ def create(conan_api, parser, *args):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    if True:  # just to keep diff shorter now
+    if not is_python_require:
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         scope_options(profile_host, requires=requires, tool_requires=tool_requires)
@@ -74,25 +73,25 @@ def create(conan_api, parser, *args):
                                                                 tool_requires=tool_requires,
                                                                 profile_host=profile_host)
 
-    out.title("Computing dependency graph")
-    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                            profile_build=profile_build,
-                                            lockfile=lockfile,
-                                            remotes=remotes,
-                                            update=args.update)
-    print_graph_basic(deps_graph)
-    out.title("Computing necessary packages")
-    if args.build is None:  # Not specified, force build the tested library
-        build_modes = [ref.repr_notime()]
-    else:
-        build_modes = args.build
-    deps_graph.report_graph_error()
-    conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update,
-                                     lockfile=lockfile)
-    print_graph_packages(deps_graph)
+        out.title("Computing dependency graph")
+        deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
+                                                profile_build=profile_build,
+                                                lockfile=lockfile,
+                                                remotes=remotes,
+                                                update=args.update)
+        print_graph_basic(deps_graph)
+        out.title("Computing necessary packages")
+        if args.build is None:  # Not specified, force build the tested library
+            build_modes = [ref.repr_notime()]
+        else:
+            build_modes = args.build
+        deps_graph.report_graph_error()
+        conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=args.update,
+                                         lockfile=lockfile)
+        print_graph_packages(deps_graph)
 
-    out.title("Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
+        out.title("Installing packages")
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     if args.test_folder == "None":
         # Now if parameter --test-folder=None (string None) we have to skip tests

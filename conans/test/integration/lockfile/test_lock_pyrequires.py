@@ -84,3 +84,14 @@ def test_transitive_matching_ranges():
     assert "pkga/0.2: dep: dep/0.1!!" in client.out
     assert "pkgb/0.2: tool: tool/0.3!!" in client.out
     assert "pkgb/0.2: dep: dep/0.2!!" in client.out
+
+
+def test_lock_pyrequires():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require"),
+            "conan.lock": """{"version": "0.5",
+                                "requires": [],
+                                "build_requires": [],
+                                "python_requires": []}"""})
+    c.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
+    print(c.load("conan.lock"))
