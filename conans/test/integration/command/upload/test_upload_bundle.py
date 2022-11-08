@@ -32,6 +32,7 @@ def test_upload_bundle():
             args = parser.parse_args(*args)
 
             remote = conan_api.remotes.get(args.remote)
+            enabled_remotes = conan_api.remotes.list()
 
             upload_bundle = conan_api.upload.get_bundle(args.reference)
             if not upload_bundle.recipes:
@@ -43,7 +44,7 @@ def test_upload_bundle():
             if not upload_bundle.any_upload:
                 return
 
-            conan_api.upload.prepare(upload_bundle)
+            conan_api.upload.prepare(upload_bundle, enabled_remotes)
             cli_out_write(json.dumps(upload_bundle.serialize(), indent=4))
         """)
 
