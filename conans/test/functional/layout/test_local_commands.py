@@ -1,5 +1,4 @@
 import os
-import platform
 import re
 import textwrap
 

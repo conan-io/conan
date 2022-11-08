@@ -54,7 +54,7 @@ class GraphBinariesAnalyzer(object):
     def _get_package_from_remotes(self, node):
         results = []
         pref = node.pref
-        for r in self._app.selected_remotes:
+        for r in self._selected_remotes:
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})
@@ -63,8 +63,8 @@ class GraphBinariesAnalyzer(object):
             except NotFoundException:
                 pass
 
-        if not self._app.enabled_remotes and self._app.update:
-            node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
+        if not self._selected_remotes and self._app.update:
+            node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
             remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
@@ -292,7 +292,8 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes):
+        self._selected_remotes = remotes or []# TODO: A bit dirty interfaz, pass as arg instead
         build_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):

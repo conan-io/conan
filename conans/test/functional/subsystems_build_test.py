@@ -486,7 +486,7 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")
 
-    @pytest.mark.tool("clang")
+    @pytest.mark.tool("clang", "13")
     def test_clang(self):
         """
         native, LLVM/Clang compiler

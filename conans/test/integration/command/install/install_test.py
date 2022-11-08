@@ -281,12 +281,12 @@ def test_install_disabled_remote(client):
     client.run("upload * --confirm -r default")
     client.run("remote disable default")
     client.run("install --requires=pkg/0.1@lasote/testing -r default", assert_error=True)
-    assert "Remote 'default' is disabled" in client.out
+    assert "ERROR: Remote 'default' can't be found or is disabled" in client.out
     client.run("remote enable default")
     client.run("install --requires=pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
     client.run("install --requires=pkg/0.1@lasote/testing --update -r default", assert_error=True)
-    assert "Remote 'default' is disabled" in client.out
+    assert "ERROR: Remote 'default' can't be found or is disabled" in client.out
 
 
 def test_install_skip_disabled_remote():

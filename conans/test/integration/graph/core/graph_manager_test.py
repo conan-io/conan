@@ -616,6 +616,36 @@ class TestDiamond(GraphManagerTest):
         # Order seems to be link order
         _check_transitive(app, [(libc, True, True, False, False),
                                 (liba, True, True, False, False)])
+        # Both requires of app are direct! https://github.com/conan-io/conan/pull/12388
+        for require in app.transitive_deps.keys():
+            assert require.direct is True
+
+    def test_half_diamond_reverse(self):
+        # same as above, just swap order of declaration
+        # app -->libc0.1--> liba0.1
+        #    \-------------->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("libc/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "liba/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        liba = app.dependencies[1].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[liba, libc])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[app, libc])
+
+        # Order seems to be link order, constant irrespective of declaration order, good
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (liba, True, True, False, False)])
+        # Both requires of app are direct! https://github.com/conan-io/conan/pull/12388
+        for require in app.transitive_deps.keys():
+            assert require.direct is True
 
     def test_shared_static(self):
         # app -> libb0.1 (shared) -> liba0.1 (static)

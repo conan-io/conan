@@ -50,13 +50,10 @@ def test_apt_install_substitutes():
     client.save({"conanfile.py": conanfile_py.format(installs)})
     client.run("create . --name=test --version=1.0 -c tools.system.package_manager:mode=install "
                "-c tools.system.package_manager:sudo=True", assert_error=True)
-    host_arch = client.get_default_host_profile().settings['arch']
-    arch_map = {"armv8": "arm64", "x86_64": "amd64"}
-    dpkg_arch = arch_map[host_arch]
-    assert f"dpkg-query: no packages found matching non-existing1:{dpkg_arch}" in client.out
-    assert f"dpkg-query: no packages found matching non-existing2:{dpkg_arch}" in client.out
-    assert f"dpkg-query: no packages found matching non-existing3:{dpkg_arch}" in client.out
-    assert f"dpkg-query: no packages found matching non-existing4:{dpkg_arch}" in client.out
+    assert "dpkg-query: no packages found matching non-existing1" in client.out
+    assert "dpkg-query: no packages found matching non-existing2" in client.out
+    assert "dpkg-query: no packages found matching non-existing3" in client.out
+    assert "dpkg-query: no packages found matching non-existing4" in client.out
     assert "None of the installs for the package substitutes succeeded." in client.out
 
     client.run_command("sudo apt remove nano -yy")
@@ -91,8 +88,8 @@ def test_build_require():
         """)})
     client.run("create consumer.py --name=consumer --version=1.0 "
                "-s:b arch=armv8 -s:h arch=x86 --build=missing")
-    assert "dpkg-query: no packages found matching non-existing1:arm64" in client.out
-    assert "dpkg-query: no packages found matching non-existing2:arm64" in client.out
+    assert "dpkg-query: no packages found matching non-existing1" in client.out
+    assert "dpkg-query: no packages found matching non-existing2" in client.out
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 

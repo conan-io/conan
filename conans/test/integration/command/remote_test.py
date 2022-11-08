@@ -195,10 +195,11 @@ class RemoteTest(unittest.TestCase):
         client = TestClient()
 
         client.run("remote disable invalid_remote", assert_error=True)
-        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
+        msg = "ERROR: Remote 'invalid_remote' can't be found or is disabled"
+        self.assertIn(msg, client.out)
 
         client.run("remote enable invalid_remote", assert_error=True)
-        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
+        self.assertIn(msg, client.out)
 
         client.run("remote disable invalid_wildcard_*")
 

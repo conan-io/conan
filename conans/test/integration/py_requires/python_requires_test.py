@@ -1036,6 +1036,7 @@ class TestTestPackagePythonRequire:
             class Common(ConanFile):
                 name = "common"
                 version = "0.1"
+                package_type = "python-require"
             """)
         test = textwrap.dedent("""
             from conan import ConanFile
@@ -1046,7 +1047,7 @@ class TestTestPackagePythonRequire:
             """)
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
-        c.run("create . --python-require")
+        c.run("create .")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
@@ -1061,6 +1062,7 @@ class TestTestPackagePythonRequire:
             class Common(ConanFile):
                 name = "common"
                 version = "0.1"
+                package_type = "python-require"
             """)
         test = textwrap.dedent("""
             from conan import ConanFile
@@ -1073,7 +1075,7 @@ class TestTestPackagePythonRequire:
             """)
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
-        c.run("create . --python-require")
+        c.run("create . ")
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
-        c.run("create . --python-require -s build_type=Debug")
+        c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out

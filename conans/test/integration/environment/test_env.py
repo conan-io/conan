@@ -510,19 +510,19 @@ def test_multiple_deactivate():
     os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
     client.run("install .")
 
-    if platform.system() == "Windows":
-        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
-    else:
-        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
-    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              shell=True, cwd=client.current_folder).communicate()
-    out = out.decode()
-    assert "VAR1=Value1!!" in out
-    assert "VAR2=Value2!!" in out
-    # conanbuildenv is included
-    assert 3 == str(out).count("Restoring environment")
-    assert "VAR1=!!" in out
-    assert "VAR2=!!" in out
+    for _ in range(2):  # Just repeat it, so we can check things keep working
+        if platform.system() == "Windows":
+            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        else:
+            cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  shell=True, cwd=client.current_folder).communicate()
+        out = out.decode()
+        assert "VAR1=Value1!!" in out
+        assert "VAR2=Value2!!" in out
+        assert 3 == str(out).count("Restoring environment")
+        assert "VAR1=!!" in out
+        assert "VAR2=!!" in out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")

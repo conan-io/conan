@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.client.userio import UserInput
@@ -39,6 +37,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     args = parser.parse_args(*args)
 
     remote = conan_api.remotes.get(args.remote)
+    enabled_remotes = conan_api.remotes.list()
 
     upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
     if not upload_bundle.recipes:
@@ -57,7 +56,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     if not upload_bundle.any_upload:
         return
 
-    conan_api.upload.prepare(upload_bundle)
+    conan_api.upload.prepare(upload_bundle, enabled_remotes)
     conan_api.upload.upload_bundle(upload_bundle, remote)
 
 

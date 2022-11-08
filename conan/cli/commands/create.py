@@ -7,12 +7,12 @@ from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import get_lockfile, get_profiles_from_args, scope_options, save_lockfile_out
-from conan.api.subapi.remotes import get_multiple_remotes
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
 from conan.api.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.pkg_type import PackageType
 from conans.util.files import chdir, mkdir
 
 
@@ -31,8 +31,6 @@ def create(conan_api, parser, *args):
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
-    parser.add_argument("--python-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "None" to skip the test stage')
@@ -42,17 +40,20 @@ def create(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
                             partial=args.lockfile_partial)
-    remotes = get_multiple_remotes(conan_api, args.remote)
+    remotes = conan_api.remotes.list(args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
     out.highlight("Exporting the recipe")
-    ref = conan_api.export.export(path=path,
-                                  name=args.name, version=args.version,
-                                  user=args.user, channel=args.channel,
-                                  lockfile=lockfile)
+    ref, conanfile = conan_api.export.export(path=path,
+                                             name=args.name, version=args.version,
+                                             user=args.user, channel=args.channel,
+                                             lockfile=lockfile)
+    # The package_type is not fully processed at export
+    is_python_require = conanfile.package_type == "python-require"
+
     if lockfile:
-        if args.python_require:
+        if is_python_require:
             lockfile.add(python_requires=[ref])
         elif args.build_require:
             lockfile.add(build_requires=[ref])
@@ -101,7 +102,7 @@ def create(conan_api, parser, *args):
         # TODO: We need arguments for:
         #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
-        tested_python_requires = ref.repr_notime() if args.python_require else None
+        tested_python_requires = ref.repr_notime() if is_python_require else None
         from conan.cli.commands.test import run_test
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
                               remotes, lockfile, update=False, build_modes=None,

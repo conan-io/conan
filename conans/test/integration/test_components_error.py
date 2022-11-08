@@ -1,4 +1,4 @@
-import os.path
+import os
 import textwrap
 
 from conans.test.utils.tools import TestClient

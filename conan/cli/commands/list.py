@@ -4,7 +4,6 @@ from collections import OrderedDict
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conan.cli.commands import default_json_formatter
-from conan.api.subapi.remotes import get_remote_selection
 from conan.cli.formatters.list import list_packages_html
 from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -108,7 +107,7 @@ def _selected_cache_remotes(conan_api, args):
     if args.cache or not args.remote:
         remotes.append(None)
     if args.remote:
-        remotes.extend(get_remote_selection(conan_api, args.remote))
+        remotes.extend(conan_api.remotes.list(args.remote))
     return remotes
 
 

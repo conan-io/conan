@@ -32,12 +32,12 @@ def export_pkg(conan_api, parser, *args):
 
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
-    ref = conan_api.export.export(path=path,
-                                  name=args.name,
-                                  version=args.version,
-                                  user=args.user,
-                                  channel=args.channel,
-                                  lockfile=lockfile)
+    ref, _ = conan_api.export.export(path=path,
+                                     name=args.name,
+                                     version=args.version,
+                                     user=args.user,
+                                     channel=args.channel,
+                                     lockfile=lockfile)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
     scope_options(profile_host, requires=[ref], tool_requires=None)

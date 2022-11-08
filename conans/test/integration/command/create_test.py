@@ -745,7 +745,6 @@ def test_defaults_in_components():
     assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out))
     assert "WARN: FOO RESDIRS: []" in client.out
 
-
     # The paths are absolute and the components have defaults
     # ".+" Check that there is a path, not only "lib"
     assert re.search("BINDIRS: \['.+bin'\]", str(client.out))
@@ -755,3 +754,14 @@ def test_defaults_in_components():
     assert bool(re.search("WARN: FOO LIBDIRS: \['.+lib'\]", str(client.out)))
     assert bool(re.search("WARN: FOO INCLUDEDIRS: \['.+include'\]", str(client.out)))
     assert "WARN: FOO RESDIRS: []" in client.out
+
+
+def test_name_never():
+    """ check that a package can be named equal to a build policy --build=never,
+    because --build are now patterns
+    Close https://github.com/conan-io/conan/issues/12430
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("never", "0.1")})
+    c.run("create .")
+    assert "never/0.1: Created package" in c.out

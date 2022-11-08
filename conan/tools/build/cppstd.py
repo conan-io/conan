@@ -84,11 +84,11 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
     :param compiler_version: Version of the compiler e.g. 12
     :return: The default ``compiler.cppstd`` for the specified compiler
     """
-    from conans.client.conf.detect import _cppstd_default
     compiler = compiler or conanfile.settings.get_safe("compiler")
     compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
     if not compiler or not compiler_version:
         raise ConanException("Called default_cppstd with no compiler or no compiler.version")
+    from conans.client.conf.detect import _cppstd_default
     return _cppstd_default(compiler, Version(compiler_version))
 
 

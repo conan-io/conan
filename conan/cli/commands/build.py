@@ -5,7 +5,6 @@ from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, _get_conanfile_path
 from conan.cli.common import save_lockfile_out
-from conan.api.subapi.remotes import get_multiple_remotes
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
     _help_build_policies
 from conan.api.conan_app import ConanApp
@@ -31,13 +30,13 @@ def build(conan_api, parser, *args):
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
-    remote = get_multiple_remotes(conan_api, args.remote)
+    remotes = conan_api.remotes.list(args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
     out.title("Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None

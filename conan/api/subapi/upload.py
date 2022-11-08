@@ -62,20 +62,16 @@ class UploadAPI:
         """Check if the artifacts are already in the specified remote, skipping them from
         the upload_bundle in that case"""
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes([remote])
         UploadUpstreamChecker(app).check(upload_bundle, remote, force)
 
     @api_method
-    def prepare(self, upload_bundle):
+    def prepare(self, upload_bundle, enabled_remotes):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there"""
         app = ConanApp(self.conan_api.cache_folder)
-        # Necessary to load remotes, as exports_sources might need to be retrieved to
-        # prepare the artifacts
-        app.load_remotes()
         preparator = PackagePreparator(app)
-        preparator.prepare(upload_bundle)
+        preparator.prepare(upload_bundle, enabled_remotes)
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to upload_bundle with signatures
         signer.sign(upload_bundle)
@@ -83,7 +79,6 @@ class UploadAPI:
     @api_method
     def upload_bundle(self, upload_bundle, remote):
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes([remote])
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(upload_bundle, remote)
