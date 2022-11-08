@@ -93,6 +93,7 @@ def create(conan_api, parser, *args):
         out.title("Installing packages")
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
+        i
     if args.test_folder == "None":
         # Now if parameter --test-folder=None (string None) we have to skip tests
         args.test_folder = False

@@ -54,6 +54,7 @@ class ConanAPIV2(object):
         self.upload = UploadAPI(self)
         self.download = DownloadAPI(self)
         self.cache = CacheAPI(self)
+        self.lockfile = LockfileAPI(self)
 
 
 ConanAPI = ConanAPIV2

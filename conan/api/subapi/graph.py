@@ -126,10 +126,6 @@ class GraphAPI:
         remotes = remotes or []
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, remotes)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
-
-        if lockfile:
-            lockfile.update_lock(deps_graph)
-
         return deps_graph
 
     @api_method
