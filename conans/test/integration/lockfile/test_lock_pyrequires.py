@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 
@@ -86,12 +87,40 @@ def test_transitive_matching_ranges():
     assert "pkgb/0.2: dep: dep/0.2!!" in client.out
 
 
-def test_lock_pyrequires():
+def test_lock_pyrequires_create():
     c = TestClient()
-    c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require"),
-            "conan.lock": """{"version": "0.5",
-                                "requires": [],
-                                "build_requires": [],
-                                "python_requires": []}"""})
-    c.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
-    print(c.load("conan.lock"))
+    c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")})
+    c.run("create .  --lockfile-out=conan.lock")
+    lock = json.loads(c.load("conan.lock"))
+    assert "tool/0.1#7835890f1e86b3f7fc6d76b4e3c43cb1" in lock["python_requires"][0]
+
+
+def test_lock_pyrequires_export():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")})
+    c.run("export .  --lockfile-out=conan.lock")
+    lock = json.loads(c.load("conan.lock"))
+    assert "tool/0.1#7835890f1e86b3f7fc6d76b4e3c43cb1" in lock["python_requires"][0]
+
+
+def test_lock_pyrequires_export_transitive():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
+            "tool/conanfile.py": GenConanfile("tool", "0.1").with_package_type("python-require")
+                                                            .with_python_requires("dep/0.1")})
+    c.run("export dep")
+    c.run("export tool --lockfile-out=conan.lock")
+    lock = json.loads(c.load("conan.lock"))
+    assert "tool/0.1#c0008d3fcf07f7a690dd16bf6c171cec" in lock["python_requires"][0]
+    assert "dep/0.1#5d31586a2a4355d68898875dc591009a" in lock["python_requires"][1]
+
+
+def test_lock_export_transitive_pyrequire():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1") .with_python_requires("dep/0.1")})
+    c.run("export dep")
+    c.run("export pkg --lockfile-out=conan.lock")
+    lock = json.loads(c.load("conan.lock"))
+    assert "pkg/0.1#dfd6bc1becb3915043a671111860baee" in lock["requires"][0]
+    assert "dep/0.1#5d31586a2a4355d68898875dc591009a" in lock["python_requires"][0]

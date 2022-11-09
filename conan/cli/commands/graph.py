@@ -7,7 +7,6 @@ from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
     Extender, CommandResult
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
-from conan.cli.common import save_lockfile_out
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conans.client.graph.install_graph import InstallGraph
@@ -53,6 +52,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out.title("Computing the build order")
     install_graph = InstallGraph(deps_graph)
     install_order_serialized = install_graph.install_build_order()
+
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conanfile_path = os.path.dirname(deps_graph.root.path) if deps_graph.root.path else os.getcwd()
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, conanfile_path)
+
     return install_order_serialized
 
 
@@ -103,7 +108,9 @@ def graph_info(conan_api, parser, subparser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
                                          allow_error=True)
 
-    save_lockfile_out(args, deps_graph, lockfile, os.getcwd())
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
     if args.deploy:
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)

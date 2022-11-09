@@ -43,6 +43,15 @@ def test_lockfile_out(command):
     assert "dep/0.1" in lock
 
 
+def test_lockfile_out_export():
+    # Check that lockfile out is generated for "conan export"
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export pkg --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "pkg/0.1" in lock
+
+
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_ranges_transitive(requires):
     """

@@ -1,84 +1,89 @@
-from conan.api.model import UploadBundle
+import os
+
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
-from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
-    UploadUpstreamChecker
-from conans.client.pkg_sign import PkgSignaturesPlugin
+from conan.cli.commands import make_abs_path
 from conans.errors import ConanException
+from conans.model.graph_lock import Lockfile, LOCKFILE
 
 
-class UploadAPI:
+class LockfileAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
     @api_method
-    def get_bundle(self, expression, package_query=None, only_recipe=False):
-        ret = UploadBundle()
-        if ":" in expression or package_query:
-            # We are uploading the selected packages and the recipes belonging to that
-            prefs = self.conan_api.search.package_revisions(expression, query=package_query)
-            if not prefs:
-                raise ConanException("There are no packages matching {}".format(expression))
-            ret.add_prefs(prefs)
+    def get_lockfile(self, lockfile=None, conanfile_path=None, cwd=None, partial=False):
+        """ obtain a lockfile, following this logic:
+        - If lockfile is explicitly defined, it would be either absolute or relative to cwd
+          the lockfile file must exist. If lockfile="None" (as string, no lockfile will be used)
+        - If lockfile is not defined, it will still look for a default conan.lock:
+           - if conanfile_path is defined, it will be besides it
+           - if conanfile_path is not defined, the default conan.lock should be in cwd
+           - if the default conan.lock cannot be found, it is not an error
+
+        :param partial: If the obtained lockfile will allow partial resolving
+        :param cwd: the current working dir, if None, os.getcwd() will be used
+        :param conanfile_path: The full path to the conanfile, if existing
+        :param lockfile: the name of the lockfile file
+        """
+        if lockfile == "None":
+            # Allow a way with ``--lockfile=None`` to optout automatic usage of conan.lock
+            return
+
+        cwd = cwd or os.getcwd()
+        if lockfile is None:  # Look for a default "conan.lock"
+            # if path is defined, take it as reference
+            base_path = os.path.dirname(conanfile_path) if conanfile_path else cwd
+            lockfile_path = make_abs_path(LOCKFILE, base_path)
+            if not os.path.isfile(lockfile_path):
+                return
+        else:  # explicit lockfile given
+            lockfile_path = make_abs_path(lockfile, cwd)
+            if not os.path.isfile(lockfile_path):
+                raise ConanException("Lockfile doesn't exist: {}".format(lockfile_path))
+
+        graph_lock = Lockfile.load(lockfile_path)
+        graph_lock.partial = partial
+        ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
+        return graph_lock
+
+    def update_lockfile_export(self, lockfile, conanfile, ref, is_build_require=False):
+        # The package_type is not fully processed at export
+        is_python_require = conanfile.package_type == "python-require"
+        is_require = not is_python_require and not is_build_require
+        if hasattr(conanfile, "python_requires"):
+            python_requires = conanfile.python_requires.all_refs()
         else:
-            # Upload the recipes and all the packages
-            refs = self.conan_api.search.recipe_revisions(expression)
-            if only_recipe:
-                for ref in refs:
-                    ret.add_ref(ref)
-                return ret
-            app = ConanApp(self.conan_api.cache_folder)
-            for ref in refs:
-                # Get all the prefs and all the prevs
-                pkg_ids = app.cache.get_package_references(ref, only_latest_prev=False)
-                if pkg_ids:
-                    ret.add_prefs(pkg_ids)
-                else:
-                    ret.add_ref(ref)
+            python_requires = []
+        python_requires = python_requires + ([ref] if is_python_require else [])
+        lockfile = self.add_lockfile(lockfile,
+                                     requires=[ref] if is_require else None,
+                                     python_requires=python_requires,
+                                     build_requires=[ref] if is_build_require else None)
+        return lockfile
 
-        # This is necessary to upload_policy = "skip"
-        app = ConanApp(self.conan_api.cache_folder)
-        for recipe in ret.recipes:
-            layout = app.cache.ref_layout(recipe.ref)
-            conanfile_path = layout.conanfile()
-            conanfile = app.loader.load_basic(conanfile_path)
-            if conanfile.upload_policy == "skip":
-                ConanOutput().info(f"{recipe.ref}: Skipping upload of binaries, "
-                                   "because upload_policy='skip'")
-                recipe.packages = []
-        return ret
+    @staticmethod
+    def update_lockfile(lockfile, graph, lock_packages=False, clean=False):
+        if lockfile is None or clean:
+            lockfile = Lockfile(graph, lock_packages)
+        else:
+            lockfile.update_lock(graph, lock_packages)
+        return lockfile
 
-    @api_method
-    def check_integrity(self, upload_data):
-        """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
-        app = ConanApp(self.conan_api.cache_folder)
-        checker = IntegrityChecker(app)
-        checker.check(upload_data)
+    @staticmethod
+    def add_lockfile(lockfile=None, requires=None, build_requires=None, python_requires=None):
+        if lockfile is None:
+            lockfile = Lockfile()  # create a new lockfile
+            lockfile.partial = True
 
-    @api_method
-    def check_upstream(self, upload_bundle, remote, force=False):
-        """Check if the artifacts are already in the specified remote, skipping them from
-        the upload_bundle in that case"""
-        app = ConanApp(self.conan_api.cache_folder)
-        UploadUpstreamChecker(app).check(upload_bundle, remote, force)
+        lockfile.add(requires=requires, build_requires=build_requires,
+                     python_requires=python_requires)
+        return lockfile
 
-    @api_method
-    def prepare(self, upload_bundle, enabled_remotes):
-        """Compress the recipes and packages and fill the upload_data objects
-        with the complete information. It doesn't perform the upload nor checks upstream to see
-        if the recipe is still there"""
-        app = ConanApp(self.conan_api.cache_folder)
-        preparator = PackagePreparator(app)
-        preparator.prepare(upload_bundle, enabled_remotes)
-        signer = PkgSignaturesPlugin(app.cache)
-        # This might add files entries to upload_bundle with signatures
-        signer.sign(upload_bundle)
-
-    @api_method
-    def upload_bundle(self, upload_bundle, remote):
-        app = ConanApp(self.conan_api.cache_folder)
-        app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
-        executor.upload(upload_bundle, remote)
+    @staticmethod
+    def save_lockfile(lockfile, lockfile_out, path=None):
+        if lockfile_out is not None:
+            lockfile_out = make_abs_path(lockfile_out, path)
+            lockfile.save(lockfile_out)
+            ConanOutput().info(f"Generated lockfile: {lockfile_out}")
