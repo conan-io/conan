@@ -56,6 +56,14 @@ def test_configure_arguments():
     assert "-j23" not in runner.command_called
     assert "my_make install my_make_args DESTDIR=whatever -j1" == runner.command_called
 
+    ab.install(args=["DESTDIR=whatever", "-arg1 -j1 -arg2"])
+    assert "-j23" not in runner.command_called
+    assert "my_make install my_make_args DESTDIR=whatever -arg1 -j1 -arg2" == runner.command_called
+
     # check that we don't detect -j in an argument as number of jobs
     ab.install(args=["DESTDIR=/user/smith-john/whatever"])
     assert "my_make install my_make_args DESTDIR=/user/smith-john/whatever -j23" == runner.command_called
+
+    # check that we don't detect -j in an argument as number of jobs
+    ab.install(args=["DESTDIR=/user/smith-j47/whatever"])
+    assert "my_make install my_make_args DESTDIR=/user/smith-j47/whatever -j23" == runner.command_called
