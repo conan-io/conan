@@ -49,16 +49,18 @@ class _LockRequires:
         return result
 
     def add(self, ref, package_ids=None):
-        # In case we have an existing, incomplete thing
-        pop_ref = RecipeReference.loads(str(ref))
-        self._requires.pop(pop_ref, None)  # Partial cannot have package_ids
-        old_package_ids = self._requires.pop(ref, None)
-        if old_package_ids is not None:
-            if package_ids is not None:
-                package_ids = old_package_ids.update(package_ids)
-            else:
-                package_ids = old_package_ids
-        self._requires[ref] = package_ids
+        if ref.revision is not None:
+            old_package_ids = self._requires.pop(ref, None)  # Get existing one
+            if old_package_ids is not None:
+                if package_ids is not None:
+                    package_ids = old_package_ids.update(package_ids)
+                else:
+                    package_ids = old_package_ids
+            self._requires[ref] = package_ids
+        else:  # Manual addition of something without revision
+            if ref in self._requires:
+                raise ConanException(f"Cannot add {ref} to lockfile, already exists")
+            self._requires[ref] = package_ids
 
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
