@@ -81,6 +81,15 @@ class RecipeReference:
         return (self.name, self.version, self.user, self.channel, self.revision) == \
                (ref.name, ref.version, ref.user, ref.channel, ref.revision)
 
+    def require_equal(self, ref):
+        # Timestamp doesn't affect equality.
+        # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
+        if self.revision is not None and ref.revision is not None:
+            return (self.name, self.version, self.user, self.channel, self.revision) == \
+                   (ref.name, ref.version, ref.user, ref.channel, ref.revision)
+        return (self.name, self.version, self.user, self.channel) == \
+               (ref.name, ref.version, ref.user, ref.channel)
+
     def __hash__(self):
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
         return hash((self.name, self.version, self.user, self.channel, self.revision))

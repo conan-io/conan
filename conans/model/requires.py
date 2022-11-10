@@ -211,7 +211,7 @@ class Requirement:
                  (self.libs and other.libs) or
                  (self.run and other.run) or
                  (self.visible and other.visible) or
-                 (self.ref == other.ref)))
+                 (self.ref.require_equal(other.ref))))
 
     def aggregate(self, other):
         """ when closing loop and finding the same dependency on a node, the information needs
