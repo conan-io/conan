@@ -44,12 +44,14 @@ def create(conan_api, parser, *args):
 
     out = ConanOutput()
     out.highlight("Exporting the recipe")
-    ref = conan_api.export.export(path=path,
-                                  name=args.name, version=args.version,
-                                  user=args.user, channel=args.channel,
-                                  lockfile=lockfile)
+    ref, conanfile = conan_api.export.export(path=path,
+                                             name=args.name, version=args.version,
+                                             user=args.user, channel=args.channel,
+                                             lockfile=lockfile)
+    # The package_type is not fully processed at export
+    is_python_require = conanfile.package_type == "python-require"
+
     if lockfile:
-        # FIXME: We need to update build_requires too, not only ``requires``
         lockfile.add(requires=[ref])
 
     out.title("Input profiles")
@@ -94,9 +96,11 @@ def create(conan_api, parser, *args):
         # TODO: We need arguments for:
         #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
+        tested_python_requires = ref.repr_notime() if is_python_require else None
         from conan.cli.commands.test import run_test
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes, lockfile, update=False, build_modes=None)
+                              remotes, lockfile, update=False, build_modes=None,
+                              tested_python_requires=tested_python_requires)
 
     save_lockfile_out(args, deps_graph, lockfile, cwd)
 
@@ -116,10 +120,11 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
                     "tested is '{}'".format(missmatch[0], tested_ref))
 
 
-def test_package(conan_api, deps_graph, test_conanfile_path):
+def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requires=None):
     out = ConanOutput()
     out.title("Testing the package")
-    if len(deps_graph.nodes) == 1:
+    # TODO: Better modeling when we are testing a python_requires
+    if len(deps_graph.nodes) == 1 and not tested_python_requires:
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))

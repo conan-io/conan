@@ -44,12 +44,13 @@ def test(conan_api, parser, *args):
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
-             build_modes):
+             build_modes, tested_python_requires=None):
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
                                                          remotes=remotes,
                                                          update=update,
-                                                         lockfile=lockfile)
+                                                         lockfile=lockfile,
+                                                         tested_python_requires=tested_python_requires)
 
     out = ConanOutput()
     out.title("test_package: Computing dependency graph")
@@ -69,5 +70,5 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     out.title("test_package: Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=update)
     _check_tested_reference_matches(deps_graph, ref, out)
-    test_package(conan_api, deps_graph, path)
+    test_package(conan_api, deps_graph, path, tested_python_requires)
     return deps_graph

@@ -36,7 +36,8 @@ class ConanFileLoader:
         """
         return self.load_basic_module(conanfile_path, graph_lock, display, remotes)[0]
 
-    def load_basic_module(self, conanfile_path, graph_lock=None, display="", remotes=None):
+    def load_basic_module(self, conanfile_path, graph_lock=None, display="", remotes=None,
+                          tested_python_requires=None):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
@@ -50,6 +51,8 @@ class ConanFileLoader:
 
         try:
             module, conanfile = parse_conanfile(conanfile_path)
+            if tested_python_requires:
+                conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
                 self._pyreq_loader.load_py_requires(conanfile, self, graph_lock, remotes)
@@ -86,10 +89,11 @@ class ConanFileLoader:
         return data or {}
 
     def load_named(self, conanfile_path, name, version, user, channel, graph_lock=None,
-                   remotes=None):
+                   remotes=None, tested_python_requires=None):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes=remotes)
+        conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes=remotes,
+                                              tested_python_requires=tested_python_requires)
 
         # Export does a check on existing name & version
         if name:
@@ -144,11 +148,11 @@ class ConanFileLoader:
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
-                      channel=None, graph_lock=None, remotes=None):
+                      channel=None, graph_lock=None,  remotes=None, tested_python_requires=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock,
-                                    remotes)
+                                    remotes, tested_python_requires=tested_python_requires)
 
         ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):
