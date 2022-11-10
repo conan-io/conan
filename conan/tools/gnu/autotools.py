@@ -48,7 +48,7 @@ class Autotools(object):
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
-        if "-j" not in str_args and "nmake" not in make_program.lower():
+        if "-j" not in (str_args + str_extra_args) and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
             if njobs:
                 jobs = "-j{}".format(njobs)
@@ -56,8 +56,10 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self, args=None, target="install"):
-        args = args if args is not None else \
-            ["DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder))]
+        args = args if args else []
+        str_args = " ".join(args)
+        if "DESTDIR" not in str_args:
+            args.insert(0, "DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder)))
         self.make(target=target, args=args)
 
     def autoreconf(self, args=None):

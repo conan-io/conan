@@ -32,12 +32,26 @@ def test_configure_arguments():
 
     ab = Autotools(conanfile)
     ab.make()
-    assert "my_make my_make_args -j23" in runner.command_called
+    assert "my_make my_make_args -j23" == runner.command_called
 
     # test install target argument
 
     ab.install()
-    assert 'my_make install my_make_args DESTDIR=None -j23' in runner.command_called
+    assert 'my_make install my_make_args DESTDIR=None -j23' == runner.command_called
 
     ab.install(target="install_other")
-    assert 'my_make install_other my_make_args DESTDIR=None -j23' in runner.command_called
+    assert 'my_make install_other my_make_args DESTDIR=None -j23' == runner.command_called
+
+    # we can override the number of jobs in the recipe
+
+    ab.make(args=["-j1"])
+    assert "-j23" not in runner.command_called
+    assert "my_make my_make_args -j1" == runner.command_called
+
+    ab.install(args=["-j1"])
+    assert "-j23" not in runner.command_called
+    assert "my_make install my_make_args DESTDIR=None -j1" == runner.command_called
+
+    ab.install(args=["DESTDIR=whatever", "-j1"])
+    assert "-j23" not in runner.command_called
+    assert "my_make install my_make_args DESTDIR=whatever -j1" == runner.command_called
