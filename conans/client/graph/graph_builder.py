@@ -148,6 +148,8 @@ class DepsGraphBuilder(object):
                     if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
+                    CONTINUE HERE THIS ADDS A DUPLICATE tool_require run=True
+                    BECAUSE DIFFERENT REVISION and different run=True trait
                     node.conanfile.requires.tool_require(str(tool_require),
                                                          raise_if_duplicated=False)
 
