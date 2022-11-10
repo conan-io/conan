@@ -58,7 +58,8 @@ class _LockRequires:
                     package_ids = old_package_ids
             self._requires[ref] = package_ids
         else:  # Manual addition of something without revision
-            if ref in self._requires:
+            existing = {r: r for r in self._requires}.get(ref)
+            if existing and existing.revision is not None:
                 raise ConanException(f"Cannot add {ref} to lockfile, already exists")
             self._requires[ref] = package_ids
 
