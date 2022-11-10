@@ -49,7 +49,7 @@ class Autotools(object):
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
-        jobs_already_passed = re.search(r"-j\d+", join_arguments([str_args, str_extra_args]))
+        jobs_already_passed = re.search(r"-j(\d+)", join_arguments([str_args, str_extra_args]))
         if not jobs_already_passed and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
             if njobs:
