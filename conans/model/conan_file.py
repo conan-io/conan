@@ -150,7 +150,10 @@ class ConanFile:
 
     #: When ``True`` it enables the new run in a subsystem bash in Windows mechanism.
     win_bash = None
+
+    #: When ``True`` it enables running commands in the ``"run"`` scope, to run them inside a bash shell.
     win_bash_run = None  # For run scope
+
     tested_reference_str = None
 
     _conan_is_consumer = False
