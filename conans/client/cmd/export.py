@@ -80,7 +80,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             set_dirty(source_folder)
 
     scoped_output.info("Exported revision: %s" % revision)
-    return ref
+    return ref, conanfile
 
 
 def calc_revision(scoped_output, path, manifest, revision_mode):
