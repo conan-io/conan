@@ -42,33 +42,37 @@ def test_configure_arguments():
     ab.install(target="install_other")
     assert 'my_make install_other my_make_args DESTDIR=None -j23' == runner.command_called
 
-    save_toolchain_args({
-        "configure_args": "my_configure_args",
-        "make_args": ""}
-    )
+    for make_args in ["my_make_args", ""]:
 
-    ab = Autotools(conanfile)
+        save_toolchain_args({
+            "configure_args": "my_configure_args",
+            "make_args": f"{make_args}"}
+        )
 
-    ab.make(args=["-j1"])
-    assert "-j23" not in runner.command_called
-    assert "my_make -j1" == runner.command_called
+        ab = Autotools(conanfile)
 
-    ab.install(args=["-j1"])
-    assert "-j23" not in runner.command_called
-    assert "my_make install DESTDIR=None -j1" == runner.command_called
+        make_args_str = f" {make_args}" if make_args else ""
 
-    ab.install(args=["DESTDIR=whatever", "-j1"])
-    assert "-j23" not in runner.command_called
-    assert "my_make install DESTDIR=whatever -j1" == runner.command_called
+        ab.make(args=["-j1"])
+        assert "-j23" not in runner.command_called
+        assert f"my_make{make_args_str} -j1" == runner.command_called
 
-    ab.install(args=["DESTDIR=whatever", "-arg1 -j1 -arg2"])
-    assert "-j23" not in runner.command_called
-    assert "my_make install DESTDIR=whatever -arg1 -j1 -arg2" == runner.command_called
+        ab.install(args=["-j1"])
+        assert "-j23" not in runner.command_called
+        assert f"my_make install{make_args_str} DESTDIR=None -j1" == runner.command_called
 
-    # check that we don't detect -j in an argument as number of jobs
-    ab.install(args=["DESTDIR=/user/smith-john/whatever"])
-    assert "my_make install DESTDIR=/user/smith-john/whatever -j23" == runner.command_called
+        ab.install(args=["DESTDIR=whatever", "-j1"])
+        assert "-j23" not in runner.command_called
+        assert f"my_make install{make_args_str} DESTDIR=whatever -j1" == runner.command_called
 
-    # check that we don't detect -j in an argument as number of jobs
-    ab.install(args=["DESTDIR=/user/smith-j47/whatever"])
-    assert "my_make install DESTDIR=/user/smith-j47/whatever -j23" == runner.command_called
+        ab.install(args=["DESTDIR=whatever", "-arg1 -j1 -arg2"])
+        assert "-j23" not in runner.command_called
+        assert f"my_make install{make_args_str} DESTDIR=whatever -arg1 -j1 -arg2" == runner.command_called
+
+        # check that we don't detect -j in an argument as number of jobs
+        ab.install(args=["DESTDIR=/user/smith-john/whatever"])
+        assert f"my_make install{make_args_str} DESTDIR=/user/smith-john/whatever -j23" == runner.command_called
+
+        # check that we don't detect -j in an argument as number of jobs
+        ab.install(args=["DESTDIR=/user/smith-j47/whatever"])
+        assert f"my_make install{make_args_str} DESTDIR=/user/smith-j47/whatever -j23" == runner.command_called
