@@ -71,7 +71,7 @@ class Git(object):
         Checks that the given commit exists in the remote, with ``branch -r --contains <commit>``
         and checking an occurrence of a branch in that remote exists.
 
-        :param remote: Commit to check.
+        :param commit: Commit to check.
         :param remote: Name of the remote git repository ('origin' by default).
         :return: True if the given commit exists in the remote, False otherwise.
         """
