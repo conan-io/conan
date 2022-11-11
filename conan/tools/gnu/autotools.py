@@ -4,6 +4,7 @@ from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
+from conan.tools.microsoft import unix_path
 
 
 def join_arguments(args):
@@ -68,7 +69,8 @@ class Autotools(object):
                      ``make`` call.
         """
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
-                                                default="mingw32-make" if self._use_win_mingw() else "make")
+                                                default="mingw32-make" if self._use_win_mingw()
+                                                else "make")
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
@@ -79,7 +81,7 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def install(self, args=None):
+    def install(self, args=None, target="install"):
         """
         This is just an "alias" of ``self.make(target="install")``
 
@@ -87,9 +89,10 @@ class Autotools(object):
                      ``make`` call. By default an argument ``DESTDIR=unix_path(self.package_folder)``
                      is added to the call if the passed value is ``None``. See more information about
                      :ref:`tools.microsoft.unix_path() function<conan_tools_microsoft_unix_path>`
+        :param target: (Optional, Defaulted to ``None``): Choose which target to install.
         """
         args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
-        self.make(target="install", args=args)
+        self.make(target=target, args=args)
 
     def autoreconf(self, args=None):
         """

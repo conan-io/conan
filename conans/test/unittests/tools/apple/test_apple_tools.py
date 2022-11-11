@@ -2,7 +2,7 @@ import pytest
 
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conans.test.utils.test_files import temp_folder
-from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name
+from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
 
 def test_tools_apple_is_apple_os():
     conanfile = ConanFileMock()
@@ -36,3 +36,14 @@ def test_fix_shared_install_name_no_libraries():
     with pytest.raises(Exception) as e:
         fix_apple_shared_install_name(conanfile)
         assert "not found inside package folder" in str(e.value)
+
+
+def test_xcrun_public_settings():
+    # https://github.com/conan-io/conan/issues/12485
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "watchOS"})
+
+    xcrun = XCRun(conanfile, use_settings_target=True)
+    settings = xcrun.settings
+
+    assert settings.os == "watchOS"
