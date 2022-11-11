@@ -23,8 +23,6 @@ class GraphAPI:
                                      name=None, version=None, user=None, channel=None,
                                      update=None, remotes=None, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
-        # necessary for correct resolution and update of remote python_requires
-        app.load_remotes(update=update)
 
         if path.endswith(".py"):
             conanfile = app.loader.load_consumer(path,
@@ -67,7 +65,6 @@ class GraphAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        app.load_remotes(update=update)
 
         loader = app.loader
         profile_host.options.scope(tested_reference)
@@ -118,13 +115,12 @@ class GraphAPI:
         """
         app = ConanApp(self.conan_api.cache_folder)
 
-        app.load_remotes(update=update, check_updates=check_update)
-
         assert profile_host is not None
         assert profile_build is not None
 
         remotes = remotes or []
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, remotes)
+        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, remotes,
+                                   update, check_update)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 
@@ -142,9 +138,8 @@ class GraphAPI:
             revisions for already existing recipes in the Conan cache
         """
         conan_app = ConanApp(self.conan_api.cache_folder)
-        conan_app.load_remotes(update=update)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
-        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes)
+        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update)
 
     @api_method
     def load_conanfile_class(self, path):

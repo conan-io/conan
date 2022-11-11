@@ -12,7 +12,6 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
 class GraphBinariesAnalyzer(object):
 
     def __init__(self, conan_app):
-        self._app = conan_app
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
@@ -58,12 +57,12 @@ class GraphBinariesAnalyzer(object):
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})
-                if len(results) > 0 and not self._app.update:
+                if len(results) > 0 and not self._update:
                     break
             except NotFoundException:
                 pass
 
-        if not self._selected_remotes and self._app.update:
+        if not self._selected_remotes and self._update:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
@@ -254,7 +253,7 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_in_cache(self, cache_latest_prev, node):
         assert cache_latest_prev.revision
-        if self._app.update:
+        if self._update:
             output = node.conanfile.output
             try:
                 self._get_package_from_remotes(node)
@@ -292,8 +291,9 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
         self._selected_remotes = remotes or []# TODO: A bit dirty interfaz, pass as arg instead
+        self._update = update  # TODO: Dirty, fix it
         build_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):

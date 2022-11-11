@@ -56,11 +56,3 @@ class ConanApp(object):
         cmd_wrap = CmdWrapper(self.cache)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
-
-        # Remotes
-        self.update = False
-        self.check_updates = False
-
-    def load_remotes(self, update=False, check_updates=False):
-        self.update = update
-        self.check_updates = check_updates
