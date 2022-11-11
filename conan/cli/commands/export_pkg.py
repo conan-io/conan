@@ -4,8 +4,8 @@ import os
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_lockfile, add_profiles_args, get_profiles_from_args, \
-    add_lockfile_args, add_reference_args, scope_options, save_lockfile_out
+from conan.cli.common import get_profiles_from_args, scope_options
+from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 
 
 def json_export_pkg(info):
@@ -26,17 +26,20 @@ def export_pkg(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
-                            partial=args.lockfile_partial)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
 
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
-    ref = conan_api.export.export(path=path,
-                                  name=args.name,
-                                  version=args.version,
-                                  user=args.user,
-                                  channel=args.channel,
-                                  lockfile=lockfile)
+    ref, conanfile = conan_api.export.export(path=path,
+                                             name=args.name, version=args.version,
+                                             user=args.user, channel=args.channel,
+                                             lockfile=lockfile)
+    # The package_type is not fully processed at export
+    assert conanfile.package_type != "python-require", "A python-require cannot be export-pkg"
+    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
     scope_options(profile_host, requires=[ref], tool_requires=None)
@@ -53,5 +56,7 @@ def export_pkg(conan_api, parser, *args):
 
     conan_api.export.export_pkg(deps_graph, path)
 
-    save_lockfile_out(args, deps_graph, lockfile, cwd)
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return deps_graph

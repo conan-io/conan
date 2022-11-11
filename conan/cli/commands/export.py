@@ -4,7 +4,7 @@ import os
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_lockfile, add_reference_args
+from conan.cli.args import add_reference_args
 
 
 def common_args_export(parser):
@@ -24,20 +24,26 @@ def export(conan_api, parser, *args):
     common_args_export(parser)
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
+    parser.add_argument("--lockfile-out", action=OnceArgument,
+                        help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-partial", action="store_true",
                         help="Do not raise an error if some dependency is not found in lockfile")
-
+    parser.add_argument("--build-require", action='store_true', default=False,
+                        help='The provided reference is a build-require')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
-                            partial=args.lockfile_partial)
-    ref = conan_api.export.export(path=path,
-                                  name=args.name, version=args.version,
-                                  user=args.user, channel=args.channel,
-                                  lockfile=lockfile)
-    # TODO: Can ``conan export`` modify a lockfile, and thus, have a --lockfile-out arg?
-    #  ``conan create`` does it at export time
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
+    ref, conanfile = conan_api.export.export(path=path,
+                                             name=args.name, version=args.version,
+                                             user=args.user, channel=args.channel,
+                                             lockfile=lockfile)
+    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
+                                                         args.build_require)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     ConanOutput().success("Exported recipe: {}".format(ref.repr_humantime()))
     return ref

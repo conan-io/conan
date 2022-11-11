@@ -352,6 +352,7 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("visual_studio")
 class WinTest(unittest.TestCase):
+    # FIXME: This test needs to be parameterized correctly for different VS versions
 
     conanfile = textwrap.dedent("""
         import os

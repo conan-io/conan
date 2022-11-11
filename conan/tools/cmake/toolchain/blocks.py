@@ -119,7 +119,7 @@ class FPicBlock(Block):
     template = textwrap.dedent("""
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }} CACHE BOOL "Position independent code") 
         {% endif %}
         """)
 
@@ -205,7 +205,7 @@ class CppStdBlock(Block):
 class SharedLibBock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS = {{ shared_libs }}")
-        set(BUILD_SHARED_LIBS {{ shared_libs }})
+        set(BUILD_SHARED_LIBS {{ shared_libs }} CACHE BOOL "Build shared libraries")
         """)
 
     def context(self):

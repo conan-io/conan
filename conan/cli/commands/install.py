@@ -4,10 +4,11 @@ import os
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conan.cli.commands import make_abs_path
-from conan.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args, get_lockfile, get_multiple_remotes, add_lockfile_args, \
-    add_reference_args, scope_options, save_lockfile_out
-from conan.cli.formatters.graph import print_graph_basic, print_graph_packages
+from conan.cli.common import get_profiles_from_args, scope_options
+from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
+    _help_build_policies
+from conan.cli.printers.graph import print_graph_basic, print_graph_packages
+
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -64,9 +65,11 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = get_multiple_remotes(conan_api, args.remote)
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
-                            partial=partial)
+    remotes = conan_api.remotes.list(args.remote)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=partial)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
@@ -167,13 +170,13 @@ def install(conan_api, parser, *args):
     else:
         output_folder = None
 
-    remote = get_multiple_remotes(conan_api, args.remote)
+    remotes = conan_api.remotes.list(args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
 
     out = ConanOutput()
     out.title("Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remote, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph=deps_graph,
@@ -183,5 +186,7 @@ def install(conan_api, parser, *args):
                                        deploy=args.deploy
                                        )
 
-    save_lockfile_out(args, deps_graph, lockfile, cwd)
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return deps_graph

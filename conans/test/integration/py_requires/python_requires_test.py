@@ -75,6 +75,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
 
+    @pytest.mark.xfail(reason="Lockfiles with alias are broken, never were tested")
     def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
@@ -1021,3 +1022,61 @@ def test_multiple_reuse():
     c.run("install consumer")
     assert "VALUE COMMON: 42!!!" in c.out
     assert "VALUE TOOL: 42!!!" in c.out
+
+
+class TestTestPackagePythonRequire:
+    def test_test_package_python_requires(self):
+        """ test how to test_package a python_require
+        """
+
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            def mycommon():
+                return 42
+            class Common(ConanFile):
+                name = "common"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        test = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Tool(ConanFile):
+                def test(self):
+                    self.output.info("{}!!!".format(self.python_requires["common"].module.mycommon()))
+            """)
+        c.save({"conanfile.py": conanfile,
+                "test_package/conanfile.py": test})
+        c.run("create .")
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+    def test_test_package_python_requires_configs(self):
+        """ test how to test_package a python_require with various configurations
+        """
+
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            def mycommon(build_type):
+                return str(build_type).upper() + "OK"
+            class Common(ConanFile):
+                name = "common"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        test = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Tool(ConanFile):
+                settings = "build_type"
+                def test(self):
+                    result = self.python_requires["common"].module.mycommon(self.settings.build_type)
+                    self.output.info("{}!!!".format(result))
+            """)
+        c.save({"conanfile.py": conanfile,
+                "test_package/conanfile.py": test})
+        c.run("create . ")
+        assert "common/0.1 (test package): RELEASEOK!!!" in c.out
+        c.run("create . -s build_type=Debug")
+        assert "common/0.1 (test package): DEBUGOK!!!" in c.out

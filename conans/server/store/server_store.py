@@ -54,7 +54,7 @@ class ServerStore(object):
     def export(self, ref):
         return join(self.base_folder(ref), SERVER_EXPORT_FOLDER)
 
-    def get_conanfile_file_path(self, ref, filename):
+    def get_recipe_file_path(self, ref, filename):
         abspath = join(self.export(ref), filename)
         return abspath
 
@@ -66,25 +66,14 @@ class ServerStore(object):
     def path_exists(self, path):
         return self._storage_adapter.path_exists(path)
 
-    # ############ SNAPSHOTS (APIv1)
-    def get_recipe_snapshot(self, ref):
-        """Returns a {filepath: md5} """
-        assert isinstance(ref, RecipeReference)
-        return self._get_snapshot_of_files(self.export(ref))
-
-    def _get_snapshot_of_files(self, relative_path):
-        snapshot = self._storage_adapter.get_snapshot(relative_path)
-        snapshot = self._relativize_keys(snapshot, relative_path)
-        return snapshot
-
     # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
     def get_recipe_file_list(self, ref):
-        """Returns a {filepath: md5} """
+        """Returns a  [filepath] """
         assert isinstance(ref, RecipeReference)
         return self._get_file_list(self.export(ref))
 
     def get_package_file_list(self, pref):
-        """Returns a {filepath: md5} """
+        """Returns a  [filepath] """
         assert isinstance(pref, PkgReference)
         return self._get_file_list(self.package(pref))
 
@@ -94,7 +83,7 @@ class ServerStore(object):
         return file_list
 
     def _delete_empty_dirs(self, ref):
-        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
+        lock_files = {REVISIONS_FILE, "%s.lock" % REVISIONS_FILE}
 
         ref_path = normpath(join(self.store, ref_dir_repr(ref)))
         if ref.revision:

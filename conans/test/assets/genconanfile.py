@@ -90,10 +90,10 @@ class GenConanfile(object):
             self._exports.append(export)
         return self
 
-    def with_require(self, ref, private=False, override=False):
+    def with_require(self, ref):
         self._requires = self._requires or []
         ref_str = self._get_full_ref_str(ref)
-        self._requires.append((ref_str, private, override))
+        self._requires.append(ref_str)
         return self
 
     def with_requires(self, *refs):
@@ -323,13 +323,8 @@ class GenConanfile(object):
     @property
     def _requires_render(self):
         items = []
-        for ref, private, override in self._requires:
-            if private or override:
-                private_str = ", 'private'" if private else ""
-                override_str = ", 'override'" if override else ""
-                items.append('("{}"{}{})'.format(ref, private_str, override_str))
-            else:
-                items.append('"{}"'.format(ref))
+        for ref in self._requires:
+            items.append('"{}"'.format(ref))
         return "requires = ({}, )".format(", ".join(items))
 
     @property

@@ -2,20 +2,18 @@ import os
 
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import add_reference_args
+from conan.cli.args import add_reference_args
 from conan.api.conan_app import ConanApp
-from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.source import run_source_method
 from conans.errors import conanfile_exception_formatter
-from conans.model.options import Options
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
 def source(conan_api, parser, *args):
     """
-    Install + calls the build() method
+    Calls the source() method
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
@@ -30,18 +28,14 @@ def source(conan_api, parser, *args):
 
     # TODO: Decide API to put this
     app = ConanApp(conan_api.cache_folder)
-    profile_host = conan_api.profiles.get_profile([conan_api.profiles.get_default_host()])
-
-    profile_host.conf.rebase_conf_definition(app.cache.new_config)
+    # This profile is empty, but with the conf from global.conf
+    profile = conan_api.profiles.get_profile([])
     conanfile = app.loader.load_consumer(path,
                                          name=args.name, version=args.version,
                                          user=args.user, channel=args.channel,
                                          graph_lock=None)
 
-    initialize_conanfile_profile(conanfile, profile_host, profile_host, CONTEXT_HOST, False)
-    run_configure_method(conanfile, down_options=Options(),
-                         profile_options=profile_host.options, ref=None)
-
+    initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
     # This is important, otherwise the ``conan source`` doesn't define layout and fails
     if hasattr(conanfile, "layout"):
         with conanfile_exception_formatter(conanfile, "layout"):

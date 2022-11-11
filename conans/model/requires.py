@@ -164,7 +164,7 @@ class Requirement:
             return RecipeReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
                                    self.ref.revision)
 
-    def process_package_type(self, node):
+    def process_package_type(self, src_node, node):
         """If the requirement traits have not been adjusted, then complete them with package type
         definition"""
 
@@ -192,6 +192,11 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package
+
+        src_pkg_type = src_node.conanfile.package_type
+        if src_pkg_type is PackageType.HEADER:
+            set_if_none("_transitive_headers", self.headers)
+            set_if_none("_transitive_libs", self.libs)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
@@ -227,13 +232,15 @@ class Requirement:
         self.run = self.run or other.run
         self.visible |= other.visible
         self.force |= other.force
+        self.direct |= other.direct
+        self.transitive_headers = self.transitive_headers or other.transitive_headers
+        self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
-
         consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
         Compute new Requirement to be applied to "consumer" translating the effect of the dependency
@@ -261,28 +268,32 @@ class Requirement:
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type in (PackageType.UNKNOWN, PackageType.HEADER)
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
-            downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+            downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
@@ -297,18 +308,24 @@ class Requirement:
         if require.transitive_headers is not None:
             downstream_require.headers = require.transitive_headers
 
+        if self.transitive_headers is not None and require.transitive_headers:
+            downstream_require.transitive_headers = self.transitive_headers
+
         if require.transitive_libs is not None:
             downstream_require.libs = require.transitive_libs
+            if require.transitive_libs is False:
+                downstream_require.transitive_libs = False
 
-        # If non-default, then the consumer requires has priority
-        if self.visible is False:
-            downstream_require.visible = False
+        if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
+            # If non-default, then the consumer requires has priority
+            if self.visible is False:
+                downstream_require.visible = False
 
-        if self.headers is False:
-            downstream_require.headers = False
+            if self.headers is False:
+                downstream_require.headers = False
 
-        if self.libs is False:
-            downstream_require.libs = False
+            if self.libs is False:
+                downstream_require.libs = False
 
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:

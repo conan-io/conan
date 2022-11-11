@@ -10,7 +10,6 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.errors import ConanException
 
 
 class CmdWrapper:
@@ -59,25 +58,9 @@ class ConanApp(object):
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
 
         # Remotes
-        self.selected_remotes = []
-        self.enabled_remotes = []
-        self.all_remotes = []
         self.update = False
         self.check_updates = False
 
-    def load_remotes(self, remotes=None, update=False, check_updates=False):
-        self.all_remotes = self.cache.remotes_registry.list()
-        self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
+    def load_remotes(self, update=False, check_updates=False):
         self.update = update
         self.check_updates = check_updates
-        self.selected_remotes = []
-        if remotes:
-            for r in remotes:
-                if r.name is not None:  # FIXME: Remove this when we pass always remote objects
-                    tmp = self.cache.remotes_registry.read(r.name)
-                    if tmp.disabled:
-                        raise ConanException("Remote '{}' is disabled".format(tmp.name))
-                    self.selected_remotes.append(tmp)
-            # sort the list based on the index preference in the remotes list
-            if self.selected_remotes:
-                self.selected_remotes.sort(key=lambda remote: self.cache.remotes_registry.get_remote_index(remote))

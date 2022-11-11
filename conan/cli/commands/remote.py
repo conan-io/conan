@@ -160,10 +160,7 @@ def remote_enable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to enable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(pattern=args.remote)
-    for r in remotes:
-        r.disabled = False
-        conan_api.remotes.update(r)
+    conan_api.remotes.enable(args.remote)
 
 
 @conan_subcommand()
@@ -174,10 +171,7 @@ def remote_disable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(pattern=args.remote)
-    for r in remotes:
-        r.disabled = True
-        conan_api.remotes.update(r)
+    conan_api.remotes.disable(args.remote)
 
 
 # ### User related commands

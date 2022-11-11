@@ -13,22 +13,51 @@ class RemotesAPI:
         self.conan_api = conan_api
 
     @api_method
-    def list(self, pattern=None, only_active=False):
+    def list(self, pattern=None, only_enabled=True):
+        """
+        :param pattern: if None, all remotes will be listed
+                        it can be a single value or a list of values
+        :param only_enabled:
+        :return:
+        """
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
+        if only_enabled:
+            remotes = [r for r in remotes if not r.disabled]
         if pattern:
             filtered_remotes = []
-            for remote in remotes:
-                if fnmatch.fnmatch(remote.name, pattern):
-                    filtered_remotes.append(remote)
-
-            if not filtered_remotes and "*" not in pattern:
-                raise ConanException(f"Remote '{pattern}' not found in remotes")
+            patterns = [pattern] if isinstance(pattern, str) else pattern
+            for p in patterns:
+                is_match = False
+                for remote in remotes:
+                    if fnmatch.fnmatch(remote.name, p):
+                        is_match = True
+                        if remote not in filtered_remotes:
+                            filtered_remotes.append(remote)
+                if not is_match:
+                    if "*" in p or "?" in p:
+                        if only_enabled:
+                            raise ConanException(
+                                f"Remotes for pattern '{p}' can't be found or are disabled")
+                    else:
+                        raise ConanException(f"Remote '{p}' can't be found or is disabled")
 
             remotes = filtered_remotes
-        if only_active:
-            remotes = [r for r in remotes if not r.disabled]
         return remotes
+
+    @api_method
+    def disable(self, pattern):
+        remotes = self.list(pattern, only_enabled=False)
+        for r in remotes:
+            r.disabled = True
+            self.update(r)
+
+    @api_method
+    def enable(self, pattern):
+        remotes = self.list(pattern, only_enabled=False)
+        for r in remotes:
+            r.disabled = False
+            self.update(r)
 
     @api_method
     def get(self, remote_name):

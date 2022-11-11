@@ -10,7 +10,7 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_exe_run
+from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import touch
 
@@ -62,6 +62,8 @@ def test_autotools():
 def build_windows_subsystem(profile, make_program, subsystem):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
+
+    This doesn't run in bash at all, not win_bash, pure Windows terminal
     """
     # FIXME: cygwin in CI (my local machine works) seems broken for path with spaces
     client = TestClient(path_with_spaces=False)
@@ -103,6 +105,8 @@ def build_windows_subsystem(profile, make_program, subsystem):
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, subsystem=subsystem)
     assert "hello/0.1: Hello World Release!" in client.out
+    check_vs_runtime("app.exe", client, vs_version="15", build_type="Release", architecture="amd64",
+                     static_runtime=False, subsystem=subsystem)
 
     client.save({"app.cpp": gen_function_cpp(name="main", msg="main2",
                                              includes=["hello"], calls=["hello"])})
@@ -122,6 +126,7 @@ def build_windows_subsystem(profile, make_program, subsystem):
 @pytest.mark.tool("cygwin")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_cygwin():
+    # TODO: This test seems broken locally, need to really verify is passing in CI
     gcc = textwrap.dedent("""
         [settings]
         os=Windows
@@ -138,6 +143,7 @@ def test_autotoolsdeps_cygwin():
 @pytest.mark.tool("mingw64")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_mingw_msys():
+    # FIXME: Missing subsystem to model mingw libstdc++
     gcc = textwrap.dedent("""
         [settings]
         os=Windows

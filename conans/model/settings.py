@@ -160,6 +160,15 @@ class SettingsItem(object):
             ret[key] = value.get_definition()
         return ret
 
+    def rm_safe(self, name):
+        """ Iterates all possible subsettings, calling rm_safe() for all of them. If removing
+        "compiler.cppstd", this will iterate msvc, gcc, clang, etc, calling rm_safe(cppstd) for
+        all of them"""
+        if isinstance(self._definition, list):
+            return
+        for subsetting in self._definition.values():
+            subsetting.rm_safe(name)
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value="settings"):
@@ -199,17 +208,18 @@ class Settings(object):
         return default
 
     def rm_safe(self, name):
-        try:
-            tmp = self
-            attr_ = name
-            if "." in name:
-                fields = name.split(".")
-                attr_ = fields.pop()
-                for prop in fields:
-                    tmp = getattr(tmp, prop)
-            delattr(tmp, attr_)
-        except ConanException:
-            pass
+        """ Removes the setting or subsetting from the definition. For example,
+        rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
+        of the current value of the "compiler"
+        """
+        if "." in name:
+            setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
+            try:
+                self._data[setting].rm_safe(remainder)  # call rm_safe("cppstd") for the "compiler"
+            except KeyError:
+                pass
+        else:
+            self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive

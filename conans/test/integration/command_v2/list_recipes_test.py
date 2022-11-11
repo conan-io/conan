@@ -35,7 +35,7 @@ class TestListRecipesBase:
 class TestParams(TestListRecipesBase):
     def test_fail_if_remote_list_is_empty(self):
         self.client.run("list recipes -r whatever *", assert_error=True)
-        assert "Remote 'whatever' not found in remotes" in self.client.out
+        assert "ERROR: Remote 'whatever' can't be found or is disabled" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -89,7 +89,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
         self.client.run("list recipes whatever -r remote1 -r remote2", assert_error=True)
-        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
+        assert "ERROR: Remote 'remote1' can't be found or is disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
@@ -268,7 +268,7 @@ class TestRemotes(TestListRecipesBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "Remote 'wrong_remote' not found in remotes"
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)
