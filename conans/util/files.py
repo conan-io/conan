@@ -364,29 +364,11 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 
 
 def tar_extract(fileobj, destination_dir):
-    """Extract tar file controlling not absolute paths and fixing the routes
-    if the tar was zipped in windows"""
-    def badpath(path, base):
-        # joinpath will ignore base if path is absolute
-        return not realpath(abspath(joinpath(base, path))).startswith(base)
-
-    def safemembers(members):
-        base = realpath(abspath(destination_dir))
-
-        for finfo in members:
-            if badpath(finfo.name, base):
-                # ConanOutput().warning("file:%s is skipped since it's not safe." % str(finfo.name))
-                continue
-            else:
-                # Fixes unzip a windows zipped file in linux
-                finfo.name = finfo.name.replace("\\", "/")
-                yield finfo
-
     the_tar = tarfile.open(fileobj=fileobj)
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
     # the_tar.errorlevel = 2  # raise exception if any error
-    the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
+    the_tar.extractall(path=destination_dir)
     the_tar.close()
 
 
