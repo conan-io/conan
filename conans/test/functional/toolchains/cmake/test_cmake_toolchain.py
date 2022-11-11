@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -1186,17 +1187,10 @@ def test_find_program_for_tool_requires():
 
     xxx = client.get_default_build_profile()
 
-    build_context_package_id = "8a4ff0fe84a07ff632c76e1459cdffd5e0d8d05b"
-    host_context_package_id = "c0dac52c62d31829af1777b04c0df6a08877e8f7"
-
     client.run("create . -pr:b build_profile -pr:h build_profile")
-    latest_rrev = client.cache.get_latest_recipe_reference(
-        RecipeReference.loads("foobar/1.0"))
-    pref = client.get_latest_package_reference(latest_rrev, build_context_package_id)
-    build_context_package_folder = client.get_latest_pkg_layout(pref).package()
+    build_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
     client.run("create . -pr:b build_profile -pr:h host_profile")
-    pref = client.get_latest_package_reference(latest_rrev, host_context_package_id)
-    host_context_package_folder = client.get_latest_pkg_layout(pref).package()
+    host_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
 
     conanfile_consumer = textwrap.dedent("""
         from conan import ConanFile
