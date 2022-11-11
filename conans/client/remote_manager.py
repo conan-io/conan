@@ -85,7 +85,6 @@ class RemoteManager(object):
 
         # Make sure that the source dir is deleted
         rmdir(layout.source())
-        touch_folder(export_folder)
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
@@ -104,7 +103,6 @@ class RemoteManager(object):
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
         uncompress_file(tgz_file, export_sources_folder)
-        touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, pref, remote):
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
@@ -139,8 +137,6 @@ class RemoteManager(object):
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
-            # Issue #214 https://github.com/conan-io/conan/issues/214
-            touch_folder(package_folder)
 
             scoped_output.success('Package installed %s' % pref.package_id)
             scoped_output.info("Downloaded package revision %s" % pref.revision)
@@ -217,6 +213,7 @@ class RemoteManager(object):
             raise ConanException(exc, remote=remote)
 
 
+# TODO: Consider removing this, we are not changing the compression format
 def check_compressed_files(tgz_name, files):
     bare_name = os.path.splitext(tgz_name)[0]
     for f in files:

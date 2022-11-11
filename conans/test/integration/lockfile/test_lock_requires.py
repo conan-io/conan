@@ -447,6 +447,7 @@ class TestLockTestPackage:
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
 
+<<<<<<< HEAD
     def test_create_lock_tool_requires_test(self, client):
         """ same as above, but the full lockfile including the "test_package" can be
         obtained with a single "conan create"
@@ -467,3 +468,83 @@ class TestLockTestPackage:
             assert "cmake/2.0" not in c.out
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
+=======
+
+class TestErrorDuplicates:
+    def test_error_duplicates(self):
+        """ the problem is having 2 different, almost identical requires that will point to the same
+        thing, with different traits and not colliding.
+        Lockfiles do a ``require.ref`` update and that alters some dictionaries iteration, producing
+        an infinite loop and blocking
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("dep/0.1#f8c2264d0b32a4c33f251fe2944bb642", headers=False, libs=False,
+                                visible=False)
+                    self.requires("dep/0.1", headers=True, libs=False, visible=False)
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": pkg})
+        c.run("create dep --lockfile-out=conan.lock")
+        c.run("create pkg", assert_error=True)
+        assert "Duplicated requirement: dep/0.1" in c.out
+        c.run("create pkg --lockfile=conan.lock", assert_error=True)
+        assert "Duplicated requirement: dep/0.1" in c.out
+
+    def test_error_duplicates_reverse(self):
+        """ Same as above, but order requires changed
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("dep/0.1", headers=True, libs=False, visible=False)
+                    self.requires("dep/0.1#f8c2264d0b32a4c33f251fe2944bb642", headers=False, libs=False,
+                                visible=False)
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": pkg})
+        c.run("create dep --lockfile-out=conan.lock")
+        c.run("create pkg", assert_error=True)
+        assert "Duplicated requirement: dep/0.1" in c.out
+        c.run("create pkg --lockfile=conan.lock", assert_error=True)
+        assert "Duplicated requirement: dep/0.1" in c.out
+
+    def test_error_duplicates_revisions(self):
+        """ 2 different revisions can be added without conflict, if they are not visible and not
+        other conflicting traits
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("dep/0.1#f8c2264d0b32a4c33f251fe2944bb642", headers=False,
+                                  libs=False, visible=False)
+                    self.requires("dep/0.1#7b91e6100797b8b012eb3cdc5544800b", headers=True,
+                                  libs=False, visible=False)
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "dep2/conanfile.py": GenConanfile("dep", "0.1").with_class_attribute("potato=42"),
+                "pkg/conanfile.py": pkg})
+        c.run("create dep --lockfile-out=conan.lock")
+        c.run("create dep2 --lockfile=conan.lock --lockfile-out=conan.lock")
+
+        c.run("create pkg")
+        assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
+        assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
+        print(c.load("conan.lock"))
+        c.run("create pkg --lockfile=conan.lock")
+        assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
+        assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
+>>>>>>> develop2

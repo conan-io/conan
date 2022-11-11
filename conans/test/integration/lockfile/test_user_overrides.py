@@ -181,12 +181,11 @@ def test_add_multiple_revisions():
     assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == \
            new_lock["requires"]
 
-    # add without revision at all
-    # It is not that this makes a lot of sense, but it is up to the user, the important thing
-    # is that it doesn't crash
-    c.run("lock add --requires=math/1.0")
+    # add without revision at all, will give us an error, as it doesn't make sense
+    c.run("lock add --requires=math/1.0", assert_error=True)
+    assert "Cannot add math/1.0 to lockfile, already exists" in c.out
     new_lock = json.loads(c.load("conan.lock"))
-    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0', 'math/1.0'] == \
+    assert ['math/1.0#revx%0.0', 'math/1.0#rev2', 'math/1.0#rev1', 'math/1.0#rev0'] == \
            new_lock["requires"]
 
 

@@ -233,13 +233,14 @@ class Requirement:
         self.visible |= other.visible
         self.force |= other.force
         self.direct |= other.direct
+        self.transitive_headers = self.transitive_headers or other.transitive_headers
+        self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
-
         consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
         Compute new Requirement to be applied to "consumer" translating the effect of the dependency
@@ -267,32 +268,32 @@ class Requirement:
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.HEADER:
-                downstream_require = Requirement(require.ref, headers=True, libs=True, run=True)
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
                 assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.HEADER:
-                downstream_require = Requirement(require.ref, headers=True, libs=True, run=False)
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
                 assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
-            downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+            downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
@@ -307,8 +308,13 @@ class Requirement:
         if require.transitive_headers is not None:
             downstream_require.headers = require.transitive_headers
 
+        if self.transitive_headers is not None and require.transitive_headers:
+            downstream_require.transitive_headers = self.transitive_headers
+
         if require.transitive_libs is not None:
             downstream_require.libs = require.transitive_libs
+            if require.transitive_libs is False:
+                downstream_require.transitive_libs = False
 
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
