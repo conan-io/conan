@@ -1192,10 +1192,10 @@ def test_find_program_for_tool_requires():
     client.run("create . -pr:b build_profile -pr:h build_profile")
     latest_rrev = client.cache.get_latest_recipe_reference(
         RecipeReference.loads("foobar/1.0"))
-    pref = client.get_latest_package_reference(latest_rrev)
+    pref = client.get_latest_package_reference(latest_rrev, build_context_package_id)
     build_context_package_folder = client.get_latest_pkg_layout(pref).package()
     client.run("create . -pr:b build_profile -pr:h host_profile")
-    pref = client.get_latest_package_reference(latest_rrev, "c0dac52c62d31829af1777b04c0df6a08877e8f7")
+    pref = client.get_latest_package_reference(latest_rrev, host_context_package_id)
     host_context_package_folder = client.get_latest_pkg_layout(pref).package()
 
     conanfile_consumer = textwrap.dedent("""
