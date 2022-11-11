@@ -758,3 +758,23 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
     assert "architecture" in presets["configurePresets"][0]
     assert "toolset" not in presets["configurePresets"][0]
+
+
+def test_pkg_config_executable_variable():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=armv8
+
+        [conf]
+        tools.gnu:pkg_config=/usr/local/bin/pkg-config
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(PKG_CONFIG_EXECUTABLE /usr/local/bin/pkg-config CACHE FILEPATH ' in toolchain
