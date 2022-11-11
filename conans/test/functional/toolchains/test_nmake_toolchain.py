@@ -1,0 +1,53 @@
+import platform
+import textwrap
+
+import pytest
+
+from conans.test.assets.sources import gen_function_cpp
+from conans.test.functional.utils import check_exe_run
+from conans.test.utils.tools import TestClient
+
+
+@pytest.mark.parametrize("compiler, version, runtime, cppstd, build_type",
+                         [("msvc", "190", "dynamic", "14", "Release"),
+                          ("msvc", "191", "static", "17", "Debug")])
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
+    client = TestClient(path_with_spaces=False)
+    settings = {"compiler": compiler,
+                "compiler.version": version,
+                "compiler.cppstd": cppstd,
+                "compiler.runtime": runtime,
+                "build_type": build_type,
+                "arch": "x86_64"}
+
+    # Build the profile according to the settings provided
+    settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "NMakeToolchain"
+
+            def build(self):
+                self.run(f"nmake /f makefile")
+            """)
+    makefile = textwrap.dedent("""\
+        all: simple.exe
+
+        .cpp.obj:
+          cl $(cppflags) $*.cpp
+
+        simple.exe: simple.obj
+          cl $(cppflags) simple.obj
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "makefile": makefile,
+                 "simple.cpp": gen_function_cpp(name="main")})
+    client.run("install . {}".format(settings))
+    client.run("build .")
+    print(client.out)
+    client.run_command("simple.exe")
+    print(client.out)
+    check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
