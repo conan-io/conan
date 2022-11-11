@@ -111,6 +111,7 @@ class ConanFileMock(ConanFile):
         self.path = None
         self.settings = None
         self.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
+        self.settings_target = None
         self.options = Options()
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
