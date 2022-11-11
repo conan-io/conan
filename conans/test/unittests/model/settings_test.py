@@ -415,3 +415,23 @@ os: [Windows, Linux]
         sot = settings.get_definition()
         assert [None, "cygwin", "msys", "msys2", "wsl"] == sot["os"]["Windows"]["subsystem"]
 
+
+def test_rm_safe():
+    settings = Settings.loads(default_settings_yml)
+    settings.rm_safe("compiler.cppstd")
+    settings.rm_safe("compiler.libcxx")
+    settings.compiler = "gcc"
+    with pytest.raises(Exception) as e:
+        settings.compiler.cppstd = "14"
+    assert "'settings.compiler.cppstd' doesn't exist for 'gcc'" in str(e.value)
+    with pytest.raises(Exception) as e:
+        settings.compiler.libcxx = "libstdc++"
+    assert "'settings.compiler.libcxx' doesn't exist for 'gcc'" in str(e.value)
+
+    settings.compiler = "clang"
+    with pytest.raises(Exception) as e:
+        settings.compiler.cppstd = "14"
+    assert "'settings.compiler.cppstd' doesn't exist for 'clang'" in str(e.value)
+    with pytest.raises(Exception) as e:
+        settings.compiler.libcxx = "libstdc++"
+    assert "'settings.compiler.libcxx' doesn't exist for 'clang'" in str(e.value)
