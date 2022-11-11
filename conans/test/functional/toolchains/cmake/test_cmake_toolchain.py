@@ -1230,5 +1230,6 @@ def test_find_program_for_tool_requires():
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
+        print(client.out)
         assert f"{build_context_package_folder}/bin/foobin" in client.out
         assert f"{host_context_package_folder}/include" in client.out
