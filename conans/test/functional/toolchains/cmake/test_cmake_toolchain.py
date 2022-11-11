@@ -1189,8 +1189,10 @@ def test_find_program_for_tool_requires():
 
     client.run("create . -pr:b build_profile -pr:h build_profile")
     build_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
+    build_context_package_folder = build_context_package_folder.replace("\\", "/")
     client.run("create . -pr:b build_profile -pr:h host_profile")
     host_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
+    host_context_package_folder = host_context_package_folder.replace("\\", "/")
 
     conanfile_consumer = textwrap.dedent("""
         from conan import ConanFile
