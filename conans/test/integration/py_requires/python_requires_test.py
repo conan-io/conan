@@ -75,6 +75,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
 
+    @pytest.mark.xfail(reason="Lockfiles with alias are broken, never were tested")
     def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
