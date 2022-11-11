@@ -5,7 +5,7 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
-from conan.cache.conan_reference_layout import METADATA
+from conan.internal.cache import METADATA
 from conan.api.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -16,7 +16,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import mkdir, tar_extract, touch_folder
+from conans.util.files import mkdir, tar_extract
 
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,

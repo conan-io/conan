@@ -4,8 +4,8 @@ from typing import List
 
 from jinja2 import Template
 
-from conan.cache.cache import DataCache
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.internal.cache import DataCache
+from conan.internal.cache import RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import default_settings_yml

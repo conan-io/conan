@@ -23,7 +23,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
+from conan.internal.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPIV2
 from conan.api.model import Remote

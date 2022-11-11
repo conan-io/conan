@@ -4,7 +4,7 @@ import os
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, COMMAND_GROUPS
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_profiles_from_args, scope_options
+from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 
 
@@ -31,7 +31,7 @@ def export_pkg(conan_api, parser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
 
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,

@@ -1,6 +1,6 @@
 import os
 
-from conan.cache.conan_reference_layout import METADATA
+from conan.internal.cache import METADATA
 from conans.client.loader import load_python_file
 from conans.util.files import mkdir
 
