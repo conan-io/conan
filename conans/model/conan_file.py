@@ -150,6 +150,10 @@ class ConanFile:
 
     #: When ``True`` it enables the new run in a subsystem bash in Windows mechanism.
     win_bash = None
+
+    #: When ``True`` it enables running commands in the ``"run"`` scope, to run them inside a bash shell.
+    win_bash_run = None  # For run scope
+
     tested_reference_str = None
 
     _conan_is_consumer = False
@@ -415,10 +419,13 @@ class ConanFile:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="conanbuild", quiet=False,
-            shell=True):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
+            shell=True, scope="build"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command)
+        if env == "":  # This default allows not breaking for users with ``env=None`` indicating
+            # they don't want any env-file applied
+            env = "conanbuild" if scope == "build" else "conanrun"
         env = [env] if env and isinstance(env, str) else []
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)

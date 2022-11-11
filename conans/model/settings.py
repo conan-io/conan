@@ -161,6 +161,9 @@ class SettingsItem(object):
         return ret
 
     def rm_safe(self, name):
+        """ Iterates all possible subsettings, calling rm_safe() for all of them. If removing
+        "compiler.cppstd", this will iterate msvc, gcc, clang, etc, calling rm_safe(cppstd) for
+        all of them"""
         if isinstance(self._definition, list):
             return
         for subsetting in self._definition.values():
@@ -205,10 +208,14 @@ class Settings(object):
         return default
 
     def rm_safe(self, name):
+        """ Removes the setting or subsetting from the definition. For example,
+        rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
+        of the current value of the "compiler"
+        """
         if "." in name:
-            setting, remainder = name.split(".", 1)
+            setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
             try:
-                self._data[setting].rm_safe(remainder)
+                self._data[setting].rm_safe(remainder)  # call rm_safe("cppstd") for the "compiler"
             except KeyError:
                 pass
         else:

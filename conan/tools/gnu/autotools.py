@@ -4,7 +4,6 @@ from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.files.files import load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
-from conans.util.runners import check_output_runner
 
 
 def join_arguments(args):
@@ -85,8 +84,9 @@ class Autotools(object):
         This is just an "alias" of ``self.make(target="install")``
 
         :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
-                     ``make`` call. By default an argument ``DESTDIR=self.package_folder`` is added to the
-                     call if the passed value is ``None``.
+                     ``make`` call. By default an argument ``DESTDIR=unix_path(self.package_folder)``
+                     is added to the call if the passed value is ``None``. See more information about
+                     :ref:`tools.microsoft.unix_path() function<conan_tools_microsoft_unix_path>`
         """
         args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
         self.make(target="install", args=args)

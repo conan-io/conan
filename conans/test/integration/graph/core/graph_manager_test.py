@@ -14,11 +14,11 @@ def _check_transitive(node, transitive_deps):
         "Number of deps don't match \n{}!=\n{}".format(values, transitive_deps)
 
     for v1, v2 in zip(values, transitive_deps):
-        assert v1.node is v2[0]
-        assert v1.require.headers is v2[1]
-        assert v1.require.libs is v2[2]
-        assert v1.require.build is v2[3]
-        assert v1.require.run is v2[4]
+        if v1.node is not v2[0]: raise Exception(f"{v1.node}!={v2[0]}")
+        if v1.require.headers is not v2[1]: raise Exception(f"{v1.node}!={v2[0]} headers")
+        if v1.require.libs is not v2[2]: raise Exception(f"{v1.node}!={v2[0]} libs")
+        if v1.require.build is not v2[3]: raise Exception(f"{v1.node}!={v2[0]} build")
+        if v1.require.run is not v2[4]: raise Exception(f"{v1.node}!={v2[0]} run")
         if len(v2) > 5:
             assert v1.require.package_id_mode is v2[5]
 
@@ -361,6 +361,23 @@ class TestLinear(GraphManagerTest):
             run = package_type in ("application", "shared-library")
             _check_transitive(app, [(cmake, False, False, True, run)])
 
+    def test_direct_header_only(self):
+        # app -> liba0.1 (header_only)
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library"))
+        consumer = self.recipe_consumer("app/0.1", ["liba/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[liba])
+        self._check_node(liba, "liba/0.1#123", dependents=[app])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(liba, True, False, False, False)])
+
     def test_header_only(self):
         # app -> libb0.1 -> liba0.1 (header_only)
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library"))
@@ -383,6 +400,109 @@ class TestLinear(GraphManagerTest):
         _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, False, False, False, False)])
         _check_transitive(libb, [(liba, True, False, False, False)])
+
+    def test_header_only_with_transitives(self):
+        # app -> liba0.1(header) -> libb0.1 (static)
+        #             \-----------> libc0.1 (shared)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library")
+                                                        .with_requires("libb/0.1", "libc/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["liba/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[liba])
+        self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", dependents=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[liba])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(liba, True, False, False, False),
+                                (libb, True, True, False, False),
+                                (libc, True, True, False, True)])
+        _check_transitive(liba, [(libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+
+    def test_multiple_header_only_with_transitives(self):
+        # app -> libd0.1(header) -> liba0.1(header) -> libb0.1 (static)
+        #                               \-----------> libc0.1 (shared)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("libb/0.1", "libc/0.1"))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("liba/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        liba = libd.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", dependents=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[liba])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, False, False, False),
+                                (liba, True, False, False, False),
+                                (libb, True, True, False, False),
+                                (libc, True, True, False, True)])
+        _check_transitive(libd, [(liba, True, False, False, False),
+                                 (libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+        _check_transitive(liba, [(libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+
+    def test_static_multiple_header_only_with_transitives(self):
+        # app -> libd0.1(static) -> liba0.1(header) -> libb0.1 (static)
+        #                               \-----------> libc0.1 (shared)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library")
+                              .with_requires("libb/0.1", "libc/0.1"))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_package_type("static-library")
+                              .with_requires("liba/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        liba = libd.dependencies[0].dst
+        libb = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", deps=[libb, libc], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", dependents=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[liba])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, True, False, False),
+                                (liba, False, False, False, False),
+                                (libb, False, True, False, False),
+                                (libc, False, True, False, True)])
+        _check_transitive(libd, [(liba, True, False, False, False),
+                                 (libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
+        _check_transitive(liba, [(libb, True, True, False, False),
+                                 (libc, True, True, False, True)])
 
     def test_multiple_levels_transitive_headers(self):
         # app -> libcc0.1 -> libb0.1  -> liba0.1
@@ -412,6 +532,308 @@ class TestLinear(GraphManagerTest):
         _check_transitive(app, [(libc, True, True, False, False),
                                 (libb, True, True, False, False),
                                 (liba, True, True, False, False)])
+
+
+class TestLinearFourLevels(GraphManagerTest):
+    def test_default(self):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        self.recipe_conanfile("liba/0.1", GenConanfile())
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (liba, True, True, False, False)])
+
+    def test_negate_headers(self):
+        # app -> libc/0.1 -> libb0.1  -(not headers)-> liba0.1
+        # So nobody depends on the headers downstream
+        self.recipe_conanfile("liba/0.1", GenConanfile())
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1", headers=False))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, True, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (liba, False, True, False, False)])
+
+    @parameterized.expand([("static-library", ),
+                           ("shared-library", )])
+    def test_libraries_transitive_headers(self, library_type):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # All with transitive_headers, the final application shoud get all headers
+        # https://github.com/conan-io/conan/issues/12504
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type(library_type))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type(library_type)
+                                            .with_requirement("liba/0.1", transitive_headers=True))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type(library_type)
+                                            .with_requirement("libb/0.1", transitive_headers=True))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        if library_type == "shared-library":
+            _check_transitive(app, [(libc, True, True, False, True),
+                                    (libb, True, False, False, True),
+                                    (liba, True, False, False, True)])
+        else:  # Both static and unknown behave the same
+            _check_transitive(app, [(libc, True, True, False, False),
+                                    (libb, True, True, False, False),
+                                    (liba, True, True, False, False)])
+
+    def test_negate_libs(self):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # even if all are static, we want to disable the propagation of one static lib downstream
+        # because only the headers are used
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("liba/0.1", libs=False))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, False, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, False, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, False, True, False, False),
+                                (liba, False, False, False, False)])
+
+    def test_disable_transitive_libs(self):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # even if all are static, we want to disable the propagation of one static lib downstream
+        # Maybe we are re-archiving
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("liba/0.1", transitive_libs=False))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, False, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, False, True, False, False),
+                                (liba, False, False, False, False)])
+
+    def test_shared_depends_static_libraries(self):
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        # Emulate a re-packaging, re-archiving static library
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("shared-library")
+                                            .with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libc, [(libb, True, True, False, True),
+                                 (liba, False, False, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, False, True, False, True),
+                                (liba, False, False, False, False)])
+
+    def test_negate_run(self):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # even if all are shared, we want to disable the propagation of one shared lib downstream
+        # because only the headers are used
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("shared-library")
+                                            .with_requirement("liba/0.1", run=False))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("shared-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, True),
+                                 (liba, False, False, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, True),
+                                (libb, False, False, False, True),
+                                (liba, False, False, False, False)])
+
+    def test_force_run(self):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # even if all are static, there is something in a static lib (files or whatever) that
+        # is necessary at runtime
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("liba/0.1", run=True))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("static-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, True)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, True, False, True)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, False, True, False, False),
+                                (liba, False, True, False, True)])
+
+    @parameterized.expand([(True,),
+                           (False,)])
+    def test_header_only_run(self, run):
+        # app -> libc/0.1 -> libb0.1  -> liba0.1
+        # many header-onlys
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library"))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_package_type("header-library")
+                                            .with_requirement("liba/0.1", run=run))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("header-library")
+                                            .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, False, False, run)])
+        _check_transitive(libc, [(libb, True, False, False, False),
+                                 (liba, True, False, False, run)])
+
+        _check_transitive(app, [(libc, True, False, False, False),
+                                (libb, True, False, False, False),
+                                (liba, True, False, False, run)])
 
 
 class TestDiamond(GraphManagerTest):
@@ -496,6 +918,36 @@ class TestDiamond(GraphManagerTest):
         # Order seems to be link order
         _check_transitive(app, [(libc, True, True, False, False),
                                 (liba, True, True, False, False)])
+        # Both requires of app are direct! https://github.com/conan-io/conan/pull/12388
+        for require in app.transitive_deps.keys():
+            assert require.direct is True
+
+    def test_half_diamond_reverse(self):
+        # same as above, just swap order of declaration
+        # app -->libc0.1--> liba0.1
+        #    \-------------->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("libc/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "liba/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        liba = app.dependencies[1].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[liba, libc])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[app, libc])
+
+        # Order seems to be link order, constant irrespective of declaration order, good
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (liba, True, True, False, False)])
+        # Both requires of app are direct! https://github.com/conan-io/conan/pull/12388
+        for require in app.transitive_deps.keys():
+            assert require.direct is True
 
     def test_shared_static(self):
         # app -> libb0.1 (shared) -> liba0.1 (static)

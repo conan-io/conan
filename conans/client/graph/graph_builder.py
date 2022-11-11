@@ -15,10 +15,11 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver):
+    def __init__(self, proxy, loader, resolver, remotes):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
+        self._remotes = remotes  # TODO: pass as arg to load_graph()
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -86,7 +87,7 @@ class DepsGraphBuilder(object):
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
-            require.process_package_type(prev_node)
+            require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
@@ -181,7 +182,7 @@ class DepsGraphBuilder(object):
         while alias is not None:
             # if not cached, then resolve
             try:
-                result = self._proxy.get_recipe(alias)
+                result = self._proxy.get_recipe(alias, self._remotes)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
                 raise GraphError.missing(node, require, str(e))
@@ -199,9 +200,10 @@ class DepsGraphBuilder(object):
             alias = new_req.alias
 
     def _resolve_recipe(self, ref, graph_lock):
-        result = self._proxy.get_recipe(ref)
+        result = self._proxy.get_recipe(ref, self._remotes)
         conanfile_path, recipe_status, remote, new_ref = result
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
+                                                    remotes=self._remotes)
         return new_ref, dep_conanfile, recipe_status, remote
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
@@ -210,7 +212,7 @@ class DepsGraphBuilder(object):
             #  if not require.locked_id:  # if it is locked, nothing to resolved
             # TODO: This range-resolve might resolve in a given remote or cache
             # Make sure next _resolve_recipe use it
-            resolved_ref = self._resolver.resolve(require, str(node.ref))
+            resolved_ref = self._resolver.resolve(require, str(node.ref), self._remotes)
 
             # This accounts for alias too
             resolved = self._resolve_recipe(resolved_ref, graph_lock)
@@ -247,7 +249,7 @@ class DepsGraphBuilder(object):
             down_options = node.conanfile.up_options if require.visible else Options()
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
-        require.process_package_type(new_node)
+        require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
         if node.propagate_downstream(require, new_node):

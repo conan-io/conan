@@ -24,7 +24,7 @@ class GraphAPI:
                                      update=None, remotes=None, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        app.load_remotes(remotes, update=update)
+        app.load_remotes(update=update)
 
         if path.endswith(".py"):
             conanfile = app.loader.load_consumer(path,
@@ -32,7 +32,8 @@ class GraphAPI:
                                                  version=version,
                                                  user=user,
                                                  channel=channel,
-                                                 graph_lock=lockfile)
+                                                 graph_lock=lockfile,
+                                                 remotes=remotes)
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
@@ -49,9 +50,11 @@ class GraphAPI:
 
     @api_method
     def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
-                                 update=None, remotes=None, lockfile=None):
+                                 update=None, remotes=None, lockfile=None,
+                                 tested_python_requires=None):
         """ Create and initialize a root node from a test_package/conanfile.py consumer
 
+        :param tested_python_requires: The reference to the tested ``python_requires``
         :param lockfile: Might be good to lock python-requires, build-requires
         :param path: The full path to the test_package/conanfile.py being used
         :param tested_reference: The full RecipeReference of the tested package
@@ -64,7 +67,7 @@ class GraphAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        app.load_remotes(remotes, update=update)
+        app.load_remotes(update=update)
 
         loader = app.loader
         profile_host.options.scope(tested_reference)
@@ -72,7 +75,8 @@ class GraphAPI:
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
                                          channel=tested_reference.channel,
-                                         graph_lock=lockfile)
+                                         graph_lock=lockfile, remotes=remotes,
+                                         tested_python_requires=tested_python_requires)
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
         conanfile.output.scope = conanfile.display_name
@@ -114,12 +118,13 @@ class GraphAPI:
         """
         app = ConanApp(self.conan_api.cache_folder)
 
-        app.load_remotes(remotes, update=update, check_updates=check_update)
+        app.load_remotes(update=update, check_updates=check_update)
 
         assert profile_host is not None
         assert profile_build is not None
 
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver)
+        remotes = remotes or []
+        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, remotes)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 
         if lockfile:
@@ -141,9 +146,9 @@ class GraphAPI:
             revisions for already existing recipes in the Conan cache
         """
         conan_app = ConanApp(self.conan_api.cache_folder)
-        conan_app.load_remotes(remotes, update=update)
+        conan_app.load_remotes(update=update)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
-        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile)
+        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes)
 
     @api_method
     def load_conanfile_class(self, path):

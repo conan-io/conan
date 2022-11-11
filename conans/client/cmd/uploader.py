@@ -137,7 +137,7 @@ class PackagePreparator:
         self._app = app
         self._output = ConanOutput()
 
-    def prepare(self, upload_bundle):
+    def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
         for recipe in upload_bundle.recipes:
             layout = self._app.cache.ref_layout(recipe.ref)
@@ -145,7 +145,7 @@ class PackagePreparator:
             conanfile = self._app.loader.load_basic(conanfile_path)
 
             if recipe.upload:
-                self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
+                self._prepare_recipe(recipe, conanfile, enabled_remotes)
             for package in recipe.packages:
                 if package.upload:
                     self._prepare_package(package)
@@ -335,19 +335,9 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
                                         compresslevel=compresslevel)
-        mask = ~(stat.S_IWOTH | stat.S_IWGRP)
         for filename, abs_path in sorted(files.items()):
-            info = tarfile.TarInfo(name=filename)
-            info.size = os.stat(abs_path).st_size
-            info.mode = os.stat(abs_path).st_mode & mask
-            if os.path.islink(abs_path):
-                info.type = tarfile.SYMTYPE
-                info.size = 0  # A symlink shouldn't have size
-                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                tgz.addfile(tarinfo=info)
-            else:
-                with open(abs_path, 'rb') as file_handler:
-                    tgz.addfile(tarinfo=info, fileobj=file_handler)
+            # recursive is False in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=False)
         tgz.close()
 
     duration = time.time() - t1
