@@ -447,7 +447,6 @@ class TestLockTestPackage:
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
 
-<<<<<<< HEAD
     def test_create_lock_tool_requires_test(self, client):
         """ same as above, but the full lockfile including the "test_package" can be
         obtained with a single "conan create"
@@ -468,7 +467,7 @@ class TestLockTestPackage:
             assert "cmake/2.0" not in c.out
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
-=======
+
 
 class TestErrorDuplicates:
     def test_error_duplicates(self):
@@ -543,8 +542,6 @@ class TestErrorDuplicates:
         c.run("create pkg")
         assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
         assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
-        print(c.load("conan.lock"))
         c.run("create pkg --lockfile=conan.lock")
         assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
         assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
->>>>>>> develop2
