@@ -251,16 +251,30 @@ class EnvVars:
     def keys(self):
         return self._values.keys()
 
-    def get(self, name, default=None):
+    def get(self, name, default=None, placeholder=None):
+        """
+        if placeholder is specified it means that we want to get a placeholder instead of the
+        real value of the env-var
+        """
         v = self._values.get(name)
         if v is None:
             return default
-        return v.get_value(self._subsystem, self._pathsep)
+        if placeholder:
+            return v.get_str(placeholder, self._subsystem, self._pathsep)
+        else:
+            return v.get_value(self._subsystem, self._pathsep)
 
-    def items(self):
-        """returns {str: str} (varname: value)"""
-        return {k: v.get_value(self._subsystem, self._pathsep)
-                for k, v in self._values.items()}.items()
+    def items(self, placeholder=None):
+        """returns {str: str} (varname: value)
+        if placeholder is specified it means that we want to get a placeholder instead of the
+        real values of the env-vars
+        """
+        if placeholder:
+            return {k: v.get_str(placeholder, self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
+        else:
+            return {k: v.get_value(self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
 
     @contextmanager
     def apply(self):
