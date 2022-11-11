@@ -1131,7 +1131,7 @@ def test_cmake_toolchain_vars_when_option_declared():
     assert "mylib position independent code: ON" in t.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_find_program_for_tool_requires():
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
@@ -1186,8 +1186,17 @@ def test_find_program_for_tool_requires():
 
     xxx = client.get_default_build_profile()
 
+    build_context_package_id = "8a4ff0fe84a07ff632c76e1459cdffd5e0d8d05b"
+    host_context_package_id = "c0dac52c62d31829af1777b04c0df6a08877e8f7"
+
     client.run("create . -pr:b build_profile -pr:h build_profile")
+    latest_rrev = client.cache.get_latest_recipe_reference(
+        RecipeReference.loads("foobar/1.0"))
+    pref = client.get_latest_package_reference(latest_rrev)
+    build_context_package_folder = client.get_latest_pkg_layout(pref).package()
     client.run("create . -pr:b build_profile -pr:h host_profile")
+    pref = client.get_latest_package_reference(latest_rrev, "c0dac52c62d31829af1777b04c0df6a08877e8f7")
+    host_context_package_folder = client.get_latest_pkg_layout(pref).package()
 
     conanfile_consumer = textwrap.dedent("""
         from conan import ConanFile
@@ -1197,10 +1206,10 @@ def test_find_program_for_tool_requires():
 
             def layout(self):
                 cmake_layout(self)
-            
+
             def requirements(self):
                 self.requires("foobar/1.0")
-            
+
             def build_requirements(self):
                 self.tool_requires("foobar/1.0")
     """)
@@ -1219,14 +1228,11 @@ def test_find_program_for_tool_requires():
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
         "build_profile": build_profile}, clean_first=True)
-    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
-
-    build_context_package_id = "581814504b2e960b35df487e5bdb32b1ecf02253"
-    host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
+    client.run("install conanfile_consumer.py --requires=pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
-        # Verify binary executable is found from build context package, 
+        # Verify binary executable is found from build context package,
         # and library comes from host context package
-        assert f"package/{build_context_package_id}/bin/foobin" in client.out
-        assert f"package/{host_context_package_id}/include" in client.out
+        assert f"{build_context_package_folder}/bin/foobin" in client.out
+        assert f"{host_context_package_folder}/include" in client.out
