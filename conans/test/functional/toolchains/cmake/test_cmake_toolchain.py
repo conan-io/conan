@@ -1231,5 +1231,7 @@ def test_find_program_for_tool_requires():
         # Verify binary executable is found from build context package,
         # and library comes from host context package
         print(client.out)
+        print(build_context_package_folder)
+        print(host_context_package_folder)
         assert f"{build_context_package_folder}/bin/foobin" in client.out
         assert f"{host_context_package_folder}/include" in client.out
