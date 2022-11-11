@@ -43,6 +43,15 @@ def test_lockfile_out(command):
     assert "dep/0.1" in lock
 
 
+def test_lockfile_out_export():
+    # Check that lockfile out is generated for "conan export"
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export pkg --lockfile-out=conan.lock")
+    lock = c.load("conan.lock")
+    assert "pkg/0.1" in lock
+
+
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_ranges_transitive(requires):
     """
@@ -352,8 +361,9 @@ def test_ux_defaults():
 
 
 class TestLockTestPackage:
-    def test_lock_tool_requires_test(self):
-        # https://github.com/conan-io/conan/issues/11763
+
+    @pytest.fixture()
+    def client(self):
         c = TestClient()
         test_package = textwrap.dedent("""
             from conan import ConanFile
@@ -366,7 +376,7 @@ class TestLockTestPackage:
                     self.requires(self.tested_reference_str)
                 def test(self):
                     print("package tested")
-        """)
+            """)
 
         c.save({"cmake/conanfile.py": GenConanfile("cmake"),
                 "dep/conanfile.py": GenConanfile("dep"),
@@ -375,6 +385,11 @@ class TestLockTestPackage:
 
         c.run("create cmake --version=1.0")
         c.run("create dep --version=1.0")
+        return c
+
+    def test_lock_tool_requires_test(self, client):
+        # https://github.com/conan-io/conan/issues/11763
+        c = client
         with c.chdir("app"):
             c.run("lock create .")
             lock = c.load("conan.lock")
@@ -395,31 +410,12 @@ class TestLockTestPackage:
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
 
-    def test_partial_approach(self):
-        """ do not include it in the lockfile, but apply it partially
+    def test_partial_approach(self, client):
+        """ do not include it in the lockfile, but apply it partially, so the tool_require is
+        free, will freely upgrade
         """
+        c = client
         # https://github.com/conan-io/conan/issues/11763
-        c = TestClient()
-        test_package = textwrap.dedent("""
-                   from conan import ConanFile
-
-                   class TestPackageConan(ConanFile):
-                       settings = "os", "compiler", "arch", "build_type"
-                       def build_requirements(self):
-                           self.tool_requires("cmake/[*]")
-                       def requirements(self):
-                           self.requires(self.tested_reference_str)
-                       def test(self):
-                           print("package tested")
-               """)
-
-        c.save({"cmake/conanfile.py": GenConanfile("cmake"),
-                "dep/conanfile.py": GenConanfile("dep"),
-                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("dep/[*]"),
-                "app/test_package/conanfile.py": test_package})
-
-        c.run("create cmake --version=1.0")
-        c.run("create dep --version=1.0")
         with c.chdir("app"):
             c.run("lock create .")
             lock = c.load("conan.lock")
@@ -430,7 +426,7 @@ class TestLockTestPackage:
         c.run("create dep --version=2.0")
         with c.chdir("app"):
             c.run("create . --lockfile=conan.lock --lockfile-partial")
-            assert "cmake/2.0" in c.out
+            assert "cmake/2.0" in c.out  # because it is in test_package and not locked
             assert "dep/1.0" in c.out
             assert "cmake/1.0" not in c.out
             assert "dep/2.0" not in c.out
@@ -448,6 +444,27 @@ class TestLockTestPackage:
             assert "cmake/1.0" not in c.out
             assert "cmake/2.0" in c.out
             assert "dep/1.0" in c.out
+            assert "dep/2.0" not in c.out
+            assert "package tested" in c.out
+
+    def test_create_lock_tool_requires_test(self, client):
+        """ same as above, but the full lockfile including the "test_package" can be
+        obtained with a single "conan create"
+        """
+        c = client
+        with c.chdir("app"):
+            c.run("create . --lockfile-out=conan.lock")
+            lock = c.load("conan.lock")
+            assert "cmake/1.0" in lock
+            assert "dep/1.0" in lock
+
+        c.run("create cmake --version=2.0")
+        c.run("create dep --version=2.0")
+        with c.chdir("app"):
+            c.run("create . --lockfile=conan.lock")
+            assert "cmake/1.0" in c.out
+            assert "dep/1.0" in c.out
+            assert "cmake/2.0" not in c.out
             assert "dep/2.0" not in c.out
             assert "package tested" in c.out
 
@@ -525,7 +542,6 @@ class TestErrorDuplicates:
         c.run("create pkg")
         assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
         assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
-        print(c.load("conan.lock"))
         c.run("create pkg --lockfile=conan.lock")
         assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
         assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out

@@ -4,7 +4,7 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_lockfile, get_profiles_from_args, save_lockfile_out
+from conan.cli.common import get_profiles_from_args
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
@@ -26,8 +26,10 @@ def test(conan_api, parser, *args):
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
     path = _get_conanfile_path(args.path, cwd, py=True)
-    lockfile = get_lockfile(lockfile_path=args.lockfile, cwd=cwd, conanfile_path=path,
-                            partial=args.lockfile_partial)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
     remotes = conan_api.remotes.list(args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -40,7 +42,9 @@ def test(conan_api, parser, *args):
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
                           args.update, build_modes=None)
-    save_lockfile_out(args, deps_graph, lockfile, cwd)
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.path.dirname(path))
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,

@@ -54,7 +54,7 @@ class GraphAPI:
                                  tested_python_requires=None):
         """ Create and initialize a root node from a test_package/conanfile.py consumer
 
-        :param tested_python_requires: The reference to the tested ``python_requires``
+        :param tested_python_requires: the reference of the ``python_require`` to be tested
         :param lockfile: Might be good to lock python-requires, build-requires
         :param path: The full path to the test_package/conanfile.py being used
         :param tested_reference: The full RecipeReference of the tested package
@@ -126,10 +126,6 @@ class GraphAPI:
         remotes = remotes or []
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, remotes)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
-
-        if lockfile:
-            lockfile.update_lock(deps_graph)
-
         return deps_graph
 
     @api_method
