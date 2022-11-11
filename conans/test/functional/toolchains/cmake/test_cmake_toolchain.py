@@ -1188,10 +1188,10 @@ def test_find_program_for_tool_requires():
     xxx = client.get_default_build_profile()
 
     client.run("create . -pr:b build_profile -pr:h build_profile")
-    build_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
+    build_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
     build_context_package_folder = build_context_package_folder.replace("\\", "/")
     client.run("create . -pr:b build_profile -pr:h host_profile")
-    host_context_package_folder = re.search(r"Package folder ([\w\W]+)", str(client.out)).group(1).strip()
+    host_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
     host_context_package_folder = host_context_package_folder.replace("\\", "/")
 
     conanfile_consumer = textwrap.dedent("""
@@ -1230,8 +1230,5 @@ def test_find_program_for_tool_requires():
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
-        print(client.out)
-        print(build_context_package_folder)
-        print(host_context_package_folder)
         assert f"{build_context_package_folder}/bin/foobin" in client.out
         assert f"{host_context_package_folder}/include" in client.out
