@@ -34,3 +34,10 @@ def test_configure_arguments():
     ab.make()
     assert "my_make my_make_args -j23" in runner.command_called
 
+    # test install target argument
+
+    ab.install()
+    assert 'my_make install my_make_args DESTDIR=None -j23' in runner.command_called
+
+    ab.install(target="install_other")
+    assert 'my_make install_other my_make_args DESTDIR=None -j23' in runner.command_called

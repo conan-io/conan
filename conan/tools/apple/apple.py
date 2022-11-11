@@ -98,6 +98,7 @@ class XCRun(object):
             if sdk is None and settings:
                 sdk = settings.get_safe('os.sdk')
 
+        self.settings = settings
         self.sdk = sdk
 
     def _invoke(self, args):
