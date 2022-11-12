@@ -206,7 +206,8 @@ class DepsGraphBuilder(object):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         conanfile_path, recipe_status, remote, new_ref = result
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
-                                                    remotes=self._remotes)
+                                                    remotes=self._remotes, update=self._update,
+                                                    check_update=self._check_update)
         return new_ref, dep_conanfile, recipe_status, remote
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
