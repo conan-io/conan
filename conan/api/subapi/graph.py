@@ -31,7 +31,8 @@ class GraphAPI:
                                                  user=user,
                                                  channel=channel,
                                                  graph_lock=lockfile,
-                                                 remotes=remotes)
+                                                 remotes=remotes,
+                                                 update=update)
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
