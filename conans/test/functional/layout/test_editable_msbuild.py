@@ -66,6 +66,7 @@ def test_editable_msbuild():
     assert "pkg/0.1: Created package" in c.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_editable_msbuilddeps():
     # https://github.com/conan-io/conan/issues/12521
     c = TestClient()
@@ -84,4 +85,4 @@ def test_editable_msbuilddeps():
     c.run("editable add dep dep/0.1")
     c.run("install pkg")
     # It doesn't crash anymore
-    assert "dep/0.1:164640aad040835ac89882393a96d89200694f04 - Editable" in c.out
+    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable" in c.out
