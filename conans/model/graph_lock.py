@@ -86,14 +86,13 @@ class Lockfile(object):
         self._requires = _LockRequires()
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
-        self.alias = {}  # TODO: Alias locking needs to be tested more
+        self._alias = {}
         self.partial = False
 
         if deps_graph is None:
             return
 
         self.update_lock(deps_graph, lock_packages)
-        self.alias = deps_graph.aliased
 
     def update_lock(self, deps_graph, lock_packages=False):
         for graph_node in deps_graph.nodes:
@@ -111,6 +110,8 @@ class Lockfile(object):
                 self._build_requires.add(graph_node.ref, pids)
             else:
                 self._requires.add(graph_node.ref, pids)
+
+        self._alias.update(deps_graph.aliased)
 
         self._requires.sort()
         self._build_requires.sort()
@@ -174,20 +175,31 @@ class Lockfile(object):
         if version and version != LOCKFILE_VERSION:
             raise ConanException("This lockfile was created with an incompatible "
                                  "version. Please regenerate the lockfile")
-        graph_lock._requires = _LockRequires.deserialize(data["requires"])
-        graph_lock._build_requires = _LockRequires.deserialize(data["build_requires"])
-        graph_lock._python_requires = _LockRequires.deserialize(data["python_requires"])
+        if "requires" in data:
+            graph_lock._requires = _LockRequires.deserialize(data["requires"])
+        if "build_requires" in data:
+            graph_lock._build_requires = _LockRequires.deserialize(data["build_requires"])
+        if "python_requires" in data:
+            graph_lock._python_requires = _LockRequires.deserialize(data["python_requires"])
+        if "alias" in data:
+            graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
+                                 for k, v in data["alias"].items()}
         return graph_lock
 
     def serialize(self):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        return {"version": LOCKFILE_VERSION,
-                "requires": self._requires.serialize(),
-                "build_requires": self._build_requires.serialize(),
-                "python_requires": self._python_requires.serialize()
-                }
+        result = {"version": LOCKFILE_VERSION}
+        if self._requires:
+            result["requires"] = self._requires.serialize()
+        if self._build_requires:
+            result["build_requires"] = self._build_requires.serialize()
+        if self._python_requires:
+            result["python_requires"] = self._python_requires.serialize()
+        if self._alias:
+            result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
+        return result
 
     def resolve_locked(self, node, require):
         if require.build or node.context == CONTEXT_BUILD:
@@ -205,12 +217,11 @@ class Lockfile(object):
             return prevs.get(node.package_id)
 
     def _resolve(self, require, locked_refs):
-        ref = require.ref
         version_range = require.version_range
-
+        ref = require.ref
+        matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
+                   r.channel == ref.channel]
         if version_range:
-            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
-                       r.channel == ref.channel]
             for m in matches:
                 if m.version in version_range:
                     require.ref = m
@@ -221,18 +232,22 @@ class Lockfile(object):
         else:
             alias = require.alias
             if alias:
-                require.ref = self.alias.get(require.ref, require.ref)
-            elif require.ref.revision is None:
-                for r in locked_refs:
-                    if r.name == ref.name and r.version == ref.version and r.user == ref.user and \
-                            r.channel == ref.channel:
-                        require.ref = r
+                locked_alias = self._alias.get(alias)
+                if locked_alias is not None:
+                    require.ref = locked_alias
+                elif not self.partial:
+                    raise ConanException(f"Requirement alias '{alias}' not in lockfile")
+            ref = require.ref
+            if ref.revision is None:
+                for m in matches:
+                    if m.version == ref.version:
+                        require.ref = m
                         break
                 else:
                     if not self.partial:
                         raise ConanException(f"Requirement '{ref}' not in lockfile")
             else:
-                if ref not in locked_refs and not self.partial:
+                if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require):
