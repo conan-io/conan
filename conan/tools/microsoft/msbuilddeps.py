@@ -158,17 +158,18 @@ class MSBuildDeps(object):
             for p in paths:
                 assert os.path.isabs(p), "{} is not absolute".format(p)
                 full_path = escape_path(p)
-                if full_path.startswith(package_folder):
-                    rel = full_path[len(package_folder)+1:]
+                if full_path.startswith(root_folder):
+                    rel = full_path[len(root_folder)+1:]
                     full_path = ("%s/%s" % (pkg_placeholder, rel))
                 ret.append(full_path)
             return "".join("{};".format(e) for e in ret)
 
-        package_folder = escape_path(dep.package_folder)
+        root_folder = dep.recipe_folder if dep.package_folder is None else dep.package_folder
+        root_folder = escape_path(root_folder)
 
         fields = {
             'name': name,
-            'root_folder': package_folder,
+            'root_folder': root_folder,
             'bin_dirs': join_paths(cpp_info.bindirs),
             'res_dirs': join_paths(cpp_info.resdirs),
             'include_dirs': join_paths(cpp_info.includedirs),
