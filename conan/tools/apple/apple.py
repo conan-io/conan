@@ -80,11 +80,19 @@ def apple_sdk_path(conanfile):
 
 class XCRun(object):
 
-    def __init__(self, conanfile, sdk=None):
+    def __init__(self, conanfile, sdk=None, use_settings_target=False):
         """sdk=False will skip the flag
-           sdk=None will try to adjust it automatically"""
-        if sdk is None and conanfile.settings:
-            sdk = apple_sdk_name(conanfile.settings)
+           sdk=None will try to adjust it automatically
+           target_settings=True try to use settings_target in case they exist"""
+
+        # FIXME: 2.0: remove "hasattr()" condition
+        settings = conanfile.settings
+        if use_settings_target and hasattr(conanfile, "settings_target") and conanfile.settings_target is not None:
+            settings = conanfile.settings_target
+        self.settings = settings
+
+        if sdk is None and settings:
+            sdk = apple_sdk_name(settings)
         self.sdk = sdk
 
     def _invoke(self, args):
@@ -259,7 +267,7 @@ def fix_apple_shared_install_name(conanfile):
     if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
         substitutions = _fix_dylib_files(conanfile)
 
-        # Only "fix" executables if dylib files were patched, otherwise 
+        # Only "fix" executables if dylib files were patched, otherwise
         # there is nothing to do.
         if substitutions:
             _fix_executables(conanfile, substitutions)

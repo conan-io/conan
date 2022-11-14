@@ -6,7 +6,7 @@ from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
 from conan.tools.files import chdir
-from conans.util.runners import check_output_runner
+from conan.tools.microsoft import unix_path
 
 
 class Autotools(object):
@@ -43,7 +43,8 @@ class Autotools(object):
 
     def make(self, target=None, args=None):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
-                                                default="mingw32-make" if self._use_win_mingw() else "make")
+                                                default="mingw32-make" if self._use_win_mingw()
+                                                else "make")
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
@@ -54,9 +55,10 @@ class Autotools(object):
         command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def install(self, args=None):
-        args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
-        self.make(target="install", args=args)
+    def install(self, args=None, target="install"):
+        args = args if args is not None else \
+            ["DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder))]
+        self.make(target=target, args=args)
 
     def autoreconf(self, args=None):
         args = args or []

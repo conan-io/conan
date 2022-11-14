@@ -69,7 +69,8 @@ def test_cmake_toolchain_custom_toolchain():
     assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
     presets = load_cmake_presets(client.current_folder)
     assert "mytoolchain.cmake" in presets["configurePresets"][0]["toolchainFile"]
-    assert "binaryDir" not in presets["configurePresets"][0]
+    # Now that we define the build_folder even if not layout() binaryDir is defined
+    assert "binaryDir" in presets["configurePresets"][0]
 
 
 @pytest.mark.skipif(platform.system() != "Darwin",
@@ -1061,3 +1062,172 @@ def test_resdirs_none_cmake_install():
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake, "my_license": "MIT"})
     client.run("create .", assert_error=True)
     assert "Cannot install stuff" in client.out
+
+
+def test_cmake_toolchain_vars_when_option_declared():
+    t = TestClient()
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 2.8) # <---- set this to an old version for old policies
+    cmake_policy(SET CMP0091 NEW) # <-- Needed on Windows
+    project(mylib CXX)
+
+    message("CMake version: ${CMAKE_VERSION}")
+
+    # Set the options AFTER the call to project, that is, after toolchain is loaded
+    option(BUILD_SHARED_LIBS "" ON)
+    option(CMAKE_POSITION_INDEPENDENT_CODE "" OFF)
+
+    add_library(mylib src/mylib.cpp)
+    target_include_directories(mylib PUBLIC include)
+
+    get_target_property(MYLIB_TARGET_TYPE mylib TYPE)
+    get_target_property(MYLIB_PIC mylib POSITION_INDEPENDENT_CODE)
+    message("mylib target type: ${MYLIB_TARGET_TYPE}")
+    message("MYLIB_PIC value: ${MYLIB_PIC}")
+    if(MYLIB_PIC)
+        #Note: the value is "True"/"False" if set by cmake,
+        #       and "ON"/"OFF" if set by Conan
+        message("mylib position independent code: ON")
+    else()
+        message("mylib position independent code: OFF")
+    endif()
+
+    set_target_properties(mylib PROPERTIES PUBLIC_HEADER "include/mylib.h")
+    install(TARGETS mylib)
+    """)
+
+    t.run("new mylib/1.0 --template cmake_lib")
+    t.save({"CMakeLists.txt": cmakelists})
+    
+    # The generated toolchain should set `BUILD_SHARED_LIBS` to `OFF`,
+    # and `CMAKE_POSITION_INDEPENDENT_CODE` to `ON` and the calls to
+    # `option()` in the CMakeLists.txt should respect the existing values.
+    # Note: on *WINDOWS* `fPIC` is not an option for this recipe, so it's invalid
+    #       to pass it to Conan, in which case the value in CMakeLists.txt
+    #       takes precedence.
+    fpic_option = "-o mylib:fPIC=True" if platform.system() != "Windows" else ""
+    fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
+    t.run(f"create . -o mylib:shared=False {fpic_option} --test-folder=None")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert f"mylib position independent code: {fpic_cmake_value}" in t.out
+
+    # When building manually, ensure the value passed by the toolchain overrides the ones in 
+    # the CMakeLists
+    fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
+    t.run(f"install . -o mylib:shared=False {fpic_option}")
+    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert f"mylib position independent code: OFF" in t.out
+
+    # Note: from this point forward, the CMakeCache is already initialised.
+    # When explicitly overriding `CMAKE_POSITION_INDEPENDENT_CODE` via command line, ensure
+    # this takes precedence to the value defined by the toolchain
+    t.run_command("cmake -S . -B build/ -DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+    assert "mylib target type: STATIC_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
+
+    t.run_command("cmake -S . -B build/ -DBUILD_SHARED_LIBS=ON")
+    assert "mylib target type: SHARED_LIBRARY" in t.out
+    assert "mylib position independent code: ON" in t.out
+
+
+@pytest.mark.tool_cmake
+def test_find_program_for_tool_requires():
+    """Test that the same reference can be both a tool_requires and a regular requires,
+    and that find_program (executables) and find_package (libraries) find the correct ones
+    when cross building.
+    """
+
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        import os
+
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class TestConan(ConanFile):
+            name = "foobar"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "*"
+            def layout(self):
+                pass
+            def package(self):
+                copy(self, pattern="lib*", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
+                copy(self, pattern="*bin", src=self.build_folder, dst=os.path.join(self.package_folder, "bin"))
+    """)
+
+    host_profile = textwrap.dedent("""
+    [settings]
+        os=Linux
+        arch=armv8
+        compiler=gcc
+        compiler.version=12
+        compiler.libcxx=libstdc++11
+        build_type=Release
+    """)
+
+    build_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=12
+        compiler.libcxx=libstdc++11
+        build_type=Release
+    """)
+
+    client.save({"conanfile.py": conanfile,
+                "libfoo.so": "",
+                "foobin": "",
+                "host_profile": host_profile,
+                "build_profile": build_profile
+                })
+
+    xxx = client.get_default_build_profile()
+
+    client.run("create . -pr:b build_profile -pr:h build_profile")
+    client.run("create . -pr:b build_profile -pr:h host_profile")
+
+    conanfile_consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class PkgConan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                cmake_layout(self)
+            
+            def requirements(self):
+                self.requires("foobar/1.0")
+            
+            def build_requirements(self):
+                self.tool_requires("foobar/1.0")
+    """)
+
+    cmakelists_consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Hello LANGUAGES NONE)
+        find_package(foobar CONFIG REQUIRED)
+        find_program(FOOBIN_EXECUTABLE foobin)
+        message("foobin executable: ${FOOBIN_EXECUTABLE}")
+        message("foobar include dir: ${foobar_INCLUDE_DIR}")
+    """)
+
+    client.save({
+        "conanfile_consumer.py": conanfile_consumer,
+        "CMakeLists.txt": cmakelists_consumer,
+        "host_profile": host_profile,
+        "build_profile": build_profile}, clean_first=True)
+    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
+
+    build_context_package_id = "581814504b2e960b35df487e5bdb32b1ecf02253"
+    host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
+
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+        # Verify binary executable is found from build context package, 
+        # and library comes from host context package
+        assert f"package/{build_context_package_id}/bin/foobin" in client.out
+        assert f"package/{host_context_package_id}/include" in client.out

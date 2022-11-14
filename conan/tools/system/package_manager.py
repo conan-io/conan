@@ -1,5 +1,6 @@
 import platform
 
+from conan.tools.build import cross_building
 from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 
@@ -57,7 +58,7 @@ class _SystemPackageManagerTool(object):
 
     def get_package_name(self, package):
         # TODO: should we only add the arch if cross-building?
-        if self._arch in self._arch_names:
+        if self._arch in self._arch_names and cross_building(self._conanfile):
             return "{}{}{}".format(package, self._arch_separator,
                                    self._arch_names.get(self._arch))
         return package
