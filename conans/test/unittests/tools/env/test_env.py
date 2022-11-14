@@ -417,6 +417,7 @@ def test_custom_placeholder():
     env = Environment()
     env.append_path("MyVar", "MyValue")
     env = env.vars(ConanFileMock())
-    assert env.get("MyVar", placeholder="$penv{{{name}}}") == f"$penv{{MyVar}}{os.pathsep}MyValue"
-    items = {k: v for k, v in env.items(placeholder="$penv{{{name}}}")}
+    assert env.get("MyVar", variable_reference="$penv{{{name}}}") == \
+           f"$penv{{MyVar}}{os.pathsep}MyValue"
+    items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
     assert  items == {"MyVar": f"$penv{{MyVar}}{os.pathsep}MyValue"}

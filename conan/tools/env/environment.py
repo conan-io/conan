@@ -251,26 +251,30 @@ class EnvVars:
     def keys(self):
         return self._values.keys()
 
-    def get(self, name, default=None, placeholder=None):
+    def get(self, name, default=None, variable_reference=None):
         """
-        if placeholder is specified it means that we want to get a placeholder instead of the
-        real value of the env-var
+        :param name: The name of the environment variable
+        :param default: The returned value if the variable doesn't exist, by default None
+        :param variable_reference: if specified, use a variable reference instead of the
+        pre-existing value of environment variable, where {name} can be used to refer to the
+        name of the variable.
         """
         v = self._values.get(name)
         if v is None:
             return default
-        if placeholder:
-            return v.get_str(placeholder, self._subsystem, self._pathsep)
+        if variable_reference:
+            return v.get_str(variable_reference, self._subsystem, self._pathsep)
         else:
             return v.get_value(self._subsystem, self._pathsep)
 
-    def items(self, placeholder=None):
+    def items(self, variable_reference=None):
         """returns {str: str} (varname: value)
-        if placeholder is specified it means that we want to get a placeholder instead of the
-        real values of the env-vars
+         :param variable_reference: if specified, use a variable reference instead of the
+        pre-existing value of environment variable, where {name} can be used to refer to the
+        name of the variable.
         """
-        if placeholder:
-            return {k: v.get_str(placeholder, self._subsystem, self._pathsep)
+        if variable_reference:
+            return {k: v.get_str(variable_reference, self._subsystem, self._pathsep)
                     for k, v in self._values.items()}.items()
         else:
             return {k: v.get_value(self._subsystem, self._pathsep)
