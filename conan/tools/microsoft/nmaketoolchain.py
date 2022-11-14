@@ -5,6 +5,10 @@ from conan.tools.env import Environment
 class NMakeToolchain(object):
     """
     https://learn.microsoft.com/en-us/cpp/build/reference/running-nmake?view=msvc-170#toolsini-and-nmake
+    We have also explored the usage of Tools.ini:
+    https://learn.microsoft.com/en-us/cpp/build/reference/running-nmake?view=msvc-170
+    but not possible, because it cannot include other files, it will also potentially collide with
+    a user Tool.ini, without easy resolution. At least the environment is additive.
     """
     def __init__(self, conanfile):
         """
@@ -38,8 +42,8 @@ class NMakeToolchain(object):
         # TODO: Seems we want to make this uniform, equal to other generators
         if self._environment is None:
             env = Environment()
+            # The whole injection of toolchain happens in CL env-var, the others LIBS, _LINK_
             env.append("CL", self.cl_flags)
-            env.append("UseEnv", "True")
             self._environment = env
         return self._environment
 

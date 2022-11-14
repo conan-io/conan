@@ -47,7 +47,5 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
                  "simple.cpp": gen_function_cpp(name="main")})
     client.run("install . {}".format(settings))
     client.run("build .")
-    print(client.out)
     client.run_command("simple.exe")
-    print(client.out)
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
