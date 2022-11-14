@@ -77,6 +77,8 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        # So --login do not change automatically to the user home
+        msys2_mode_env.define("CHERE_INVOKING", "1")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
         # Make sure we save pure .bat files, without sh stuff
         wb, conanfile.win_bash = conanfile.win_bash, None
