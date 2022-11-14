@@ -82,7 +82,7 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("msvc", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
                            ("msvc", "MinSizeRel", "v140_clang_c2", ""),
                            ("gcc", "Debug", None, "-g"),
-                           ("gcc", "Release", None, "-O3 -s"),
+                           ("gcc", "Release", None, "-O3"),
                            ("gcc", "RelWithDebInfo", None, "-O2 -g"),
                            ("gcc", "MinSizeRel", None, "-Os"),
                            ("clang", "Debug", None, "-g"),
