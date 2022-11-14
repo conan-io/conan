@@ -150,11 +150,8 @@ def build_type_flags(settings):
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
         if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
-            # FIXME: It is not clear that the "-s" is something related with the build type
-            # cmake is not adjusting it
-            # -s: Remove all symbol table and relocation information from the executable.
             flags = {"Debug": ["-g"],
-                     "Release": ["-O3", "-s"] if str(compiler) == "gcc" else ["-O3"],
+                     "Release": ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": ["-Os"],
                      }.get(build_type, [])
