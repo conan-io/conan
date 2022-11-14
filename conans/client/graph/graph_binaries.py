@@ -12,7 +12,6 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
 class GraphBinariesAnalyzer(object):
 
     def __init__(self, conan_app):
-        self._app = conan_app
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
@@ -32,6 +31,7 @@ class GraphBinariesAnalyzer(object):
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
+            node.should_build = True
             conanfile.output.info('Forced build from source')
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
             node.prev = None
@@ -58,12 +58,12 @@ class GraphBinariesAnalyzer(object):
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})
-                if len(results) > 0 and not self._app.update:
+                if len(results) > 0 and not self._update:
                     break
             except NotFoundException:
                 pass
 
-        if not self._selected_remotes and self._app.update:
+        if not self._selected_remotes and self._update:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
@@ -138,7 +138,7 @@ class GraphBinariesAnalyzer(object):
 
         self._process_node(node, build_mode)
         if node.binary in (BINARY_MISSING, BINARY_INVALID) \
-                and not build_mode.should_build_missing(node.conanfile):
+                and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             self._process_compatible_packages(node)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
@@ -159,6 +159,7 @@ class GraphBinariesAnalyzer(object):
             return
 
         if node.recipe == RECIPE_EDITABLE:
+            # TODO: Check what happens when editable is passed an Invalid configuration
             if build_mode.editable or self._evaluate_build(node, build_mode) or \
                     build_mode.should_build_missing(node.conanfile):
                 node.binary = BINARY_EDITABLE_BUILD
@@ -254,7 +255,7 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_in_cache(self, cache_latest_prev, node):
         assert cache_latest_prev.revision
-        if self._app.update:
+        if self._update:
             output = node.conanfile.output
             try:
                 self._get_package_from_remotes(node)
@@ -292,8 +293,9 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
         self._selected_remotes = remotes or []# TODO: A bit dirty interfaz, pass as arg instead
+        self._update = update  # TODO: Dirty, fix it
         build_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):

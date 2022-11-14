@@ -23,7 +23,6 @@ class InstallAPI:
         :param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes(update=update)
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         installer.install(deps_graph, remotes)

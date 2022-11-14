@@ -124,14 +124,36 @@ class TestValidate(unittest.TestCase):
         self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)
 
+        # This is the main difference, building from source for the specified conf, fails
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         client.assert_listed_binary({"pkg/0.1": (missing_id, "Invalid")})
+
+        client.run("install --requires=pkg/0.1@ -s os=Windows --build=pkg*", assert_error=True)
+        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        self.assertIn("Windows not supported", client.out)
+
+        client.run("install --requires=pkg/0.1@ -s os=Windows")
+        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
+                      f"missing. Using compatible package '{package_id}'",
+                      client.out)
+        client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
+
+        # --build=missing means "use existing binary if possible", and compatibles are valid binaries
+        client.run("install --requires=pkg/0.1@ -s os=Windows --build=missing")
+        self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
+                      f"missing. Using compatible package '{package_id}'",
+                      client.out)
+        client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
+
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         self.assertIn(f"pkg/0.1: Main binary package '{missing_id}' "
                       f"missing. Using compatible package '{package_id}'",
                       client.out)
         self.assertIn(f"package_id: {package_id}", client.out)
+
+        client.run("graph info --requires=pkg/0.1@ -s os=Windows --build=pkg*")
+        self.assertIn("binary: Invalid", client.out)
 
     def test_validate_remove_package_id_create(self):
         client = TestClient()

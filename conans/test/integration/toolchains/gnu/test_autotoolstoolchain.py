@@ -36,13 +36,13 @@ def test_extra_flags_via_conf():
     toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
     if os_ == "Windows":
         assert 'set "CPPFLAGS=%CPPFLAGS% -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'set "CXXFLAGS=%CXXFLAGS% -O3 -s --flag1 --flag2"' in toolchain
-        assert 'set "CFLAGS=%CFLAGS% -O3 -s --flag3 --flag4"' in toolchain
+        assert 'set "CXXFLAGS=%CXXFLAGS% -O3 --flag1 --flag2"' in toolchain
+        assert 'set "CFLAGS=%CFLAGS% -O3 --flag3 --flag4"' in toolchain
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6"' in toolchain
     else:
         assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 -s --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 -s --flag3 --flag4"' in toolchain
+        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
+        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
 
 

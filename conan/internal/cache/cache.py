@@ -1,14 +1,12 @@
 import hashlib
 import os
 
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout, EXPORT_SRC_FOLDER, \
-    EXPORT_FOLDER
+from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
-from conan.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB, \
-    ConanException
+from conan.internal.cache.db.cache_database import CacheDatabase
+from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
@@ -208,7 +206,7 @@ class DataCache:
         new_path_absolute = self._full_path(new_path_relative)
 
         if os.path.exists(new_path_absolute):
-            # If there source folder exists, export and export_sources 
+            # If there source folder exists, export and export_sources
             # folders are already copied so we can remove the tmp ones
             rmdir(self._full_path(layout.base_folder))
         else:

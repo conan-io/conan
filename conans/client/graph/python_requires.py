@@ -59,14 +59,15 @@ class PyRequireLoader(object):
         self._range_resolver = range_resolver
         self._cached_py_requires = {}
 
-    def load_py_requires(self, conanfile, loader, graph_lock, remotes):
+    def load_py_requires(self, conanfile, loader, graph_lock, remotes, update, check_update):
         py_requires_refs = getattr(conanfile, "python_requires", None)
         if py_requires_refs is None:
             return
         if isinstance(py_requires_refs, str):
             py_requires_refs = [py_requires_refs, ]
 
-        py_requires = self._resolve_py_requires(py_requires_refs, graph_lock, loader, remotes)
+        py_requires = self._resolve_py_requires(py_requires_refs, graph_lock, loader, remotes,
+                                                update, check_update)
         if hasattr(conanfile, "python_requires_extend"):
             py_requires_extend = conanfile.python_requires_extend
             if isinstance(py_requires_extend, str):
@@ -77,17 +78,18 @@ class PyRequireLoader(object):
                 conanfile.__bases__ = (base_class,) + conanfile.__bases__
         conanfile.python_requires = py_requires
 
-    def _resolve_py_requires(self, py_requires_refs, graph_lock, loader, remotes):
+    def _resolve_py_requires(self, py_requires_refs, graph_lock, loader, remotes, update,
+                             check_update):
         result = PyRequires()
         for py_requires_ref in py_requires_refs:
             py_requires_ref = RecipeReference.loads(py_requires_ref)
             requirement = Requirement(py_requires_ref)
-            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes)
+            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update)
             try:
                 py_require = self._cached_py_requires[resolved_ref]
             except KeyError:
                 pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, resolved_ref,
-                                                             remotes)
+                                                             remotes, update, check_update)
                 conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
                 self._cached_py_requires[resolved_ref] = py_require
@@ -97,7 +99,7 @@ class PyRequireLoader(object):
             result.add_pyrequire(py_require)
         return result
 
-    def _resolve_ref(self, requirement, graph_lock, remotes):
+    def _resolve_ref(self, requirement, graph_lock, remotes, update):
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
             ref = requirement.ref
@@ -106,13 +108,13 @@ class PyRequireLoader(object):
             if alias is not None:
                 ref = alias
             else:
-                ref = self._range_resolver.resolve(requirement, "py_require", remotes)
+                ref = self._range_resolver.resolve(requirement, "py_require", remotes, update)
         return ref
 
-    def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes):
-        recipe = self._proxy.get_recipe(ref, remotes)
+    def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
+        recipe = self._proxy.get_recipe(ref, remotes, update, check_update)
         path, recipe_status, remote, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, graph_lock)
+        conanfile, module = loader.load_basic_module(path, graph_lock, update, check_update)
         conanfile.name = new_ref.name
         conanfile.version = str(new_ref.version)
         conanfile.user = new_ref.user
@@ -125,6 +127,7 @@ class PyRequireLoader(object):
             alias = requirement.alias
             if alias is not None:
                 ref = alias
-            alias_result = self._load_pyreq_conanfile(loader, graph_lock, ref, remotes)
+            alias_result = self._load_pyreq_conanfile(loader, graph_lock, ref, remotes,
+                                                      update, check_update)
             conanfile, module, new_ref, path, recipe_status, remote = alias_result
         return conanfile, module, new_ref, os.path.dirname(path), recipe_status, remote
