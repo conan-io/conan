@@ -133,6 +133,13 @@ class TestValidate(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
 
+        # --build=missing means "use existing binary if possible", and compatibles are valid binaries
+        client.run("install pkg/0.1@ -s os=Windows --build=missing")
+        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      client.out)
+        self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
+
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
                       "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
