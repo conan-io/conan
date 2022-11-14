@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import textwrap
 import unittest
@@ -154,6 +155,63 @@ class TestValidate(unittest.TestCase):
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows --build=pkg*")
         self.assertIn("binary: Invalid", client.out)
+
+    def test_validate_compatible_cppstd(self):
+        client = TestClient()
+        compat = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return []
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate_build(self):
+                    # Explicit logic instead of using check_min_cppstd that hides details
+                    if int(str(self.settings.compiler.cppstd)) < 17:
+                        raise ConanInvalidConfiguration("I need at least cppstd=17 to build")
+
+                def validate(self):
+                    # Explicit use of info, for compatibles
+                    if int(str(self.settings.compiler.cppstd)) < 14:
+                        raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
+
+                def compatibility(self):
+                    return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+
+                def package_id(self):
+                    pass # FIXME: Seems the approach with package_id is broken
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create . {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Build")})
+        # create with cppstd=14 fails, not enough
+        client.run(f"create . {settings} -s compiler.cppstd=14", assert_error=True)
+        client.assert_listed_binary({"pkg/0.1": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                                 "Invalid")})
+        assert "pkg/0.1: Cannot build for this configuration: I need at least cppstd=17 to build" \
+               in client.out
+
+        # Install with cppstd=14 can fallback to the previous one
+        client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Cache")})
+
+        # install with not enough cppstd should fail
+        client.run(f"install --requires=pkg/0.1@ {settings} -s compiler.cppstd=11",
+                   assert_error=True)
+        client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
+                                                 "Invalid")})
+        assert "I need at least cppstd=14 to be used" in client.out
 
     def test_validate_remove_package_id_create(self):
         client = TestClient()
