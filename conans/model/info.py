@@ -433,7 +433,7 @@ class ConanInfo(object):
         """ Useful for build_id implementation
         """
         result = ConanInfo()
-        result.invalid = None  # self.invalid
+        result.invalid = self.invalid
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
