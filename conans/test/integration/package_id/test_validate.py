@@ -101,62 +101,7 @@ class TestValidate(unittest.TestCase):
             class Pkg(ConanFile):
                 settings = "os"
 
-                def validate_build(self):
-                    if self.settings.os == "Windows":
-                        raise ConanInvalidConfiguration("Windows not supported")
-
                 def validate(self):
-                    if self.info.settings.os == "Windows":
-                        raise ConanInvalidConfiguration("Invalid in Windows")
-
-                def package_id(self):
-                    if self.settings.os == "Windows":
-                        compatible_pkg = self.info.clone()
-                        compatible_pkg.settings.os = "Linux"
-                        self.compatible_packages.append(compatible_pkg)
-            """)
-
-        client.save({"conanfile.py": conanfile})
-
-        client.run("create . pkg/0.1@ -s os=Linux")
-        self.assertIn("pkg/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
-                      client.out)
-
-        client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
-        # This is the main difference, the package_id is reported as INVALID
-        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
-        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
-                      client.out)
-
-        # We can install, package_id defines compatible
-        client.run("install pkg/0.1@ -s os=Windows")
-        self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
-        self.assertIn("pkg/0.1: Main binary package 'INVALID' "
-                      "missing. Using compatible package", client.out)
-
-        # Info simulates install, so results in same compatible one
-        client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
-        self.assertIn("Binary: Cache", client.out)
-
-        # Info with --dry-build defines the --build, equal to create, so will return invalid
-        client.run("info pkg/0.1@ -s os=Windows --dry-build")
-        self.assertIn("ID: INVALID", client.out)
-        self.assertIn("Binary: Invalid", client.out)
-
-    def test_validate_build_compatible(self):
-        """
-        same as the above, but dropping ``validate()`` so it can define a real package_id, and not
-        only INVALID
-        """
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.errors import ConanInvalidConfiguration
-            class Pkg(ConanFile):
-                settings = "os"
-
-                def validate_build(self):
                     if self.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
 
@@ -173,25 +118,35 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
                       client.out)
 
+        # This is the main difference, building from source for the specified conf, fails
         client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
-        self.assertIn("pkg/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Invalid", client.out)
-        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
-                      client.out)
+        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("Windows not supported", client.out)
 
-        # We can install, package_id defines compatible
+        client.run("install pkg/0.1@ -s os=Windows --build=pkg", assert_error=True)
+        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("Windows not supported", client.out)
+
         client.run("install pkg/0.1@ -s os=Windows")
+        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      client.out)
         self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
-        self.assertIn("pkg/0.1: Main binary package '3475bd55b91ae904ac96fde0f106a136ab951a5e' "
-                      "missing. Using compatible package", client.out)
 
-        # Info simulates install, so results in same compatible one
+        # --build=missing means "use existing binary if possible", and compatibles are valid binaries
+        client.run("install pkg/0.1@ -s os=Windows --build=missing")
+        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      client.out)
+        self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
+
         client.run("info pkg/0.1@ -s os=Windows")
+        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      client.out)
         self.assertIn("ID: cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
-        self.assertIn("Binary: Cache", client.out)
 
-        # Info with --dry-build defines the --build, equal to create, so will return invalid
-        client.run("info pkg/0.1@ -s os=Windows --dry-build")
-        self.assertIn("ID: 3475bd55b91ae904ac96fde0f106a136ab951a5e", client.out)
+        client.run("info pkg/0.1@ -s os=Windows --dry-build=pkg")
         self.assertIn("Binary: Invalid", client.out)
 
     def test_validate_compatible_also_invalid(self):

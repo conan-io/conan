@@ -421,7 +421,7 @@ class GraphBinariesAnalyzer(object):
                     # This 'cant_build' will be ignored if we don't have to build the node.
                     node.cant_build = str(e)
 
-            # Once we are done, call package_id() to narrow and change possible values
+        # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             with conan_v2_property(conanfile, 'cpp_info',
                                    "'self.cpp_info' access in package_id() method is deprecated"):
