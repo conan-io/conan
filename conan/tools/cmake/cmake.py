@@ -61,7 +61,7 @@ class CMake(object):
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
-    def configure(self, variables=None, build_script_folder=None):
+    def configure(self, variables=None, build_script_folder=None, cli_args=None):
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -90,6 +90,9 @@ class CMake(object):
 
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
+
+        if cli_args:
+            arg_list.extend(cli_args)
 
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)

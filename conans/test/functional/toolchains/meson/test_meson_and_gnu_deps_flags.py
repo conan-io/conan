@@ -124,15 +124,31 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
             # It's not needed to declare "hello/0.1" as a dependency, only interested in flags
             executable('demo', 'main.cpp')
         """)
+
+        main = textwrap.dedent("""
+            #include <stdio.h>
+            #define STR(x)   #x
+            #define SHOW_DEFINE(x) printf("%s=%s", #x, STR(x))
+            int main(int argc, char *argv[]) {
+                SHOW_DEFINE(VAR);
+                SHOW_DEFINE(VAR2);
+                SHOW_DEFINE(DEF1);
+                SHOW_DEFINE(DEF2);
+                SHOW_DEFINE(DEF3);
+                return 0;
+            }
+        """)
+
         client.save({"conanfile.py": conanfile_py,
                      "meson.build": meson_build,
-                     "main.cpp": "int main()\n{return 0;}\n"},
+                     "main.cpp": main},
                     clean_first=True)
 
         client.run("install . %s -c 'tools.build:cxxflags=[%s]'" % (self._settings_str, flags))
         client.run("build .")
-        deps_flags = deps_flags.replace('"', "").replace(",", "")
-        flags = flags.replace('"', "").replace(",", "")
+
+        # FIXME: this should be tested elsewhere that we are passing this correctly
+        #  not checking the meson-log.txt
         meson_log_path = os.path.join(client.current_folder, "build", "meson-logs", "meson-log.txt")
         meson_log = load(None, meson_log_path)
         meson_log = meson_log.replace("\\", "/")
@@ -140,9 +156,11 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                "'--native-file {folder}/conan_meson_native.ini' " \
                "'--native-file {folder}/conan_meson_deps_flags.ini'" \
                "".format(folder=client.current_folder.replace("\\", "/")) in meson_log
-        # Flags/Defines from deps and consumer are appearing in meson-log.txt as part
-        # of the command-line
-        assert flags in meson_log
-        assert '-DVAR="VALUE" -DVAR2="VALUE2"' in meson_log
-        assert deps_flags in meson_log
-        assert '-DDEF3=simple_string -DDEF1=one_string -DDEF2=other_string' in meson_log
+
+        app_name = "demo.exe" if platform.system() == "Windows" else "demo"
+        client.run_command(os.path.join("build", app_name))
+        assert 'VAR="VALUE' in client.out
+        assert 'VAR2="VALUE2"' in client.out
+        assert 'DEF1=one_string' in client.out
+        assert 'DEF2=other_string' in client.out
+        assert 'DEF3=simple_string' in client.out
