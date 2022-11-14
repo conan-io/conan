@@ -1,6 +1,6 @@
 import sqlite3
 
-from conan.cache.db.table import BaseDbTable
+from conan.internal.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

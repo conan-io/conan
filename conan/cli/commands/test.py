@@ -4,7 +4,6 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_profiles_from_args
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
@@ -31,7 +30,7 @@ def test(conan_api, parser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
     remotes = conan_api.remotes.list(args.remote)
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     out = ConanOutput()
     out.title("Input profiles")

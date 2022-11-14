@@ -1,7 +1,7 @@
 import sqlite3
 
-from conan.cache.db.packages_table import PackagesDBTable
-from conan.cache.db.recipes_table import RecipesDBTable
+from conan.internal.cache.db.packages_table import PackagesDBTable
+from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 

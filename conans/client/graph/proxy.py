@@ -11,10 +11,11 @@ class ConanProxy(object):
         # collaborators
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
-        self._conan_app = conan_app
 
-    def get_recipe(self, ref, remotes):
+    def get_recipe(self, ref, remotes, update, check_update):
         # TODO: cache2.0 Check with new locks
+        self._update = update
+        self._check_update = check_update  # TODO: Dirty, improve it
         # with layout.conanfile_write_lock(self._out):
         result = self._get_recipe(ref, remotes)
         conanfile_path, status, remote, new_ref = result
@@ -49,7 +50,7 @@ class ConanProxy(object):
         conanfile_path = recipe_layout.conanfile()
 
         # TODO: If the revision is given, then we don't need to check for updates?
-        if self._conan_app.check_updates or self._conan_app.update:
+        if self._check_update or self._update:
 
             remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes)
             if remote_ref:
@@ -63,7 +64,7 @@ class ConanProxy(object):
                 if remote_ref.revision != ref.revision:
                     if cache_time < remote_ref.timestamp:
                         # the remote one is newer
-                        if self._conan_app.update:
+                        if self._update:
                             output.info("Retrieving from remote '%s'..." % remote.name)
                             remote, new_ref = self._download_recipe(remote_ref, remotes, output)
                             new_recipe_layout = self._cache.ref_layout(new_ref)
@@ -111,7 +112,7 @@ class ConanProxy(object):
                 except NotFoundException:
                     pass
 
-            if len(results) > 0 and not self._conan_app.update and not self._conan_app.check_updates:
+            if len(results) > 0 and not self._update and not self._check_update:
                 break
 
         if len(results) == 0:
