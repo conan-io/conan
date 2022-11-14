@@ -137,7 +137,7 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         self._process_node(node, build_mode)
-        if node.binary in (BINARY_MISSING, BINARY_INVALID) \
+        if node.binary in (BINARY_MISSING,) \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             self._process_compatible_packages(node)
 

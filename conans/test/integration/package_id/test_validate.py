@@ -108,8 +108,8 @@ class TestValidate(unittest.TestCase):
             class Pkg(ConanFile):
                 settings = "os"
 
-                def validate(self):
-                    if self.info.settings.os == "Windows":
+                def validate_build(self):
+                    if self.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
 
                 def compatibility(self):
@@ -127,11 +127,13 @@ class TestValidate(unittest.TestCase):
 
         # This is the main difference, building from source for the specified conf, fails
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
-        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
+                      client.out)
         client.assert_listed_binary({"pkg/0.1": (missing_id, "Invalid")})
 
         client.run("install --requires=pkg/0.1@ -s os=Windows --build=pkg*", assert_error=True)
-        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
+                      client.out)
         self.assertIn("Windows not supported", client.out)
 
         client.run("install --requires=pkg/0.1@ -s os=Windows")
@@ -158,9 +160,10 @@ class TestValidate(unittest.TestCase):
 
     def test_validate_compatible_cppstd(self):
         client = TestClient()
+        # simplify it a bit
         compat = textwrap.dedent("""\
             def compatibility(conanfile):
-                return []
+                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
             """)
         save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
         conanfile = textwrap.dedent("""
@@ -180,12 +183,6 @@ class TestValidate(unittest.TestCase):
                     # Explicit use of info, for compatibles
                     if int(str(self.settings.compiler.cppstd)) < 14:
                         raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
-
-                def compatibility(self):
-                    return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
-
-                def package_id(self):
-                    pass # FIXME: Seems the approach with package_id is broken
             """)
 
         client.save({"conanfile.py": conanfile})
