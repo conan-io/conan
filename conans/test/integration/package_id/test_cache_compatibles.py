@@ -299,7 +299,8 @@ class TestDefaultCompat:
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch", "compiler",
                                                                          "build_type")})
-        settings = "-s os=Linux -s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        settings = "-s os=Linux -s arch=x86_64 -s compiler=gcc -s compiler.version=9 "\
+                   "-s compiler.libcxx=libstdc++11"
         c.run(f"create . {settings} -s compiler.cppstd=11")
         c.assert_listed_binary({"pkg/0.1": ("0d5f0b9d89187b4e62abb10ae409997e152db9de", "Build")})
         c.run(f"create . {settings} -s compiler.cppstd=14")
