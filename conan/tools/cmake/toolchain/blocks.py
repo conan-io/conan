@@ -565,7 +565,7 @@ class PkgConfigBlock(Block):
         set(PKG_CONFIG_EXECUTABLE {{ pkg_config }} CACHE FILEPATH "pkg-config executable")
         {% endif %}
         {% if pkg_config_path %}
-        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}")
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}$ENV{PKG_CONFIG_PATH}")
         {% endif %}
         """)
 
@@ -575,11 +575,7 @@ class PkgConfigBlock(Block):
             pkg_config = pkg_config.replace("\\", "/")
         pkg_config_path = self._conanfile.generators_folder
         if pkg_config_path:
-            # Check if user has already defined their own PKG_CONFIG_PATH variable
-            user_pkg_config_path = os.getenv("PKG_CONFIG_PATH")
-            if user_pkg_config_path:
-                # Prepending the Conan one
-                pkg_config_path = pkg_config_path + os.pathsep + user_pkg_config_path
+            pkg_config_path += os.pathsep
         return {"pkg_config": pkg_config,
                 "pkg_config_path": pkg_config_path}
 

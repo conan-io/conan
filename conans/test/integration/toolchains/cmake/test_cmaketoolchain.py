@@ -760,7 +760,7 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     assert "toolset" not in presets["configurePresets"][0]
 
 
-def test_pkg_config_executable_variable():
+def test_pkg_config_block():
     profile = textwrap.dedent("""
         [settings]
         os=Linux
@@ -778,3 +778,6 @@ def test_pkg_config_executable_variable():
     client.run("install . -pr:b profile -pr:h profile")
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(PKG_CONFIG_EXECUTABLE /usr/local/bin/pkg-config CACHE FILEPATH ' in toolchain
+    generators_folder = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
+                        (client.current_folder + os.pathsep)
+    assert generators_folder in toolchain
