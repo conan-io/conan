@@ -565,7 +565,11 @@ class PkgConfigBlock(Block):
         set(PKG_CONFIG_EXECUTABLE {{ pkg_config }} CACHE FILEPATH "pkg-config executable")
         {% endif %}
         {% if pkg_config_path %}
+        if (DEFINED ENV{PKG_CONFIG_PATH})
         set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}$ENV{PKG_CONFIG_PATH}")
+        else()
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}")
+        endif()
         {% endif %}
         """)
 
