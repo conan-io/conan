@@ -19,6 +19,7 @@ class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
+        self.aliased = {}  # To store the aliases of py_requires, necessary for lockfiles too
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
@@ -81,21 +82,24 @@ class PyRequireLoader(object):
                              check_update):
         result = PyRequires()
         for py_requires_ref in py_requires_refs:
-            py_requires_ref = self._resolve_ref(py_requires_ref, graph_lock, remotes, update)
+            py_requires_ref = RecipeReference.loads(py_requires_ref)
+            requirement = Requirement(py_requires_ref)
+            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update)
             try:
-                py_require = self._cached_py_requires[py_requires_ref]
+                py_require = self._cached_py_requires[resolved_ref]
             except KeyError:
-                pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, py_requires_ref,
+                pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, resolved_ref,
                                                              remotes, update, check_update)
                 conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
-                self._cached_py_requires[py_requires_ref] = py_require
+                self._cached_py_requires[resolved_ref] = py_require
+                if requirement.alias:
+                    # Remove the recipe_revision, to do the same in alias as normal requires
+                    result.aliased[requirement.alias] = RecipeReference.loads(str(new_ref))
             result.add_pyrequire(py_require)
         return result
 
-    def _resolve_ref(self, py_requires_ref, graph_lock, remotes, update):
-        ref = RecipeReference.loads(py_requires_ref)
-        requirement = Requirement(ref)
+    def _resolve_ref(self, requirement, graph_lock, remotes, update):
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
             ref = requirement.ref
@@ -104,9 +108,7 @@ class PyRequireLoader(object):
             if alias is not None:
                 ref = alias
             else:
-                resolved_ref = self._range_resolver.resolve(requirement, "py_require", remotes,
-                                                            update)
-                ref = resolved_ref
+                ref = self._range_resolver.resolve(requirement, "py_require", remotes, update)
         return ref
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
