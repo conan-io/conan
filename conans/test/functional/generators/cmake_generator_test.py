@@ -5,6 +5,7 @@ import pytest
 
 from conans import tools
 from conans.client.runner import ConanRunner
+from conans.client.tools.oss import args_to_string
 from conans.test.utils.tools import TestClient
 from conans.test.utils.mocks import TestBufferConanOutput
 
@@ -58,10 +59,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("build .")
 
         if generator:
-            self.assertIn('cmake -G "{}"'.format(generator), output)
+            self.assertIn(args_to_string(['cmake', '-G', generator]), output)
             self.assertTrue(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
         else:
-            self.assertNotIn("cmake -G", output)
+            self.assertNotIn(args_to_string(['cmake', '-G']), output)
             self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
 
     @pytest.mark.skipif(not tools.os_info.is_linux, reason="Compilation with real gcc needed")

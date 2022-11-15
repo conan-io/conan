@@ -15,7 +15,7 @@ from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools import cross_building
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
@@ -140,32 +140,32 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertIsNone(conanfile.command)
         cmake.build()
-        self.assertIn("cmake --build %s" %
-                      CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
+        self.assertIn(args_to_string(['cmake', '--build']) +
+                      CMakeTest.scape(" . -- -j%i" % cpu_count(output=conanfile.output)),
                       conanfile.command)
         cmake.install()
-        self.assertNotIn("cmake --build %s" %
-                         CMakeTest.scape(". --target install -- -j%i" %
+        self.assertNotIn(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(" . --target install -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertIn("cmake --build %s" %
-                      CMakeTest.scape(". --target test -- -j%i" %
+        self.assertIn(args_to_string(['cmake', '--build']) +
+                      CMakeTest.scape(" . --target test -- -j%i" %
                                       cpu_count(output=conanfile.output)),
                       conanfile.command)
         conanfile.should_build = False
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build %s" %
-                         CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
+        self.assertNotIn(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(" . -- -j%i" % cpu_count(output=conanfile.output)),
                          conanfile.command)
         cmake.install()
-        self.assertNotIn("cmake --build %s" %
-                         CMakeTest.scape(". --target install -- -j%i" %
+        self.assertNotIn(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(" . --target install -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertIn("cmake --build %s" %
-                      CMakeTest.scape(". --target test -- -j%i" %
+        self.assertIn(args_to_string(['cmake', '--build']) +
+                      CMakeTest.scape(" . --target test -- -j%i" %
                                       cpu_count(output=conanfile.output)),
                       conanfile.command)
         conanfile.should_install = True
@@ -173,16 +173,16 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build %s" %
-                         CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
+        self.assertNotIn(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(" . -- -j%i" % cpu_count(output=conanfile.output)),
                          conanfile.command)
         cmake.install()
-        self.assertIn("cmake --build %s" %
-                      CMakeTest.scape(". --target install -- -j%i" %
+        self.assertIn(args_to_string(['cmake', '--build']) +
+                      CMakeTest.scape(" . --target install -- -j%i" %
                                       cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertNotIn("cmake --build %s" %
-                         CMakeTest.scape(". --target test -- -j%i" %
+        self.assertNotIn(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(" . --target test -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
 
     def test_conan_run_tests(self):
@@ -506,8 +506,9 @@ class CMakeTest(unittest.TestCase):
             flags_in_local_cache = flags.format('-D' + cmake_in_local_cache_var_name + '="ON"')
             flags_no_local_cache = flags.format('-D' + cmake_in_local_cache_var_name + '="OFF"')
 
-            base_cmd = 'cmake -G "{generator}" -DCMAKE_BUILD_TYPE="Release" {linux_stuff}' \
-                       '{{flags}} -Wno-dev'
+            base_cmd = args_to_string(['cmake']) + \
+                ' -G "{generator}" -DCMAKE_BUILD_TYPE="Release" {linux_stuff}' \
+                '{{flags}} -Wno-dev'
             base_cmd = base_cmd.format(generator=generator, linux_stuff=linux_stuff)
             full_cmd = "cd {build_expected} && {base_cmd} {source_expected}"
 
@@ -1119,29 +1120,29 @@ build_type: [ Release]
         conanfile.settings = settings
         cmake = CMake(conanfile)
         cmake.test()
-        self.assertIn('cmake --build '
-                      '%s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' %
-                                             cpu_count(output=conanfile.output)),
+        self.assertIn(args_to_string(['cmake', '--build']) +
+                      CMakeTest.scape(' . --target RUN_TESTS -- /m:%i' %
+                                      cpu_count(output=conanfile.output)),
                       conanfile.command)
 
         cmake.generator = "Ninja Makefiles"
         cmake.test()
-        self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test -- -j%i' %
-                                                cpu_count(output=conanfile.output)),
+        self.assertEqual(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(' . --target test -- -j%i' %
+                                         cpu_count(output=conanfile.output)),
                          conanfile.command)
 
         cmake.generator = "Ninja"
         cmake.test()
-        self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test -- -j%i' %
-                                                cpu_count(output=conanfile.output)),
+        self.assertEqual(args_to_string(['cmake', '--build']) +
+                         CMakeTest.scape(' . --target test -- -j%i' %
+                                         cpu_count(output=conanfile.output)),
                          conanfile.command)
 
         cmake.generator = "NMake Makefiles"
         cmake.test()
-        self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test'),
+        self.assertEqual(args_to_string(['cmake', '--build']) +
+                         '%s' % CMakeTest.scape(' . --target test'),
                          conanfile.command)
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
@@ -1498,23 +1499,23 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, parallel=False)
         cmake.build()
-        self.assertEqual("cmake --build %s" % CMakeTest.scape("."), conanfile.command)
+        self.assertEqual(args_to_string(["cmake", "--build", CMakeTest.scape(".")]), conanfile.command)
 
         cmake = CMake(conanfile, cmake_program="use_another_cmake", parallel=False)
         cmake.build()
-        self.assertEqual("use_another_cmake --build %s" % CMakeTest.scape("."), conanfile.command)
+        self.assertEqual(args_to_string(["use_another_cmake", "--build", CMakeTest.scape(".")]), conanfile.command)
 
         with tools.environment_append({"CONAN_CMAKE_PROGRAM": "my_custom_cmake"}):
             cmake = CMake(conanfile, parallel=False)
             cmake.build()
-            self.assertEqual("my_custom_cmake --build %s" % CMakeTest.scape("."), conanfile.command)
+            self.assertEqual(args_to_string(["my_custom_cmake", "--build", CMakeTest.scape(".")]), conanfile.command)
 
         with tools.environment_append({
             "CONAN_CMAKE_PROGRAM": "cmake_from_environment_has_priority"
         }):
             cmake = CMake(conanfile, cmake_program="but_not_cmake_from_the_ctor", parallel=False)
             cmake.build()
-            self.assertEqual("cmake_from_environment_has_priority --build %s" % CMakeTest.scape("."),
+            self.assertEqual(args_to_string(["cmake_from_environment_has_priority", "--build", CMakeTest.scape(".")]),
                              conanfile.command)
 
     def test_msbuild_verbosity(self):

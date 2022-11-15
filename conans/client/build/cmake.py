@@ -278,8 +278,11 @@ class CMake(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
 
         with environment_append(pkg_env):
-            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
-                                          arg_list)
+            command = "cd %s && %s %s" % (
+                args_to_string([self.build_dir]),
+                args_to_string([self._cmake_program]),
+                arg_list
+            )
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._run(command)
@@ -325,7 +328,7 @@ class CMake(object):
             self.build_config,
             args_to_string(args)
         ])
-        command = "%s --build %s" % (self._cmake_program, arg_list)
+        command = "%s --build %s" % (args_to_string([self._cmake_program]), arg_list)
         self._run(command)
 
     def install(self, args=None, build_dir=None):
