@@ -297,9 +297,11 @@ class Settings(object):
             try:
                 for setting in list_settings[:-1]:
                     attr = getattr(attr, setting)
-                setattr(attr, list_settings[-1], str(value))
-            except:  # fails if receiving settings doesn't have it defined
+            except ConanException:  # fails if receiving settings doesn't have it defined
                 pass
+            else:
+                setattr(attr, list_settings[-1], str(value))
+
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
