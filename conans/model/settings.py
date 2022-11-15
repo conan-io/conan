@@ -294,9 +294,12 @@ class Settings(object):
         for (name, value) in vals:
             list_settings = name.split(".")
             attr = self
-            for setting in list_settings[:-1]:
-                attr = getattr(attr, setting)
-            setattr(attr, list_settings[-1], str(value))
+            try:
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+                setattr(attr, list_settings[-1], str(value))
+            except:  # fails if receiving settings doesn't have it defined
+                pass
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
