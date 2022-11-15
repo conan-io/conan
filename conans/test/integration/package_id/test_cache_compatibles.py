@@ -294,3 +294,15 @@ class TestDefaultCompat:
         c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
         assert "valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out
+
+    def test_can_create_multiple(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch", "compiler",
+                                                                         "build_type")})
+        settings = "-s os=Linux -s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++11"
+        c.run(f"create . {settings} -s compiler.cppstd=11")
+        c.assert_listed_binary({"pkg/0.1": ("0d5f0b9d89187b4e62abb10ae409997e152db9de", "Build")})
+        c.run(f"create . {settings} -s compiler.cppstd=14")
+        c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
+        c.run(f"create . {settings} -s compiler.cppstd=17")
+        c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})
