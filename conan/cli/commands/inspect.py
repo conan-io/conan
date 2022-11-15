@@ -2,7 +2,7 @@ import inspect as python_inspect
 import os
 
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.command import conan_command
 from conan.cli.commands import default_json_formatter
 from conan.cli.commands.install import _get_conanfile_path
 
@@ -19,7 +19,7 @@ def inspect_text_formatter(data):
             cli_out_write("{}: {}".format(name, value))
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"text": inspect_text_formatter, "json": default_json_formatter})
+@conan_command(group="Consumer", formatters={"text": inspect_text_formatter, "json": default_json_formatter})
 def inspect(conan_api, parser, *args):
     """
     Inspect a conanfile.py to return the public fields

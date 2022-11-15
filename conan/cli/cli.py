@@ -110,8 +110,8 @@ class Cli:
         max_len = max((len(c) for c in self._commands)) + 1
         line_format = '{{: <{}}}'.format(max_len)
 
-        for group_name, comm_names in self._groups.items():
-            cli_out_write(group_name, Color.BRIGHT_MAGENTA)
+        for group_name, comm_names in sorted(self._groups.items()):
+            cli_out_write(group_name + " commands", Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 cli_out_write(line_format.format(name), Color.GREEN, endline="")

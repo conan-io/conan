@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS
+from conan.cli.command import conan_command
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
@@ -13,7 +13,7 @@ def json_export_pkg(info):
     cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export_pkg})
+@conan_command(group="Creator", formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache, and create a package directly from pre-compiled binaries

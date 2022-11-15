@@ -4,12 +4,12 @@ import shutil
 from jinja2 import Environment, meta, exceptions
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, Extender
+from conan.cli.command import conan_command, Extender
 from conans.errors import ConanException
 from conans.util.files import save
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+@conan_command(group="Creator")
 def new(conan_api, parser, *args):
     """
     Create a new recipe (with conanfile.py and other files) from a predefined template

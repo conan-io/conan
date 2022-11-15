@@ -3,7 +3,7 @@ import os
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.api.subapi.install import do_deploys
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
+from conan.cli.command import conan_command, conan_subcommand, \
     Extender, CommandResult
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
@@ -13,7 +13,7 @@ from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
     Computes a dependency graph, without  installing or building the binaries

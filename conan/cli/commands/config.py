@@ -1,13 +1,13 @@
 import sys
 
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_json_formatter, default_text_formatter
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group='Consumer')
 def config(conan_api, parser, *args):
     """
     Manages the Conan configuration in the current Conan home.

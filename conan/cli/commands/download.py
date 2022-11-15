@@ -2,11 +2,11 @@ from multiprocessing.pool import ThreadPool
 
 from conan.api.conan_api import ConanAPIV2
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.command import conan_command, OnceArgument
 from conans.errors import ConanException
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+@conan_command(group="Creator")
 def download(conan_api: ConanAPIV2, parser, *args):
     """
     Download a conan package from a remote server, by its reference. It downloads just the package,

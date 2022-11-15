@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 
 from conan.api.output import Color, cli_out_write
-from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand, Extender
 from conan.cli.commands import default_json_formatter
 from conan.cli.formatters.list import list_packages_html
 from conans.errors import ConanException, InvalidNameException, NotFoundException
@@ -271,8 +271,8 @@ def list_packages(conan_api, parser, subparser, *args):
     return results
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def list(conan_api, parser, *args):
     """
-    Gets information about a recipe or package reference
+    List existing recipes, revisions or packages in the cache or in remotes
     """

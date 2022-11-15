@@ -1,7 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_text_formatter, default_json_formatter
 from conan.cli.args import add_profiles_args
 from conans.errors import ConanException
@@ -82,7 +82,7 @@ def profile_list(conan_api, parser, subparser, *args):
     return result
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def profile(conan_api, parser, *args):
     """
     Manages profiles
