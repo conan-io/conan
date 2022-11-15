@@ -92,6 +92,7 @@ class Node(object):
         self.id_indirect_prefs = None
 
         self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+        self.should_build = False  # If the --build or policy wants to build this binary
 
     @property
     def id(self):
