@@ -156,6 +156,9 @@ class DepsGraphBuilder(object):
     def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
         # This is the first pass over one recipe requires
+        if hasattr(node.conanfile, "python_requires"):
+            graph.aliased.update(node.conanfile.python_requires.aliased)
+
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
                 graph_lock.resolve_locked(node, require)
