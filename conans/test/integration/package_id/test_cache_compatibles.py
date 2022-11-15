@@ -121,13 +121,10 @@ def test_cppstd_validated():
 
     base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
     client.run(f"create dep {base_settings} -s compiler.cppstd=20")
-    package_id = client.created_package_id("dep/0.1")
 
-    client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
-    # This message here proves it, only 1 configuraton passed the check
-    assert "dep/0.1: Checking 1 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. "\
-           f"Using compatible package '{package_id}'" in client.out
+    client.run(f"install consumer {base_settings} -s compiler.cppstd=17", assert_error=True)
+    assert "dep/0.1: Invalid: Current cppstd (17) is lower than the required C++ standard (20)." \
+           in client.out
 
 
 class TestDefaultCompat:
@@ -253,9 +250,9 @@ class TestDefaultCompat:
         c.run(f"create .  {settings} -s compiler.cppstd=17")
         assert "pkg/0.1: valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out
-        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14")
-        assert "valid standard!!" in c.out
-        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14", assert_error=True)
+        assert "pkg/0.1: Invalid: Current cppstd (14) is lower than the required C++ standard (17)."\
+               in c.out
         c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
         assert "valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out

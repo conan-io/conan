@@ -200,12 +200,16 @@ class TestValidate(unittest.TestCase):
 
         # Install with cppstd=14 can fallback to the previous one
         client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14")
+        # 2 valid binaries, 17 and 20
+        assert "pkg/0.1: Checking 2 compatible configurations" in client.out
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
 
         # install with not enough cppstd should fail
         client.run(f"install --requires=pkg/0.1@ {settings} -s compiler.cppstd=11",
                    assert_error=True)
+        # not even trying to fallback to compatibles
+        assert "pkg/0.1: Checking" not in client.out
         client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
                                                  "Invalid")})
         assert "I need at least cppstd=14 to be used" in client.out
