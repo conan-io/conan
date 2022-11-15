@@ -1239,7 +1239,7 @@ def test_cmaketoolchain_and_pkg_config_path():
     Lightweight test which is loading a dependency as a *.pc file through
     CMake thanks to pkg_check_modules macro.
     It's working because PKG_CONFIG_PATH env variable is being loaded automatically
-    by the VirtualBuildEnv generator.
+    by the CMakeToolchain generator.
     """
     client = TestClient()
     dep = textwrap.dedent("""

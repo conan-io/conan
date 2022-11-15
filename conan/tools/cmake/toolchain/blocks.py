@@ -575,7 +575,11 @@ class PkgConfigBlock(Block):
             pkg_config = pkg_config.replace("\\", "/")
         pkg_config_path = self._conanfile.generators_folder
         if pkg_config_path:
-            pkg_config_path += os.pathsep
+            # Path sep based on "os" host settings (as it's done
+            # for "fpic" calculation for instance)
+            os_ = self._conanfile.settings.get_safe("os")
+            pathsep = ":" if os_ != "Windows" else ";"
+            pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
         return {"pkg_config": pkg_config,
                 "pkg_config_path": pkg_config_path}
 

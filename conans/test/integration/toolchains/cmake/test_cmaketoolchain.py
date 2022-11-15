@@ -779,5 +779,5 @@ def test_pkg_config_block():
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(PKG_CONFIG_EXECUTABLE /usr/local/bin/pkg-config CACHE FILEPATH ' in toolchain
     pkg_config_path_set = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
-                          (client.current_folder + os.pathsep)
+                          (client.current_folder.replace("\\", "/") + os.pathsep)
     assert pkg_config_path_set in toolchain
