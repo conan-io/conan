@@ -157,10 +157,12 @@ class _PCContentGenerator:
     def content(self, info):
         assert isinstance(info, _PCInfo) and info.cpp_info is not None
 
-        package_folder = self._dep.package_folder or ""  # If editable, package_folder can be None
+        # If editable, package_folder can be None
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
         version = info.cpp_info.get_property("component_version") or self._dep.ref.version
 
-        prefix_path = package_folder.replace("\\", "/")
+        prefix_path = root_folder.replace("\\", "/")
         libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
         includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content")
