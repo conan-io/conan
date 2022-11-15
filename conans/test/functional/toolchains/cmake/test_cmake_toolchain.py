@@ -1257,7 +1257,7 @@ def test_cmaketoolchain_and_pkg_config_path():
         name = "pkg"
         version = "1.0"
         settings = "os", "compiler", "build_type", "arch"
-        generators = "PkgConfigDeps", "CMakeToolchain", "VirtualBuildEnv"
+        generators = "PkgConfigDeps", "CMakeToolchain"
         exports_sources = "CMakeLists.txt"
 
         def requirements(self):

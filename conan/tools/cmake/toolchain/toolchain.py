@@ -11,9 +11,8 @@ from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
-    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, SkipRPath, \
-    SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
-from conan.tools.env import Environment
+    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -169,18 +168,7 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         return content
 
-    def environment(self):
-        env = Environment()
-        env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
-        return env
-
-    def vars(self):
-        return self.environment().vars(self._conanfile, scope="build")
-
-    def generate(self, env=None, scope="build"):
-        env = env or self.environment()
-        env = env.vars(self._conanfile, scope=scope)
-        env.save_script("conan_toolchain_env")
+    def generate(self):
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
