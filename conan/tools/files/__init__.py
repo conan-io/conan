@@ -7,3 +7,4 @@ from conan.tools.files.packager import AutoPackager
 from conan.tools.files.symlinks import symlinks
 from conan.tools.files.copy_pattern import copy
 from conan.tools.files.conandata import update_conandata
+from conan.tools.files.requirements import conandata_requirements, conandata_tool_requirements
