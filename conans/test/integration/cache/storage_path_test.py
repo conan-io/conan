@@ -14,5 +14,5 @@ def test_storage_path():
     assert f"mypkg/0.1: Folder: {tmp_folder}" in client.out
     assert os.path.isfile(os.path.join(tmp_folder, "cache.sqlite3"))
 
-    client.run("cache path mypkg/0.1#latest")
+    client.run("cache path mypkg/0.1")
     assert tmp_folder in client.out
