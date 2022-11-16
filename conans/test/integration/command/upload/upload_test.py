@@ -98,9 +98,9 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=hello --version=0.1 --user=lasote --channel=testing")
-        client.run("upload hello/0.1@lasote/testing#latest:123 -r default "
+        client.run("upload hello/0.1@lasote/testing:123 -r default "
                    "--only-recipe", assert_error=True)
-        self.assertIn("There are no packages matching hello/0.1@lasote/testing#latest:123",
+        self.assertIn("There are no packages matching hello/0.1@lasote/testing:123",
                       client.out)
 
     def test_not_existing_error(self):
@@ -721,7 +721,7 @@ def test_upload_recipe_selection(populate_client):
     single_bar = bar_rrevs[1]
     for pattern in ("bar/1.*#{}".format(single_bar.revision),
                     "bar/1.*#{}*".format(single_bar.revision[0:6]),
-                    "bar/1.*#latest"):
+                    "bar/1.*"):
         # Clean the server test executions (client module scope)
         client.run("remove '*' -f -r default")
         # Upload the pattern
@@ -769,8 +769,8 @@ def test_upload_package_selection(populate_client):
             assert pref.repr_notime() in client.out
 
     # Foo all revision upload
-    for pattern in ("foo/*#latest:*#latest",
-                    "foo/*#{}:*#latest".format(foo_latest.revision)):
+    for pattern in ("foo/*:*",
+                    "foo/*#{}:*".format(foo_latest.revision)):
         # Clean the server test executions (client module scope)
         client.run("remove '*' -f -r default")
         # Upload the pattern
@@ -789,8 +789,8 @@ def test_upload_package_selection(populate_client):
             assert pref.repr_notime() not in client.out
 
     # Only the release package from the latest revision and the latest package revision
-    for pattern in ("foo/*#latest:*#latest -p 'build_type=Release'",
-                    "foo/*#{}:*#latest -p 'build_type=Release'".format(foo_latest.revision)):
+    for pattern in ("foo/*:* -p 'build_type=Release'",
+                    "foo/*#{}:* -p 'build_type=Release'".format(foo_latest.revision)):
         # Clean the server test executions (client module scope)
         client.run("remove '*' -f -r default")
         # Upload the pattern

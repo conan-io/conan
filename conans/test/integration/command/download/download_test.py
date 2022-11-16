@@ -146,18 +146,21 @@ class Pkg(ConanFile):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1#latest -p 'build_type=Debug' -r default")
-        client.run("list packages pkg/0.1#latest")
+        client.run("download pkg/0.1 -p 'build_type=Debug' -r default")
+        print(client.out)
+        client.run("list packages pkg/0.1")
         assert "build_type=Debug" in client.out
         assert "build_type=Release" not in client.out
 
-        client.run("download pkg/0.1#latest -p 'build_type=Release' -r default")
-        client.run("list packages pkg/0.1#latest")
+        print("---------------------")
+        client.run("download pkg/0.1 -p 'build_type=Release' -r default")
+        print(client.out)
+        client.run("list packages pkg/0.1")
         assert "build_type=Debug" in client.out
         assert "build_type=Release" in client.out
 
         client.remove_all()
-        client.run("list packages pkg/0.1#latest -r default")
+        client.run("list packages pkg/0.1 -r default")
         assert "build_type=Debug" in client.out
         assert "build_type=Release" in client.out
 
@@ -174,7 +177,7 @@ class Pkg(ConanFile):
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable#latest:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("download pkg/0.1@lasote/stable:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_recipe_reference(ref)
         pkgids = client.cache.get_package_references(rrev)
@@ -201,7 +204,7 @@ class Pkg(ConanFile):
         client.run("upload * --confirm -r default")
         client.run("remove * -f")
 
-        client.run("download pkg/1.0#latest:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("download pkg/1.0:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
         self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)
 

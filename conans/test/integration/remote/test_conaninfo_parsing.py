@@ -21,7 +21,7 @@ def test_conaninfo_special_chars():
 
     t.save({"conanfile.py": conanfile})
     t.run("create . ")
-    t.run('list packages weird_info/1.0#latest')
+    t.run('list packages weird_info/1.0')
     assert 'ññ¨¨&是=][{}"是是是' in t.out
 
     t.run("upload * -c -r default")

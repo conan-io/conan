@@ -39,7 +39,7 @@ class SearchAPI:
         return ret
 
     @api_method
-    def recipe_revisions(self, expression, remote=None, none_revision_allowed=True):
+    def recipe_revisions(self, expression, remote=None):
         """
         :param expression: A RecipeReference that can contain "*" at any field
         :param remote: Remote in case we want to check the references in a remote
@@ -75,16 +75,13 @@ class SearchAPI:
             if ref.revision is not None:
                 _tmp = RecipeReference.loads(repr(_r))
                 _tmp.revision = None
-                if ref.revision == "latest":
+                if ref.revision is None:
                     ret.append(self.conan_api.list.latest_recipe_revision(_tmp, remote))
                 else:
                     for _rrev in self.conan_api.list.recipe_revisions(_tmp, remote):
                         if fnmatch.fnmatch(_rrev.revision, ref.revision):
                             ret.append(_rrev)
             else:
-                if not none_revision_allowed:  # package reference without recipe revision
-                    raise ConanException("Specify a recipe revision or a wildcard. "
-                                         "e.g: {}#*".format(expression))
                 ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
 
         return ret
@@ -115,7 +112,7 @@ class SearchAPI:
             package_revision_expr = "*"
 
         # If we are specifing a pref, we need a recipe ref in the expression (at least a wildcard)
-        refs = self.recipe_revisions(recipe_expr, remote, none_revision_allowed=False)
+        refs = self.recipe_revisions(recipe_expr, remote)
         ret = []
         for ref in refs:
             configurations = self.conan_api.list.packages_configurations(ref, remote)

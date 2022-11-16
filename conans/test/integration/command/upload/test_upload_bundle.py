@@ -24,8 +24,7 @@ def test_upload_bundle():
             \"""
             parser.add_argument('reference',
                                 help="Recipe reference or package reference, can contain * as "
-                                      "wildcard at any reference field. A placeholder 'latest'"
-                                      "can be used in the revision fields: e.g: 'lib/*#latest'.")
+                                      "wildcard at any reference field.")
             # using required, we may want to pass this as a positional argument?
             parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                                 help='Upload to this specific remote')

@@ -377,7 +377,7 @@ def test_compiler_gcc():
     assert "gcc/0.1 (test package): gcc-Linux-x86_64" in c.out
 
     # check the list packages
-    c.run("list packages gcc/0.1#latest")
+    c.run("list packages gcc/0.1")
     assert """settings_target:
       arch=armv7
       build_type=Release

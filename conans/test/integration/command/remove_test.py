@@ -301,9 +301,8 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:", "error": True, "error_msg": 'Specify a package ID value'},
     {"remove": "bar/1.1#*:234234#", "error": True, "error_msg": 'Specify a package revision'},
     {"remove": "bar/1.1:234234", "error": True,
-     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
-    {"remove": "bar/1.1 -p os=Windows", "error": True,
-     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
+     "error_msg": "ERROR: Binary package not found: 'bar/1.1:234234'\n"},
+    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
