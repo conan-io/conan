@@ -399,6 +399,8 @@ class TestValidateCppstd:
         assert "pkg/0.1:7558a15eea8c5762fa0602874a38dde9d36229c1 - Cache" in client.out
 
         # FIXME 2.0: install with not enough cppstd should fail, but it doesnt
+        # It is important to know that this only happens with "compatible_packages", otherwise
+        # it will also fail (ConanCenter)
         client.run(f"install pkg/0.1@ {settings} -s compiler.cppstd=11")
         # not even trying to fallback to compatibles
         assert "Using compatible package '7558a15eea8c5762fa0602874a38dde9d36229c1'" in client.out
