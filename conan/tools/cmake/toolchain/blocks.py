@@ -12,6 +12,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
 
@@ -579,10 +580,9 @@ class PkgConfigBlock(Block):
             pkg_config = pkg_config.replace("\\", "/")
         pkg_config_path = self._conanfile.generators_folder
         if pkg_config_path:
-            # Path sep based on "os" host settings (as it's done
-            # for "fpic" calculation for instance)
-            os_ = self._conanfile.settings.get_safe("os")
-            pathsep = ":" if os_ != "Windows" else ";"
+            # hardcoding scope as "build"
+            subsystem = deduce_subsystem(self._conanfile, "build")
+            pathsep = ":" if subsystem != WINDOWS else ";"
             pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
         return {"pkg_config": pkg_config,
                 "pkg_config_path": pkg_config_path}
