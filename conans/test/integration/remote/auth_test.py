@@ -177,7 +177,7 @@ def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
        [server]
-       jwt_expire_minutes: 0.01
+       jwt_expire_minutes: 0.02
        authorize_timeout: 0
        disk_authorize_timeout: 0
        disk_storage_path: ./data
@@ -201,7 +201,7 @@ def test_token_expired():
     assert token is not None
 
     import time
-    time.sleep(2)
+    time.sleep(3)
     c.users = {}
     c.run("config set general.non_interactive=1")
     c.run("remove * -f")

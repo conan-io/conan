@@ -70,12 +70,26 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
     :param compiler_version: Version of the compiler e.g. 12
     :return: The default ``compiler.cppstd`` for the specified compiler
     """
-    from conans.client.conf.detect import _cppstd_default
     compiler = compiler or conanfile.settings.get_safe("compiler")
     compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
     if not compiler or not compiler_version:
         raise ConanException("Called default_cppstd with no compiler or no compiler.version")
-    return _cppstd_default(compiler, Version(compiler_version))
+    from conans.client.build.cppstd_flags import _gcc_cppstd_default
+    from conans.client.build.cppstd_flags import _clang_cppstd_default
+    from conans.client.build.cppstd_flags import _visual_cppstd_default
+    from conans.client.build.cppstd_flags import _mcst_lcc_cppstd_default
+    def _msvc_cppstd_default(compiler_version):
+        if Version(compiler_version) >= "190":  # VS 2015 update 3 only
+            return "14"
+        return None
+    default = {"gcc": _gcc_cppstd_default(compiler_version),
+               "clang": _clang_cppstd_default(compiler_version),
+               "apple-clang": "gnu98",
+               # Confirmed in apple-clang 9.1 with a simple "auto i=1;"; 14.0 still the same
+               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "msvc": _msvc_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
+    return default
 
 
 def supported_cppstd(conanfile, compiler=None, compiler_version=None):
@@ -116,8 +130,10 @@ def _apple_clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14"]
     if version < "10.0":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    if version < "13.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
 
 
 def _gcc_supported_cppstd(version):

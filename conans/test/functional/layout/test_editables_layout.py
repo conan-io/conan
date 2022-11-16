@@ -253,3 +253,30 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
+
+
+def test_editable_package_folder():
+    """ This test checks the behavior that self.package_folder is NOT defined (i.e = None)
+    for editable packages, so it cannot be used in ``package_info()`` method
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "arch", "build_type"
+
+            def package_info(self):
+                self.output.info("PKG FOLDER={}!!!".format(self.package_folder))
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("editable add . pkg/0.1")
+    c.run("install pkg/0.1@")
+    assert "pkg/0.1: PKG FOLDER=None!!!"

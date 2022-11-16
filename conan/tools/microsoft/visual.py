@@ -69,12 +69,29 @@ class VCVars:
             return
 
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler != "Visual Studio" and compiler != "msvc":
+        if compiler not in ("Visual Studio", "msvc", "clang"):
             return
 
-        vs_version = vs_ide_version(conanfile)
+        if compiler == "clang":
+            # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
+            if not conanfile.settings.get_safe("compiler.runtime"):
+                # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
+                return
+            toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
+            vs_version = {"v140": "14",
+                          "v141": "15",
+                          "v142": "16",
+                          "v143": "17"}.get(toolset_version)
+            if vs_version is None:
+                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
+            vcvars_ver = {"v140": "14.0",
+                          "v141": "14.1",
+                          "v142": "14.2",
+                          "v143": "14.3"}.get(toolset_version)
+        else:
+            vs_version = vs_ide_version(conanfile)
+            vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = vcvars_arch(conanfile)
-        vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
 
         vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
@@ -198,6 +215,11 @@ def vcvars_arch(conanfile):
                 'x86_64': 'x86_amd64',
                 'armv7': 'x86_arm',
                 'armv8': 'x86_arm64'}.get(arch_host)
+    elif arch_build == 'armv8':
+        arch = {'x86': 'arm64_x86',
+                'x86_64': 'arm64_x64',
+                'armv7': 'arm64_arm',
+                'armv8': 'arm64'}.get(arch_host)
 
     if not arch:
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))

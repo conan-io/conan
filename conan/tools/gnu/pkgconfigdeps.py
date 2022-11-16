@@ -86,7 +86,7 @@ def _get_formatted_dirs(folders, prefix_path_):
 _PCInfo = namedtuple("PCInfo", ['name', 'requires', 'description', 'cpp_info', 'aliases'])
 
 
-class PCContentGenerator:
+class _PCContentGenerator:
 
     template = textwrap.dedent("""\
         {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
@@ -157,10 +157,12 @@ class PCContentGenerator:
     def content(self, info):
         assert isinstance(info, _PCInfo) and info.cpp_info is not None
 
-        package_folder = self._dep.package_folder or ""  # If editable, package_folder can be None
+        # If editable, package_folder can be None
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
         version = info.cpp_info.get_property("component_version") or self._dep.ref.version
 
-        prefix_path = package_folder.replace("\\", "/")
+        prefix_path = root_folder.replace("\\", "/")
         libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
         includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content")
@@ -198,13 +200,13 @@ class PCContentGenerator:
         return template.render(context)
 
 
-class PCGenerator:
+class _PCGenerator:
 
     def __init__(self, conanfile, dep, build_context_suffix=None):
         self._conanfile = conanfile
         self._build_context_suffix = build_context_suffix or {}
         self._dep = dep
-        self._content_generator = PCContentGenerator(self._conanfile, self._dep)
+        self._content_generator = _PCContentGenerator(self._conanfile, self._dep)
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
@@ -398,7 +400,7 @@ class PkgConfigDeps:
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            pc_generator = PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
+            pc_generator = _PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
             pc_files.update(pc_generator.pc_files)
         return pc_files
 

@@ -34,10 +34,27 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def command_env_wrapper(conanfile, command, envfiles, envfiles_folder):
+def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="build"):
     from conan.tools.env.environment import environment_wrap_command
-    if platform.system() == "Windows" and conanfile.win_bash:  # New, Conan 2.0
-        wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
+    if getattr(conanfile, "conf", None) is None:
+        # TODO: No conf, no profile defined!! This happens at ``export()`` time
+        #  Is it possible to run a self.run() in export() in bash?
+        #  Is it necessary? Shouldn't be
+        return command
+
+    active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+
+    if platform.system() == "Windows" and (
+            (conanfile.win_bash and scope == "build") or
+            (conanfile.win_bash_run and scope == "run")):
+        if subsystem is None:
+            raise ConanException("win_bash/win_bash_run defined but no "
+                                 "tools.microsoft.bash:subsystem")
+        if active:
+            wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
+        else:
+            wrapped_cmd = _windows_bash_wrapper(conanfile, command, envfiles, envfiles_folder)
     else:
         wrapped_cmd = environment_wrap_command(envfiles, envfiles_folder, command)
     return wrapped_cmd
@@ -50,19 +67,26 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
-    if not subsystem or not shell_path:
-        raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
-                             "'tools.microsoft.bash:path' are "
+    if not shell_path:
+        raise ConanException("The config 'tools.microsoft.bash:path' is "
                              "needed to run commands in a Windows subsystem")
     env = env or []
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
         msys2_mode_env = Environment()
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
+        # https://www.msys2.org/wiki/Launchers/ dictates that the shell should be launched with
+        # - MSYSTEM defined
+        # - CHERE_INVOKING is necessary to keep the CWD and not change automatically to the user home
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        # So --login do not change automatically to the user home
+        msys2_mode_env.define("CHERE_INVOKING", "1")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
+        # Make sure we save pure .bat files, without sh stuff
+        wb, conanfile.win_bash = conanfile.win_bash, None
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
+        conanfile.win_bash = wb
         env.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
@@ -75,7 +99,9 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
                                                 accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
-    final_command = '{} -c {}'.format(wrapped_shell, wrapped_user_cmd)
+    # according to https://www.msys2.org/wiki/Launchers/, it is necessary to use --login shell
+    # running without it is discouraged
+    final_command = '{} --login -c {}'.format(wrapped_shell, wrapped_user_cmd)
     return final_command
 
 
@@ -102,29 +128,35 @@ def deduce_subsystem(conanfile, scope):
     if scope.startswith("build"):
         if hasattr(conanfile, "settings_build"):
             the_os = conanfile.settings_build.get_safe("os")
-            subsystem = conanfile.settings_build.get_safe("os.subsystem")
         else:
             the_os = platform.system()  # FIXME: Temporary fallback until 2.0
-            subsystem = None
     else:
         the_os = conanfile.settings.get_safe("os")
-        subsystem = conanfile.settings.get_safe("os.subsystem")
 
     if not str(the_os).startswith("Windows"):
         return None
 
-    if subsystem is None and not scope.startswith("build"):  # "run" scope do not follow win_bash
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    if not subsystem:
+        if conanfile.win_bash:
+            raise ConanException("win_bash=True but tools.microsoft.bash:subsystem "
+                                 "configuration not defined")
+        if conanfile.win_bash_run:
+            raise ConanException("win_bash_run=True but tools.microsoft.bash:subsystem "
+                                 "configuration not defined")
         return WINDOWS
+    active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
+    if active:
+        return subsystem
 
-    if subsystem is None:  # Not defined by settings, so native windows
-        if not conanfile.win_bash:
-            return WINDOWS
+    if scope.startswith("build"):  # "run" scope do not follow win_bash
+        if conanfile.win_bash:
+            return subsystem
+    elif scope.startswith("run"):
+        if conanfile.win_bash_run:
+            return subsystem
 
-        subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-        if not subsystem:
-            raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
-                                 "needed to run commands in a Windows subsystem")
-    return subsystem
+    return WINDOWS
 
 
 def subsystem_path(subsystem, path):

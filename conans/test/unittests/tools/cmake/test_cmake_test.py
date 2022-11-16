@@ -43,3 +43,18 @@ def test_run_tests(generator, target):
 
     search_pattern = "--target {}" if platform.system() == "Windows" else "'--target' '{}'"
     assert search_pattern.format(target) in conanfile.command
+
+
+def test_cli_args_configure():
+    settings = Settings.loads(get_default_settings_yml())
+
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.configure(cli_args=["--graphviz=foo.dot"])
+    assert "--graphviz=foo.dot" in conanfile.command

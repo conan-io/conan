@@ -227,9 +227,32 @@ def test_find_builddirs():
 
                 def generate(self):
                     cmake = CMakeToolchain(self)
-                    {}
                     cmake.generate()
             """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . ")
+    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
+        contents = f.read()
+        assert "/path/to/builddir" in contents
+
+    conanfile = textwrap.dedent("""
+       import os
+       from conans import ConanFile
+       from conan.tools.cmake import CMakeToolchain
+
+       class Conan(ConanFile):
+           name = "mydep"
+           version = "1.0"
+           settings = "os", "arch", "compiler", "build_type"
+
+           def build_requirements(self):
+               self.test_requires("dep/1.0")
+
+           def generate(self):
+               cmake = CMakeToolchain(self)
+               cmake.generate()
+       """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
@@ -447,17 +470,22 @@ def test_cmake_presets_singleconfig():
 def test_toolchain_cache_variables():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
 
         class Conan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
+            options = {"enable_foobar": [True, False], "qux": ["ANY"], "number": [1,2]}
+            default_options = {"enable_foobar": True, "qux": "baz", "number": 1}
 
             def generate(self):
                 toolchain = CMakeToolchain(self)
                 toolchain.cache_variables["foo"] = True
                 toolchain.cache_variables["foo2"] = False
                 toolchain.cache_variables["var"] = "23"
+                toolchain.cache_variables["ENABLE_FOOBAR"] = self.options.enable_foobar
+                toolchain.cache_variables["QUX"] = self.options.qux
+                toolchain.cache_variables["NUMBER"] = self.options.number
                 toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
                 toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
                 toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS NO PRIORITY"
@@ -476,7 +504,17 @@ def test_toolchain_cache_variables():
     assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
     assert cache_variables["BUILD_TESTING"] == 'OFF'
+    assert cache_variables["ENABLE_FOOBAR"] == 'ON'
+    assert cache_variables["QUX"] == 'baz'
+    assert cache_variables["NUMBER"] == 1
 
+    def _format_val(val):
+        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+
+    for var, value in cache_variables.items():
+        assert f"-D{var}={_format_val(value)}" in client.out
+    assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
+    assert f"-G {_format_val('MinGW Makefiles')}" in client.out
 
 def test_android_c_library():
     client = TestClient()

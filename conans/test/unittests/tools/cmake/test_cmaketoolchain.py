@@ -302,7 +302,7 @@ def test_fpic_when_shared_true(conanfile_linux_shared, fPIC):
     toolchain = CMakeToolchain(conanfile_linux_shared)
     cmake_value = 'ON' if fPIC else 'OFF'
     content = toolchain.content
-    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE {})'.format(cmake_value) in content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE {} CACHE BOOL'.format(cmake_value) in content
 
 
 def test_fpic_when_not_shared(conanfile_linux_shared):
@@ -402,7 +402,7 @@ def test_libcxx_abi_flag():
     # by default, no flag is output anymore, it is assumed the compiler default
     assert 'GLIBCXX_USE_CXX11_ABI' not in content
     # recipe workaround for older distros
-    toolchain.blocks["libcxx"].values["glibcxx"] = "1"
+    toolchain.blocks["libcxx"].values["glibcxx"] = "_GLIBCXX_USE_CXX11_ABI=1"
     content = toolchain.content
     assert '_GLIBCXX_USE_CXX11_ABI=1' in content
 

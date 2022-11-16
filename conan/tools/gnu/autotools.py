@@ -1,4 +1,5 @@
 import os
+import re
 
 from conan.tools.build import build_jobs
 from conan.tools.files.files import load_toolchain_args
@@ -6,7 +7,7 @@ from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 from conans.tools import args_to_string
 from conan.tools.files import chdir
-from conans.util.runners import check_output_runner
+from conan.tools.microsoft import unix_path
 
 
 class Autotools(object):
@@ -43,20 +44,25 @@ class Autotools(object):
 
     def make(self, target=None, args=None):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
-                                                default="mingw32-make" if self._use_win_mingw() else "make")
+                                                default="mingw32-make" if self._use_win_mingw()
+                                                else "make")
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
-        if "-j" not in str_args and "nmake" not in make_program.lower():
+        jobs_already_passed = re.search(r"(^-j\d+)|(\W-j\d+\s*)", join_arguments([str_args, str_extra_args]))
+        if not jobs_already_passed and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
             if njobs:
                 jobs = "-j{}".format(njobs)
         command = join_arguments([make_program, target, str_args, str_extra_args, jobs])
         self._conanfile.run(command)
 
-    def install(self, args=None):
-        args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
-        self.make(target="install", args=args)
+    def install(self, args=None, target="install"):
+        args = args if args else []
+        str_args = " ".join(args)
+        if "DESTDIR=" not in str_args:
+            args.insert(0, "DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder)))
+        self.make(target=target, args=args)
 
     def autoreconf(self, args=None):
         args = args or []

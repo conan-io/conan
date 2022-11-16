@@ -146,7 +146,7 @@ class BazelDeps(object):
         lib_dir = 'lib'
 
         dependencies = []
-        for req, dep in dependency.dependencies.items():
+        for dep in dependency.dependencies.direct_host.values():
             dependencies.append(dep.ref.name)
 
         shared_library = dependency.options.get_safe("shared") if dependency.options else False

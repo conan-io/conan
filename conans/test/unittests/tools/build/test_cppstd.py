@@ -1,6 +1,6 @@
 import pytest
 
-from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd
+from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd, default_cppstd
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.test.utils.mocks import MockSettings, MockConanfile
 
@@ -67,6 +67,8 @@ def test_supported_cppstd_gcc(compiler, compiler_version, values):
     ("apple-clang", "9.5", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
     ("apple-clang", "10", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17", "20",
                            "gnu20"]),
+    ("apple-clang", "13", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17", "20",
+                           "gnu20", "23", "gnu23"]),
 ])
 def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
@@ -100,6 +102,21 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
     conanfile = MockConanfile(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
+
+
+@pytest.mark.parametrize("compiler,compiler_version,result", [
+    ("gcc", "5", 'gnu98'),
+    ("gcc", "8", "gnu14"),
+    ("Visual Studio", "14", "14"),
+    ("msvc", "190", "14"),
+    ("apple-clang", "12.0", "gnu98"),
+    ("clang", "6", "gnu14"),
+])
+def test_default_cppstd_gcc(compiler, compiler_version, result):
+    settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
+    conanfile = MockConanfile(settings)
+    sot = default_cppstd(conanfile)
+    assert sot == result
 
 
 def test_check_cppstd_type():

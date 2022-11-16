@@ -58,6 +58,15 @@ def test_invalid_target_triple():
     assert "Unknown 'UNKNOWN_ARCH' machine, Conan doesn't know how " \
            "to translate it to the GNU triplet," in str(excinfo)
 
+def test_custom_host_triple():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86"})
+    conanfile.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf.define("tools.gnu:host_triplet", "i686-pc-linux-gnu")
+    tc = AutotoolsToolchain(conanfile)
+    tc.generate_args()
+    obj = load_toolchain_args()
+    assert "--host=i686-pc-linux-gnu" in obj["configure_args"]
 
 def test_cppstd():
     # Using "cppstd" is discarded
@@ -152,7 +161,7 @@ def test_ndebug():
     ("clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("clang", 'libc++', '-stdlib=libc++'),
     ("apple-clang", 'libstdc++', '-stdlib=libstdc++'),
-    ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'),
+    # ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'), # this is invalid input
     ("apple-clang", 'libc++', '-stdlib=libc++'),
     ("sun-cc", 'libCstd', '-library=Cstd'),
     ("sun-cc", 'libstdcxx', '-library=stdcxx4'),
