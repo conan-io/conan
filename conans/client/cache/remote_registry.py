@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from urllib.parse import urlparse
@@ -156,9 +157,8 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         assert isinstance(remote_name, str)
         remotes = self._load_remotes()
-        remote = remotes.remove(remote_name)
+        remotes.remove(remote_name)
         self.save_remotes(remotes)
-        return remote
 
     def update(self, remote):
         self._validate_url(remote.url)

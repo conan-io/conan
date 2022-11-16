@@ -72,8 +72,10 @@ class RemotesAPI:
     @api_method
     def remove(self, remote_name):
         app = ConanApp(self.conan_api.cache_folder)
-        remote = app.cache.remotes_registry.remove(remote_name)
-        users_clean(app.cache.localdb, remote.url)
+        remotes = self.list(remote_name, only_enabled=False)
+        for remote in remotes:
+            app.cache.remotes_registry.remove(remote.name)
+            users_clean(app.cache.localdb, remote.url)
 
     @api_method
     def update(self, remote: Remote):
