@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import textwrap
 import unittest
@@ -107,8 +108,8 @@ class TestValidate(unittest.TestCase):
             class Pkg(ConanFile):
                 settings = "os"
 
-                def validate(self):
-                    if self.info.settings.os == "Windows":
+                def validate_build(self):
+                    if self.settings.os == "Windows":
                         raise ConanInvalidConfiguration("Windows not supported")
 
                 def compatibility(self):
@@ -126,11 +127,13 @@ class TestValidate(unittest.TestCase):
 
         # This is the main difference, building from source for the specified conf, fails
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
-        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
+                      client.out)
         client.assert_listed_binary({"pkg/0.1": (missing_id, "Invalid")})
 
         client.run("install --requires=pkg/0.1@ -s os=Windows --build=pkg*", assert_error=True)
-        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Cannot build for this configuration: Windows not supported",
+                      client.out)
         self.assertIn("Windows not supported", client.out)
 
         client.run("install --requires=pkg/0.1@ -s os=Windows")
@@ -388,3 +391,204 @@ class TestValidate(unittest.TestCase):
         c.save({"conanfile.py": conanfile})
         c.run("install .", assert_error=True)
         assert "ERROR: conanfile.py: Invalid ID: Invalid: never ever" in c.out
+
+
+class TestValidateCppstd:
+    """ aims to be a very close to real use case of cppstd management and validation in recipes
+    """
+    def test_build_17_consume_14(self):
+        client = TestClient()
+        # simplify it a bit
+        compat = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate_build(self):
+                    # Explicit logic instead of using check_min_cppstd that hides details
+                    if int(str(self.settings.compiler.cppstd)) < 17:
+                        raise ConanInvalidConfiguration("I need at least cppstd=17 to build")
+
+                def validate(self):
+                    if int(str(self.settings.compiler.cppstd)) < 14:
+                        raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create . {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Build")})
+        # create with cppstd=14 fails, not enough
+        client.run(f"create . {settings} -s compiler.cppstd=14", assert_error=True)
+        client.assert_listed_binary({"pkg/0.1": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                                 "Invalid")})
+        assert "pkg/0.1: Cannot build for this configuration: I need at least cppstd=17 to build" \
+               in client.out
+
+        # Install with cppstd=14 can fallback to the previous one
+        client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14")
+        # 2 valid binaries, 17 and 20
+        assert "pkg/0.1: Checking 2 compatible configurations" in client.out
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Cache")})
+
+        # install with not enough cppstd should fail
+        client.run(f"install --requires=pkg/0.1@ {settings} -s compiler.cppstd=11",
+                   assert_error=True)
+        # not even trying to fallback to compatibles
+        assert "pkg/0.1: Checking" not in client.out
+        client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
+                                                 "Invalid")})
+        assert "I need at least cppstd=14 to be used" in client.out
+
+    def test_build_17_consume_14_transitive(self):
+        """ what happens if we have:
+        app->engine(shared-lib)->pkg(static-lib)
+        if pkg is only buildable with cppstd>=17 and needs cppstd>=14 to be consumed, but
+        as it is static it becomes an implementation detail of engine, that doesn't have any
+        constraint or validate() at all
+        """
+        client = TestClient()
+        # simplify it a bit
+        compat = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+                package_type = "static-library"
+
+                def validate_build(self):
+                    # Explicit logic instead of using check_min_cppstd that hides details
+                    if int(str(self.settings.compiler.cppstd)) < 17:
+                        raise ConanInvalidConfiguration("I need at least cppstd=17 to build")
+
+                def validate(self):
+                    if int(str(self.settings.compiler.cppstd)) < 14:
+                        raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
+            """)
+        engine = GenConanfile("engine", "0.1").with_package_type("shared-library") \
+                                              .with_requires("pkg/0.1")
+        app = GenConanfile("app", "0.1").with_package_type("application") \
+                                        .with_requires("engine/0.1")
+        client.save({"pkg/conanfile.py": conanfile,
+                     "engine/conanfile.py": engine,
+                     "app/conanfile.py": app})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create pkg {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Build")})
+        client.run(f"create engine {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Cache")})
+        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Skip")})
+        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Skip")})
+        # No binary for engine exist for cppstd=11
+        client.run(f"install app {settings} -s compiler.cppstd=11", assert_error=True)
+        client.assert_listed_binary({"engine/0.1": ("dc24e2caf6e1fa3e8bb047ca0f5fa053c71df6db",
+                                                    "Missing")})
+        client.run(f"install app {settings} -s compiler.cppstd=11 --build=missing",
+                   assert_error=True)
+        assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
+
+    def test_build_17_consume_14_transitive_erasure(self):
+        """ The same as the above test:
+        app->engine(shared-lib)->pkg(static-lib)
+        but in this test, the engine shared-lib does "package_id()" erasure of "pkg" dependency,
+        being able to reuse it then even when cppstd==11
+        """
+        client = TestClient()
+        # simplify it a bit
+        compat = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+                package_type = "static-library"
+
+                def validate_build(self):
+                    # Explicit logic instead of using check_min_cppstd that hides details
+                    if int(str(self.settings.compiler.cppstd)) < 17:
+                        raise ConanInvalidConfiguration("I need at least cppstd=17 to build")
+
+                def validate(self):
+                    if int(str(self.settings.compiler.cppstd)) < 14:
+                        raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
+            """)
+        engine = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "engine"
+                version = "0.1"
+                settings = "compiler"
+                package_type = "shared-library"
+                requires = "pkg/0.1"
+
+                def package_id(self):
+                    del self.info.settings.compiler.cppstd
+                    self.info.requires["pkg"].full_version_mode()
+
+            """)
+        app = GenConanfile("app", "0.1").with_package_type("application") \
+                                        .with_requires("engine/0.1")
+        client.save({"pkg/conanfile.py": conanfile,
+                     "engine/conanfile.py": engine,
+                     "app/conanfile.py": app})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create pkg {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Build")})
+        client.run(f"create engine {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
+                                                    "Build")})
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Cache")})
+        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
+                                                    "Cache")})
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Skip")})
+        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
+                                                    "Cache")})
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Skip")})
+        # No binary for engine exist for cppstd=11
+        client.run(f"install app {settings} -s compiler.cppstd=11")
+        client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
+                                                 "Skip")})
+        client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
+                                                    "Cache")})
+        client.run(f"install app {settings} -s compiler.cppstd=11 --build=engine*",
+                   assert_error=True)
+        assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out

@@ -67,7 +67,7 @@ def run_validate_package_id(conanfile):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
-            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "validate"):
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:

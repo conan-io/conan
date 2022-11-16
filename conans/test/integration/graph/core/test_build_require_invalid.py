@@ -123,13 +123,13 @@ class TestInvalidBuildPackageID:
        class Conan(ConanFile):
            settings = "os"
 
-           def validate(self):
-               if self.info.settings.os == "Windows":
+           def validate_build(self):
+               if self.settings.os == "Windows":
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
            def package_id(self):
                del self.info.settings.os
-       """)
+        """)
     linux_package_id = NO_SETTINGS_PACKAGE_ID
     windows_package_id = NO_SETTINGS_PACKAGE_ID
 
@@ -157,7 +157,7 @@ class TestInvalidBuildPackageID:
         client.run("install consumer -s os=Windows --build='*'", assert_error=True)
         # Only when trying to build, it will try to build the Windows one
         client.assert_listed_binary({"pkg/0.1": (self.windows_package_id, "Invalid")})
-        assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
+        assert "Package does not work in Windows!" in client.out
 
     def test_valid_build_require_two_profiles(self, client):
         conanfile_consumer = GenConanfile().with_tool_requires("pkg/0.1").with_settings("os")
@@ -182,8 +182,8 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
        class Conan(ConanFile):
            settings = "os"
 
-           def validate(self):
-               if self.info.settings.os == "Windows":
+           def validate_build(self):
+               if self.settings.os == "Windows":
                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
            def compatibility(self):
