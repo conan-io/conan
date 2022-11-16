@@ -1,8 +1,5 @@
-import json
-
 import pytest
 
-from conans.model.package_ref import PkgReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -16,111 +13,82 @@ def created_package():
     return t, pref
 
 
-def test_cache_path_regular(created_package):
-
+def test_cache_path(created_package):
     t, pref = created_package
-    latest_pref = PkgReference.loads(str(pref))
-    latest_pref.ref.revision = latest_pref.revision = "latest"
+    recipe_revision = pref.ref.revision
 
-    # By default, exports folder, works with pref
-    t.run("cache path {}".format(pref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {}".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
+    # Basic recipe paths, without specifying revision
+    recipe_layout = t.cache.ref_layout(pref.ref)
+    t.run("cache path foo/1.0")
+    assert recipe_layout.export() == str(t.out).rstrip()
+    t.run("cache path foo/1.0 --folder=export_source")
+    assert recipe_layout.export_sources() == str(t.out).rstrip()
+    t.run("cache path foo/1.0 --folder=source")
+    assert recipe_layout.source() == str(t.out).rstrip()
 
-    # By default, exports folder, works with ref
-    t.run("cache path {}".format(pref.ref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {}".format(latest_pref.ref.repr_notime()))
-    assert folder == str(t.out).rstrip()
+    # Basic recipe paths, with revision
+    t.run(f"cache path foo/1.0#{recipe_revision}")
+    assert recipe_layout.export() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0#{recipe_revision} --folder=export_source")
+    assert recipe_layout.export_sources() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0#{recipe_revision} --folder=source")
+    assert recipe_layout.source() == str(t.out).rstrip()
 
-    # exports can be specified too
-    t.run("cache path {} --folder exports".format(pref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder exports".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
+    pkg_layout = t.cache.pkg_layout(pref)
+    # Basic package paths, without specifying revision
+    t.run(f"cache path foo/1.0:{pref.package_id}")
+    assert pkg_layout.package() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0:{pref.package_id} --folder=build")
+    assert pkg_layout.build() == str(t.out).rstrip()
 
-    # with reference works too
-    t.run("cache path {} --folder exports".format(pref.ref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder exports".format(latest_pref.ref.repr_notime()))
-    assert folder == str(t.out).rstrip()
+    # Basic package paths, with recipe-revision
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}")
+    assert pkg_layout.package() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id} --folder=build")
+    assert pkg_layout.build() == str(t.out).rstrip()
 
-    # exports_sources
-    t.run("cache path {} --folder exports_sources".format(pref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export_sources()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder exports_sources".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
-
-    # with reference works too
-    t.run("cache path {} --folder exports_sources".format(pref.ref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).export_sources()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder exports_sources".format(latest_pref.ref.repr_notime()))
-    assert folder == str(t.out).rstrip()
-
-    # sources
-    t.run("cache path {} --folder sources".format(pref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).source()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder sources".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
-
-    # with reference works too
-    t.run("cache path {} --folder sources".format(pref.ref.repr_notime()))
-    folder = t.cache.ref_layout(pref.ref).source()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder sources".format(latest_pref.ref.repr_notime()))
-    assert folder == str(t.out).rstrip()
-
-    # build
-    t.run("cache path {} --folder build".format(pref.repr_notime()))
-    folder = t.cache.pkg_layout(pref).build()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder build".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
-
-    # package
-    t.run("cache path {} --folder package".format(pref.repr_notime()))
-    folder = t.cache.pkg_layout(pref).package()
-    assert folder == str(t.out).rstrip()
-    # Try with "latest"
-    t.run("cache path {} --folder package".format(latest_pref.repr_notime()))
-    assert folder == str(t.out).rstrip()
+    # Basic package paths, with both revisions
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#{pref.revision}")
+    assert pkg_layout.package() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#{pref.revision} --folder=build")
+    assert pkg_layout.build() == str(t.out).rstrip()
 
 
-def test_cache_path_regular_errors(created_package):
+def test_cache_path_exist_errors(created_package):
     t, pref = created_package
+    recipe_revision = pref.ref.revision
 
+    t.run("cache path nonexist/1.0", assert_error=True)
+    assert "ERROR: 'nonexist/1.0' not found in cache" in t.out
+
+    t.run("cache path nonexist/1.0#rev", assert_error=True)
+    # TODO: Improve this error message
+    assert "ERROR: No entry for recipe 'nonexist/1.0#rev'" in t.out
+
+    t.run("cache path foo/1.0#rev", assert_error=True)
+    # TODO: Improve this error message
+    assert "ERROR: No entry for recipe 'foo/1.0#rev'" in t.out
+
+    t.run(f"cache path foo/1.0:pid1", assert_error=True)
+    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+
+    t.run(f"cache path foo/1.0#{recipe_revision}:pid1", assert_error=True)
+    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#rev2", assert_error=True)
+    assert f"ERROR: No entry for package 'foo/1.0#{recipe_revision}:{pref.package_id}#rev2" in t.out
+
+
+def test_cache_path_arg_errors():
+    t = TestClient()
     # build, cannot obtain build without pref
-    t.run("cache path {} --folder build".format(pref.ref.repr_notime()), assert_error=True)
+    t.run("cache path foo/1.0 --folder build", assert_error=True)
     assert "ERROR: '--folder build' requires a valid package reference" in t.out
 
-    # package, cannot obtain package without pref
-    t.run("cache path {} --folder package".format(pref.ref.repr_notime()), assert_error=True)
-    assert "ERROR: '--folder package' requires a valid package reference" in t.out
-
     # Invalid reference
-    t.run("cache path patata --folder package", assert_error=True)
-    assert "ERROR: Invalid recipe or package reference, specify a complete reference" in t.out
+    t.run("cache path patata", assert_error=True)
+    assert "ERROR: patata is not a valid recipe reference" in t.out
 
-    # Missing reference
-    t.run("cache path patata/1.0#123123:123123123#123123123 --folder package", assert_error=True)
-    assert "ERROR: No entry for package 'patata/1.0#123123:123123123#123123123'" in t.out
-
-    t.run("cache path patata/1.0#123123", assert_error=True)
-    assert "ERROR: No entry for recipe 'patata/1.0#123123'" in t.out
+    # source, cannot obtain build without pref
+    t.run("cache path foo/1.0:pid --folder source", assert_error=True)
+    assert "ERROR: '--folder source' requires a recipe reference" in t.out
