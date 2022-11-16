@@ -765,3 +765,29 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
     assert "architecture" in presets["configurePresets"][0]
     assert "toolset" not in presets["configurePresets"][0]
+
+
+def test_pkg_config_block():
+    os_ = platform.system()
+    os_ = "Macos" if os_ == "Darwin" else os_
+    profile = textwrap.dedent("""
+        [settings]
+        os=%s
+        arch=x86_64
+
+        [conf]
+        tools.gnu:pkg_config=/usr/local/bin/pkg-config
+        """ % os_)
+
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(PKG_CONFIG_EXECUTABLE /usr/local/bin/pkg-config CACHE FILEPATH ' in toolchain
+    pathsep = ":" if os_ != "Windows" else ";"
+    pkg_config_path_set = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
+                          (client.current_folder.replace("\\", "/") + pathsep)
+    assert pkg_config_path_set in toolchain
