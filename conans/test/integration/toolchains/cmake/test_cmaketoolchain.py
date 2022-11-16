@@ -784,3 +784,27 @@ def test_pkg_config_block():
     pkg_config_path_set = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
                           (client.current_folder.replace("\\", "/") + pathsep)
     assert pkg_config_path_set in toolchain
+
+
+def test_set_cmake_lang_compilers():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=clang
+    compiler.version=15
+    compiler.libcxx=libstdc++11
+    [conf]
+    tools.cmake.cmaketoolchain:compilers = [("C", "/my/local/gcc"), ("cxx", "C:\\local\\g++"),]
+    """)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_C_COMPILER clang)' not in toolchain
+    assert 'set(CMAKE_CXX_COMPILER clang++)' not in toolchain
+    assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
+    assert 'set(CMAKE_CXX_COMPILER "C:/local/g++")' in toolchain

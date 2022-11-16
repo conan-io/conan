@@ -22,6 +22,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain.presets:max_schema_version": "Generate CMakeUserPreset.json compatible with the supplied schema version",
+    "tools.cmake.cmaketoolchain:compilers": "List of tuples that define LANG and COMPILER path, e.g., [('CXX', '/usr/bin/g++')], to be set by CMakeToolchain",
     "tools.env.virtualenv:auto_use": "Automatically activate virtualenv file generation",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",

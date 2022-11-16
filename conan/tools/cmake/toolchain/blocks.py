@@ -668,7 +668,7 @@ class TryCompileBlock(Block):
 
 
 class GenericSystemBlock(Block):
-    template = textwrap.dedent("""
+    template = textwrap.dedent(r"""
         {% if cmake_sysroot %}
         set(CMAKE_SYSROOT {{ cmake_sysroot }})
         {% endif %}
@@ -704,6 +704,11 @@ class GenericSystemBlock(Block):
         if(NOT DEFINED ENV{RC})
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
+        {% endif %}
+        {% if compilers_by_conf|length > 0 %}
+        {% for compilers in compilers_by_conf %}
+        set(CMAKE_{{ compilers[0]|upper }}_COMPILER "{{ compilers[1]|replace('\\', '/') }}")
+        {% endfor %}
         {% endif %}
         """)
 
@@ -766,7 +771,7 @@ class GenericSystemBlock(Block):
                     "armv8": "ARM64"}.get(arch)
         return None
 
-    def _get_compiler(self, generator):
+    def _get_windows_compilers(self, generator):
         compiler = self._conanfile.settings.get_safe("compiler")
         os_ = self._conanfile.settings.get_safe("os")
 
@@ -843,8 +848,13 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-
-        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
+        compilers_by_conf = self._conanfile.conf.get("tools.cmake.cmaketoolchain:compilers",
+                                                     default=[], check_type=list)
+        # FIXME: do we want to keep this legacy part?
+        compiler, compiler_cpp, compiler_rc = None, None, None
+        if not compilers_by_conf:
+            # Configuration has preference for setting compilers
+            compiler, compiler_cpp, compiler_rc = self._get_windows_compilers(generator)
 
         system_name, system_version, system_processor = self._get_cross_build()
 
@@ -852,7 +862,8 @@ class GenericSystemBlock(Block):
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        return {"compiler": compiler,
+        return {"compilers_by_conf": compilers_by_conf,
+                "compiler": compiler,
                 "compiler_rc": compiler_rc,
                 "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
