@@ -118,7 +118,7 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     return None
 
 
-def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions) -> bool:
+def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions):
     """ Check if current cppstd fits the version required according to a given comparator.
 
         In case the current cppstd doesn't fit the maximum version required
@@ -139,7 +139,7 @@ def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions) -> bool:
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
 
-    def compare(lhs, rhs, comparator):
+    def compare(lhs, rhs, comp):
         def extract_cpp_version(_cppstd):
             return str(_cppstd).replace("gnu", "")
 
@@ -148,9 +148,9 @@ def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions) -> bool:
 
         lhs = add_millennium(extract_cpp_version(lhs))
         rhs = add_millennium(extract_cpp_version(rhs))
-        return not comparator(lhs, rhs)
+        return not comp(lhs, rhs)
 
-    current_cppstd = conanfile.info.settings.get_safe("compiler.cppstd")
+    current_cppstd = conanfile.settings.get_safe("compiler.cppstd")
     if current_cppstd is None:
         raise ConanInvalidConfiguration("The compiler.cppstd is not defined for this configuration")
 
@@ -161,6 +161,7 @@ def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions) -> bool:
         raise ConanInvalidConfiguration(
             "Current cppstd ({}) is {} than the required C++ standard ({}).".format(
                 current_cppstd, "higher" if comparator == operator.gt else "lower", cppstd))
+
 
 def _apple_clang_supported_cppstd(version):
     """
