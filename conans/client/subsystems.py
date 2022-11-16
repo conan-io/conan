@@ -75,10 +75,18 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
         # Configure MSYS2 to inherith the PATH
         msys2_mode_env = Environment()
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
+        # https://www.msys2.org/wiki/Launchers/ dictates that the shell should be launched with
+        # - MSYSTEM defined
+        # - CHERE_INVOKING is necessary to keep the CWD and not change automatically to the user home
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        # So --login do not change automatically to the user home
+        msys2_mode_env.define("CHERE_INVOKING", "1")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
+        # Make sure we save pure .bat files, without sh stuff
+        wb, conanfile.win_bash = conanfile.win_bash, None
         msys2_mode_env.vars(conanfile, "build").save_bat(path)
+        conanfile.win_bash = wb
         env.append(path)
 
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
@@ -91,7 +99,9 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
                                                 accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
 
-    final_command = '{} -c {}'.format(wrapped_shell, wrapped_user_cmd)
+    # according to https://www.msys2.org/wiki/Launchers/, it is necessary to use --login shell
+    # running without it is discouraged
+    final_command = '{} --login -c {}'.format(wrapped_shell, wrapped_user_cmd)
     return final_command
 
 

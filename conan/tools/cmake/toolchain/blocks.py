@@ -12,6 +12,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
 
@@ -153,7 +154,7 @@ class FPicBlock(Block):
     template = textwrap.dedent("""
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }} CACHE BOOL "Position independent code") 
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }} CACHE BOOL "Position independent code")
         {% endif %}
         """)
 
@@ -557,6 +558,34 @@ class FindFiles(Block):
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
         }
+
+
+class PkgConfigBlock(Block):
+    template = textwrap.dedent("""
+        {% if pkg_config %}
+        set(PKG_CONFIG_EXECUTABLE {{ pkg_config }} CACHE FILEPATH "pkg-config executable")
+        {% endif %}
+        {% if pkg_config_path %}
+        if (DEFINED ENV{PKG_CONFIG_PATH})
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}$ENV{PKG_CONFIG_PATH}")
+        else()
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}")
+        endif()
+        {% endif %}
+        """)
+
+    def context(self):
+        pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str)
+        if pkg_config:
+            pkg_config = pkg_config.replace("\\", "/")
+        pkg_config_path = self._conanfile.generators_folder
+        if pkg_config_path:
+            # hardcoding scope as "build"
+            subsystem = deduce_subsystem(self._conanfile, "build")
+            pathsep = ":" if subsystem != WINDOWS else ";"
+            pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
+        return {"pkg_config": pkg_config,
+                "pkg_config_path": pkg_config_path}
 
 
 class UserToolchain(Block):

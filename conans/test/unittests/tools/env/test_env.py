@@ -410,3 +410,14 @@ class TestProfileEnvRoundTrip:
             MyPath1=+(path)/my/path12
             MyPath1+=(path)/my/path11
             """)
+
+
+def test_custom_placeholder():
+    # https://github.com/conan-io/conan/issues/12427
+    env = Environment()
+    env.append_path("MyVar", "MyValue")
+    env = env.vars(ConanFileMock())
+    assert env.get("MyVar", variable_reference="$penv{{{name}}}") == \
+           f"$penv{{MyVar}}{os.pathsep}MyValue"
+    items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
+    assert  items == {"MyVar": f"$penv{{MyVar}}{os.pathsep}MyValue"}

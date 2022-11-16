@@ -1,8 +1,10 @@
 import os
 import platform
+import textwrap
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake_app
 from conans.test.utils.tools import TestClient
 
@@ -62,3 +64,25 @@ def test_editable_msbuild():
     c.run("create pkg")
     # print(c.out)
     assert "pkg/0.1: Created package" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_editable_msbuilddeps():
+    # https://github.com/conan-io/conan/issues/12521
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def layout(self):
+                pass
+            """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_settings("build_type", "arch")
+                                                          .with_requires("dep/0.1")
+                                                          .with_generator("MSBuildDeps")})
+    c.run("editable add dep dep/0.1")
+    c.run("install pkg")
+    # It doesn't crash anymore
+    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable" in c.out
