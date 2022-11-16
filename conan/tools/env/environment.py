@@ -324,12 +324,13 @@ class EnvVars:
         return self._values.keys()
 
     def get(self, name, default=None, variable_reference=None):
-        """
-        :param name: The name of the environment variable
-        :param default: The returned value if the variable doesn't exist, by default None
+        """ get the value of a env-var
+
+        :param name: The name of the environment variable.
+        :param default: The returned value if the variable doesn't exist, by default None.
         :param variable_reference: if specified, use a variable reference instead of the
-        pre-existing value of environment variable, where {name} can be used to refer to the
-        name of the variable.
+                                   pre-existing value of environment variable, where {name}
+                                   can be used to refer to the name of the variable.
         """
         v = self._values.get(name)
         if v is None:
@@ -341,9 +342,10 @@ class EnvVars:
 
     def items(self, variable_reference=None):
         """returns {str: str} (varname: value)
-         :param variable_reference: if specified, use a variable reference instead of the
-        pre-existing value of environment variable, where {name} can be used to refer to the
-        name of the variable.
+
+        :param variable_reference: if specified, use a variable reference instead of the
+                                   pre-existing value of environment variable, where {name}
+                                   can be used to refer to the name of the variable.
         """
         if variable_reference:
             return {k: v.get_str(variable_reference, self._subsystem, self._pathsep)

@@ -1,10 +1,10 @@
 from conan.api.conan_api import ConanAPIV2
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def remove(conan_api: ConanAPIV2, parser, *args):
     """
     Removes recipes or packages from local cache or a remote.

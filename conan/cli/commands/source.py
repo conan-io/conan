@@ -1,6 +1,6 @@
 import os
 
-from conan.cli.command import conan_command, COMMAND_GROUPS
+from conan.cli.command import conan_command
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.args import add_reference_args
 from conan.api.conan_app import ConanApp
@@ -10,7 +10,7 @@ from conans.client.source import run_source_method
 from conans.errors import conanfile_exception_formatter
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+@conan_command(group="Creator")
 def source(conan_api, parser, *args):
     """
     Calls the source() method

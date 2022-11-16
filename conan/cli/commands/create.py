@@ -3,7 +3,7 @@ import os
 import shutil
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import scope_options
@@ -21,7 +21,7 @@ def json_create(deps_graph):
     cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
+@conan_command(group="Creator", formatters={"json": json_create})
 def create(conan_api, parser, *args):
     """
     Create a package

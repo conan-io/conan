@@ -1,14 +1,14 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import _get_conanfile_path
 from conan.api.conan_app import ConanApp
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+@conan_command(group="Creator")
 def editable(conan_api, parser, *args):
     """
     Allows working with a package in user folder

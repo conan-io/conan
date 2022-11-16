@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
+from conan.cli.command import conan_command, Extender
 from conan.cli.commands import make_abs_path
 from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
@@ -130,7 +130,7 @@ def common_graph_args(subparser):
     add_lockfile_args(subparser)
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_install})
+@conan_command(group="Consumer", formatters={"json": json_install})
 def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).

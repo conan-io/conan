@@ -5,12 +5,6 @@ import textwrap
 from conan.cli.commands import add_log_level_args, process_log_level_args
 from conans.errors import ConanException
 
-COMMAND_GROUPS = {
-    'consumer': 'Consumer commands',
-    'misc': 'Miscellaneous commands',
-    'creator': 'Creator commands'
-}
-
 
 class Extender(argparse.Action):
     """Allows using the same flag several times in command and creates a list with the values.
@@ -166,7 +160,7 @@ class ConanCommand(BaseConanCommand):
         super().__init__(method, formatters=formatters)
         self._subcommands = {}
         self._subcommand_parser = None
-        self._group = group or COMMAND_GROUPS['misc']
+        self._group = group or "Other"
         self._name = method.__name__.replace("_", "-")
         self._parser = ConanArgumentParser(description=self._doc,
                                            prog="conan {}".format(self._name),
@@ -213,25 +207,18 @@ class ConanSubCommand(BaseConanCommand):
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
+        self._parser.description = self._doc
         self._parent_parser = parent_parser
         self._init_formatters()
         self._init_log_levels()
 
 
 def conan_command(group=None, formatters=None):
-    def decorator(f):
-        cmd = ConanCommand(f, group, formatters=formatters)
-        return cmd
-
-    return decorator
+    return lambda f: ConanCommand(f, group, formatters=formatters)
 
 
 def conan_subcommand(formatters=None):
-    def decorator(f):
-        cmd = ConanSubCommand(f, formatters=formatters)
-        return cmd
-
-    return decorator
+    return lambda f: ConanSubCommand(f, formatters=formatters)
 
 
 class CommandResult:

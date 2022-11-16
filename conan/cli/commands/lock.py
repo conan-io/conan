@@ -1,7 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, conan_subcommand
+from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import common_graph_args, graph_compute
 from conans.errors import ConanException
@@ -9,7 +9,7 @@ from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def lock(conan_api, parser, *args):
     """
     Create or manages lockfiles
