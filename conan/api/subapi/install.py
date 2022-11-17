@@ -38,7 +38,7 @@ class InstallAPI:
         conanfile = root_node.conanfile
 
         if conanfile.info is not None and conanfile.info.invalid:
-            binary, reason = conanfile.info.invalid
+            binary, reason = "Invalid", conanfile.info.invalid
             msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
             raise ConanInvalidConfiguration(msg)
 
