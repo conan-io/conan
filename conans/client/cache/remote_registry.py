@@ -1,4 +1,3 @@
-import fnmatch
 import json
 import os
 from urllib.parse import urlparse
