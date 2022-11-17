@@ -102,6 +102,15 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_FRAMEWORKS{{ config_suffix }} {{ global_cpp.frameworks }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
 
+              # COMPOUND VARIABLES
+              set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
+                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
+              set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>")
+
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
@@ -123,13 +132,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
               set({{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ cpp.sharedlinkflags_list }})
               set({{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ cpp.exelinkflags_list }})
+
+              # COMPOUND VARIABLES
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
+                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
+
               set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
+                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
+                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
+                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
-
-
               {%- endfor %}
           """)
         return ret
