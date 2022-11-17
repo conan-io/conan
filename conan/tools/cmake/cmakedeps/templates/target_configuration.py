@@ -180,8 +180,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                  set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
                              $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS', config_suffix)}}> APPEND)
 
-                set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
-
                 {%- if set_interface_link_directories %}
                 # This is only used for '#pragma comment(lib, "foo")' (automatic link)
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
