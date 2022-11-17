@@ -217,9 +217,9 @@ def test_meson_and_additional_machine_files_composition():
                  "profile": profile})
 
     client.run("install . -pr=profile -if build")
-    client.run("build . -bf build")
+    client.run("build . -bf build", assert_error=True)
     # Checking the order of the appended user file (the order matters)
     conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
     assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
-    # Meson warns about an unknown option
-    assert 'WARNING: Unknown options: "my_option"' in client.out
+    # Meson fails because of an unknown option
+    assert 'ERROR: Unknown options: "my_option"' in client.out
