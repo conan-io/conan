@@ -52,7 +52,7 @@ BUILT_IN_CONFS = {
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain and AutotoolsToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
     "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
-    "tools.build:compiler": "Defines a Python dict-like with the compilers path to be used, e.g., {'CXX': '/usr/bin/clang++'}",
+    "tools.build:compilers": "Defines a Python dict-like with the compilers path to be used, e.g., {'CXX': '/usr/bin/clang++'}",
     "tools.microsoft.bash:subsystem": "Set subsystem to use for Windows. Possible values: 'msys2', 'msys', 'cygwin', 'wsl' and 'sfu'",
     "tools.microsoft.bash:path": "Path to the shell executable. Default: 'bash'",
     "tools.apple:sdk_path": "Path for the sdk location. This value will be passed as SDKROOT or -isysroot depending on the generator used",
