@@ -706,8 +706,8 @@ class GenericSystemBlock(Block):
         endif()
         {% endif %}
         {% if compilers_by_conf|length > 0 %}
-        {% for compilers in compilers_by_conf %}
-        set(CMAKE_{{ compilers[0] }}_COMPILER {{ compilers[1] }})
+        {% for lang, compiler_path in compilers_by_conf.items() %}
+        set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
         {% endif %}
         """)
@@ -788,19 +788,6 @@ class GenericSystemBlock(Block):
 
         return compiler_c, compiler_cpp, compiler_rc
 
-    def _get_compilers_by_conf(self):
-        """
-        Returns a tuple like (LANG, COMPILER_PATH)
-        """
-        compilers = []
-        # Checking supported compilers lang
-        for lang in ["C", "CXX", "OBJC", "OBJCXX", "RC"]:
-            compiler = self._conanfile.conf.get(f"tools.build:{lang.lower()}_compiler",
-                                                check_type=str)
-            if compiler:
-                compilers.append((lang, compiler.replace("\\", "/")))
-        return compilers
-
     def _get_generic_system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
         os_build = self._conanfile.settings_build.get_safe("os")
@@ -861,7 +848,8 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-        compilers_by_conf = self._get_compilers_by_conf()
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compilers", default={},
+                                                     check_type=dict)
         # FIXME: do we want to keep this legacy part?
         compiler, compiler_cpp, compiler_rc = None, None, None
         if not compilers_by_conf:

@@ -795,11 +795,7 @@ def test_set_cmake_lang_compilers():
     compiler.version=15
     compiler.libcxx=libstdc++11
     [conf]
-    tools.build:c_compiler="/my/local/gcc"
-    tools.build:cxx_compiler="/my/local/g++"
-    tools.build:objc_compiler="/usr/bin/clang"
-    tools.build:objcxx_compiler="/usr/bin/clang++"
-    tools.build:rc_compiler="C:\\local\\rc.exe"
+    tools.build:compilers={"C": "/my/local/gcc", "cxx": "/my/local/g++", "RC": "C:\\local\\rc.exe"}
     """)
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
@@ -812,6 +808,4 @@ def test_set_cmake_lang_compilers():
     assert 'set(CMAKE_CXX_COMPILER clang++)' not in toolchain
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "/my/local/g++")' in toolchain
-    assert 'set(CMAKE_OBJC_COMPILER "/usr/bin/clang")' in toolchain
-    assert 'set(CMAKE_OBJCXX_COMPILER "/usr/bin/clang++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
