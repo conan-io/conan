@@ -133,7 +133,7 @@ class Cli:
                 cli_out_write(txt)
 
         cli_out_write("")
-        cli_out_write('Conan commands. Type "conan help <command>" for help', Color.BRIGHT_YELLOW)
+        cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
