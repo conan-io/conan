@@ -24,7 +24,6 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
-BINARY_ERROR = "ConfigurationError"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"

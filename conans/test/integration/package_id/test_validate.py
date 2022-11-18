@@ -279,7 +279,7 @@ class TestValidate(unittest.TestCase):
     @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
     def test_validate_options(self):
         # The dependency option doesn't affect pkg package_id, so it could find a valid binary
-        # in the cache. So ConanErrorConfiguration will solve this issue.
+        # in the cache. So ConanInvalidConfiguration will solve this issue.
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])
                                                    .with_default_option("myoption", 1)})
@@ -287,13 +287,13 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=dep --version=0.1 -o dep/*:myoption=2")
         conanfile = textwrap.dedent("""
            from conan import ConanFile
-           from conan.errors import ConanErrorConfiguration
+           from conan.errors import ConanInvalidConfiguration
            class Pkg(ConanFile):
                requires = "dep/0.1"
 
                def validate(self):
                    if self.options["dep"].myoption == 2:
-                       raise ConanErrorConfiguration("Option 2 of 'dep' not supported")
+                       raise ConanInvalidConfiguration("Option 2 of 'dep' not supported")
            """)
 
         client.save({"conanfile.py": conanfile})
@@ -450,6 +450,53 @@ class TestValidateCppstd:
         client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
                                                  "Invalid")})
         assert "I need at least cppstd=14 to be used" in client.out
+
+    def test_header_only_14(self):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def package_id(self):
+                    self.info.clear()
+
+                def validate(self):
+                    check_min_cppstd(self, 14)
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create . {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Build")})
+        client.run(f"create . {settings} -s compiler.cppstd=14")
+        client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Build")})
+
+        client.run(f"create . {settings} -s compiler.cppstd=11", assert_error=True)
+        client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Invalid")})
+        assert "Current cppstd (11) is lower than the required C++ standard (14)" in client.out
+
+        # Install with cppstd=14 can fallback to the previous one
+        client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14")
+        client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Cache")})
+
+        # install with not enough cppstd should fail
+        client.run(f"install --requires=pkg/0.1@ {settings} -s compiler.cppstd=11",
+                   assert_error=True)
+        # not even trying to fallback to compatibles
+        assert "pkg/0.1: Checking" not in client.out
+        client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                 "Invalid")})
+        assert "Current cppstd (11) is lower than the required C++ standard (14)" in client.out
 
     def test_build_17_consume_14_transitive(self):
         """ what happens if we have:
