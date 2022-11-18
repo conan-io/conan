@@ -94,7 +94,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "9", "9.1", "9.2", "9.3", "9.4",
                       "10", "10.1", "10.2", "10.3",
                       "11", "11.1", "11.2", "11.3",
-                      "12"]
+                      "12", "12.1", "12.2"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32]  # Windows MinGW
             exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
