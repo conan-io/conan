@@ -83,21 +83,3 @@ def test_download_packages_twice(setup):
     new_client.run("download hello0/0.1@lasote/stable:* -r default")
     got_header = load(os.path.join(package_folder, "hellohello0.h"))
     assert expected_header_contents == got_header
-
-
-def test_download_all_but_no_packages():
-    # Remove all from remote
-    new_client = TestClient(default_server_user=True)
-
-    # Try to install all
-    new_client.run("download hello0/0.1@lasote/stable:* -r default", assert_error=True)
-    assert "Recipe not found: 'hello0/0.1@lasote/stable'" in new_client.out
-
-    # Upload the recipe (we don't have packages)
-    new_client.save({"conanfile.py": GenConanfile()})
-    new_client.run("export . --name=hello0 --version=0.1 --user=lasote --channel=stable")
-    new_client.run("upload hello0/0.1@lasote/stable -r default")
-
-    # And try to download all
-    new_client.run("download hello0/0.1@lasote/stable:* -r default", assert_error=True)
-    assert "There are no packages matching 'hello0/0.1@lasote/stable:*'" in new_client.out

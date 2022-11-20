@@ -1,9 +1,8 @@
 import fnmatch
 
+from conan.api.model import SelectBundle
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
-from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
 from conans.search.search import search_recipes
 
 
@@ -38,99 +37,33 @@ class SearchAPI:
                 ret.append(r)
         return ret
 
-    @api_method
-    def recipe_revisions(self, expression, remote=None):
-        """
-        :param expression: A RecipeReference that can contain "*" at any field
-        :param remote: Remote in case we want to check the references in a remote
-        :return: a list of complete RecipeReference
-        """
-        if "/" not in expression:
-            if "*" not in expression:
-                raise ConanException("Invalid expression, specify a version "
-                                     "or a wildcard. e.g: {}*".format(expression))
-            if "#" in expression or ":" in expression:
-                raise ConanException("Invalid expression, specify version")
-            refs = self.conan_api.search.recipes(expression, remote)
-            ref = RecipeReference(expression)
-        else:
-            ref = RecipeReference.loads(expression)
-            if not ref.revision and "#" in expression:
-                # Something like "foo/var#" without specifying revision
-                raise ConanException("Specify a recipe revision")
-
-            # First resolve any * in the regular reference, doing a search
-            if any(["*" in field for field in (ref.name, str(ref.version),
-                                               ref.user or "", ref.channel or "")]):
-                query = str(ref)
-                if expression.endswith("@"):
-                    query += "@"
-                refs = self.recipes(query, remote)
+    def select(self, ref_pattern, only_recipe=False, package_query=None, remote=None):
+        select_bundle = SelectBundle()
+        refs = self.conan_api.search.recipes(ref_pattern.ref)
+        for r in refs:
+            if ref_pattern.rrev is None:  # latest
+                rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
             else:
-                refs = [ref]
+                rrevs = self.conan_api.list.recipe_revisions(r, remote)
+                rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, ref_pattern.rrev)]
 
-        # Second, for the got references, check revisions matching.
-        ret = []
-        for _r in refs:
-            if ref.revision is not None:
-                _tmp = RecipeReference.loads(repr(_r))
-                _tmp.revision = None
-                if ref.revision is None:
-                    ret.append(self.conan_api.list.latest_recipe_revision(_tmp, remote))
-                else:
-                    for _rrev in self.conan_api.list.recipe_revisions(_tmp, remote):
-                        if fnmatch.fnmatch(_rrev.revision, ref.revision):
-                            ret.append(_rrev)
-            else:
-                ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
+            # Add recipe revisions to bundle
+            for rrev in rrevs:
+                select_bundle.add_ref(rrev)
+                if only_recipe:
+                    continue
+                prefs = self.conan_api.list.packages_configurations(rrev, remote)
+                if package_query is not None:
+                    prefs = self.conan_api.list.filter_packages_configurations(prefs, package_query)
+                prefs = prefs.keys()
+                if ref_pattern.pid is not None:
+                    prefs = [p for p in prefs if fnmatch.fnmatch(p.package_id, ref_pattern.pid)]
 
-        return ret
-
-    @api_method
-    def package_revisions(self, expression, query=None, remote=None):
-        """ Resolve an expression like lib*/1*#*:9283*, filtering by query and obtaining all the package revisions
-
-        :param expression: lib*/1*#*:9283*
-        :param query: package configuration query like "os=Windows AND (arch=x86 OR compiler=gcc)"
-        :param remote: Remote object
-        :return: a List of PkgReference
-        """
-        if ":" in expression:
-            recipe_expr, package_expr = expression.split(":", 1)
-            if not package_expr:
-                raise ConanException("Specify a package ID value after ':'")
-        else:
-            recipe_expr = expression
-            package_expr = "*#*"
-
-        if "#" in package_expr:
-            package_id_expr, package_revision_expr = package_expr.split("#", 1)
-            if not package_revision_expr:
-                raise ConanException("Specify a package revision")
-        else:
-            package_id_expr = package_expr
-            package_revision_expr = "*"
-
-        # If we are specifing a pref, we need a recipe ref in the expression (at least a wildcard)
-        refs = self.recipe_revisions(recipe_expr, remote)
-        ret = []
-        for ref in refs:
-            configurations = self.conan_api.list.packages_configurations(ref, remote)
-            filtered_configurations = {}
-            for _pref, configuration in configurations.items():
-                if fnmatch.fnmatch(_pref.package_id, package_id_expr):
-                    filtered_configurations[_pref] = configuration
-            prefs = self.conan_api.list.filter_packages_configurations(filtered_configurations,
-                                                                       query).keys()
-            for pref in prefs:
-                if package_revision_expr == "latest":
-                    latest = self.conan_api.list.latest_package_revision(pref, remote)
-                    if latest:
-                        ret.append(latest)
-                else:
-                    prevs = self.conan_api.list.package_revisions(pref, remote)
-                    for prev in prevs:
-                        if fnmatch.fnmatch(prev.revision, package_revision_expr):
-                            ret.append(prev)
-
-        return ret
+                for pref in prefs:
+                    if ref_pattern.prev is None:  # latest
+                        prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
+                    else:
+                        prevs = self.conan_api.list.package_revisions(pref, remote)
+                        prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, ref_pattern.prev)]
+                    select_bundle.add_prefs(prevs)
+        return select_bundle

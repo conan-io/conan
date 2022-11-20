@@ -54,6 +54,5 @@ def test_upload_bundle():
     c.run("create .")
     c.run('upload-bundle "*" -r=default', redirect_stdout="mybundle.json")
     bundle = c.load("mybundle.json")
-    # print(bundle)
     bundle = json.loads(bundle)
-    assert bundle[0]["ref"] == "pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164"
+    assert bundle["pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164"]["upload"] is True

@@ -1,5 +1,4 @@
-from collections import defaultdict
-from typing import List
+from collections import OrderedDict
 
 
 class Remote:
@@ -31,17 +30,15 @@ class Remote:
 
 
 class _RecipeUploadData:
-    def __init__(self, ref, prefs=None):
-        self.ref = ref
+    def __init__(self, prefs):
         self.upload = True
         self.force = None
         self.dirty = None
         self.files = None
-        self.packages = [_PackageUploadData(p) for p in prefs or []]
+        self.packages = [_PackageUploadData(pref) for pref in prefs]
 
     def serialize(self):
         return {
-            "ref": repr(self.ref),
             "dirty": self.dirty,
             "upload": self.upload,
             "force": self.force,
@@ -66,26 +63,40 @@ class _PackageUploadData:
         }
 
 
-class UploadBundle:
+class SelectBundle:
     def __init__(self):
-        self.recipes: List[_RecipeUploadData] = []
-
-    def serialize(self):
-        return [r.serialize() for r in self.recipes]
+        self.recipes = OrderedDict()
 
     def add_ref(self, ref):
-        self.recipes.append(_RecipeUploadData(ref))
+        self.recipes.setdefault(ref, [])
+
+    def refs(self):
+        return self.recipes.keys()
+
+    def prefs(self):
+        prefs = []
+        for v in self.recipes.values():
+            prefs.extend(v)
+        return prefs
 
     def add_prefs(self, prefs):
-        refs = defaultdict(list)
         for pref in prefs:
-            refs[pref.ref].append(pref)
-        for ref, prefs in refs.items():
-            self.recipes.append(_RecipeUploadData(ref, prefs))
+            self.recipes.setdefault(pref.ref, []).append(pref)
+
+
+class UploadBundle:
+    def __init__(self, select_bundle):
+        self.recipes = OrderedDict()
+        # We reverse the bundle so older revisions are uploaded first
+        for ref, prefs in reversed(select_bundle.recipes.items()):
+            self.recipes[ref] = _RecipeUploadData(reversed(prefs))
+
+    def serialize(self):
+        return {r.repr_notime(): v.serialize() for r, v in self.recipes.items()}
 
     @property
     def any_upload(self):
-        for r in self.recipes:
+        for r in self.recipes.values():
             if r.upload:
                 return True
             for p in r.packages:

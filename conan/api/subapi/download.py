@@ -19,7 +19,7 @@ class DownloadAPI:
         app = ConanApp(self.conan_api.cache_folder)
         skip_download = app.cache.exists_rrev(ref)
         if skip_download:
-            output.info(f"Skip {ref.repr_notime()} download, already in cache")
+            output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
@@ -44,7 +44,7 @@ class DownloadAPI:
 
         skip_download = app.cache.exists_prev(pref)
         if skip_download:
-            output.info(f"Skip {pref.repr_notime()} download, already in cache")
+            output.info(f"Skip package {pref.repr_notime()} download, already in cache")
             return False
         layout = app.cache.ref_layout(pref.ref)
         conan_file_path = layout.conanfile()

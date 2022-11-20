@@ -53,20 +53,6 @@ class Pkg(ConanFile):
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
 
-    def test_download_reference_without_packages(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("export . --user=user --channel=stable")
-        client.run("upload pkg/0.1@user/stable -r default")
-        client.run("remove pkg/0.1@user/stable -f")
-
-        client.run("download pkg/0.1@user/stable#*:* -r default", assert_error=True)
-        # Check 'No remote binary packages found' warning
-        self.assertIn("There are no packages matching", client.out)
-        # The recipe is not downloaded either
-        client.run("list recipes pkg*")
-        assert "There are no matching recipe references" in client.out
-
     def test_download_reference_with_packages(self):
         client = TurboTestClient(default_server_user=True)
         conanfile = """from conan import ConanFile
@@ -93,19 +79,6 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(ref_layout.conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
-
-    def test_download_wrong_id(self):
-        client = TurboTestClient(default_server_user=True)
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-        client.export(ref)
-        rrev = client.exported_recipe_revision()
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable#{}:wrong -r default".format(rrev),
-                   assert_error=True)
-        self.assertIn("ERROR: There are no packages matching "
-                      "'pkg/0.1@lasote/stable#{}:wrong".format(rrev), client.out)
 
     def test_download_full_reference(self):
         server = TestServer()
@@ -147,14 +120,11 @@ class Pkg(ConanFile):
         client.remove_all()
 
         client.run("download pkg/0.1 -p 'build_type=Debug' -r default")
-        print(client.out)
         client.run("list packages pkg/0.1")
         assert "build_type=Debug" in client.out
         assert "build_type=Release" not in client.out
 
-        print("---------------------")
         client.run("download pkg/0.1 -p 'build_type=Release' -r default")
-        print(client.out)
         client.run("list packages pkg/0.1")
         assert "build_type=Debug" in client.out
         assert "build_type=Release" in client.out
@@ -190,11 +160,6 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
-
-    def test_download_not_found_reference(self):
-        client = TurboTestClient(default_server_user=True)
-        client.run("download pkg/0.1@lasote/stable -r default", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
 
     def test_no_user_channel(self):
         # https://github.com/conan-io/conan/issues/6009
