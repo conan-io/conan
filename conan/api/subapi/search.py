@@ -39,7 +39,7 @@ class SearchAPI:
 
     def select(self, ref_pattern, only_recipe=False, package_query=None, remote=None):
         select_bundle = SelectBundle()
-        refs = self.conan_api.search.recipes(ref_pattern.ref)
+        refs = self.conan_api.search.recipes(ref_pattern.ref, remote=remote)
         for r in refs:
             if ref_pattern.rrev is None:  # latest
                 rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]

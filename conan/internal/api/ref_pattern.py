@@ -6,9 +6,11 @@ class RefPattern:
                 return None, default
             tokens = s.split(c, 1)
             if len(tokens) == 2:
-                return tokens
+                return tokens[0], tokens[1] or default
             return tokens[0], default
 
         recipe, package = split(expression, ":")
-        self.ref, self.rrev = split(recipe, "#", rrev)
-        self.pid, self.prev = split(package, "#", prev)
+        self.ref, rrev = split(recipe, "#", rrev)
+        self.rrev, _ = split(rrev, "%")
+        self.pid, prev = split(package, "#", prev)
+        self.prev, _ = split(prev, "%")

@@ -25,30 +25,6 @@ def setup():
     return client, ref, package_ids, str(conanfile)
 
 
-def test_download_all(setup):
-    client, ref, package_ids, _ = setup
-    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    # Should retrieve the three packages
-    new_client.run("download hello0/0.1@lasote/stable:* -r default")
-    latest_rrev = new_client.cache.get_latest_recipe_reference(ref)
-    packages = new_client.cache.get_package_references(latest_rrev)
-    new_package_ids = [package.package_id for package in packages]
-    assert set(new_package_ids) == set(package_ids)
-
-
-def test_download_some_reference(setup):
-    client, ref, package_ids, _ = setup
-    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    # Should retrieve the specified packages
-    new_client.run("download hello0/0.1@lasote/stable:%s -r default" % package_ids[0])
-    assert len(package_ids) == 3
-
-    # try to re-download the package we have just installed, will skip download
-    latest_prev = new_client.get_latest_package_reference("hello0/0.1@lasote/stable")
-    new_client.run(f"download {latest_prev.repr_notime()} -r default")
-    assert f"Skip {latest_prev.repr_notime()} download, already in cache" in new_client.out
-
-
 def test_download_recipe_twice(setup):
     client, ref, package_ids, conanfile = setup
     new_client = TestClient(servers=client.servers, inputs=["admin", "password"])

@@ -98,7 +98,7 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
         # now remove packages, ensure --build=missing also creates them
-        client.run('remove "*" -p -f')
+        client.run('remove "*:*" -f')
         client.run("install . --profile ./profile.txt --build=missing")
         self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
