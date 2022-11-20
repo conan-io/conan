@@ -81,3 +81,28 @@ def test_with_options_validate_build_test():
            "with False option" in t.out
 
     t.run("create consumer.py --build missing -o foo/*:my_option=True")
+
+
+def test_basic_validate_build_command_build():
+    """ the "conan build" command should fail for a validate_build() too
+    https://github.com/conan-io/conan/issues/12571
+    """
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+
+        class myConan(ConanFile):
+            settings = "os"
+
+            def validate_build(self):
+                if self.settings.os == "Windows":
+                    raise ConanInvalidConfiguration("This doesn't build in Windows")
+        """)
+
+    t.save({"conanfile.py": conanfile})
+    t.run(f"build .", assert_error=True)
+    assert "ERROR: conanfile.py: Cannot build for this configuration: " \
+           "This doesn't build in Windows" in t.out
+    t.run("build . -s os=Linux")
+    # It doesn't fail
