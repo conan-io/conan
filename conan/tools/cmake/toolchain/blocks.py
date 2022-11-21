@@ -669,6 +669,7 @@ class TryCompileBlock(Block):
 
 class CompilersBlock(Block):
     template = textwrap.dedent(r"""
+        {% if compilers_by_conf|length < 1 %}
         {% if compiler %}
         if(NOT DEFINED ENV{CC})
         set(CMAKE_C_COMPILER {{ compiler }})
@@ -684,9 +685,11 @@ class CompilersBlock(Block):
         set(CMAKE_RC_COMPILER {{ compiler_rc }})
         endif()
         {% endif %}
+        {% else %}
         {% for lang, compiler_path in compilers_by_conf.items() %}
         set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
+        {% endif %}
     """)
 
     def _get_windows_compilers(self, generator):
