@@ -20,6 +20,8 @@ def client():
     t = tempfile.mkdtemp(suffix='conans')
     c = TestClient(cache_folder=t)
     save(c.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
+    # TODO: Adding CXX, CC env-vars is good, but that forces users to activate environment
+    #  it would be better an abstraction that sends it directly to the toolchain
     clang_profile = textwrap.dedent("""
         [settings]
         os=Windows
@@ -27,6 +29,10 @@ def client():
         build_type=Release
         compiler=clang
         compiler.version=12
+        [buildenv]
+        CXX=clang++
+        CC=clang
+        RC=clang
         """)
     conanfile = textwrap.dedent("""
         import os

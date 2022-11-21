@@ -11,7 +11,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
@@ -690,21 +690,6 @@ class GenericSystemBlock(Block):
         {% if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
-        {% if compiler %}
-        if(NOT DEFINED ENV{CC})
-        set(CMAKE_C_COMPILER {{ compiler }})
-        endif()
-        {% endif %}
-        {% if compiler_cpp %}
-        if(NOT DEFINED ENV{CXX})
-        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        endif()
-        {% endif %}
-        {% if compiler_rc %}
-        if(NOT DEFINED ENV{RC})
-        set(CMAKE_RC_COMPILER {{ compiler_rc }})
-        endif()
-        {% endif %}
         """)
 
     def _get_toolset(self, generator):
@@ -765,23 +750,6 @@ class GenericSystemBlock(Block):
                     "armv7": "ARM",
                     "armv8": "ARM64"}.get(arch)
         return None
-
-    def _get_compiler(self, generator):
-        compiler = self._conanfile.settings.get_safe("compiler")
-        os_ = self._conanfile.settings.get_safe("os")
-
-        compiler_c = compiler_cpp = compiler_rc = None
-
-        # TODO: Check if really necessary now that conanvcvars is used
-        if "Ninja" in str(generator) and is_msvc(self._conanfile):
-            compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
-            # definition of compiler only if not using the VS Clang toolset
-            compiler_rc = "clang"
-            compiler_c = "clang"
-            compiler_cpp = "clang++"
-
-        return compiler_c, compiler_cpp, compiler_rc
 
     def _get_generic_system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
@@ -844,18 +812,13 @@ class GenericSystemBlock(Block):
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
 
-        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
-
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        return {"compiler": compiler,
-                "compiler_rc": compiler_rc,
-                "compiler_cpp": compiler_cpp,
-                "toolset": toolset,
+        return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
