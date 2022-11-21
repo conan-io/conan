@@ -101,7 +101,7 @@ def test_basic_validate_build_command_build():
         """)
 
     t.save({"conanfile.py": conanfile})
-    t.run(f"build .", assert_error=True)
+    t.run(f"build . -s os=Windows", assert_error=True)
     assert "ERROR: conanfile.py: Cannot build for this configuration: " \
            "This doesn't build in Windows" in t.out
     t.run("build . -s os=Linux")
