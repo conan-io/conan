@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPIV2
 from conan.cli.command import conan_command, OnceArgument
-from conan.internal.api.ref_pattern import RefPattern
+from conan.internal.api.select_pattern import SelectPattern
 from conans.client.userio import UserInput
 
 
@@ -32,10 +32,7 @@ def remove(conan_api: ConanAPIV2, parser, *args):
         return args.force or ui.request_boolean(message)
 
     only_recipe = ":" not in args.reference and not args.package_query
-    if only_recipe:
-        ref_pattern = RefPattern(args.reference, rrev="*")
-    else:
-        ref_pattern = RefPattern(args.reference, prev="*")
+    ref_pattern = SelectPattern(args.reference, rrev="*", prev="*")
     select_bundle = conan_api.search.select(ref_pattern, only_recipe, args.package_query, remote)
 
     if only_recipe:

@@ -3,7 +3,7 @@ from multiprocessing.pool import ThreadPool
 from conan.api.conan_api import ConanAPIV2
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
-from conan.internal.api.ref_pattern import RefPattern
+from conan.internal.api.select_pattern import SelectPattern
 
 
 @conan_command(group="Creator")
@@ -29,7 +29,7 @@ def download(conan_api: ConanAPIV2, parser, *args):
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
     parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
-    ref_pattern = RefPattern(args.reference)
+    ref_pattern = SelectPattern(args.reference)
     select_bundle = conan_api.search.select(ref_pattern, args.only_recipe, args.package_query,
                                             remote)
     refs = select_bundle.refs()

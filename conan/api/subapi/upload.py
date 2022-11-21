@@ -2,7 +2,7 @@ from conan.api.model import UploadBundle
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
-from conan.internal.api.ref_pattern import RefPattern
+from conan.internal.api.select_pattern import SelectPattern
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -15,7 +15,7 @@ class UploadAPI:
 
     @api_method
     def get_bundle(self, expression, package_query=None, only_recipe=False):
-        ref_pattern = RefPattern(expression)
+        ref_pattern = SelectPattern(expression)
         select_bundle = self.conan_api.search.select(ref_pattern, only_recipe, package_query)
         upload_bundle = UploadBundle(select_bundle)
 

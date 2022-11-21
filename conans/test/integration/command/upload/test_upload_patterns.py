@@ -88,10 +88,14 @@ class TestUploadPatterns:
     def test_pkg(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev2",), ("Windows", "Linux"), ("prev2",)
         self.assert_uploaded("pkga", result, client)
+        # equivalent to using explicitly latest
+        self.assert_uploaded("pkga#latest", result, client)
 
     def test_pkg_rrev(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev1",), ("Windows", "Linux"), ("prev2",)
         self.assert_uploaded("pkga#rev1", result, client)
+        # equivalent to using explicitly latest
+        self.assert_uploaded("pkga#rev1:*#latest", result, client)
 
     def test_pkg_rrevs(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev1", "rev2"), ("Windows", "Linux"), ("prev2",)
@@ -100,6 +104,7 @@ class TestUploadPatterns:
     def test_pkg_pid(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev2",), ("Windows",), ("prev2",)
         self.assert_uploaded("pkga:Windows", result, client)
+        self.assert_uploaded("pkga:Windows#latest", result, client)
 
     def test_pkg_rrev_pid(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev1",), ("Windows",), ("prev2",)

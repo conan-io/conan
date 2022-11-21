@@ -3,8 +3,8 @@ import fnmatch
 from conans.errors import ConanException
 
 
-class RefPattern:
-    def __init__(self, expression, rrev=None, prev=None):
+class SelectPattern:
+    def __init__(self, expression, rrev="latest", prev="latest"):
 
         def split(s, c, default=None):
             if not s:
@@ -19,6 +19,14 @@ class RefPattern:
         self.rrev, _ = split(rrev, "%")
         self.package_id, prev = split(package, "#", prev)
         self.prev, _ = split(prev, "%")
+
+    @property
+    def is_latest_rrev(self):
+        return self.rrev == "latest"
+
+    @property
+    def is_latest_prev(self):
+        return self.prev == "latest"
 
     def check_refs(self, refs):
         if not refs and self.ref and "*" not in self.ref:

@@ -1,6 +1,7 @@
 from conan.api.model import SelectBundle
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
+from conans.errors import ConanException
 from conans.search.search import search_recipes
 
 
@@ -36,12 +37,16 @@ class SearchAPI:
         return ret
 
     def select(self, pattern, only_recipe=False, package_query=None, remote=None):
+        if package_query and pattern.package_id and "*" not in pattern.package_id:
+            raise ConanException("Cannot specify '-p' package queries, "
+                                 "if 'package_id' is not a pattern")
+
         select_bundle = SelectBundle()
         refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
         pattern.check_refs(refs)
 
         for r in refs:
-            if pattern.rrev is None:  # latest
+            if pattern.is_latest_rrev:
                 rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
@@ -60,7 +65,7 @@ class SearchAPI:
                     prefs = pattern.filter_prefs(prefs)
 
                 for pref in prefs:
-                    if pattern.prev is None:  # latest
+                    if pattern.is_latest_prev:
                         prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
                     else:
                         prevs = self.conan_api.list.package_revisions(pref, remote)
