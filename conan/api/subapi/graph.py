@@ -40,6 +40,7 @@ class GraphAPI:
             if ref.name:
                 profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
+            root_node.should_build = True  # It is a consumer, this is something we are building
         else:
             conanfile = app.loader.load_conanfile_txt(path)
             consumer_definer(conanfile, profile_host)
