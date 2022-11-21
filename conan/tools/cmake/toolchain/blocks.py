@@ -667,8 +667,63 @@ class TryCompileBlock(Block):
         """)
 
 
-class GenericSystemBlock(Block):
+class CompilersBlock(Block):
     template = textwrap.dedent(r"""
+        {% if compiler %}
+        if(NOT DEFINED ENV{CC})
+        set(CMAKE_C_COMPILER {{ compiler }})
+        endif()
+        {% endif %}
+        {% if compiler_cpp %}
+        if(NOT DEFINED ENV{CXX})
+        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
+        endif()
+        {% endif %}
+        {% if compiler_rc %}
+        if(NOT DEFINED ENV{RC})
+        set(CMAKE_RC_COMPILER {{ compiler_rc }})
+        endif()
+        {% endif %}
+        {% for lang, compiler_path in compilers_by_conf.items() %}
+        set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
+        {% endfor %}
+    """)
+
+    def _get_windows_compilers(self, generator):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        os_ = self._conanfile.settings.get_safe("os")
+
+        compiler_c = compiler_cpp = compiler_rc = None
+
+        # TODO: Check if really necessary now that conanvcvars is used
+        if "Ninja" in str(generator) and is_msvc(self._conanfile):
+            compiler_c = compiler_cpp = "cl"
+        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
+            # definition of compiler only if not using the VS Clang toolset
+            compiler_rc = "clang"
+            compiler_c = "clang"
+            compiler_cpp = "clang++"
+
+        return compiler_c, compiler_cpp, compiler_rc
+
+    def context(self):
+        generator = self._toolchain.generator
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compilers", default={},
+                                                     check_type=dict)
+        # FIXME: do we want to keep this legacy part?
+        compiler, compiler_cpp, compiler_rc = None, None, None
+        if not compilers_by_conf:
+            # Configuration has preference for setting compilers
+            compiler, compiler_cpp, compiler_rc = self._get_windows_compilers(generator)
+
+        return {"compilers_by_conf": compilers_by_conf,
+                "compiler": compiler,
+                "compiler_rc": compiler_rc,
+                "compiler_cpp": compiler_cpp}
+
+
+class GenericSystemBlock(Block):
+    template = textwrap.dedent("""
         {% if cmake_sysroot %}
         set(CMAKE_SYSROOT {{ cmake_sysroot }})
         {% endif %}
@@ -689,26 +744,6 @@ class GenericSystemBlock(Block):
         {% endif %}
         {% if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
-        {% endif %}
-        {% if compiler %}
-        if(NOT DEFINED ENV{CC})
-        set(CMAKE_C_COMPILER {{ compiler }})
-        endif()
-        {% endif %}
-        {% if compiler_cpp %}
-        if(NOT DEFINED ENV{CXX})
-        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        endif()
-        {% endif %}
-        {% if compiler_rc %}
-        if(NOT DEFINED ENV{RC})
-        set(CMAKE_RC_COMPILER {{ compiler_rc }})
-        endif()
-        {% endif %}
-        {% if compilers_by_conf|length > 0 %}
-        {% for lang, compiler_path in compilers_by_conf.items() %}
-        set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
-        {% endfor %}
         {% endif %}
         """)
 
@@ -771,23 +806,6 @@ class GenericSystemBlock(Block):
                     "armv8": "ARM64"}.get(arch)
         return None
 
-    def _get_windows_compilers(self, generator):
-        compiler = self._conanfile.settings.get_safe("compiler")
-        os_ = self._conanfile.settings.get_safe("os")
-
-        compiler_c = compiler_cpp = compiler_rc = None
-
-        # TODO: Check if really necessary now that conanvcvars is used
-        if "Ninja" in str(generator) and is_msvc(self._conanfile):
-            compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
-            # definition of compiler only if not using the VS Clang toolset
-            compiler_rc = "clang"
-            compiler_c = "clang"
-            compiler_cpp = "clang++"
-
-        return compiler_c, compiler_cpp, compiler_rc
-
     def _get_generic_system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
         os_build = self._conanfile.settings_build.get_safe("os")
@@ -848,25 +866,13 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compilers", default={},
-                                                     check_type=dict)
-        # FIXME: do we want to keep this legacy part?
-        compiler, compiler_cpp, compiler_rc = None, None, None
-        if not compilers_by_conf:
-            # Configuration has preference for setting compilers
-            compiler, compiler_cpp, compiler_rc = self._get_windows_compilers(generator)
-
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        return {"compilers_by_conf": compilers_by_conf,
-                "compiler": compiler,
-                "compiler_rc": compiler_rc,
-                "compiler_cpp": compiler_cpp,
-                "toolset": toolset,
+        return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,

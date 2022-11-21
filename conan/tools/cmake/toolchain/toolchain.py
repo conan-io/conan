@@ -12,7 +12,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -127,6 +127,7 @@ class CMakeToolchain(object):
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),
                                        ("generic_system", GenericSystemBlock),
+                                       ("compilers", CompilersBlock),
                                        ("android_system", AndroidSystemBlock),
                                        ("apple_system", AppleSystemBlock),
                                        ("fpic", FPicBlock),
