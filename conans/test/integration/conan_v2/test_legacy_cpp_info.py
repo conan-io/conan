@@ -24,7 +24,6 @@ def test_legacy_names_filenames():
 
                 self.cpp_info.env_info.whatever = "whatever-env_info"
                 self.cpp_info.user_info.whatever = "whatever-user_info"
-                self.cpp_info.build_modules = ["nice_rel_path"]
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
