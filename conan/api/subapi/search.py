@@ -1,5 +1,3 @@
-import fnmatch
-
 from conan.api.model import SelectBundle
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
@@ -37,15 +35,17 @@ class SearchAPI:
                 ret.append(r)
         return ret
 
-    def select(self, ref_pattern, only_recipe=False, package_query=None, remote=None):
+    def select(self, pattern, only_recipe=False, package_query=None, remote=None):
         select_bundle = SelectBundle()
-        refs = self.conan_api.search.recipes(ref_pattern.ref, remote=remote)
+        refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+        pattern.check_refs(refs)
+
         for r in refs:
-            if ref_pattern.rrev is None:  # latest
+            if pattern.rrev is None:  # latest
                 rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
-                rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, ref_pattern.rrev)]
+                rrevs = pattern.filter_rrevs(rrevs)
 
             # Add recipe revisions to bundle
             for rrev in rrevs:
@@ -56,14 +56,14 @@ class SearchAPI:
                 if package_query is not None:
                     prefs = self.conan_api.list.filter_packages_configurations(prefs, package_query)
                 prefs = prefs.keys()
-                if ref_pattern.pid is not None:
-                    prefs = [p for p in prefs if fnmatch.fnmatch(p.package_id, ref_pattern.pid)]
+                if pattern.package_id is not None:
+                    prefs = pattern.filter_prefs(prefs)
 
                 for pref in prefs:
-                    if ref_pattern.prev is None:  # latest
+                    if pattern.prev is None:  # latest
                         prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
                     else:
                         prevs = self.conan_api.list.package_revisions(pref, remote)
-                        prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, ref_pattern.prev)]
+                        prevs = pattern.filter_prevs(prevs)
                     select_bundle.add_prefs(prevs)
         return select_bundle

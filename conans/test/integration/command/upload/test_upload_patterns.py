@@ -13,7 +13,6 @@ class TestUploadPatterns:
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_package_file("file", env_var="MYVAR")})
 
         for pkg in ("pkga", "pkgb"):
             for version in ("1.0", "1.1"):
@@ -137,46 +136,37 @@ class TestUploadPatterns:
         self.assert_uploaded("pkga", result, client, query="os=Windows")
 
 
-@pytest.mark.xfail(reason="Pattern errors not defined yet")
 class TestUploadPatternErrors:
-    def test_upload_binary_not_existing(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . --name=hello --version=0.1 --user=lasote --channel=testing")
-        client.run("upload hello/0.1@lasote/testing:123 -r default", assert_error=True)
-        assert "ERROR: No 'hello/0.1@lasote/testing' package_id matching '123'" in client.out
-        # But this shouldn't be a problem
-        client.run("upload hello/0.1@lasote/testing:* -r default -c")
-        assert "WARN: No 'hello/0.1@lasote/testing' package_id matching '123'" in client.out
 
-    def test_not_existing_error(self):
-        """ Trying to upload with pattern not matched must raise an Error
-        """
+    @pytest.fixture(scope="class")
+    def client(self):
         client = TestClient(default_server_user=True)
-        client.run("upload some_nonsense* -r default --only-recipe", assert_error=True)
-        assert "No recipes found matching pattern 'some_nonsense*'" in client.out
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        client.run(f"create .")
+        return client
 
-    def test_non_existing_recipe_error(self):
-        """ Trying to upload a non-existing recipe must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload pkg/0.1@user/channel -r default --only-recipe", assert_error=True)
-        self.assertIn("No recipes found matching pattern 'pkg/0.1@user/channel'", client.out)
+    @staticmethod
+    def assert_error(pattern, error, client, only_recipe=False, query=None):
+        only_recipe = "" if not only_recipe else "--only-recipe"
+        query = "" if not query else f"-p={query}"
+        client.run(f"upload {pattern} -r=default {only_recipe} {query}", assert_error=True)
+        assert error in client.out
 
-    def test_non_existing_package_error(self):
-        """ Trying to upload a non-existing package must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload pkg/0.1@user/channel -r default --only-recipe", assert_error=True)
-        self.assertIn("No recipes found matching pattern 'pkg/0.1@user/channel'", client.out)
+    def test_recipe_not_found(self, client):
+        error = "ERROR: Recipe 'zlib/1.2.11' not found"
+        self.assert_error("zlib/1.2.11", error, client)
 
-    def test_upload_with_pref(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --user=user --channel=testing")
-        client.run("upload hello0/1.2.1@user/testing#*:{} -c "
-                   "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        print(client.out)
-        self.assertIn("Uploading package 'hello0/1.2.1@user/testing#e9865516f03b8acbe2bd918d26b1460f"
-                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e'",
-                      client.out)
+    def test_rrev_not_found(self, client):
+        error = "ERROR: Recipe revision 'pkg/0.1#rev1' not found"
+        self.assert_error("pkg/0.1#rev1", error, client)
+
+    def test_pid_not_found(self, client):
+        rrev = "485dad6cb11e2fa99d9afbe44a57a164"
+        error = f"ERROR: Package ID 'pkg/0.1#{rrev}:pid1' not found"
+        self.assert_error(f"pkg/0.1#{rrev}:pid1", error, client)
+
+    def test_prev_not_found(self, client):
+        rrev = "485dad6cb11e2fa99d9afbe44a57a164"
+        pid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        error = f"ERROR: Package revision 'pkg/0.1#{rrev}:{pid}#prev' not found"
+        self.assert_error(f"pkg/0.1#{rrev}:{pid}#prev", error, client)

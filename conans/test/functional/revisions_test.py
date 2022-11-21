@@ -281,7 +281,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         fakeref.revision = "fakerev"
         full_ref = repr(fakeref)
         client.run("remove {} -f".format(repr(fakeref)), assert_error=True)
-        self.assertIn("ERROR: Recipe not found: '%s'" % full_ref, client.out)
+        self.assertIn(f"ERROR: Recipe revision '{full_ref}' not found", client.out)
         self.assertTrue(client.recipe_exists(self.ref))
 
     def test_remove_local_package(self):
@@ -306,7 +306,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         str_ref = repr(fakeref)
         client.run("remove {} -f".format(repr(fakeref)), assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
+        self.assertIn("Recipe revision '{}' not found".format(str_ref), client.out)
 
         # If I remove the ref with valid RREV, the packages are removed
         pref1 = client.create(self.ref)

@@ -32,9 +32,12 @@ def remove(conan_api: ConanAPIV2, parser, *args):
         return args.force or ui.request_boolean(message)
 
     only_recipe = ":" not in args.reference and not args.package_query
-    ref_pattern = RefPattern(args.reference, rrev="*", prev="*")
+    if only_recipe:
+        ref_pattern = RefPattern(args.reference, rrev="*")
+    else:
+        ref_pattern = RefPattern(args.reference, prev="*")
     select_bundle = conan_api.search.select(ref_pattern, only_recipe, args.package_query, remote)
-    print(select_bundle.recipes)
+
     if only_recipe:
         for ref in select_bundle.refs():
             if confirmation("Remove the recipe and all the packages of '{}'?"

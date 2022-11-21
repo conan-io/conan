@@ -14,7 +14,6 @@ class TestDownloadPatterns:
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_package_file("file", env_var="MYVAR")})
 
         for pkg in ("pkga", "pkgb"):
             for version in ("1.0", "1.1"):
@@ -131,68 +130,47 @@ class TestDownloadPatterns:
         self.assert_downloaded("pkga#*", result, client, only_recipe=True)
 
     # Package query
+    def test_all_query(self, client):
+        result = ("pkga", "pkgb"), ("1.0", "1.1"), ("rev2",), ("Windows",), ("prev2",)
+        self.assert_downloaded("*", result, client, query="os=Windows")
+
     def test_pkg_query(self, client):
         result = ("pkga",), ("1.0", "1.1"), ("rev2",), ("Windows",), ("prev2",)
         self.assert_downloaded("pkga", result, client, query="os=Windows")
 
 
-@pytest.mark.xfail(reason="Pattern errors not defined yet")
 class TestDownloadPatterErrors:
 
-    def test_download_revs_enabled_with_fake_rrev(self):
+    @pytest.fixture(scope="class")
+    def client(self):
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
-        client.run("upload * --confirm -r default")
-        client.run("remove * -f")
-        client.run("download pkg/1.0@user/channel#fakerevision -r default", assert_error=True)
-        self.assertIn("ERROR: There are no recipes matching 'pkg/1.0@user/channel#fakerevision'", client.out)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        client.run(f"create .")
+        client.run("upload *#*:*#* -r=default -c")
+        return client
 
-    def test_download_all_but_no_packages():
-        # Remove all from remote
-        new_client = TestClient(default_server_user=True)
+    @staticmethod
+    def assert_error(pattern, error, client, only_recipe=False, query=None):
+        only_recipe = "" if not only_recipe else "--only-recipe"
+        query = "" if not query else f"-p={query}"
+        client.run(f"download {pattern} -r=default {only_recipe} {query}", assert_error=True)
+        assert error in client.out
 
-        # Try to install all
-        new_client.run("download hello0/0.1@lasote/stable:* -r default", assert_error=True)
-        assert "Recipe not found: 'hello0/0.1@lasote/stable'" in new_client.out
+    def test_recipe_not_found(self, client):
+        error = "ERROR: Recipe 'zlib/1.2.11' not found"
+        self.assert_error("zlib/1.2.11", error, client)
 
-        # Upload the recipe (we don't have packages)
-        new_client.save({"conanfile.py": GenConanfile()})
-        new_client.run("export . --name=hello0 --version=0.1 --user=lasote --channel=stable")
-        new_client.run("upload hello0/0.1@lasote/stable -r default")
+    def test_rrev_not_found(self, client):
+        error = "ERROR: Recipe revision 'pkg/0.1#rev1' not found"
+        self.assert_error("pkg/0.1#rev1", error, client)
 
-        # And try to download all
-        new_client.run("download hello0/0.1@lasote/stable:* -r default", assert_error=True)
-        assert "There are no packages matching 'hello0/0.1@lasote/stable:*'" in new_client.out
+    def test_pid_not_found(self, client):
+        rrev = "485dad6cb11e2fa99d9afbe44a57a164"
+        error = f"ERROR: Package ID 'pkg/0.1#{rrev}:pid1' not found"
+        self.assert_error(f"pkg/0.1#{rrev}:pid1", error, client)
 
-    def test_download_wrong_id(self):
-        client = TurboTestClient(default_server_user=True)
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-        client.export(ref)
-        rrev = client.exported_recipe_revision()
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable#{}:wrong -r default".format(rrev),
-                   assert_error=True)
-        self.assertIn("ERROR: There are no packages matching "
-                      "'pkg/0.1@lasote/stable#{}:wrong".format(rrev), client.out)
-
-    def test_download_not_found_reference(self):
-        client = TurboTestClient(default_server_user=True)
-        client.run("download pkg/0.1@lasote/stable -r default", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
-
-    def test_download_reference_without_packages(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("export . --user=user --channel=stable")
-        client.run("upload pkg/0.1@user/stable -r default")
-        client.run("remove pkg/0.1@user/stable -f")
-
-        client.run("download pkg/0.1@user/stable#*:* -r default", assert_error=True)
-        # Check 'No remote binary packages found' warning
-        self.assertIn("There are no packages matching", client.out)
-        # The recipe is not downloaded either
-        client.run("list recipes pkg*")
-        assert "There are no matching recipe references" in client.out
+    def test_prev_not_found(self, client):
+        rrev = "485dad6cb11e2fa99d9afbe44a57a164"
+        pid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        error = f"ERROR: Package revision 'pkg/0.1#{rrev}:{pid}#prev' not found"
+        self.assert_error(f"pkg/0.1#{rrev}:{pid}#prev", error, client)
