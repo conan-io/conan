@@ -43,33 +43,33 @@ def test_cmake_toolchain(conanfile):
 
 def test_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks.remove("generic_system")
+    toolchain.blocks.remove("compilers")
     content = toolchain.content
     assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_template_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks["generic_system"].template = ""
+    toolchain.blocks["compilers"].template = ""
     content = toolchain.content
     assert 'CMAKE_C_COMPILER' not in content
 
 
 def test_template_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.blocks["generic_system"].template
-    toolchain.blocks["generic_system"].template = tmp.replace("CMAKE_C_COMPILER", "OTHER_THING")
+    tmp = toolchain.blocks["compilers"].template
+    toolchain.blocks["compilers"].template = tmp.replace("CMAKE_C_COMPILER", "OTHER_THING")
     content = toolchain.content
     assert 'set(OTHER_THING clang)' in content
 
 
 def test_context_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.blocks["generic_system"]
+    tmp = toolchain.blocks["compilers"]
 
     def context(self):
         assert self
-        return {"compiler": None}
+        return {"compiler": None, "compilers_by_conf": {}}
     tmp.context = types.MethodType(context, tmp)
     content = toolchain.content
     assert 'CMAKE_C_COMPILER' not in content
@@ -77,15 +77,15 @@ def test_context_change(conanfile):
 
 def test_context_update(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    compiler = toolchain.blocks["generic_system"].values["compiler"]
-    toolchain.blocks["generic_system"].values["compiler"] = "Super" + compiler
+    compiler = toolchain.blocks["compilers"].values["compiler"]
+    toolchain.blocks["compilers"].values["compiler"] = "Super" + compiler
     content = toolchain.content
     assert 'set(CMAKE_C_COMPILER Superclang)' in content
 
 
 def test_context_replace(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks["generic_system"].values = {"compiler": "SuperClang"}
+    toolchain.blocks["compilers"].values = {"compiler": "SuperClang", "compilers_by_conf": {}}
     content = toolchain.content
     assert 'set(CMAKE_C_COMPILER SuperClang)' in content
 
@@ -99,7 +99,7 @@ def test_replace_block(conanfile):
         def context(self):
             return {}
 
-    toolchain.blocks["generic_system"] = MyBlock
+    toolchain.blocks["compilers"] = MyBlock
     content = toolchain.content
     assert 'HelloWorld' in content
     assert 'CMAKE_C_COMPILER' not in content
