@@ -90,7 +90,7 @@ class MultiRemotesTest(unittest.TestCase):
         # Upload hello0 to local and default from client_a
         sleep(1)  # For timestamp and updates checks
         self._create(client_a, "hello0", "0.0", modifier="\n\n")
-        client_a.run("upload hello0/0.0@lasote/stable -r default --only-recipe")
+        client_a.run("upload hello0/0.0@lasote/stable#latest -r default --only-recipe")
 
         # Now client_b checks for updates without -r parameter
         # TODO: cache2.0 conan info not yet implemented with new cache
@@ -125,7 +125,7 @@ class MultiRemotesTest(unittest.TestCase):
         sleep(1)  # For timestamp and updates checks
         self._create(client, "hello0", "0.0", modifier=" ")
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
-        client.run("upload hello0/0.0@lasote/stable -r local")
+        client.run("upload hello0/0.0@lasote/stable#latest -r local")
         client.run("remove '*' -f")
 
         client.run("install --requires=hello0/0.0@lasote/stable")
