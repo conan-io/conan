@@ -35,7 +35,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Windows", assert_error=True)
-        assert "pkg/0.1: {}: Package does not work in Windows!".format(self.invalid) in client.out
+        assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
 
     def test_invalid_info(self, client):
         """
@@ -44,7 +44,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("graph info consumer -s os=Windows")
-        assert "binary: {}".format(self.invalid) in client.out
+        assert "binary: Invalid" in client.out
 
     def test_valid(self, client):
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
@@ -57,7 +57,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_tool_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s:h os=Windows -s:b os=Windows", assert_error=True)
-        assert "pkg/0.1: {}: Package does not work in Windows!".format(self.invalid) in client.out
+        assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
 
     def test_valid_build_require_two_profiles(self, client):
         conanfile_consumer = GenConanfile().with_tool_requires("pkg/0.1").with_settings("os")
@@ -73,14 +73,14 @@ class TestErrorConfiguration(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.errors import ConanErrorConfiguration
+        from conan.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             settings = "os"
 
             def validate(self):
                 if self.info.settings.os == "Windows":
-                    raise ConanErrorConfiguration("Package does not work in Windows!")
+                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
             def package_id(self):
                 del self.info.settings.os
@@ -95,14 +95,14 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.errors import ConanErrorConfiguration
+        from conan.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             settings = "os"
 
             def validate(self):
                 if self.info.settings.os == "Windows":
-                    raise ConanErrorConfiguration("Package does not work in Windows!")
+                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
             def compatibility(self):
                if self.settings.os == "Windows":

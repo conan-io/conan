@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
+    BINARY_MISSING, BINARY_INVALID
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -243,7 +243,7 @@ class InstallGraph:
             for package in install_node.packages.values():
                 if package.binary == BINARY_MISSING:
                     missing.append(package)
-                elif package.binary in (BINARY_INVALID, BINARY_ERROR):
+                elif package.binary == BINARY_INVALID:
                     invalid.append(package)
 
         if invalid:
@@ -253,7 +253,7 @@ class InstallGraph:
                 if node.cant_build and node.should_build:
                     binary, reason = "Cannot build for this configuration", node.cant_build
                 else:
-                    binary, reason = node.conanfile.info.invalid
+                    binary, reason = "Invalid", node.conanfile.info.invalid
                 msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
             raise ConanInvalidConfiguration("\n".join(msg))
         if missing:
