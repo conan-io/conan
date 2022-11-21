@@ -91,7 +91,7 @@ class _Component(object):
         self.filenames = MockInfoProperty("cpp_info.filenames")
         self.user_info = MockInfoProperty("cpp_info.user_info")
         self.env_info = MockInfoProperty("cpp_info.env_info")
-        self.env_info = MockInfoProperty("cpp_info.build_modules")
+        self.build_modules = MockInfoProperty("cpp_info.build_modules")
 
         if set_defaults:
             self.includedirs = ["include"]
