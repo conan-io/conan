@@ -18,20 +18,20 @@ class TestOtherCommands:
         # Nothing in the cache
         t.run("list recipes *")
         assert "There are no matching recipe references" in t.out
-        t.run('list packages lib/0.1')
+        t.run('list packages lib/0.1#latest')
         assert "There are no recipes" in t.out
 
         t.run('export . ')
         assert "lib/0.1: Exported revision" in t.out
         t.run("list recipes *")
         assert "lib/0.1" in t.out
-        t.run('list packages lib/0.1')
+        t.run('list packages lib/0.1#latest')
         assert "There are no packages" in t.out  # One binary is listed
 
         t.run('export-pkg .')
         assert "lib/0.1: Exporting package" in t.out
 
-        t.run('list packages lib/0.1')
+        t.run('list packages lib/0.1#latest')
         assert "lib/0.1" in t.out  # One binary is listed
 
         t.run('upload lib/0.1 -r default')
@@ -41,7 +41,7 @@ class TestOtherCommands:
         # Nothing in the cache
         t.run("list recipes *")
         assert "There are no matching recipe references" in t.out
-        t.run('list packages lib/0.1')
+        t.run('list packages lib/0.1#latest')
         assert "There are no recipes" in t.out
 
     def test_create_editable(self):

@@ -223,7 +223,7 @@ def list_packages(conan_api, parser, subparser, *args):
     """
     subparser.add_argument(
         "reference",
-        help="Recipe reference and revision, e.g., libyaml/0.2.5 or "
+        help="Recipe reference and revision, e.g., libyaml/0.2.5#latest or "
              "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a"
         )
     _add_remotes_and_cache_options(subparser)
@@ -235,13 +235,18 @@ def list_packages(conan_api, parser, subparser, *args):
         raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
                              f" in the form name/version[@user/channel][#RECIPE_REVISION]")
 
+    if not ref.revision:
+        raise ConanException(f"Invalid '{args.reference}' missing revision. Please specify one "
+                             "revision or '#latest' one")
+
     remotes = _selected_cache_remotes(conan_api, args)
 
     results = OrderedDict()
     for remote in remotes:
         name = getattr(remote, "name", "Local Cache")
-        if ref.revision is None:
+        if ref.revision == "latest":
             try:
+                ref.revision = None
                 ref = conan_api.list.latest_recipe_revision(ref, remote)
             except NotFoundException:
                 # TODO: Remove this try-except whenever Artifactory is returning proper messages

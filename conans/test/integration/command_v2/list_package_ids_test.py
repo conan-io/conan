@@ -97,7 +97,7 @@ class TestParams(TestListPackageIdsBase):
                    """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --name foo --version 1.0")
-        self.client.run('list packages foo/1.0')
+        self.client.run('list packages foo/1.0#latest')
 
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -119,7 +119,7 @@ class TestParams(TestListPackageIdsBase):
                    """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --name foo --version 1.0")
-        self.client.run('list packages foo/1.0')
+        self.client.run('list packages foo/1.0#latest')
 
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -405,7 +405,7 @@ class TestListPackagesHTML:
         c.run("create dep")
         c.run("create pkg -s os=Windows -s arch=x86")
         # Revision is needed explicitly!
-        c.run("list packages pkg/2.3.4 --format=html", redirect_stdout="table.html")
+        c.run("list packages pkg/2.3.4#latest --format=html", redirect_stdout="table.html")
         table = c.load("table.html")
         assert "<!DOCTYPE html>" in table
         # TODO: The actual good html is missing
@@ -419,5 +419,5 @@ class TestListPackagesHTML:
         c.run("create lib.py")
         template_folder = os.path.join(c.cache_folder, 'templates')
         c.save({"list_packages.html": '{{ base_template_path }}'}, path=template_folder)
-        c.run("list packages lib/0.1 --format=html")
+        c.run("list packages lib/0.1#latest --format=html")
         assert template_folder in c.stdout
