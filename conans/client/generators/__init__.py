@@ -9,8 +9,8 @@ _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MesonDeps", "MSBuildDeps", "QbsToolchain",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain"]
-
+               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain",
+               "NMakeToolchain"]
 
 def _get_generator_class(generator_name):
     if generator_name not in _generators:
@@ -73,6 +73,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "XcodeToolchain":
         from conan.tools.apple import XcodeToolchain
         return XcodeToolchain
+    elif generator_name == "NMakeToolchain":
+        from conan.tools.microsoft import NMakeToolchain
+        return NMakeToolchain
     else:
         raise ConanException("Internal Conan error: Generator '{}' "
                              "not complete".format(generator_name))

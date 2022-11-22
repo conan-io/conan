@@ -426,7 +426,10 @@ class ConanFile:
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
             # they don't want any env-file applied
             env = "conanbuild" if scope == "build" else "conanrun"
-        env = [env] if env and isinstance(env, str) else []
+
+
+        env = [env] if env and isinstance(env, str) else (env or [])
+        assert isinstance(env, list), "env argument to ConanFile.run() should be a list"
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run

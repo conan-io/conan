@@ -599,6 +599,56 @@ class CMakeInstallTest(unittest.TestCase):
 
 
 @pytest.mark.tool("cmake")
+class CMakeTestTest(unittest.TestCase):
+    """
+    test the cmake.test() helper
+    """
+    def test_test(self):
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+                exports_sources = "CMakeLists.txt", "example.cpp"
+
+                def build_requirements(self):
+                    self.test_requires("test/0.1")
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    cmake.test()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(App CXX)
+            find_package(test CONFIG REQUIRED)
+            add_executable(example example.cpp)
+            target_link_libraries(example test::test)
+
+            enable_testing()
+            add_test(NAME example
+                      COMMAND example)
+            """)
+        c = TestClient()
+        c.run("new test/0.1 -m=cmake_lib")
+        c.run("create .  -tf=None -o test*:shared=True")
+
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": cmakelist,
+                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+               clean_first=True)
+
+        # The create flow must work
+        c.run("create . pkg/0.1@ -pr:b=default -o test*:shared=True")
+        assert "1/1 Test #1: example ..........................   Passed" in c.out
+
+
+@pytest.mark.tool_cmake
 class CMakeOverrideCacheTest(unittest.TestCase):
 
     def test_cmake_cache_variables(self):
