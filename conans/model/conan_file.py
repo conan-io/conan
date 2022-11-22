@@ -4,6 +4,7 @@ from pathlib import Path
 from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
+from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
@@ -245,7 +246,8 @@ class ConanFile:
         self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
-        self.user_info = None
+        self.user_info = MockInfoProperty("cpp_info.user_info")
+        self.env_info = MockInfoProperty("cpp_info.env_info")
         self._conan_dependencies = None
 
         if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
