@@ -11,7 +11,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
@@ -669,60 +669,18 @@ class TryCompileBlock(Block):
 
 class CompilersBlock(Block):
     template = textwrap.dedent(r"""
-        {% if compilers_by_conf|length < 1 %}
-        {% if compiler %}
-        if(NOT DEFINED ENV{CC})
-        set(CMAKE_C_COMPILER {{ compiler }})
-        endif()
-        {% endif %}
-        {% if compiler_cpp %}
-        if(NOT DEFINED ENV{CXX})
-        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        endif()
-        {% endif %}
-        {% if compiler_rc %}
-        if(NOT DEFINED ENV{RC})
-        set(CMAKE_RC_COMPILER {{ compiler_rc }})
-        endif()
-        {% endif %}
-        {% else %}
-        {% for lang, compiler_path in compilers_by_conf.items() %}
+        {% for lang, compiler_path in compilers.items() %}
         set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
-        {% endif %}
     """)
 
-    def _get_windows_compilers(self, generator):
-        compiler = self._conanfile.settings.get_safe("compiler")
-        os_ = self._conanfile.settings.get_safe("os")
-
-        compiler_c = compiler_cpp = compiler_rc = None
-
-        # TODO: Check if really necessary now that conanvcvars is used
-        if "Ninja" in str(generator) and is_msvc(self._conanfile):
-            compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
-            # definition of compiler only if not using the VS Clang toolset
-            compiler_rc = "clang"
-            compiler_c = "clang"
-            compiler_cpp = "clang++"
-
-        return compiler_c, compiler_cpp, compiler_rc
-
     def context(self):
-        generator = self._toolchain.generator
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compilers", default={},
-                                                     check_type=dict)
-        # FIXME: do we want to keep this legacy part?
-        compiler, compiler_cpp, compiler_rc = None, None, None
-        if not compilers_by_conf:
-            # Configuration has preference for setting compilers
-            compiler, compiler_cpp, compiler_rc = self._get_windows_compilers(generator)
-
-        return {"compilers_by_conf": compilers_by_conf,
-                "compiler": compiler,
-                "compiler_rc": compiler_rc,
-                "compiler_cpp": compiler_cpp}
+        # Reading configuration from "tools.build:compilers" -> {"C": "/usr/bin/gcc"}
+        compilers = self._conanfile.conf.get("tools.build:compilers", default={}, check_type=dict)
+        # Users used to define CC as env variable. Translating it just in case.
+        if "CC" in compilers:
+            compilers["C"] = compilers.pop("CC")
+        return {"compilers": compilers}
 
 
 class GenericSystemBlock(Block):
