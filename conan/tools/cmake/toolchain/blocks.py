@@ -670,7 +670,7 @@ class TryCompileBlock(Block):
 class CompilersBlock(Block):
     template = textwrap.dedent(r"""
         {% for lang, compiler_path in compilers.items() %}
-        set(CMAKE_{{ lang|upper }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
+        set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
     """)
 

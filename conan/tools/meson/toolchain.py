@@ -163,10 +163,12 @@ class MesonToolchain(object):
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
 
+        # Read configuration for compilers
+        compilers = self._conanfile.conf.get("tools.build:compilers", default={}, check_type=dict)
         # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        self.c = build_env.get("CC") or default_comp
-        self.cpp = build_env.get("CXX") or default_comp_cpp
+        self.c = compilers.get("CC") or build_env.get("CC") or default_comp
+        self.cpp = compilers.get("CXX") or build_env.get("CXX") or default_comp_cpp
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
         self.ar = build_env.get("AR")
@@ -183,8 +185,8 @@ class MesonToolchain(object):
         self.apple_arch_flag = []
         self.apple_isysroot_flag = []
         self.apple_min_version_flag = []
-        self.objc = None
-        self.objcpp = None
+        self.objc = compilers.get("OBJC")
+        self.objcpp = compilers.get("OBJCXX")
         self.objc_args = []
         self.objc_link_args = []
         self.objcpp_args = []
@@ -251,8 +253,8 @@ class MesonToolchain(object):
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
-        self.objc = "clang"
-        self.objcpp = "clang++"
+        self.objc = self.objc or "clang"
+        self.objcpp = self.objcpp or "clang++"
         self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
         self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
         self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
