@@ -438,7 +438,7 @@ class ConanFile(object):
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
             envfiles_folder = self.generators_folder or os.getcwd()
-            _env = [_env] if _env and isinstance(_env, str) else _env
+            _env = [_env] if _env and isinstance(_env, str) else (_env or [])
             assert isinstance(_env, list)
             wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder,
                                               scope=scope)
