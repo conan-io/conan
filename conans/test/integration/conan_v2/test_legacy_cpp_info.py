@@ -28,5 +28,5 @@ def test_legacy_names_filenames():
               "Conan 2.X. Please, update your recipes unless you are maintaining compatibility " \
               "with Conan 1.X"
 
-    for name in ["cpp_info.names", "cpp_info.filenames", "cpp_info.env_info", "cpp_info.user_info"]:
+    for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info"]:
         assert message.format(name) in c.out
