@@ -552,9 +552,7 @@ class CMakeInstallTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
             project(App C)
-            if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
-                include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
-            endif()
+
             if(NOT CMAKE_TOOLCHAIN_FILE)
                 message(FATAL ">> Not using toolchain")
             endif()
@@ -583,6 +581,56 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+
+@pytest.mark.tool_cmake
+class CMakeTestTest(unittest.TestCase):
+    """
+    test the cmake.test() helper
+    """
+    def test_test(self):
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+                exports_sources = "CMakeLists.txt", "example.cpp"
+
+                def build_requirements(self):
+                    self.test_requires("test/0.1")
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    cmake.test()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(App CXX)
+            find_package(test CONFIG REQUIRED)
+            add_executable(example example.cpp)
+            target_link_libraries(example test::test)
+
+            enable_testing()
+            add_test(NAME example
+                      COMMAND example)
+            """)
+        c = TestClient()
+        c.run("new test/0.1 -m=cmake_lib")
+        c.run("create .  -tf=None -o test*:shared=True")
+
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": cmakelist,
+                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+               clean_first=True)
+
+        # The create flow must work
+        c.run("create . pkg/0.1@ -pr:b=default -o test*:shared=True")
+        assert "1/1 Test #1: example ..........................   Passed" in c.out
 
 
 @pytest.mark.tool_cmake
