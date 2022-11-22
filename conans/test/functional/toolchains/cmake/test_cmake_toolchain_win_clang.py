@@ -28,7 +28,7 @@ def client():
         compiler=clang
         compiler.version=12
         [conf]
-        tools.cmake.cmaketoolchain:set_compilers={"CXX": "clang++", "C": "clang", "RC": "clang"}
+        tools.build:compiler_executables={"cxx": "clang++", "cc": "clang", "rc": "clang"}
         """)
     conanfile = textwrap.dedent("""
         import os

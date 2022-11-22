@@ -678,11 +678,22 @@ class CompilersBlock(Block):
     """)
 
     def context(self):
-        compilers = self._conanfile.conf.get("tools.cmake.cmaketoolchain:set_compilers", default={},
-                                             check_type=dict)
-        compiler_launchers = \
-            self._conanfile.conf.get("tools.cmake.cmaketoolchain:set_compiler_launchers", default={},
-                                     check_type=dict)
+        # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        # Map the possible languages
+        compilers = {}
+        compiler_launchers = {}
+        # Allowed <LANG> variables (and <LANG>_LAUNCHER)
+        compilers_mapping = {"cc": "C", "cuda": "CUDA", "cxx": "CXX",
+                             "objc": "OBJC", "objcxx": "OBJCXX", "rc": "RC"}
+        for comp, lang in compilers_mapping.items():
+            # To set CMAKE_<LANG>_COMPILER
+            if comp in compilers_by_conf:
+                compilers[lang] = compilers_by_conf[comp]
+            # To set CMAKE_<LANG>_COMPILER_LAUNCHER
+            if comp + "_launcher" in compilers_by_conf:
+                compiler_launchers[lang] = compilers_by_conf[comp + "_launcher"]
         return {"compilers": compilers,
                 "compiler_launchers": compiler_launchers}
 

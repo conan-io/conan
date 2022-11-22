@@ -123,7 +123,13 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-        if is_msvc(self._conanfile):
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        if compilers_by_conf:
+            compilers_mapping = {"cc": "CC", "cxx": "CXX"}
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_by_conf:
+                    env.define(env_var, compilers_by_conf[comp])
+        elif is_msvc(self._conanfile):
             env.define("CXX", "cl")
             env.define("CC", "cl")
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
