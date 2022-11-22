@@ -599,7 +599,7 @@ class CMakeInstallTest(unittest.TestCase):
 
 
 @pytest.mark.tool("cmake")
-class CMakeTestTest(unittest.TestCase):
+class TestCmakeTestMethod:
     """
     test the cmake.test() helper
     """
@@ -635,7 +635,7 @@ class CMakeTestTest(unittest.TestCase):
                       COMMAND example)
             """)
         c = TestClient()
-        c.run("new test/0.1 -m=cmake_lib")
+        c.run("new cmake_lib -d name=test -d version=0.1")
         c.run("create .  -tf=None -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
@@ -644,11 +644,11 @@ class CMakeTestTest(unittest.TestCase):
                clean_first=True)
 
         # The create flow must work
-        c.run("create . pkg/0.1@ -pr:b=default -o test*:shared=True")
+        c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
         assert "1/1 Test #1: example ..........................   Passed" in c.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 class CMakeOverrideCacheTest(unittest.TestCase):
 
     def test_cmake_cache_variables(self):

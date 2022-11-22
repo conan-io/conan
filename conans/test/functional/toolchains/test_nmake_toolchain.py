@@ -45,7 +45,6 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
                  "simple.cpp": gen_function_cpp(name="main")})
-    client.run("install . {}".format(settings))
-    client.run("build .")
+    client.run("build . {}".format(settings))
     client.run_command("simple.exe")
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
