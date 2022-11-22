@@ -810,4 +810,4 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER_LAUNCHER "ccache")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
-    assert 'set(CMAKE_C_COMPILER_LAUNCHER "/my/local/ccache")' in toolchain
+    assert 'set(CMAKE_C_COMPILER_LAUNCHER "ccache")' in toolchain
