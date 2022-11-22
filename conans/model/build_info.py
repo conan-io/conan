@@ -89,6 +89,7 @@ class _Component(object):
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = MockInfoProperty("cpp_info.names")
         self.filenames = MockInfoProperty("cpp_info.filenames")
+        self.build_modules = MockInfoProperty("cpp_info.build_modules")
 
         if set_defaults:
             self.includedirs = ["include"]
