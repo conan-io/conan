@@ -83,7 +83,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
         if extra_msg:  # For ``conan new`` templates
             assert "{} {} {}".format(name, extra_msg, build_type) in output
         else:
-            assert "{}: {}".format(name, extra_msg, build_type) in output
+            assert "{}: {}".format(name, build_type) in output
         if compiler == "msvc":
             if arch == "x86":
                 assert "{} _M_IX86 defined".format(name) in output
