@@ -672,15 +672,19 @@ class CompilersBlock(Block):
         {% for lang, compiler_path in compilers.items() %}
         set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
+        {% for lang, compiler_launcher_path in compiler_launchers.items() %}
+        set(CMAKE_{{ lang }}_COMPILER_LAUNCHER "{{ compiler_launcher_path|replace('\\', '/') }}")
+        {% endfor %}
     """)
 
     def context(self):
-        # Reading configuration from "tools.build:compilers" -> {"C": "/usr/bin/gcc"}
-        compilers = self._conanfile.conf.get("tools.build:compilers", default={}, check_type=dict)
-        # Users used to define CC as env variable. Translating it just in case.
-        if "CC" in compilers:
-            compilers["C"] = compilers.pop("CC")
-        return {"compilers": compilers}
+        compilers = self._conanfile.conf.get("tools.cmake.cmaketoolchain:set_compilers", default={},
+                                             check_type=dict)
+        compiler_launchers = \
+            self._conanfile.conf.get("tools.cmake.cmaketoolchain:set_compiler_launchers", default={},
+                                     check_type=dict)
+        return {"compilers": compilers,
+                "compiler_launchers": compiler_launchers}
 
 
 class GenericSystemBlock(Block):

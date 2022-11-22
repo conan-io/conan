@@ -786,7 +786,7 @@ def test_pkg_config_block():
     assert pkg_config_path_set in toolchain
 
 
-def test_set_cmake_lang_compilers():
+def test_set_cmake_lang_compilers_and_launchers():
     profile = textwrap.dedent(r"""
     [settings]
     os=Windows
@@ -795,7 +795,8 @@ def test_set_cmake_lang_compilers():
     compiler.version=15
     compiler.libcxx=libstdc++11
     [conf]
-    tools.build:compilers={"CC": "/my/local/gcc", "CXX": "/my/local/g++", "RC": "C:\\local\\rc.exe"}
+    tools.cmake.cmaketoolchain:set_compilers={"C": "/my/local/gcc", "CXX": "/my/local/g++", "RC": "C:\\local\\rc.exe"}
+    tools.cmake.cmaketoolchain:set_compiler_launchers={"C": "/my/local/ccache"}
     """)
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
@@ -809,3 +810,4 @@ def test_set_cmake_lang_compilers():
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "/my/local/g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
+    assert 'set(CMAKE_C_COMPILER_LAUNCHER "/my/local/ccache")' in toolchain
