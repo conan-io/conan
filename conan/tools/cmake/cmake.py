@@ -158,6 +158,6 @@ class CMake(object):
             target = "RUN_TESTS" if is_multi and not is_ninja else "test"
 
         # The default for ``test()`` is both the buildenv and the runenv
-        env = ["conanbuild", "conanrun"] if env is "" else env
+        env = ["conanbuild", "conanrun"] if env == "" else env
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args, env=env)
