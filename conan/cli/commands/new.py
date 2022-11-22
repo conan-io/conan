@@ -4,7 +4,7 @@ import shutil
 from jinja2 import Environment, meta, exceptions
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, Extender
+from conan.cli.command import conan_command
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -21,7 +21,7 @@ def new(conan_api, parser, *args):
                         "E.g. 'conan new cmake_lib -d name=hello -d version=0.1'. "
                         "You can define your own templates too."
                         )
-    parser.add_argument("-d", "--define", action=Extender,
+    parser.add_argument("-d", "--define", action="append",
                         help="Define a template argument as key=value")
     parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if exists")
 

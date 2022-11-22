@@ -338,6 +338,8 @@ def _profile_parse_args(settings, options, envs, conf):
             return []
         # Validate the pairs
         for item in items:
+            if not isinstance(item, str):
+                raise Exception("POTATO!!!!")
             chunks = item.split("=", 1)
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
