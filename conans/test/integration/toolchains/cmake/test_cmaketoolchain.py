@@ -795,7 +795,7 @@ def test_set_cmake_lang_compilers_and_launchers():
     compiler.version=15
     compiler.libcxx=libstdc++11
     [conf]
-    tools.build:compiler_executables={"cc": "/my/local/gcc", "cc_launcher": "ccache", "cxx": "g++", "rc": "C:\\local\\rc.exe"}
+    tools.build:compiler_executables={"cc": "/my/local/gcc", "cxx": "g++", "rc": "C:\\local\\rc.exe"}
     """)
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
@@ -807,7 +807,5 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER clang)' not in toolchain
     assert 'set(CMAKE_CXX_COMPILER clang++)' not in toolchain
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
-    assert 'set(CMAKE_C_COMPILER_LAUNCHER "ccache")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
-    assert 'set(CMAKE_C_COMPILER_LAUNCHER "ccache")' in toolchain

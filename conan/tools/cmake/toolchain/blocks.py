@@ -672,9 +672,6 @@ class CompilersBlock(Block):
         {% for lang, compiler_path in compilers.items() %}
         set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
         {% endfor %}
-        {% for lang, compiler_launcher_path in compiler_launchers.items() %}
-        set(CMAKE_{{ lang }}_COMPILER_LAUNCHER "{{ compiler_launcher_path|replace('\\', '/') }}")
-        {% endfor %}
     """)
 
     def context(self):
@@ -691,11 +688,7 @@ class CompilersBlock(Block):
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
-            # To set CMAKE_<LANG>_COMPILER_LAUNCHER
-            if comp + "_launcher" in compilers_by_conf:
-                compiler_launchers[lang] = compilers_by_conf[comp + "_launcher"]
-        return {"compilers": compilers,
-                "compiler_launchers": compiler_launchers}
+        return {"compilers": compilers}
 
 
 class GenericSystemBlock(Block):
