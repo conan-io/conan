@@ -1,4 +1,4 @@
-from conan.cli.command import OnceArgument, ExtenderValueRequired, Extender
+from conan.cli.command import OnceArgument
 
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
@@ -36,9 +36,9 @@ def add_lockfile_args(parser):
 
 def _add_common_install_arguments(parser, build_help, update_help=None):
     if build_help:
-        parser.add_argument("-b", "--build", action=ExtenderValueRequired, nargs="?", help=build_help)
+        parser.add_argument("-b", "--build", action="append", help=build_help)
 
-    parser.add_argument("-r", "--remote", action=Extender, default=None,
+    parser.add_argument("-r", "--remote", action="append", default=None,
                         help='Look in the specified remote or remotes server')
 
     if not update_help:
@@ -57,14 +57,14 @@ def add_profiles_args(parser):
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),
                             "--profile{}".format(long_suffix),
-                            default=None, action=Extender,
+                            default=None, action="append",
                             dest='profile_{}'.format(machine),
                             help='Apply the specified profile to the {} machine'.format(machine))
 
     def settings_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-s{}".format(short_suffix),
                             "--settings{}".format(long_suffix),
-                            nargs=1, action=Extender,
+                            action="append",
                             dest='settings_{}'.format(machine),
                             help='Settings to build the package, overwriting the defaults'
                                  ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
@@ -73,7 +73,7 @@ def add_profiles_args(parser):
     def options_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-o{}".format(short_suffix),
                             "--options{}".format(long_suffix),
-                            nargs=1, action=Extender,
+                            action="append",
                             dest="options_{}".format(machine),
                             help='Define options values ({} machine), e.g.:'
                                  ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
@@ -81,7 +81,7 @@ def add_profiles_args(parser):
     def conf_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-c{}".format(short_suffix),
                             "--conf{}".format(long_suffix),
-                            nargs=1, action=Extender,
+                            action="append",
                             dest='conf_{}'.format(machine),
                             help='Configuration to build the package, overwriting the defaults'
                                  ' ({} machine). e.g.: -c{} '
