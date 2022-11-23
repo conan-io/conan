@@ -168,8 +168,9 @@ class MesonToolchain(object):
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        self.c = compilers_by_conf.get("cc") or build_env.get("CC") or default_comp
-        self.cpp = compilers_by_conf.get("cxx") or build_env.get("CXX") or default_comp_cpp
+        self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
+        self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
         self.ar = build_env.get("AR")

@@ -680,10 +680,10 @@ class CompilersBlock(Block):
                                                      check_type=dict)
         # Map the possible languages
         compilers = {}
-        compiler_launchers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
-        compilers_mapping = {"cc": "C", "cuda": "CUDA", "cxx": "CXX",
-                             "objc": "OBJC", "objcxx": "OBJCXX", "rc": "RC"}
+        compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
+                             "objcxx": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
+                             "hip": "HIP", "ispc": "ISPC"}
         for comp, lang in compilers_mapping.items():
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:

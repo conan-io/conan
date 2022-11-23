@@ -795,7 +795,7 @@ def test_set_cmake_lang_compilers_and_launchers():
     compiler.version=15
     compiler.libcxx=libstdc++11
     [conf]
-    tools.build:compiler_executables={"cc": "/my/local/gcc", "cxx": "g++", "rc": "C:\\local\\rc.exe"}
+    tools.build:compiler_executables={"c": "/my/local/gcc", "cpp": "g++", "rc": "C:\\local\\rc.exe"}
     """)
     client = TestClient(path_with_spaces=False)
     conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
