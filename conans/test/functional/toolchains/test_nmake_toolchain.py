@@ -23,12 +23,16 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
 
     # Build the profile according to the settings provided
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+    client.run("new dep/1.0 -m=cmake_lib")
+    client.run(f'create . -tf=None {settings} '
+               f'-c tools.cmake.cmaketoolchain:generator="Visual Studio 16"')
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "NMakeToolchain"
+            requires = "dep/1.0"
+            generators = "NMakeToolchain", "NMakeDeps"
 
             def build(self):
                 self.run(f"nmake /f makefile")
@@ -44,8 +48,10 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
         """)
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
-                 "simple.cpp": gen_function_cpp(name="main")})
+                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"])},
+                clean_first=True)
     client.run("install . {}".format(settings))
     client.run("build .")
     client.run_command("simple.exe")
+    assert "dep/1.0" in client.out
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
