@@ -11,7 +11,7 @@ from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
@@ -590,6 +590,30 @@ class TryCompileBlock(Block):
         """)
 
 
+class CompilersBlock(Block):
+    template = textwrap.dedent(r"""
+        {% for lang, compiler_path in compilers.items() %}
+        set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
+        {% endfor %}
+    """)
+
+    def context(self):
+        # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        # Map the possible languages
+        compilers = {}
+        # Allowed <LANG> variables (and <LANG>_LAUNCHER)
+        compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
+                             "objcxx": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
+                             "hip": "HIP", "ispc": "ISPC"}
+        for comp, lang in compilers_mapping.items():
+            # To set CMAKE_<LANG>_COMPILER
+            if comp in compilers_by_conf:
+                compilers[lang] = compilers_by_conf[comp]
+        return {"compilers": compilers}
+
+
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
         {% if cmake_sysroot %}
@@ -612,21 +636,6 @@ class GenericSystemBlock(Block):
         {% endif %}
         {% if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
-        {% endif %}
-        {% if compiler %}
-        if(NOT DEFINED ENV{CC})
-        set(CMAKE_C_COMPILER {{ compiler }})
-        endif()
-        {% endif %}
-        {% if compiler_cpp %}
-        if(NOT DEFINED ENV{CXX})
-        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        endif()
-        {% endif %}
-        {% if compiler_rc %}
-        if(NOT DEFINED ENV{RC})
-        set(CMAKE_RC_COMPILER {{ compiler_rc }})
-        endif()
         {% endif %}
         """)
 
@@ -676,23 +685,6 @@ class GenericSystemBlock(Block):
                     "armv7": "ARM",
                     "armv8": "ARM64"}.get(arch)
         return None
-
-    def _get_compiler(self, generator):
-        compiler = self._conanfile.settings.get_safe("compiler")
-        os_ = self._conanfile.settings.get_safe("os")
-
-        compiler_c = compiler_cpp = compiler_rc = None
-
-        # TODO: Check if really necessary now that conanvcvars is used
-        if "Ninja" in str(generator) and is_msvc(self._conanfile):
-            compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in generator:
-            # definition of compiler only if not using the VS Clang toolset
-            compiler_rc = "clang"
-            compiler_c = "clang"
-            compiler_cpp = "clang++"
-
-        return compiler_c, compiler_cpp, compiler_rc
 
     def _get_generic_system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
@@ -755,19 +747,13 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-
-        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
-
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        return {"compiler": compiler,
-                "compiler_rc": compiler_rc,
-                "compiler_cpp": compiler_cpp,
-                "toolset": toolset,
+        return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,

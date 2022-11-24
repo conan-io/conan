@@ -10,7 +10,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -125,6 +125,7 @@ class CMakeToolchain(object):
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),
                                        ("generic_system", GenericSystemBlock),
+                                       ("compilers", CompilersBlock),
                                        ("android_system", AndroidSystemBlock),
                                        ("apple_system", AppleSystemBlock),
                                        ("fpic", FPicBlock),
@@ -144,6 +145,7 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
+        self.user_presets_path = None
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -196,7 +198,8 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
-        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables)
+        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
+                            self.user_presets_path)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
