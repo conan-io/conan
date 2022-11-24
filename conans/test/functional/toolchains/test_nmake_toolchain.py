@@ -25,7 +25,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
     client.run("new dep/1.0 -m=cmake_lib")
     client.run(f'create . -tf=None {settings} '
-               f'-c tools.cmake.cmaketoolchain:generator="Visual Studio 16"')
+               f'-c tools.cmake.cmaketoolchain:generator="Visual Studio 15"')
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
