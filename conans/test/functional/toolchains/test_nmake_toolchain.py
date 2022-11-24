@@ -50,8 +50,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type):
                  "makefile": makefile,
                  "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"])},
                 clean_first=True)
-    client.run("install . {}".format(settings))
-    client.run("build .")
+    client.run("build . {}".format(settings))
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
