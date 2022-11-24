@@ -214,7 +214,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
 
         ########## For the modules (FindXXX)
-        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{root_target_name}})
+        set({{ pkg_name }}_LIBRARIES{{ config_suffix }} {{ '${' }}{{ pkg_name }}_LIBS{{ config_suffix }}})
 
         """)
 
