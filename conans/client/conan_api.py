@@ -1343,6 +1343,9 @@ class ConanAPIV1(object):
         old_lock = GraphLockFile.load(old_lockfile, revisions_enabled)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
         new_lock = GraphLockFile.load(new_lockfile, revisions_enabled)
+        if old_lock.profile_host is None or new_lock.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
         if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
                                  % (old_lockfile, old_lock.profile_host.dumps(),
