@@ -398,7 +398,7 @@ def test_cmake_add_subdirectory():
     # only doing the configure failed before #11743 fix
     t.run("build .")
     # The boost::boost target has linked the two components
-    assert "AGGREGATED LIBS: boost::boost" in t.out
+    assert "AGGREGATED LIBS: " in t.out  # Not real libraries, so it is empty
     assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
     assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
     assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
