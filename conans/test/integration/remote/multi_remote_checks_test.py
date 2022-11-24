@@ -70,11 +70,11 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=1")
         client.run("upload pkg* -r=server1 --confirm")
-        client.run("remove * -p -f")
+        client.run("remove *:* -f")
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=2")
         package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
         client.run("upload pkg* -r=server2 --confirm")
-        client.run("remove * -p -f")
+        client.run("remove *:* -f")
 
         # recipe is cached, takes binary from server2
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2")
