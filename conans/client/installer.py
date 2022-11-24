@@ -711,6 +711,12 @@ class BinaryInstaller(object):
                         # Paste the editable cpp_info but prioritizing it, only if a
                         # variable is not declared at build/source, the package will keep the value
                         fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+                        conanfile.buildenv_info.compose_env(conanfile.cpp.source.buildenv_info)
+                        conanfile.buildenv_info.compose_env(conanfile.cpp.build.buildenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.cpp.source.runenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.cpp.build.runenv_info)
+                        conanfile.conf_info.compose_conf(conanfile.cpp.source.conf_info)
+                        conanfile.conf_info.compose_conf(conanfile.cpp.build.conf_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
