@@ -579,12 +579,12 @@ def test_error_missing_build_type():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_map_imported_config():
     # https://github.com/conan-io/conan/issues/12041
 
     client = TestClient()
-    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=1.0")
     client.run("create . -tf=None -s build_type=Release")
 
     # It is necessary a 2-level test to make the fixes evident
