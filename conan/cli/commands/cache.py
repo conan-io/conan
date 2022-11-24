@@ -8,14 +8,15 @@ from conans.model.recipe_ref import RecipeReference
 
 @conan_command(group="Consumer")
 def cache(conan_api: ConanAPIV2, parser, *args):
-    """Performs file operations in the local cache (of recipes and packages)"""
+    """Performs file operations in the local cache (of recipes and packages)
+    """
     pass
 
 
 @conan_subcommand(formatters={"text": default_text_formatter})
 def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
     """
-        Shows the path af a given reference
+        Shows the path in the Conan cache af a given reference
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
     subparser.add_argument("--folder", choices=['export_source', 'source', 'build'],
@@ -24,7 +25,10 @@ def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
                                 " path ")
 
     args = parser.parse_args(*args)
-    pref = _get_package_reference(args.reference)
+    try:
+        pref = PkgReference.loads(args.reference)
+    except ConanException:
+        pref = None
 
     if not pref:  # Not a package reference
         ref = RecipeReference.loads(args.reference)
@@ -44,12 +48,3 @@ def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
         else:
             raise ConanException(f"'--folder {args.folder}' requires a recipe reference")
     return path
-
-
-def _get_package_reference(pref):
-    try:
-        return PkgReference.loads(pref)
-    except ConanException:
-        return None
-
-

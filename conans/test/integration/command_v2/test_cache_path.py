@@ -21,6 +21,8 @@ def test_cache_path(created_package):
     recipe_layout = t.cache.ref_layout(pref.ref)
     t.run("cache path foo/1.0")
     assert recipe_layout.export() == str(t.out).rstrip()
+    t.run("cache path foo/1.0#latest")
+    assert recipe_layout.export() == str(t.out).rstrip()
     t.run("cache path foo/1.0 --folder=export_source")
     assert recipe_layout.export_sources() == str(t.out).rstrip()
     t.run("cache path foo/1.0 --folder=source")
@@ -43,6 +45,8 @@ def test_cache_path(created_package):
 
     # Basic package paths, with recipe-revision
     t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}")
+    assert pkg_layout.package() == str(t.out).rstrip()
+    t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#latest")
     assert pkg_layout.package() == str(t.out).rstrip()
     t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id} --folder=build")
     assert pkg_layout.build() == str(t.out).rstrip()
