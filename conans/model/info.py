@@ -426,9 +426,9 @@ class ConanInfo:
         try:
             self.options.validate()
         except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
+            self.invalid = str(e)
 
         try:
             self.settings.validate()
         except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
+            self.invalid = str(e)

@@ -13,11 +13,9 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     binary packages, unless --only-recipe is specified. You can use the "latest" placeholder at the
     "reference" argument to specify the latest revision of the recipe or the package.
     """
-    _not_specified_ = object()
-
     parser.add_argument('reference', help="Recipe reference or package reference, can contain * as "
-                                          "wildcard at any reference field. A placeholder 'latest'"
-                                          "can be used in the revision fields: e.g: 'lib/*#latest'.")
+                                          "wildcard at any reference field. If no revision is "
+                                          "specified, it is assumed to be the latest")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
@@ -62,14 +60,14 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
 def _ask_confirm_upload(conan_api, upload_data):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for recipe in upload_data.recipes:
-        msg = "Are you sure you want to upload recipe '%s'?" % recipe.ref.repr_notime()
+    for ref, bundle in upload_data.recipes.items():
+        msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
         if not ui.request_boolean(msg):
-            recipe.upload = False
-            for package in recipe.packages:
+            bundle.upload = False
+            for package in bundle.packages:
                 package.upload = False
         else:
-            for package in recipe.packages:
+            for package in bundle.packages:
                 msg = "Are you sure you want to upload package '%s'?" % package.pref.repr_notime()
                 if not ui.request_boolean(msg):
                     package.upload = False

@@ -1,5 +1,4 @@
 import copy
-import os
 import time
 import unittest
 from collections import OrderedDict
@@ -281,7 +280,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         fakeref.revision = "fakerev"
         full_ref = repr(fakeref)
         client.run("remove {} -f".format(repr(fakeref)), assert_error=True)
-        self.assertIn("ERROR: Recipe not found: '%s'" % full_ref, client.out)
+        self.assertIn(f"ERROR: Recipe revision '{full_ref}' not found", client.out)
         self.assertTrue(client.recipe_exists(self.ref))
 
     def test_remove_local_package(self):
@@ -306,7 +305,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         str_ref = repr(fakeref)
         client.run("remove {} -f".format(repr(fakeref)), assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
+        self.assertIn("Recipe revision '{}' not found".format(str_ref), client.out)
 
         # If I remove the ref with valid RREV, the packages are removed
         pref1 = client.create(self.ref)
@@ -318,16 +317,15 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         tmp = copy.copy(pref1.ref)
         tmp.revision = None
         command = "remove {}:{}#{} -f".format(repr(tmp), pref1.package_id, pref1.revision)
-        client.run(command, assert_error=True)
-        self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Specify a recipe revision", client.out)
+        client.run(command)
+        self.assertFalse(client.package_exists(pref1))
 
         # A wrong PREV doesn't remove the PREV
         pref1 = client.create(self.ref)
         command = "remove {}:{}#fakeprev -f".format(repr(pref1.ref), pref1.package_id)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Binary package not found", client.out)
+        self.assertIn("ERROR: Package revision", client.out)
 
         # Everything correct, removes the unique local package revision
         pref1 = client.create(self.ref)
@@ -433,15 +431,9 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client = self.c_v2
 
         # Remove PREV without RREV in a remote, the client has to fail
-        command = "remove {}:{}#{} -f -r default".format(self.ref, pref2.package_id,
-                                                            pref2.revision)
-        remover_client.run(command, assert_error=True)
-        self.assertIn("Specify a recipe revision", remover_client.out)
-
-        # Remove package with RREV and PREV
-        command = "remove {}:{}#{} -f -r default".format(repr(pref2.ref),
-                                                         pref2.package_id, pref2.revision)
+        command = "remove {}:{}#{} -f -r default".format(self.ref, pref2.package_id, pref2.revision)
         remover_client.run(command)
+
         self.assertTrue(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
         self.assertTrue(self.server.recipe_exists(pref2b.ref))
@@ -454,7 +446,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client.run(command, assert_error=True)
         fakeref = copy.copy(pref2)
         fakeref.revision = "fakerev"
-        self.assertIn("Binary package not found: '{}'".format(fakeref.repr_notime()),
+        self.assertIn(f"ERROR: Package revision '{fakeref.repr_notime()}' not found",
                       remover_client.out)
 
 

@@ -164,7 +164,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.assertIn(f"arch={default_arch}", self.client.out)
         self.assertIn("arch=x86", self.client.out)
 
-        self.client.run("remove -f foobar/0.1@user/testing -p -r default")
+        self.client.run("remove -f foobar/0.1@user/testing:* -r default")
         self.client.run("search foobar/0.1@user/testing -r default")
         self.assertNotIn(f"arch={default_arch}", self.client.out)
         self.assertNotIn("arch=x86", self.client.out)
@@ -243,14 +243,12 @@ def populated_client():
     {"remove": "*/*@user/*", "recipes": ["foo/1.0", "fbar/1.1", "bar/1.1"]},
     {"remove": "*/*@*", "recipes": ['foo/1.0', 'fbar/1.1', 'bar/1.1']},
     {"remove": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
-    {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
-                                                      'fbar/1.1']},
+    {"remove": "foo/1.0@user/channel:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
+                                                     'fbar/1.1']},
     {"remove": "foo/*@", "recipes": ['foo/1.0@user/channel', 'bar/1.1', 'fbar/1.1']},
-    # These are errors
-    {"remove": "foo", "error": True,
-     "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
-    {"remove": "*#", "error": True},
-    {"remove": "*/*#", "error": True},
+    {"remove": "foo", "recipes": ['bar/1.1', 'fbar/1.1']},
+    {"remove": "*#", "recipes": []},
+    {"remove": "*/*#", "recipes": []},
 ])
 def test_new_remove_recipes_expressions(populated_client, with_remote, data):
 
@@ -270,7 +268,7 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     {"remove": "bar/1.1#z*", "rrevs": [bar_rrev, bar_rrev2]},
     {"remove": "bar/1.1#*9*", "rrevs": []},
     {"remove": "bar/1.1#*2a", "rrevs": [bar_rrev]},
-    {"remove": "bar*#*50", "error": True, "error_msg": "Invalid expression, specify version"},
+    {"remove": "bar*#*50", "rrevs": [bar_rrev, bar_rrev2]},
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
     with populated_client.mocked_servers():
@@ -297,13 +295,11 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_rrev2_release]},
     # Errors
     {"remove": '*/*#*:*#* -p', "error": True,
-     "error_msg": "The -p argument cannot be used with a package reference"},
-    {"remove": "bar/1.1#*:", "error": True, "error_msg": 'Specify a package ID value'},
-    {"remove": "bar/1.1#*:234234#", "error": True, "error_msg": 'Specify a package revision'},
-    {"remove": "bar/1.1:234234", "error": True,
-     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
-    {"remove": "bar/1.1 -p os=Windows", "error": True,
-     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
+     "error_msg": "argument -p/--package-query: expected one argument"},
+    {"remove": "bar/1.1#*:", "prefs": []},
+    {"remove": "bar/1.1#*:234234#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:234234", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
@@ -328,16 +324,15 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     {"remove": '{}#*kk*'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1,
                                                               bar_rrev2_release_prev2]},
     {"remove": '{}#*'.format(bar_rrev2_release), "prevs": []},
-    {"remove": '{}#{}* -p "build_type=Debug"'.format(bar_rrev2_release, bar_prev2[:3]),
+    {"remove": '{}*#{}* -p "build_type=Debug"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
-    {"remove": '{}#{}* -p "build_type=Release"'.format(bar_rrev2_release, bar_prev2[:3]),
+    {"remove": '{}*#{}* -p "build_type=Release"'.format(bar_rrev2_release, bar_prev2[:3]),
      "prevs": [bar_rrev2_release_prev1]},
-    {"remove": '{}#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
-    {"remove": '{}#* -p "build_type=Debug"'.format(bar_rrev2_release),
+    {"remove": '{}*#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}*#* -p "build_type=Debug"'.format(bar_rrev2_release),
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
     # Errors
-    {"remove": '{}#'.format(bar_rrev2_release), "error": True,
-     "error_msg": "Specify a package revision"},
+    {"remove": '{}#'.format(bar_rrev2_release), "prevs": []},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here

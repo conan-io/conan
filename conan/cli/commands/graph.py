@@ -3,8 +3,7 @@ import os
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.api.subapi.install import do_deploys
-from conan.cli.command import conan_command, conan_subcommand, \
-    Extender, CommandResult
+from conan.cli.command import conan_command, conan_subcommand, CommandResult
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.install import graph_compute, common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
@@ -66,7 +65,7 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merges more than 1 build-order file
     """
-    subparser.add_argument("--file", nargs="?", action=Extender, help="Files to be merged")
+    subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
 
     result = InstallGraph()
@@ -89,11 +88,11 @@ def graph_info(conan_api, parser, subparser, *args):
     """
     common_graph_args(subparser)
     subparser.add_argument("--check-updates", default=False, action="store_true")
-    subparser.add_argument("--filter", nargs=1, action=Extender,
+    subparser.add_argument("--filter", action="append",
                            help="Show only the specified fields")
-    subparser.add_argument("--package-filter", nargs=1, action=Extender,
+    subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
-    subparser.add_argument("--deploy", action=Extender,
+    subparser.add_argument("--deploy", action="append",
                            help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 

@@ -67,6 +67,17 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("remote0", self.client.out)
         self.assertNotIn("remote2", self.client.out)
 
+    def test_remove_remote_all(self):
+        self.client.run("remote list")
+        self.assertIn("remote0: http://", self.client.out)
+        self.assertIn("remote1: http://", self.client.out)
+        self.assertIn("remote2: http://", self.client.out)
+        self.client.run("remote remove *")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertNotIn("remote0", self.client.out)
+        self.assertNotIn("remote2", self.client.out)
+
     def test_remove_remote_no_user(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("remote remove remote0")
@@ -229,7 +240,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: The specified remote doesn't exist", self.client.out)
+        self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
 
     def test_duplicated_error(self):
         """ check remote name and URL are not duplicated

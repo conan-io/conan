@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, Extender
+from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
 from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
@@ -146,11 +146,11 @@ def install(conan_api, parser, *args):
     generators.
     """
     common_graph_args(parser)
-    parser.add_argument("-g", "--generator", nargs=1, action=Extender,
+    parser.add_argument("-g", "--generator", action="append",
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("--deploy", action=Extender,
+    parser.add_argument("--deploy", action="append",
                         help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 

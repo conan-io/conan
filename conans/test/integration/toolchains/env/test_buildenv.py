@@ -26,13 +26,13 @@ def test_crossbuild_windows_incomplete():
     """)
     client.save({"conanfile.py": conanfile, "build_profile": build_profile})
     client.run("create . -pr:b=build_profile", assert_error=True)
-    assert "'.' is not recognized as an internal or external command" not in client.out
-    assert "ERROR: The 'build' profile must have a 'os' declared" in client.out
+    assert "ERROR: Error in generator 'CMakeToolchain': "\
+           "The 'build' profile must have a 'os' declared" in client.out
 
     build_profile = textwrap.dedent("""
-            [settings]
-            os=Windows
-            arch=x86_64
+        [settings]
+        os=Windows
+        arch=x86_64
         """)
     client.save({"conanfile.py": conanfile, "build_profile": build_profile})
     client.run("create . -pr:b=build_profile")

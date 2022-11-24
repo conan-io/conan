@@ -6,45 +6,6 @@ from conan.cli.commands import add_log_level_args, process_log_level_args
 from conans.errors import ConanException
 
 
-class Extender(argparse.Action):
-    """Allows using the same flag several times in command and creates a list with the values.
-    For example:
-        conan install MyPackage/1.2@user/channel -o qt/*:value -o mode/*:2 -s cucumber/*:true
-      It creates:
-          options = ['qt:value', 'mode:2']
-          settings = ['cucumber:true']
-    """
-    raise_if_none = False
-
-    def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
-        dest = getattr(namespace, self.dest, None)
-        if not hasattr(dest, 'extend') or dest == self.default:
-            dest = []
-            setattr(namespace, self.dest, dest)
-            # if default isn't set to None, this method might be called
-            # with the default as `values` for other arguments which
-            # share this destination.
-            parser.set_defaults(**{self.dest: None})
-
-        if isinstance(values, str):
-            dest.append(values)
-        elif values:
-            try:
-                dest.extend(values)
-            except ValueError:
-                dest.append(values)
-        else:  # When "--argument" with no value is specified
-            if self.raise_if_none:
-                raise argparse.ArgumentError(None, 'Specify --build="*" instead of --build')
-
-
-class ExtenderValueRequired(Extender):
-
-    # If --build is specified, it will raise
-    raise_if_none = True
-
-
 class OnceArgument(argparse.Action):
     """Allows declaring a parameter that can have only one value, by default argparse takes the
     latest declared and it's very confusing.
