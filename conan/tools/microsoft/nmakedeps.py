@@ -18,7 +18,6 @@ class NMakeDeps(object):
         ret = NewCppInfo()
         deps = self._conanfile.dependencies.host.topological_sort
         deps = [dep for dep in reversed(deps.values())]
-        print("DEPS!!!!", deps)
         for dep in deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
