@@ -1287,3 +1287,46 @@ def test_cmaketoolchain_and_pkg_config_path():
     client.run("create dep/conanfile.py")
     client.run("create pkg/conanfile.py")
     assert "Found dep, version 1.0" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_check_c_source_compiles():
+    """
+    https://github.com/conan-io/conan/issues/12012
+    """
+    client = TestClient()
+    client.run("new dep/1.0 -m=cmake_lib")
+    client.run("create . -tf=None")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class PkgConan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            requires = "dep/1.0"
+            generators = "CMakeDeps", "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self)
+        """)
+
+    # COMMENT set(MYLIB ... ) and UNCOMMENT get_target_property( ) for test to pass
+    cmakelist = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 3.15)
+        project(Hello LANGUAGES CXX)
+        find_package(dep CONFIG REQUIRED)
+        INCLUDE(CheckCXXSourceCompiles)
+        list(PREPEND CMAKE_REQUIRED_INCLUDES ${dep_INCLUDE_DIRS})
+        #get_target_property(MYLIB CONAN_LIB::dep_dep_RELEASE IMPORTED_LOCATION_RELEASE)
+        set(MYLIB ${dep_LIBRARIES})
+        list(PREPEND CMAKE_REQUIRED_LIBRARIES ${MYLIB})
+        check_cxx_source_compiles("#include <dep.h>
+			                      int main(void) { dep(); return 0; }" IT_COMPILES)
+        """)
+
+    client.save({"conanfile.py": consumer,
+                 "CMakeLists.txt": cmakelist}, clean_first=True)
+    client.run("install .")
+
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake ")
+        assert "Performing Test IT_COMPILES - Success" in client.out
