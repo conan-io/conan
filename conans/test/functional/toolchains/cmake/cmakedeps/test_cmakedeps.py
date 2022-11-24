@@ -574,3 +574,86 @@ def test_error_missing_build_type():
     run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
     client.run_command(run_app)
     assert "Hello World Release!" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_map_imported_config():
+    # https://github.com/conan-io/conan/issues/12041
+
+    client = TestClient()
+    client.run("new hello/1.0 -m=cmake_lib")
+    client.run("create . -tf=None -s build_type=Release")
+
+    # It is necessary a 2-level test to make the fixes evident
+    talk_cpp = gen_function_cpp(name="talk", includes=["hello"], calls=["hello"])
+    talk_h = gen_function_h(name="talk")
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        from conan.tools.files import copy
+        class HelloConan(ConanFile):
+            name = 'talk'
+            version = '1.0'
+            exports_sources = "*"
+            generators = "CMakeDeps", "CMakeToolchain"
+            requires = ("hello/1.0", )
+            settings = "os", "compiler", "arch", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                self.cpp_info.libs.append("talk")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": gen_cmakelists(libname="talk",
+                                                  libsources=["talk.cpp"], find_package=["hello"],
+                                                  install=True, public_header="talk.h"),
+                 "talk.cpp": talk_cpp,
+                 "talk.h": talk_h}, clean_first=True)
+    client.run("create . -tf=None -s build_type=Release")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        talk/1.0
+        [generators]
+        CMakeDeps
+        CMakeToolchain
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(app)
+        set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
+        find_package(talk REQUIRED)
+        add_executable(app main.cpp)
+        target_link_libraries(app talk::talk)
+        """)
+
+    client.save({
+        "conanfile.txt": conanfile,
+        "main.cpp": gen_function_cpp(name="main", includes=["talk"], calls=["talk"]),
+        "CMakeLists.txt": cmakelists
+    }, clean_first=True)
+
+    client.run("install . -s build_type=Release")
+    if platform.system() != "Windows":
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake "
+                           "-DCMAKE_BUILD_TYPE=DEBUG")
+        client.run_command("cmake --build .")
+        client.run_command("./app")
+    else:
+        client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+        client.run_command("cmake --build . --config Debug")
+        client.run_command("Debug\\app.exe")
+    assert "hello/1.0: Hello World Release!" in client.out
+    assert "talk: Release!" in client.out
+    assert "main: Debug!" in client.out

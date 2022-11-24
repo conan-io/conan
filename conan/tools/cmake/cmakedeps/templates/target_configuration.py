@@ -67,7 +67,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
         if(NOT TARGET {{ pkg_name+'_DEPS_TARGET'}})
-            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE)
+            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE IMPORTED)
         endif()
 
         set_property(TARGET {{ pkg_name + '_DEPS_TARGET'}}
@@ -146,7 +146,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
                 ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
                 if(NOT TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}})
-                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE)
+                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE IMPORTED)
                 endif()
 
                 set_property(TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
