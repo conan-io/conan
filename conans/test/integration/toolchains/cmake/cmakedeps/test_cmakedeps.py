@@ -210,12 +210,12 @@ def test_cmakedeps_set_dependency_props_from_consumer():
                 cmake_layout(self)
             def generate(self):
                 deps = CMakeDeps(self)
-                deps.set_property("cmake_find_mode", "bar", "{find_mode}")
-                deps.set_property("cmake_file_name", "bar", "custom_bar_file_name")
-                deps.set_property("cmake_module_file_name", "bar", "custom_bar_module_file_name")
-                deps.set_property("cmake_target_name", "bar", "custom_bar_target_name")
-                deps.set_property("cmake_module_target_name", "bar", "custom_bar_module_target_name")
-                deps.set_property("cmake_target_name", "bar::component1", "custom_bar_component_target_name")
+                deps.set_property("bar", "cmake_find_mode", "{find_mode}")
+                deps.set_property("bar", "cmake_file_name", "custom_bar_file_name")
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_module_file_name")
+                deps.set_property("bar", "cmake_target_name", "custom_bar_target_name")
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_module_target_name")
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_component_target_name")
                 deps.generate()
         ''')
 
