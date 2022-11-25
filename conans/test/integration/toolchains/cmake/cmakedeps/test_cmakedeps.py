@@ -187,3 +187,70 @@ def test_cmakedeps_cppinfo_complex_strings():
     assert r"spaces=me you" in deps
     assert r"foobar=bazbuz" in deps
     assert r"answer=42" in deps
+
+
+def test_cmakedeps_set_dependency_props_from_consumer():
+    client = TestClient(path_with_spaces=False)
+    bar = textwrap.dedent(r'''
+        from conan import ConanFile
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "both")
+                self.cpp_info.components["component1"].requires = []
+        ''')
+
+    foo = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps, cmake_layout
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "bar/1.0"
+            def layout(self):
+                cmake_layout(self)
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("cmake_find_mode", "bar", "{find_mode}")
+                deps.set_property("cmake_file_name", "bar", "custom_bar_file_name")
+                deps.set_property("cmake_module_file_name", "bar", "custom_bar_module_file_name")
+                deps.set_property("cmake_target_name", "bar", "custom_bar_target_name")
+                deps.set_property("cmake_module_target_name", "bar", "custom_bar_module_target_name")
+                deps.set_property("cmake_target_name", "bar::component1", "custom_bar_component_target_name")
+                deps.generate()
+        ''')
+
+    client.save({"foo.py": foo.format(find_mode=""), "bar.py": bar}, clean_first=True)
+
+    module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
+
+    # uses cmake_find_mode set in bar: both
+    client.run("create bar.py bar/1.0@")
+    client.run("install foo.py foo/1.0@")
+    assert os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    module_content = client.load(module_file)
+    assert "add_library(custom_bar_module_target_name INTERFACE IMPORTED)" in module_content
+    config_content = client.load(config_file)
+    assert "add_library(custom_bar_target_name INTERFACE IMPORTED)" in config_content
+    components_module_content = client.load(components_module)
+    assert "add_library(bar_custom_bar_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content
+
+    client.save({"foo.py": foo.format(find_mode="none"), "bar.py": bar}, clean_first=True)
+    client.run("create bar.py bar/1.0@")
+    client.run("install foo.py foo/1.0@")
+    assert not os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+
+    client.save({"foo.py": foo.format(find_mode="module"), "bar.py": bar}, clean_first=True)
+    client.run("create bar.py bar/1.0@")
+    client.run("install foo.py foo/1.0@")
+    assert os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+
+    client.save({"foo.py": foo.format(find_mode="config"), "bar.py": bar}, clean_first=True)
+    client.run("create bar.py bar/1.0@")
+    client.run("install foo.py foo/1.0@")
+    assert not os.path.exists(module_file)
+    assert os.path.exists(config_file)

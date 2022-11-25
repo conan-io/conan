@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
@@ -32,6 +33,7 @@ class CMakeDeps(object):
 
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
+        self._properties = defaultdict(dict)
 
     def generate(self):
         # FIXME: Remove this in 2.0
@@ -76,7 +78,7 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode")
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement
@@ -112,3 +114,35 @@ class CMakeDeps(object):
         # file is common for the different configurations.
         if not os.path.exists(config.filename):
             ret[config.filename] = config.render()
+
+    def set_property(self, prop, dependency, value):
+        self._properties[dependency].update({prop: value})
+
+    def get_property(self, prop, dependency, component=None):
+        dep_property = dependency.cpp_info.get_property(prop) if not component else \
+        dependency.cpp_info.components[component].get_property(prop)
+        dep_and_comp = dependency.ref.name if not component else f"{dependency.ref.name}::{component}"
+        return self._properties[dep_and_comp].get(prop) or dep_property
+
+    def get_cmake_package_name(self, req, module_mode=None):
+        """Get the name of the file for the find_package(XXX)"""
+        # This is used by CMakeDeps to determine:
+        # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
+        # - The name of the defined XXX_DIR variables
+        # - The name of transitive dependencies for calls to find_dependency
+        if module_mode and self.get_find_mode(req) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
+            ret = self.get_property("cmake_module_file_name", req)
+            if ret:
+                return ret
+        ret = self.get_property("cmake_file_name", req)
+        return ret or req.ref.name
+
+    def get_find_mode(self, req):
+        """
+        :param req: requirement
+        :return: "none" or "config" or "module" or "both" or "config" when not set
+        """
+        tmp = self.get_property("cmake_find_mode", req)
+        if tmp is None:
+            return "config"
+        return tmp.lower()
