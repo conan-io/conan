@@ -115,8 +115,8 @@ class CMakeDeps(object):
         if not os.path.exists(config.filename):
             ret[config.filename] = config.render()
 
-    def set_property(self, dependency, prop, value):
-        self._properties[dependency].update({prop: value})
+    def set_property(self, dep, prop, value):
+        self._properties[dep].update({prop: value})
 
     def get_property(self, prop, dep, component=None):
         dep_property = dep.cpp_info.get_property(prop) if not component else \
