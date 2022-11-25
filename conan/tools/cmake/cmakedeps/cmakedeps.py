@@ -118,31 +118,31 @@ class CMakeDeps(object):
     def set_property(self, dependency, prop, value):
         self._properties[dependency].update({prop: value})
 
-    def get_property(self, prop, dependency, component=None):
-        dep_property = dependency.cpp_info.get_property(prop) if not component else \
-        dependency.cpp_info.components[component].get_property(prop)
-        dep_and_comp = dependency.ref.name if not component else f"{dependency.ref.name}::{component}"
+    def get_property(self, prop, dep, component=None):
+        dep_property = dep.cpp_info.get_property(prop) if not component else \
+        dep.cpp_info.components[component].get_property(prop)
+        dep_and_comp = dep.ref.name if not component else f"{dep.ref.name}::{component}"
         return self._properties[dep_and_comp].get(prop) or dep_property
 
-    def get_cmake_package_name(self, req, module_mode=None):
+    def get_cmake_package_name(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
-        if module_mode and self.get_find_mode(req) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
-            ret = self.get_property("cmake_module_file_name", req)
+        if module_mode and self.get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
+            ret = self.get_property("cmake_module_file_name", dep)
             if ret:
                 return ret
-        ret = self.get_property("cmake_file_name", req)
-        return ret or req.ref.name
+        ret = self.get_property("cmake_file_name", dep)
+        return ret or dep.ref.name
 
-    def get_find_mode(self, req):
+    def get_find_mode(self, dep):
         """
-        :param req: requirement
+        :param dep: requirement
         :return: "none" or "config" or "module" or "both" or "config" when not set
         """
-        tmp = self.get_property("cmake_find_mode", req)
+        tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:
             return "config"
         return tmp.lower()
