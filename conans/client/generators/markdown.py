@@ -442,7 +442,7 @@ class MarkdownGenerator(Generator):
             cmake_variables = {
                 'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(requirement.ref.name),
                 'component_alias': cmake_component_alias,
-                'file_name': cmake_deps.cmake_get_file_name(requirement)
+                'file_name': cmake_deps.get_cmake_package_name(requirement)
             }
 
             pkgconfig_component_alias = {
