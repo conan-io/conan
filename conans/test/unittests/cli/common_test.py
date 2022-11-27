@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.tools.files import save
 from conans.client.cache.cache import ClientCache
 from conans.errors import ConanException
@@ -14,7 +14,7 @@ def conan_api():
     tmp_folder = temp_folder()
     cache = ClientCache(tmp_folder)
     save(None, cache.default_profile_path, "")
-    return ConanAPIV2(tmp_folder)
+    return ConanAPI(tmp_folder)
 
 
 @pytest.fixture()

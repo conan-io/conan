@@ -25,7 +25,7 @@ from webtest.app import TestApp
 
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
@@ -427,7 +427,7 @@ class TestClient(object):
         return self.cache.store
 
     def update_servers(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)
 
@@ -481,7 +481,7 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = ConanAPIV2(cache_folder=self.cache_folder)
+        self.api = ConanAPI(cache_folder=self.cache_folder)
         command = Cli(self.api)
 
         error = None
@@ -656,11 +656,11 @@ class TestClient(object):
         return ref_layout
 
     def get_default_host_profile(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         return api.profiles.get_profile([api.profiles.get_default_host()])
 
     def get_default_build_profile(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         return api.profiles.get_profile([api.profiles.get_default_build()])
 
     def recipe_exists(self, ref):

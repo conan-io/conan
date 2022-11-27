@@ -2,10 +2,11 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.api.subapi.install import do_deploys
+from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand, CommandResult
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import graph_compute, common_graph_args
+from conan.cli.commands.install import graph_compute
+from conan.cli.args import common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conans.client.graph.install_graph import InstallGraph

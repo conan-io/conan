@@ -3,7 +3,6 @@ import os
 
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
-from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 
@@ -25,7 +24,7 @@ def export_pkg(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,

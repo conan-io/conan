@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -353,7 +353,7 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
 
 
 def _get_all_recipes(client, with_remote):
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
     remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
         return set([r.repr_notime() for r in api.search.recipes("*", remote=remote)])
@@ -361,7 +361,7 @@ def _get_all_recipes(client, with_remote):
 
 def _get_all_packages(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
     remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
         try:
@@ -372,7 +372,7 @@ def _get_all_packages(client, ref, with_remote):
 
 def _get_revisions_recipes(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
     remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
         try:
@@ -383,7 +383,7 @@ def _get_revisions_recipes(client, ref, with_remote):
 
 def _get_revisions_packages(client, pref, with_remote):
     pref = PkgReference.loads(pref)
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
     remote = api.remotes.get("default") if with_remote else None
     with client.mocked_servers():
         try:

@@ -1,4 +1,4 @@
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_text_formatter
 from conans.errors import ConanException
@@ -7,14 +7,14 @@ from conans.model.recipe_ref import RecipeReference
 
 
 @conan_command(group="Consumer")
-def cache(conan_api: ConanAPIV2, parser, *args):
+def cache(conan_api: ConanAPI, parser, *args):
     """Performs file operations in the local cache (of recipes and packages)
     """
     pass
 
 
 @conan_subcommand(formatters={"text": default_text_formatter})
-def cache_path(conan_api: ConanAPIV2, parser, subparser, *args):
+def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
         Shows the path in the Conan cache af a given reference
     """

@@ -104,3 +104,17 @@ def add_reference_args(parser):
                         help='Provide a user if not specified in conanfile')
     parser.add_argument("--channel", action=OnceArgument,
                         help='Provide a channel if not specified in conanfil')
+
+
+def common_graph_args(subparser):
+    subparser.add_argument("path", nargs="?",
+                           help="Path to a folder containing a recipe (conanfile.py "
+                                "or conanfile.txt) or to a recipe file. e.g., "
+                                "./my_project/conanfile.txt.")
+    add_reference_args(subparser)
+    subparser.add_argument("--requires", action="append",
+                           help='Directly provide requires instead of a conanfile')
+    subparser.add_argument("--tool-requires", action='append',
+                           help='Directly provide tool-requires instead of a conanfile')
+    _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
+    add_lockfile_args(subparser)
