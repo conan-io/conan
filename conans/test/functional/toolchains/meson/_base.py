@@ -1,5 +1,4 @@
 import platform
-import sys
 import unittest
 
 import pytest
@@ -8,7 +7,6 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() not in ("Darwin", "Windows", "Linux"),
                     reason="Not tested for not mainstream boring operating systems")
 class TestMesonBase(unittest.TestCase):
@@ -17,7 +15,7 @@ class TestMesonBase(unittest.TestCase):
 
     def _check_binary(self):
         # FIXME: Some values are hardcoded to match the CI setup
-        host_arch =  self.t.get_default_host_profile().settings['arch']
+        host_arch = self.t.get_default_host_profile().settings['arch']
         arch_macro = {
             "gcc": {"armv8": "__aarch64__", "x86_64": "__x86_64__"},
             "msvc": {"armv8": "_M_ARM64", "x86_64": "_M_X64"}

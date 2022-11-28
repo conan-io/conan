@@ -60,6 +60,7 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:configs": "Define Bazel config file",
     "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
+    "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
