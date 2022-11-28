@@ -119,7 +119,7 @@ class CMakeDeps(object):
 
     def get_property(self, prop, dep):
         try:
-            return self._properties[dep].get(prop)
+            return self._properties[dep].get(prop) or dep.get_property(prop)
         except KeyError:
             return dep.get_property(prop)
 
