@@ -33,7 +33,7 @@ class CMakeDeps(object):
 
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
-        self._properties = defaultdict(dict)
+        self._properties = {}
 
     def generate(self):
         # FIXME: Remove this in 2.0
@@ -116,7 +116,7 @@ class CMakeDeps(object):
             ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value):
-        self._properties[dep].update({prop: value})
+        self._properties.setdefault(dep, {}).update({prop: value})
 
     def get_property(self, prop, dep, component=None):
         dep_property = dep.cpp_info.get_property(prop) if not component else \
