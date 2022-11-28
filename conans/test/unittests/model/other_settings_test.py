@@ -241,7 +241,7 @@ class SayConan(ConanFile):
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
         conan_info = self._get_conaninfo("say/0.1", client)
-        self.assertEqual(conan_info["settings"], {})
+        self.assertEqual(conan_info.get("settings"), None)
 
         # Settings is {}
         content = """
@@ -259,4 +259,4 @@ class SayConan(ConanFile):
 
         conan_info = self._get_conaninfo("say/0.1", client)
 
-        self.assertEqual(conan_info["settings"], {})
+        self.assertEqual(conan_info.get("settings"), None)

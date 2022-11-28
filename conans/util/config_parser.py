@@ -62,7 +62,6 @@ class ConfigParser(object):
         if name in self._sections:
             return "\n".join(self._sections[name])
         else:
-            if self._allowed_fields and name in self._allowed_fields:
-                return ""
-            else:
+            if self._allowed_fields and name not in self._allowed_fields:
                 raise ConanException("ConfigParser: Unrecognized field '%s'" % name)
+            return ""
