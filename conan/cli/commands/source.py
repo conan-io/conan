@@ -1,7 +1,6 @@
 import os
 
 from conan.cli.command import conan_command
-from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.args import add_reference_args
 from conan.api.conan_app import ConanApp
 from conans.client.graph.graph import CONTEXT_HOST
@@ -23,7 +22,7 @@ def source(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
 
     # TODO: Decide API to put this

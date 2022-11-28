@@ -1,4 +1,4 @@
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TurboTestClient
@@ -20,7 +20,7 @@ def test_search_recipes():
     client.upload_all(pref3.ref, "default")
 
     # Search all the recipes locally and in the remote
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
     for remote in [None, api.remotes.get("default")]:
         with client.mocked_servers():
             sot = api.search.recipes(query="f*", remote=remote)

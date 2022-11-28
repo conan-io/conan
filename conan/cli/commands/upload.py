@@ -1,11 +1,11 @@
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
 
 
 @conan_command(group="Creator")
-def upload(conan_api: ConanAPIV2, parser, *args):
+def upload(conan_api: ConanAPI, parser, *args):
     """
     Uploads a recipe and binary packages to a remote.
     By default, all the matching references are uploaded (all revisions).

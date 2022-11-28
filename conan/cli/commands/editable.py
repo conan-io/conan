@@ -3,7 +3,6 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import _get_conanfile_path
 from conan.api.conan_app import ConanApp
 from conans.model.recipe_ref import RecipeReference
 
@@ -34,7 +33,7 @@ def editable_add(conan_api, parser, subparser, *args):
     # TODO: Decide in which API we put this
     app = ConanApp(conan_api.cache_folder)
     # Retrieve conanfile.py from target_path
-    target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
+    target_path = conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None
     # Check the conanfile is there, and name/version matches
     ref = RecipeReference.loads(reference)

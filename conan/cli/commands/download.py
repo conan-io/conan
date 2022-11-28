@@ -1,13 +1,13 @@
 from multiprocessing.pool import ThreadPool
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.internal.api.select_pattern import SelectPattern
 
 
 @conan_command(group="Creator")
-def download(conan_api: ConanAPIV2, parser, *args):
+def download(conan_api: ConanAPI, parser, *args):
     """
     Download a conan package from a remote server, by its reference. It downloads just the package,
     but not its transitive dependencies, and it will not call any generate, generators or deployers.

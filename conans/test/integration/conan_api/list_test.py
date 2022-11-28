@@ -1,7 +1,7 @@
 import copy
 
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TurboTestClient, TestClient
@@ -30,7 +30,7 @@ def test_get_recipe_revisions():
     client.upload_all(pref2.ref, "default")
     client.upload_all(pref3.ref, "default")
 
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
 
     # Check the revisions locally
     sot = api.list.recipe_revisions(ref)
@@ -60,7 +60,7 @@ def test_get_package_revisions():
     _pref = copy.copy(pref1)
     _pref.revision = None
 
-    api = ConanAPIV2(client.cache_folder)
+    api = ConanAPI(client.cache_folder)
 
     # Check the revisions locally
     sot = api.list.package_revisions(_pref)

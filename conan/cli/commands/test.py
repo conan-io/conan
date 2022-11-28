@@ -3,7 +3,6 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
-from conan.cli.commands.install import _get_conanfile_path
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
@@ -24,7 +23,7 @@ def test(conan_api, parser, *args):
 
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,

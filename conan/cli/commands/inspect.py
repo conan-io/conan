@@ -4,7 +4,6 @@ import os
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
 from conan.cli.commands import default_json_formatter
-from conan.cli.commands.install import _get_conanfile_path
 
 
 def inspect_text_formatter(data):
@@ -28,7 +27,7 @@ def inspect(conan_api, parser, *args):
 
     args = parser.parse_args(*args)
 
-    path = _get_conanfile_path(args.path, os.getcwd(), py=True)
+    path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
 
     conanfile = conan_api.graph.load_conanfile_class(path)
     ret = {}

@@ -3,7 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import graph_compute, _get_conanfile_path
+from conan.cli.commands.install import graph_compute
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
     _help_build_policies
 from conan.api.conan_app import ConanApp
@@ -27,7 +27,7 @@ def build(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
     remotes = conan_api.remotes.list(args.remote)
 

@@ -8,7 +8,7 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, Color, cli_out_write
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
@@ -27,7 +27,7 @@ class Cli:
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, ConanAPIV2), \
+        assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
         self._groups = defaultdict(list)
@@ -208,7 +208,7 @@ def main(args):
     """
 
     try:
-        conan_api = ConanAPIV2()
+        conan_api = ConanAPI()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
