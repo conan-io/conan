@@ -59,7 +59,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                        add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                    endif()
                    # Link library file
-                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION${config_suffix} ${CONAN_FOUND_LIBRARY})
                    list(APPEND _out_libraries_target ${_LIB_NAME})
                    message(VERBOSE "Conan: Found: ${CONAN_FOUND_LIBRARY}")
                else()

@@ -8,6 +8,7 @@ from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
@@ -784,3 +785,63 @@ def test_pkg_config_block():
     pkg_config_path_set = 'set(ENV{PKG_CONFIG_PATH} "%s$ENV{PKG_CONFIG_PATH}")' % \
                           (client.current_folder.replace("\\", "/") + pathsep)
     assert pkg_config_path_set in toolchain
+
+
+@pytest.mark.parametrize("path", ["subproject", False])
+def test_user_presets_custom_location(path):
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+                import os
+                from conan import ConanFile
+                from conan.tools.cmake import cmake_layout, CMakeToolchain
+
+                class Conan(ConanFile):
+                    settings = "os", "arch", "compiler", "build_type"
+
+                    def generate(self):
+                        t = CMakeToolchain(self)
+                        t.user_presets_path = {}
+                        t.generate()
+
+                    def layout(self):
+                        cmake_layout(self)
+                """.format('"{}"'.format(path) if isinstance(path, str) else path))
+    client.save({"CMakeLists.txt": "",
+                 "subproject/CMakeLists.txt": "",
+                 "subproject2/foo.txt": "",
+                 "conanfile.py": conanfile})
+
+    # We want to generate it to build the subproject
+    client.run("install . ")
+
+    if path is not False:
+        assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+        assert os.path.exists(os.path.join(client.current_folder, "subproject", "CMakeUserPresets.json"))
+    else:
+        assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+        assert not os.path.exists(os.path.join(client.current_folder, "False", "CMakeUserPresets.json"))
+
+
+def test_set_cmake_lang_compilers_and_launchers():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=clang
+    compiler.version=15
+    compiler.libcxx=libstdc++11
+    [conf]
+    tools.build:compiler_executables={"c": "/my/local/gcc", "cpp": "g++", "rc": "C:\\local\\rc.exe"}
+    """)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_C_COMPILER clang)' not in toolchain
+    assert 'set(CMAKE_CXX_COMPILER clang++)' not in toolchain
+    assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
+    assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
+    assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain

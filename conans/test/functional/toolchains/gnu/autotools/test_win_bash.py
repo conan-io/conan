@@ -20,6 +20,7 @@ def test_autotools_bash_complete():
     save(client.cache.new_config_path, textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
+            tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
             """.format(bash_path)))
 
     main = gen_function_cpp(name="main")
@@ -31,7 +32,6 @@ def test_autotools_bash_complete():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.gnu import Autotools
-        from conan.tools.env import Environment
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"

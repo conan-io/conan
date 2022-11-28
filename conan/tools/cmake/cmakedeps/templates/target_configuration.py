@@ -49,16 +49,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ########### VARIABLES #######################################################################
         #############################################################################################
-
-        set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
-            "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
-            "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
-
-        set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
-            "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
-            "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
-            "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>")
-
         set({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "") # Will be filled later
         conan_find_apple_frameworks({{ pkg_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${' }}{{ pkg_name }}_FRAMEWORKS{{ config_suffix }}}" "{{ '${' }}{{ pkg_name }}_FRAMEWORK_DIRS{{ config_suffix }}}")
 
@@ -67,7 +57,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
         if(NOT TARGET {{ pkg_name+'_DEPS_TARGET'}})
-            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE)
+            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE IMPORTED)
         endif()
 
         set_property(TARGET {{ pkg_name + '_DEPS_TARGET'}}
@@ -146,7 +136,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
                 ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
                 if(NOT TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}})
-                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE)
+                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE IMPORTED)
                 endif()
 
                 set_property(TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
@@ -188,10 +178,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                             $<$<CONFIG:{{ configuration }}>:
-                             {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix)}}
-                             {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
-                set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS', config_suffix)}}> APPEND)
 
                 {%- if set_interface_link_directories %}
                 # This is only used for '#pragma comment(lib, "foo")' (automatic link)
