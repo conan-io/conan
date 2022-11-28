@@ -111,6 +111,8 @@ class MesonToolchain(object):
         self._default_library = ("shared" if shared else "static") if shared is not None else None
 
         compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler is None:
+            raise ConanException("MesonToolchain needs 'settings.compiler', but it is not defined")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
