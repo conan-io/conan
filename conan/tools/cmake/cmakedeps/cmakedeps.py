@@ -77,7 +77,7 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = self.get_property("cmake_find_mode", dep.cpp_info)
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement
@@ -114,14 +114,20 @@ class CMakeDeps(object):
         if not os.path.exists(config.filename):
             ret[config.filename] = config.render()
 
-    def set_property(self, dep, prop, value):
-        self._properties.setdefault(dep, {}).update({prop: value})
+    def set_property(self, dep, prop, value, build_context=False):
+        build_suffix = "_build" if build_context else ""
+        self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 
-    def get_property(self, prop, dep):
+    def get_property(self, prop, dep, comp_name=None):
+        dep_name = dep.ref.name
+        build_suffix = "_build" if str(
+            dep_name) in self.build_context_activated and dep.context == "build" else ""
+        dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
-            return self._properties[dep][prop]
+            return self._properties[f"{dep_comp}{build_suffix}"][prop]
         except KeyError:
-            return dep.get_property(prop)
+            return dep.cpp_info.get_property(prop) if not comp_name else dep.cpp_info.components[
+                comp_name].get_property(prop)
 
     def get_cmake_package_name(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""
@@ -130,10 +136,10 @@ class CMakeDeps(object):
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
         if module_mode and self.get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
-            ret = self.get_property("cmake_module_file_name", dep.cpp_info)
+            ret = self.get_property("cmake_module_file_name", dep)
             if ret:
                 return ret
-        ret = self.get_property("cmake_file_name", dep.cpp_info)
+        ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
     def get_find_mode(self, dep):
@@ -141,7 +147,7 @@ class CMakeDeps(object):
         :param dep: requirement
         :return: "none" or "config" or "module" or "both" or "config" when not set
         """
-        tmp = self.get_property("cmake_find_mode", dep.cpp_info)
+        tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:
             return "config"
         return tmp.lower()

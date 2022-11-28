@@ -211,16 +211,16 @@ def test_dependency_props_from_consumer():
             def generate(self):
                 deps = CMakeDeps(self)
                 {set_find_mode}
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_file_name", "custom_bar_file_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_file_name", "custom_bar_module_file_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_target_name", "custom_bar_target_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_target_name", "custom_bar_module_target_name")
-                deps.set_property(self.dependencies["bar"].cpp_info.components["component1"], "cmake_target_name", "custom_bar_component_target_name")
+                deps.set_property("bar", "cmake_file_name", "custom_bar_file_name")
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_module_file_name")
+                deps.set_property("bar", "cmake_target_name", "custom_bar_target_name")
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_module_target_name")
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_component_target_name")
                 deps.generate()
         ''')
 
     set_find_mode = """
-        deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", {find_mode})
+        deps.set_property("bar", "cmake_find_mode", {find_mode})
     """
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
@@ -289,24 +289,24 @@ def test_props_from_consumer_build_context_activated():
                 deps.build_context_suffix = {{"bar": "_BUILD"}}
                 {set_find_mode}
 
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_file_name", "custom_bar_file_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_file_name", "custom_bar_module_file_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_target_name", "custom_bar_target_name")
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_target_name", "custom_bar_module_target_name")
-                deps.set_property(self.dependencies["bar"].cpp_info.components["component1"], "cmake_target_name", "custom_bar_component_target_name")
+                deps.set_property("bar", "cmake_file_name", "custom_bar_file_name")
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_module_file_name")
+                deps.set_property("bar", "cmake_target_name", "custom_bar_target_name")
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_module_target_name")
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_component_target_name")
 
-                deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_file_name", "custom_bar_build_file_name")
-                deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_module_file_name", "custom_bar_build_module_file_name")
-                deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_target_name", "custom_bar_build_target_name")
-                deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_module_target_name", "custom_bar_build_module_target_name")
-                deps.set_property(self.dependencies.build["bar"].cpp_info.components["component1"], "cmake_target_name", "custom_bar_build_component_target_name")
+                deps.set_property("bar", "cmake_file_name", "custom_bar_build_file_name", build_context=True)
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_build_module_file_name", build_context=True)
+                deps.set_property("bar", "cmake_target_name", "custom_bar_build_target_name", build_context=True)
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_build_module_target_name", build_context=True)
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_build_component_target_name", build_context=True)
 
                 deps.generate()
         ''')
 
     set_find_mode = """
-        deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", {find_mode})
-        deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_find_mode", {find_mode})
+        deps.set_property("bar", "cmake_find_mode", {find_mode})
+        deps.set_property("bar", "cmake_find_mode", {find_mode}, build_context=True)
     """
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)

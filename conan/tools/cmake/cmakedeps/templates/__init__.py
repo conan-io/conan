@@ -84,10 +84,10 @@ class CMakeDepsFileTemplate(object):
 
     def get_root_target_name(self, req, suffix=""):
         if self.generating_module:
-            ret = self.cmakedeps.get_property("cmake_module_target_name", req.cpp_info)
+            ret = self.cmakedeps.get_property("cmake_module_target_name", req)
             if ret:
                 return ret
-        ret = self.cmakedeps.get_property("cmake_target_name", req.cpp_info)
+        ret = self.cmakedeps.get_property("cmake_target_name", req)
         return ret or self._get_target_default_name(req, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
@@ -98,10 +98,10 @@ class CMakeDepsFileTemplate(object):
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.generating_module:
-            ret = self.cmakedeps.get_property("cmake_module_target_name", req.cpp_info.components[comp_name])
+            ret = self.cmakedeps.get_property("cmake_module_target_name", req, comp_name=comp_name)
             if ret:
                 return ret
-        ret = self.cmakedeps.get_property("cmake_target_name", req.cpp_info.components[comp_name])
+        ret = self.cmakedeps.get_property("cmake_target_name", req, comp_name=comp_name)
 
         # If we don't specify the `cmake_target_name` property for the component it will
         # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name
