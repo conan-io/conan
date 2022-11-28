@@ -60,6 +60,7 @@ BUILT_IN_CONFS = {
     "tools.gnu:pkg_config": "Define the 'pkg_config' executable name or full path",
     "tools.env.virtualenv:powershell": "Opt-in to generate Powershell '.ps1' scripts instead of '.bat'",
     "tools.meson.mesontoolchain:backend": "Set the Meson backend. Possible values: 'ninja', 'vs', 'vs2010', 'vs2015', 'vs2017', 'vs2019', 'xcode'",
+    "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.files.download:download_cache": "Location for the download cache",
     "tools.build.cross_building:can_run": "Set the return value for the 'conan.tools.build.can_run()' tool",
 }
