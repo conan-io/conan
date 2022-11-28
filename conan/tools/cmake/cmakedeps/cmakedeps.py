@@ -115,12 +115,12 @@ class CMakeDeps(object):
             ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
-        build_suffix = "_build" if build_context else ""
+        build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 
     def get_property(self, prop, dep, comp_name=None):
         dep_name = dep.ref.name
-        build_suffix = "_build" if str(
+        build_suffix = "&build" if str(
             dep_name) in self.build_context_activated and dep.context == "build" else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
