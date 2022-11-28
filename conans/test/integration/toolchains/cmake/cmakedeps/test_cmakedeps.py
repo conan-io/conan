@@ -210,7 +210,7 @@ def test_dependency_props_from_consumer():
                 cmake_layout(self)
             def generate(self):
                 deps = CMakeDeps(self)
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", "{find_mode}")
+                {set_find_mode}
                 deps.set_property(self.dependencies["bar"].cpp_info, "cmake_file_name", "custom_bar_file_name")
                 deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_file_name", "custom_bar_module_file_name")
                 deps.set_property(self.dependencies["bar"].cpp_info, "cmake_target_name", "custom_bar_target_name")
@@ -219,7 +219,11 @@ def test_dependency_props_from_consumer():
                 deps.generate()
         ''')
 
-    client.save({"foo.py": foo.format(find_mode=""), "bar.py": bar}, clean_first=True)
+    set_find_mode = """
+        deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", {find_mode})
+    """
+
+    client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
     module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
     components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
@@ -237,19 +241,22 @@ def test_dependency_props_from_consumer():
     components_module_content = client.load(components_module)
     assert "add_library(bar_custom_bar_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content
 
-    client.save({"foo.py": foo.format(find_mode="none"), "bar.py": bar}, clean_first=True)
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")),
+                 "bar.py": bar}, clean_first=True)
     client.run("create bar.py bar/1.0@")
     client.run("install foo.py foo/1.0@")
     assert not os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
-    client.save({"foo.py": foo.format(find_mode="module"), "bar.py": bar}, clean_first=True)
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
+                 "bar.py": bar}, clean_first=True)
     client.run("create bar.py bar/1.0@")
     client.run("install foo.py foo/1.0@")
     assert os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
-    client.save({"foo.py": foo.format(find_mode="config"), "bar.py": bar}, clean_first=True)
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
+                 "bar.py": bar}, clean_first=True)
     client.run("create bar.py bar/1.0@")
     client.run("install foo.py foo/1.0@")
     assert not os.path.exists(module_file)
@@ -280,8 +287,7 @@ def test_props_from_consumer_build_context_activated():
                 deps = CMakeDeps(self)
                 deps.build_context_activated = ["bar"]
                 deps.build_context_suffix = {{"bar": "_BUILD"}}
-                deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", "{find_mode}")
-                deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_find_mode", "{find_mode}")
+                {set_find_mode}
 
                 deps.set_property(self.dependencies["bar"].cpp_info, "cmake_file_name", "custom_bar_file_name")
                 deps.set_property(self.dependencies["bar"].cpp_info, "cmake_module_file_name", "custom_bar_module_file_name")
@@ -298,15 +304,26 @@ def test_props_from_consumer_build_context_activated():
                 deps.generate()
         ''')
 
-    client.save({"foo.py": foo.format(find_mode=""), "bar.py": bar}, clean_first=True)
+    set_find_mode = """
+        deps.set_property(self.dependencies["bar"].cpp_info, "cmake_find_mode", {find_mode})
+        deps.set_property(self.dependencies.build["bar"].cpp_info, "cmake_find_mode", {find_mode})
+    """
 
-    module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
-    components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
-    config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
+    client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
-    module_file_build = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_build_module_file_name_BUILDTargets.cmake")
-    components_module_build = os.path.join(client.current_folder, "build", "generators", "custom_bar_build_file_name_BUILD-Target-release.cmake")
-    config_file_build = os.path.join(client.current_folder, "build", "generators", "custom_bar_build_file_name_BUILDTargets.cmake")
+    module_file = os.path.join(client.current_folder, "build", "generators",
+                               "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(client.current_folder, "build", "generators",
+                                     "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(client.current_folder, "build", "generators",
+                               "custom_bar_file_nameTargets.cmake")
+
+    module_file_build = os.path.join(client.current_folder, "build", "generators",
+                                     "module-custom_bar_build_module_file_name_BUILDTargets.cmake")
+    components_module_build = os.path.join(client.current_folder, "build", "generators",
+                                           "custom_bar_build_file_name_BUILD-Target-release.cmake")
+    config_file_build = os.path.join(client.current_folder, "build", "generators",
+                                     "custom_bar_build_file_name_BUILDTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
@@ -332,7 +349,9 @@ def test_props_from_consumer_build_context_activated():
     components_module_content_build = client.load(components_module_build)
     assert "add_library(bar_BUILD_custom_bar_build_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content_build
 
-    client.save({"foo.py": foo.format(find_mode="none"), "bar.py": bar}, clean_first=True)
+    client.save(
+        {"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")), "bar.py": bar},
+        clean_first=True)
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
     client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
@@ -340,7 +359,8 @@ def test_props_from_consumer_build_context_activated():
     assert not os.path.exists(module_file_build)
     assert not os.path.exists(config_file_build)
 
-    client.save({"foo.py": foo.format(find_mode="module"), "bar.py": bar}, clean_first=True)
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
+                 "bar.py": bar}, clean_first=True)
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
     client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
     assert os.path.exists(module_file)
@@ -348,7 +368,8 @@ def test_props_from_consumer_build_context_activated():
     assert os.path.exists(module_file_build)
     assert not os.path.exists(config_file_build)
 
-    client.save({"foo.py": foo.format(find_mode="config"), "bar.py": bar}, clean_first=True)
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
+                 "bar.py": bar}, clean_first=True)
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
     client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
@@ -356,3 +377,12 @@ def test_props_from_consumer_build_context_activated():
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
 
+    # invalidate upstream property setting a None, will use config that's the default
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="None")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
+    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    assert not os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    assert not os.path.exists(module_file_build)
+    assert os.path.exists(config_file_build)
