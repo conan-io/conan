@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -67,3 +68,27 @@ def test_not_none_values():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
 
+
+def test_set_prefix():
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+        from conan.tools.layout import basic_layout
+
+
+        class Foo(ConanFile):
+            name = "foo"
+            version = "1.0"
+            def layout(self):
+                basic_layout(self)
+            def generate(self):
+                at_toolchain = AutotoolsToolchain(self, prefix="/somefolder")
+                at_toolchain.generate()
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    conanbuild = client.load(os.path.join(client.current_folder, "build", "conan", "conanbuild.conf"))
+    assert "configure_args = '--prefix=/somefolder'" in conanbuild

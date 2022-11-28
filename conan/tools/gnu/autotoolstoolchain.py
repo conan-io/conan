@@ -13,9 +13,10 @@ from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile, namespace=None, prefix="/"):
         self._conanfile = conanfile
         self._namespace = namespace
+        self._prefix = prefix
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
         self.autoreconf_args = self._default_autoreconf_flags()
@@ -168,7 +169,7 @@ class AutotoolsToolchain:
             return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
 
         # If someone want arguments but not the defaults can pass them in args manually
-        configure_install_flags.extend(["--prefix=/",
+        configure_install_flags.extend([f"--prefix={self._prefix}",
                                        _get_argument("bindir", "bindirs"),
                                        _get_argument("sbindir", "bindirs"),
                                        _get_argument("libdir", "libdirs"),
