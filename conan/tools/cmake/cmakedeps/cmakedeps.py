@@ -122,7 +122,10 @@ class CMakeDeps(object):
         dep_property = dep.cpp_info.get_property(prop) if not component else \
         dep.cpp_info.components[component].get_property(prop)
         dep_and_comp = dep.ref.name if not component else f"{dep.ref.name}::{component}"
-        return self._properties[dep_and_comp].get(prop) or dep_property
+        try:
+            return self._properties[dep_and_comp].get(prop) or dep_property
+        except KeyError:
+            return dep_property
 
     def get_cmake_package_name(self, dep, module_mode=None):
         """Get the name of the file for the find_package(XXX)"""
