@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 import textwrap
 
 import pytest
@@ -173,6 +174,7 @@ class MesonToolchainTest(TestMesonBase):
 
 
 @pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
 def test_meson_and_additional_machine_files_composition():
     """
     Testing when users wants to append their own meson machine files and override/complement some
