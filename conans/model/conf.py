@@ -174,6 +174,8 @@ class _ConfValue(object):
         if isinstance(self._value, list):
             self._value = [os.path.join(folder, v) if v != _ConfVarPlaceHolder else v
                            for v in self._value]
+        if isinstance(self._value, dict):
+            self._value = {k: os.path.join(folder, v) for k, v in self._value.items()}
         elif isinstance(self._value, str):
             self._value = os.path.join(folder, self._value)
 
@@ -299,9 +301,13 @@ class Conf:
         """
         return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
-    def define(self, name, value, path=False):
+    def define(self, name, value):
         self._validate_lower_case(name)
-        self._values[name] = _ConfValue(name, value, path)
+        self._values[name] = _ConfValue(name, value)
+
+    def define_path(self, name, value):
+        self._validate_lower_case(name)
+        self._values[name] = _ConfValue(name, value, path=True)
 
     def unset(self, name):
         """
@@ -314,14 +320,29 @@ class Conf:
         conf_value = _ConfValue(name, {})
         self._values.setdefault(name, conf_value).update(value)
 
-    def append(self, name, value, path=False):
+    def update_path(self, name, value):
         self._validate_lower_case(name)
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path)
+        conf_value = _ConfValue(name, {}, path=True)
+        self._values.setdefault(name, conf_value).update(value)
+
+    def append(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).append(value)
+
+    def append_path(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).append(value)
 
     def prepend(self, name, value):
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).prepend(value)
+
+    def prepend_path(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):

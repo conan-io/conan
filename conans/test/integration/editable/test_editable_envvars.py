@@ -41,8 +41,10 @@ def test_editable_conf():
             def layout(self):
                 self.folders.source = "mysource"
                 self.folders.build = "mybuild"
-                self.cpp.source.conf_info.append("myconf", "mylocalsrc", path=True)
-                self.cpp.build.conf_info.append("myconf", "mylocalbuild", path=True)
+                self.cpp.source.conf_info.append_path("myconf", "mylocalsrc")
+                self.cpp.build.conf_info.append_path("myconf", "mylocalbuild")
+                self.cpp.build.conf_info.update_path("mydictconf", {"a": "mypatha", "b": "mypathb"})
+                self.cpp.build.conf_info.define_path("mydictconf2", {"c": "mypathc"})
         """)
 
     pkg = textwrap.dedent("""
@@ -52,13 +54,21 @@ def test_editable_conf():
             def generate(self):
                 conf = self.dependencies["dep"].conf_info.get("myconf")
                 self.output.info(f"CONF: {conf}")
+                dictconf = self.dependencies["dep"].conf_info.get("mydictconf", check_type=dict)
+                self.output.info(f"CONFDICT: {dictconf}")
+                dictconf2 = self.dependencies["dep"].conf_info.get("mydictconf2", check_type=dict)
+                self.output.info(f"CONFDICT: {dictconf2}")
         """)
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
     c.run("editable add dep dep/1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     out = str(c.out).replace("\\\\", "\\")
-    build_path = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
-    run_path = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
-    assert build_path in out
-    assert run_path in out
+    conf_source = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
+    conf_build = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
+    confdict1 = os.path.join(c.current_folder, "dep", "mybuild", "mypatha")
+    confdict2 = os.path.join(c.current_folder, "dep", "mybuild", "mypathc")
+    assert conf_source in out
+    assert conf_build in out
+    assert confdict1 in out
+    assert confdict2 in out
