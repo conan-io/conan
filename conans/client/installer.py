@@ -689,12 +689,14 @@ class BinaryInstaller(object):
                         conanfile.cpp_info.public_deps = public_deps
 
                         if not is_editable:
-                            # Copy the infos.package into the old cppinfo
-                            fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
+                            # IMPORTANT: Need to go first, otherwise fill_old_cppinfo() destroys
+                            # component information
                             conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                             conanfile.buildenv_info.compose_env(conanfile.cpp.package.buildenv_info)
                             conanfile.runenv_info.compose_env(conanfile.cpp.package.runenv_info)
                             conanfile.conf_info.compose_conf(conanfile.cpp.package.conf_info)
+                            # Copy the infos.package into the old cppinfo
+                            fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
                             conanfile.cpp_info.filter_empty = False
 
