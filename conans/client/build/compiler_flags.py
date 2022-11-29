@@ -280,4 +280,4 @@ def format_framework_paths(framework_paths, settings):
     compiler_base = settings.get_safe("compiler.base")
     if (str(compiler) not in GCC_LIKE) and (str(compiler_base) not in GCC_LIKE):
         return []
-    return ["-F %s" % adjust_path(framework_path, settings) for framework_path in framework_paths]
+    return ["-F\"%s\"" % adjust_path(framework_path, settings) for framework_path in framework_paths]
