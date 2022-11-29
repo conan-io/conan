@@ -9,9 +9,17 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_pkg_config
 @pytest.mark.tool_autotools
 @pytest.mark.skipif(platform.system() == "Windows", reason="Needs pkg-config")
-def test_pkg_configdeps_definitions_escape():
+def test_pkgconfigdeps_and_autotools():
+    """
+    This test aims to show how to use PkgConfigDeps and AutotoolsToolchain.
+
+    In this case, the test_package is using PkgConfigDeps and AutotoolsToolchain to use
+    the created pkg/1.0 package. It's important to make a full compilation to ensure that
+    the test main.cpp is using correctly the flags passed via pkg.pc file.
+
+    Issue related: https://github.com/conan-io/conan/issues/11867
+    """
     client = TestClient(path_with_spaces=False)
-    # client.run("new autotools_lib -d name=pkg -d version=1.0")
     conanfile_pkg = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.gnu import Autotools
@@ -42,6 +50,7 @@ def test_pkg_configdeps_definitions_escape():
 
         def package_info(self):
             self.cpp_info.libs = ["pkg"]
+            # Add non-existing frameworkdirs to check that it's not failing because of this
             self.cpp_info.frameworkdirs = ["/my/framework/file1", "/my/framework/file2"]
     """)
     conanfile_test = textwrap.dedent("""
@@ -94,9 +103,11 @@ def test_pkg_configdeps_definitions_escape():
                  "test_package/configure.ac": configure_test,
                  "test_package/Makefile.am": makefile_test,
                  })
+    # client.run("new autotools_lib -d name=pkg -d version=1.0")
     client.run("create .")
     if platform.system() == "Darwin":
         # Checking that frameworkdirs appear all together instead of "-F /whatever/f1"
+        # Issue: https://github.com/conan-io/conan/issues/11867
         assert '-F/my/framework/file1' in client.out
         assert '-F/my/framework/file2' in client.out
         assert "warning: directory not found for option '-F/my/framework/file1'" in client.out
