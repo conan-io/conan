@@ -1,6 +1,7 @@
 import pytest
 
 from conans.model.build_info import CppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
+from conans.model.layout import _SubInfo
 
 
 def test_components_order():
@@ -14,7 +15,7 @@ def test_components_order():
 
 
 def test_generator_properties_copy():
-    cppinfo = CppInfo()
+    cppinfo = _SubInfo()
     cppinfo.set_property("foo", "foo_value")
     cppinfo.set_property("foo2", "foo2_value")
     copied = cppinfo.copy()
