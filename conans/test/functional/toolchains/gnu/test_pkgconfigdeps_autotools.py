@@ -6,8 +6,8 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_pkg_config
-@pytest.mark.tool_autotools
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("autotools")
 @pytest.mark.skipif(platform.system() == "Windows", reason="Needs pkg-config")
 def test_pkg_configdeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
