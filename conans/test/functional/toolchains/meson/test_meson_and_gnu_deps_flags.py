@@ -147,16 +147,6 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
         client.run("install . %s -c 'tools.build:cxxflags=[%s]'" % (self._settings_str, flags))
         client.run("build .")
 
-        # FIXME: this should be tested elsewhere that we are passing this correctly
-        #  not checking the meson-log.txt
-        meson_log_path = os.path.join(client.current_folder, "build", "meson-logs", "meson-log.txt")
-        meson_log = load(None, meson_log_path)
-        meson_log = meson_log.replace("\\", "/")
-        assert "Build Options: " \
-               "'--native-file {folder}/conan_meson_native.ini' " \
-               "'--native-file {folder}/conan_meson_deps_flags.ini'" \
-               "".format(folder=client.current_folder.replace("\\", "/")) in meson_log
-
         app_name = "demo.exe" if platform.system() == "Windows" else "demo"
         client.run_command(os.path.join("build", app_name))
         assert 'VAR="VALUE' in client.out
