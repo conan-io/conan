@@ -91,4 +91,5 @@ def test_set_prefix():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
     conanbuild = client.load(os.path.join(client.current_folder, "build", "conan", "conanbuild.conf"))
-    assert "configure_args = '--prefix=/somefolder'" in conanbuild
+    assert "--prefix=/somefolder" in conanbuild
+    assert conanbuild.count("--prefix") == 1
