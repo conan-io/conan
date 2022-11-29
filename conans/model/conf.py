@@ -1,4 +1,5 @@
 import fnmatch
+import os
 from collections import OrderedDict
 
 import six
@@ -82,10 +83,11 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    def __init__(self, name, value):
+    def __init__(self, name, value, path=False):
         self._name = name
         self._value = value
         self._value_type = type(value)
+        self._path = path
 
     def __repr__(self):
         return repr(self._value)
@@ -99,7 +101,7 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value)
+        return _ConfValue(self._name, self._value, self._path)
 
     def dumps(self):
         if self._value is None:
@@ -165,6 +167,17 @@ class _ConfValue(object):
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
+
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        if isinstance(self._value, list):
+            self._value = [os.path.join(folder, v) if v != _ConfVarPlaceHolder else v
+                           for v in self._value]
+        if isinstance(self._value, dict):
+            self._value = {k: os.path.join(folder, v) for k, v in self._value.items()}
+        elif isinstance(self._value, str):
+            self._value = os.path.join(folder, self._value)
 
 
 class Conf:
@@ -292,6 +305,10 @@ class Conf:
         self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value)
 
+    def define_path(self, name, value):
+        self._validate_lower_case(name)
+        self._values[name] = _ConfValue(name, value, path=True)
+
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
@@ -303,14 +320,29 @@ class Conf:
         conf_value = _ConfValue(name, {})
         self._values.setdefault(name, conf_value).update(value)
 
+    def update_path(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, {}, path=True)
+        self._values.setdefault(name, conf_value).update(value)
+
     def append(self, name, value):
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).append(value)
 
+    def append_path(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(name, conf_value).append(value)
+
     def prepend(self, name, value):
         self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).prepend(value)
+
+    def prepend_path(self, name, value):
+        self._validate_lower_case(name)
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):
@@ -339,6 +371,10 @@ class Conf:
             if _is_profile_module(k):
                 result._values[k] = v
         return result
+
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
 
 
 class ConfDefinition:

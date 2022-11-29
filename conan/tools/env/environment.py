@@ -154,6 +154,12 @@ class _EnvValue:
         previous_value = os.getenv(self._name)
         return self.get_str(previous_value, subsystem, pathsep)
 
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        self._values = [os.path.join(folder, v) if v != _EnvVarPlaceHolder else v
+                        for v in self._values]
+
 
 class Environment:
     def __init__(self):
@@ -232,6 +238,10 @@ class Environment:
 
     def vars(self, conanfile, scope="build"):
         return EnvVars(conanfile, self._values, scope)
+
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
 
 
 class EnvVars:
