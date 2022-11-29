@@ -6,9 +6,7 @@ from jinja2 import DictLoader
 from jinja2 import Environment
 
 from conan.tools.cmake.cmakedeps.cmakedeps import CMakeDeps
-from conan.tools.cmake.cmakedeps.templates import (
-    CMakeDepsFileTemplate,
-    get_cmake_package_name as cmake_get_file_name)
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.gnu.pkgconfigdeps import (
     _get_component_name as pkgconfig_get_component_name,
     _get_name_with_namespace as pkgconfig_get_name_with_namespace,
@@ -444,7 +442,7 @@ class MarkdownGenerator(Generator):
             cmake_variables = {
                 'global_target_name': requirement.cpp_info.get_property('cmake_target_name') or "{0}::{0}".format(requirement.ref.name),
                 'component_alias': cmake_component_alias,
-                'file_name': cmake_get_file_name(requirement)
+                'file_name': cmake_deps.get_cmake_package_name(requirement)
             }
 
             pkgconfig_component_alias = {
