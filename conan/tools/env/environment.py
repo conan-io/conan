@@ -185,6 +185,7 @@ class Environment:
 
     def copy(self):
         e = Environment()
+        # TODO: Check this, the internal list is not being copied
         e._values = self._values.copy()
         return e
 

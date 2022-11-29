@@ -562,13 +562,8 @@ class CppInfo(object):
                     f"{conanfile}: Required package '{e}' not in component 'requires'")
 
     def copy(self):
+        raise NotImplementedError("This shouldn't be called")
         # Only used at the moment by layout() editable merging build+source .cpp data
-        ret = CppInfo()
-        ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _Component())
-        for comp_name in self.components:
-            ret.components[comp_name] = copy.copy(self.components[comp_name])
-        return ret
 
     @property
     def required_components(self):

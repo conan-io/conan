@@ -234,8 +234,8 @@ def test_dependency_props_from_consumer():
     config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert os.path.exists(module_file)
     assert os.path.exists(config_file)
     module_content = client.load(module_file)
@@ -247,22 +247,22 @@ def test_dependency_props_from_consumer():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert not os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
 
@@ -330,8 +330,8 @@ def test_props_from_consumer_build_context_activated():
                                      "custom_bar_build_file_name_BUILDTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert os.path.exists(module_file_build)
@@ -356,8 +356,8 @@ def test_props_from_consumer_build_context_activated():
     client.save(
         {"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")), "bar.py": bar},
         clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert not os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
@@ -365,8 +365,8 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert os.path.exists(module_file)
     assert not os.path.exists(config_file)
     assert os.path.exists(module_file_build)
@@ -374,8 +374,8 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
@@ -384,8 +384,8 @@ def test_props_from_consumer_build_context_activated():
     # invalidate upstream property setting a None, will use config that's the default
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="None")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
