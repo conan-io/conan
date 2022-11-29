@@ -23,6 +23,8 @@ def test_pkg_configdeps_definitions_escape():
         name = "pkg"
         version = "1.0"
         settings = "os", "compiler", "build_type", "arch"
+        options = {"shared": [True, False], "fPIC": [True, False]}
+        default_options = {"shared": False, "fPIC": True}
         exports_sources = "configure.ac", "Makefile.am", "src/*"
         generators = "AutotoolsToolchain"
 
@@ -52,9 +54,7 @@ def test_pkg_configdeps_definitions_escape():
     from conan.tools.build import cross_building
     class PkgTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        generators = "PkgConfigDeps", "AutotoolsToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-        apply_env = False
-        test_type = "explicit"
+        generators = "PkgConfigDeps", "AutotoolsToolchain"
 
         def requirements(self):
             self.requires(self.tested_reference_str)
