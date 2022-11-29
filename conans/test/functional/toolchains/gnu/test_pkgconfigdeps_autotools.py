@@ -88,7 +88,7 @@ def test_pkg_configdeps_definitions_escape():
     AM_CXXFLAGS = $(pkg_CFLAGS)
     main_LDADD = $(pkg_LIBS)
     """)
-    client.run("new pkg/1.0 -m autotools_lib")
+    client.run("new autotools_lib -d name=pkg -d version=1.0")
     client.save({"conanfile.py": conanfile_pkg,
                  "test_package/conanfile.py": conanfile_test,
                  "test_package/configure.ac": configure_test,
