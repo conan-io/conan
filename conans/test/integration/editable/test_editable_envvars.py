@@ -15,11 +15,11 @@ def test_editable_envvars():
             def layout(self):
                 self.folders.source = "mysource"
                 self.folders.build = "mybuild"
-                self.cpp.source.runenv_info.append_path("MYRUNPATH", "mylocalsrc")
-                self.cpp.build.buildenv_info.define_path("MYBUILDPATH", "mylocalbuild")
+                self.layouts.source.runenv_info.append_path("MYRUNPATH", "mylocalsrc")
+                self.layouts.build.buildenv_info.define_path("MYBUILDPATH", "mylocalbuild")
 
-                self.cpp.package.buildenv_info.define_path("MYBUILDPATH", "mypkgbuild")
-                self.cpp.package.runenv_info.append_path("MYRUNTPATH", "mypkgsrc")
+                self.layouts.package.buildenv_info.define_path("MYBUILDPATH", "mypkgbuild")
+                self.layouts.package.runenv_info.append_path("MYRUNTPATH", "mypkgsrc")
 
             def package_info(self):
                 self.buildenv_info.define("OTHERVAR", "randomvalue")
@@ -63,10 +63,10 @@ def test_editable_conf():
             def layout(self):
                 self.folders.source = "mysource"
                 self.folders.build = "mybuild"
-                self.cpp.source.conf_info.append_path("myconf", "mylocalsrc")
-                self.cpp.build.conf_info.append_path("myconf", "mylocalbuild")
-                self.cpp.build.conf_info.update_path("mydictconf", {"a": "mypatha", "b": "mypathb"})
-                self.cpp.build.conf_info.define_path("mydictconf2", {"c": "mypathc"})
+                self.layouts.source.conf_info.append_path("myconf", "mylocalsrc")
+                self.layouts.build.conf_info.append_path("myconf", "mylocalbuild")
+                self.layouts.build.conf_info.update_path("mydictconf", {"a": "mypatha", "b": "mypathb"})
+                self.layouts.build.conf_info.define_path("mydictconf2", {"c": "mypathc"})
         """)
 
     pkg = textwrap.dedent("""
