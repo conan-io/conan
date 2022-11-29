@@ -377,6 +377,15 @@ class BinaryInstaller:
                     # the one defined in the conanfile cpp_info
                     conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
+                    # Paste the editable cpp_info but prioritizing it, only if a
+                    # variable is not declared at build/source, the package will keep the value
+                    conanfile.buildenv_info.compose_env(conanfile.cpp.source.buildenv_info)
+                    conanfile.buildenv_info.compose_env(conanfile.cpp.build.buildenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.cpp.source.runenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.cpp.build.runenv_info)
+                    conanfile.conf_info.compose_conf(conanfile.cpp.source.conf_info)
+                    conanfile.conf_info.compose_conf(conanfile.cpp.build.conf_info)
+
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 
         conanfile.cpp_info.check_component_requires(conanfile)

@@ -164,6 +164,12 @@ class _EnvValue:
             rel_path = os.path.relpath(v, package_folder)
             self._values[i] = os.path.join(deploy_folder, rel_path)
 
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        self._values = [os.path.join(folder, v) if v != _EnvVarPlaceHolder else v
+                        for v in self._values]
+
 
 class Environment:
     """
@@ -300,6 +306,10 @@ class Environment:
         """Make the paths relative to the deploy_folder"""
         for varvalues in self._values.values():
             varvalues.deploy_base_folder(package_folder, deploy_folder)
+
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
 
 
 class EnvVars:

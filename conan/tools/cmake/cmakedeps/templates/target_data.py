@@ -4,8 +4,8 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
 from conans.model.dependencies import get_transitive_requires
+
 
 """
 
@@ -207,11 +207,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_dependency_filenames(self):
         if self.conanfile.is_build_context:
             return []
+
         transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         # Previously it was filtering here components, but not clear why the file dependency
         # should be skipped if components are not being required, why would it declare a
         # dependency to it?
-        ret = [get_cmake_package_name(r, self.generating_module) for r in transitive_reqs.values()]
+        ret = [self.cmakedeps.get_cmake_package_name(r, self.generating_module)
+               for r in transitive_reqs.values()]
         return ret
 
     def _get_dependencies_find_modes(self):
@@ -220,8 +222,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for dep in deps.values():
-            dep_file_name = get_cmake_package_name(dep, self.generating_module)
-            find_mode = get_find_mode(dep)
+            dep_file_name = self.cmakedeps.get_cmake_package_name(dep, self.generating_module)
+            find_mode = self.cmakedeps.get_find_mode(dep)
             default_value = "NO_MODULE" if not self.generating_module else "MODULE"
             values = {
                 FIND_MODE_NONE: "",
