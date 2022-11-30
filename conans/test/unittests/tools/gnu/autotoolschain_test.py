@@ -2,6 +2,7 @@ import pytest
 
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
+from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
@@ -90,3 +91,20 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
         msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and " \
               "needed for os=Windows"
         assert msg == str(conan_error.value)
+
+
+def test_compilers_mapping():
+    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+    compilers = {"c": "path_to_c", "cpp": "path_to_cpp", "cuda": "path_to_cuda",
+                 "fortran": "path_to_fortran"}
+    settings = MockSettings({"build_type": "Release",
+                             "os": "Windows",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.build:compiler_executables", compilers)
+    conanfile.settings = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    env = autotoolschain.environment().vars(conanfile)
+    for compiler, env_var in autotools_mapping.items():
+        assert env[env_var] == f"path_to_{compiler}"
