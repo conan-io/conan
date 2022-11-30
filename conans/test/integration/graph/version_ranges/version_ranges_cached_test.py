@@ -49,7 +49,7 @@ class TestVersionRangesCache:
             client.run("create .")
             client.run(f"upload liba/2.{minor}.0 -r server1 -c")
 
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         client.save({"conanfile.py": GenConanfile("libb", "1.0").with_require("liba/[>=2.0]")})
         client.run("create .")

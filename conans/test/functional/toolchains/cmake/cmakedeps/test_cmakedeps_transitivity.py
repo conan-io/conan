@@ -89,7 +89,7 @@ def test_shared_requires_static(transitive_libraries):
 def test_transitive_binary_skipped(transitive_libraries):
     c = transitive_libraries
     # IMPORTANT: liba binary can be removed, no longer necessary
-    c.run("remove liba*:* -f")
+    c.run("remove liba*:* -c")
 
     conanfile = textwrap.dedent("""\
        from conan import ConanFile

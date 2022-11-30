@@ -34,7 +34,7 @@ def test_install_deploy():
             "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
            clean_first=True)
     c.run("install . --deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
-    c.run("remove * -f")  # Make sure the cache is clean, no deps there
+    c.run("remove * -c")  # Make sure the cache is clean, no deps there
     cwd = c.current_folder.replace("\\", "/")
     arch = c.get_default_host_profile().settings['arch']
     deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")

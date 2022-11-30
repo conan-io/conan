@@ -103,7 +103,7 @@ def test_android_ndk():
     # IMPORTANT: The consumption via test_package allows specifying the type of requires
     # in this case: None, as this is intended to be injected via profile [tool_requires]
     # can be tested like that
-    c.run("remove * -f")
+    c.run("remove * -c")
     c.save({"test_package/conanfile.py": test})
 
     # Creating the NDK packages for Windows, Linux

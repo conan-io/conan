@@ -381,7 +381,7 @@ class DefaultNameConan(ConanFile):
 
     def test_info_with_profiles(self):
 
-        self.client.run("remove '*' -f")
+        self.client.run("remove '*' -c")
         # Create a simple recipe to require
         winreq_conanfile = '''
 from conans.model.conan_file import ConanFile

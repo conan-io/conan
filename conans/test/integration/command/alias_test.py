@@ -46,7 +46,7 @@ class ConanAliasTest(unittest.TestCase):
         self.assertNotIn("hello/0.x", conaninfo)
 
         client.run('upload "*" --confirm -r default')
-        client.run('remove "*" -f')
+        client.run('remove "*" -c')
 
         client.run("install .")
         client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})

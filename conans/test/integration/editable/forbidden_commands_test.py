@@ -37,7 +37,7 @@ class TestOtherCommands:
         t.run('upload lib/0.1 -r default')
         assert "Uploading recipe 'lib/0.1" in t.out
 
-        t.run("remove * -f")
+        t.run("remove * -c")
         # Nothing in the cache
         t.run("list recipes *")
         assert "There are no matching recipe references" in t.out

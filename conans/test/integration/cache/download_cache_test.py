@@ -18,7 +18,7 @@ class TestDownloadCache:
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         # enable cache
         tmp_folder = temp_folder()
@@ -27,20 +27,20 @@ class TestDownloadCache:
         client.run("install --requires=mypkg/0.1@user/testing")
         assert "Downloading" in client.out
 
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
         assert "Downloading" not in client.out
 
         # removing the config downloads things
         client.save({"global.conf": ""}, path=client.cache.cache_folder)
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
         assert "Downloading" in client.out
 
         client.save({"global.conf": f"core.download:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
 
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=mypkg/0.1@user/testing")
         assert "Downloading" not in client.out
 
@@ -54,7 +54,7 @@ class TestDownloadCache:
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . --name=pkg --version=0.1")
         client.run("upload * -c -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@")
 
         # Make the cache dirty
@@ -65,11 +65,11 @@ class TestDownloadCache:
                 save(path, "broken!")
                 set_dirty(path)
 
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@")
         assert "Downloading" in client.out
 
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@")
         assert "Downloading" not in client.out
 
@@ -157,7 +157,7 @@ class TestDownloadCache:
         c.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         c.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
         c.run("upload * --confirm -r default")
-        c.run("remove * -f")
+        c.run("remove * -c")
 
         # enable cache
         c.save({"global.conf": f"core.download:download_cache=mytmp_folder"},

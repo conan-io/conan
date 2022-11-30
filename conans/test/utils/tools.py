@@ -584,7 +584,7 @@ class TestClient(object):
 
     # Higher level operations
     def remove_all(self):
-        self.run("remove '*' -f")
+        self.run("remove '*' -c")
 
     def export(self, ref, conanfile=GenConanfile(), args=None):
         """ export a ConanFile with as "ref" and return the reference with recipe revision

@@ -24,7 +24,7 @@ class Pkg(ConanFile):
 
         ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.run("upload pkg/0.1@lasote/stable -r default")
-        client.run("remove pkg/0.1@lasote/stable -f")
+        client.run("remove pkg/0.1@lasote/stable -c")
 
         client.run("download pkg/0.1@lasote/stable -r default")
         self.assertIn("Downloading conan_sources.tgz", client.out)
@@ -38,14 +38,14 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=1.0")
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         client.run("download pkg/1.0:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
         self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)
 
         # All
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/1.0#*:* -r default")
         self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
                       NO_SETTINGS_PACKAGE_ID, client.out)
@@ -65,11 +65,11 @@ class Pkg(ConanFile):
         c.run("create pkg")
         c.run("upload tool* -r tools -c")
         c.run("upload pkg* -r pkgs -c")
-        c.run("remove * -f")
+        c.run("remove * -c")
 
         c.run("install --requires=pkg/0.1 -r pkgs -r tools")
         self.assertIn("Downloading", c.out)
-        c.run("remove * -f")
+        c.run("remove * -c")
 
         # This fails, as it won't allow 2 remotes
         c.run("download pkg/0.1 -r pkgs -r tools", assert_error=True)
