@@ -9,7 +9,7 @@ class ConanFileTextLoader(object):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
                                                          "imports", "tool_requires", "layout"],
-                                           parse_lines=True)
+                                           strip_comments=True)
 
     @property
     def layout(self):

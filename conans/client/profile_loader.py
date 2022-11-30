@@ -251,6 +251,7 @@ class _ProfileValueParser(object):
     """
     @staticmethod
     def get_profile(profile_text, base_profile=None):
+        # Trying to strip comments might be problematic if things contain #
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
                                                          "settings",
                                                          "options", "conf", "buildenv", "runenv"])
