@@ -138,3 +138,30 @@ class TestCustomCommands:
         assert "myargument" in client.out
         client.run("complex sub1 myargument -f json")
         assert f'{{"argument1": "myargument"}}' in client.out
+
+    def test_overwrite_builtin_command(self):
+        complex_command = textwrap.dedent("""
+            import json
+
+            from conan.cli.command import conan_command, conan_subcommand
+            from conan.api.output import cli_out_write
+
+            @conan_command()
+            def install(conan_api, parser, *args, **kwargs):
+                \"""
+                this is a command with subcommands
+                \"""
+                cli_out_write("Hello world")
+            """)
+
+        client = TestClient()
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'myteam', 'cmd_install.py')
+        client.save({f"{command_file_path}": complex_command})
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_install.py')
+        client.save({f"{command_file_path}": complex_command})
+        client.run("myteam:install")
+        assert "Hello world" in client.out
+        client.run("install")
+        assert "Hello world" in client.out
