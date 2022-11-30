@@ -133,7 +133,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True -tf=None")
     client.run("upload hello/0.1 -c -r default")
-    client.run("remove * -f")
+    client.run("remove * -c")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile

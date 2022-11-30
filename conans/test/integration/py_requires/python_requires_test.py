@@ -48,10 +48,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/0.1@user/testing#latest:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
@@ -275,10 +275,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/0.1@user/testing#*:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 

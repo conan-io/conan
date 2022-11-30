@@ -16,7 +16,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('reference', help="Recipe reference or package reference, can contain * as"
                                           "wildcard at any reference field. e.g: lib/*")
-    parser.add_argument('-f', '--force', default=False, action='store_true',
+    parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Remove without requesting a confirmation')
     parser.add_argument('-p', '--package-query', action=OnceArgument,
                         help="Remove all packages (empty) or provide a query: "
@@ -29,7 +29,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     remote = conan_api.remotes.get(args.remote) if args.remote else None
 
     def confirmation(message):
-        return args.force or ui.request_boolean(message)
+        return args.confirm or ui.request_boolean(message)
 
     only_recipe = ":" not in args.reference and not args.package_query
     ref_pattern = SelectPattern(args.reference, rrev="*", prev="*")

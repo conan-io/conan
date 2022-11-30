@@ -36,7 +36,7 @@ def test_timestamp_error():
     c.run("create gtest")
     c.run("create engine")
     c.run("upload * -r=default -c")
-    c.run("remove * -f")
+    c.run("remove * -c")
     c.run("install app")
     # This used to fail, now it is not crashing anymore
     assert "Finalizing install" in c.out

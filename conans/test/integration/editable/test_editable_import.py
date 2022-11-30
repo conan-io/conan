@@ -51,7 +51,7 @@ class TestEditableImport:
         t.run("install consumer")
         assert t.load("consumer/imports/myfile.txt") == "mydata"
 
-        t.run("remove * -f")
+        t.run("remove * -c")
         t.run('editable add dep dep/0.1@')
         shutil.rmtree(os.path.join(t.current_folder, "consumer", "imports"))
         t.run("install consumer")

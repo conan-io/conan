@@ -52,7 +52,7 @@ def test_install_system_requirements(client):
     client.run(" install --requires=pkg/0.1@lasote/testing --build='*'")
     assert "Running system requirements!!" in client.out
     client.run("upload * --confirm -r default")
-    client.run('remove "*" -f')
+    client.run('remove "*" -c')
     client.run(" install --requires=pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
 
@@ -263,7 +263,7 @@ def test_install_without_ref(client):
     client.run('upload lib/1.0 -c -r default')
     assert "Uploading recipe 'lib/1.0" in client.out
 
-    client.run('remove "*" -f')
+    client.run('remove "*" -c')
 
     # This fails, Conan thinks this is a path
     client.run('install lib/1.0', assert_error=True)
@@ -298,7 +298,7 @@ def test_install_skip_disabled_remote():
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload * --confirm -r default")
     client.run("upload * --confirm -r server3")
-    client.run("remove * -f")
+    client.run("remove * -c")
     client.run("remote disable default")
     client.run("install --requires=pkg/0.1@lasote/testing", assert_error=False)
     assert "Trying with 'default'..." not in client.out

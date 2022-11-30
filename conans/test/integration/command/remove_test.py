@@ -30,15 +30,15 @@ class Test(ConanFile):
         client.run("upload * --confirm -r default")
 
         for remote in ("", "-r=default"):
-            client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("remove Test/0.1@lasote/testing -q=os=Windows -c %s" % remote)
             client.run("search Test/0.1@lasote/testing %s" % remote)
             self.assertNotIn("os: Windows", client.out)
             self.assertIn("os: Linux", client.out)
 
-            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -c %s" % remote)
             client.run("search Test2/0.1@lasote/testing %s" % remote)
             self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-            client.run("remove Test2/0.1@lasote/testing -q=os=None -f %s" % remote)
+            client.run("remove Test2/0.1@lasote/testing -q=os=None -c %s" % remote)
             client.run("search Test2/0.1@lasote/testing %s" % remote)
             self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             self.assertIn("There are no packages", client.out)
@@ -76,7 +76,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
         latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_layout = self.client.cache.pkg_layout(latest_prev)
-        self.client.run("remove lib/1.0 -f")
+        self.client.run("remove lib/1.0 -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))
         self.assertFalse(os.path.exists(pkg_layout.base_folder))
 
@@ -84,14 +84,14 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
         self.client.run("upload lib/1.0 -r default -c")
-        self.client.run("remove lib/1.0 -f")
+        self.client.run("remove lib/1.0 -c")
         # we can still install it
         self.client.run("install --requires=lib/1.0@")
         self.assertIn("lib/1.0: Retrieving package", self.client.out)
-        self.client.run("remove lib/1.0 -f")
+        self.client.run("remove lib/1.0 -c")
 
         # Now remove remotely
-        self.client.run("remove lib/1.0 -f -r default")
+        self.client.run("remove lib/1.0 -c -r default")
         self.client.run("install --requires=lib/1.0@", assert_error=True)
 
         self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)
@@ -118,7 +118,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
-        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
+        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
@@ -131,7 +131,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
-        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
+        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
@@ -143,10 +143,10 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         self.client.run("upload foobar/0.1@user/testing -r default -c")
-        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
+        self.client.run("remove -c foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
-        self.client.run("remove -f foobar/0.1@user/testing#{}:{} -r default"
+        self.client.run("remove -c foobar/0.1@user/testing#{}:{} -r default"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
@@ -164,7 +164,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.assertIn(f"arch={default_arch}", self.client.out)
         self.assertIn("arch=x86", self.client.out)
 
-        self.client.run("remove -f foobar/0.1@user/testing:* -r default")
+        self.client.run("remove -c foobar/0.1@user/testing:* -r default")
         self.client.run("search foobar/0.1@user/testing -r default")
         self.assertNotIn(f"arch={default_arch}", self.client.out)
         self.assertNotIn("arch=x86", self.client.out)
@@ -255,7 +255,7 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     with populated_client.mocked_servers():
         r = "-r default" if with_remote else ""
         error = data.get("error", False)
-        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
         if not error:
             assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
         elif data.get("error_msg"):
@@ -274,7 +274,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     with populated_client.mocked_servers():
         r = "-r default" if with_remote else ""
         error = data.get("error", False)
-        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
         if not error:
             rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
             assert rrevs == set(data["rrevs"])
@@ -304,14 +304,14 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -f {}".format(r))
+    populated_client.run("remove f/* -c {}".format(r))
 
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 
     with populated_client.mocked_servers():
         error = data.get("error", False)
-        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
         if not error:
             pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
             assert pids == set(data["prefs"])
@@ -337,14 +337,14 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -f {}".format(r))
+    populated_client.run("remove f/* -c {}".format(r))
 
     prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
     with populated_client.mocked_servers():
         error = data.get("error", False)
-        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
         if not error:
             prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
             assert set(prefs) == set(data["prevs"])

@@ -54,7 +54,7 @@ class UploadTest(unittest.TestCase):
                       % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # TODO: cache2.0 check if this makes sense for 2.0, xfail test for the moment
-        client.run("remove hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
+        client.run("remove hello/0.1@lasote/testing -p=%s -c" % NO_SETTINGS_PACKAGE_ID)
         client.run("upload * --confirm")
 
     @pytest.mark.artifactory_ready
@@ -71,7 +71,7 @@ class UploadTest(unittest.TestCase):
         package_file_path = os.path.join(package_folder, "myfile.sh")
 
         if platform.system() == "Linux":
-            client.run("remove '*' -f")
+            client.run("remove '*' -c")
             client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
             os.system('chmod +x "{}"'.format(package_file_path))
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
@@ -87,7 +87,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-> conan_package.tgz", client.out)
 
         if platform.system() == "Linux":
-            client.run("remove '*' -f")
+            client.run("remove '*' -c")
             client.run("install --requires={}".format(ref))
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
@@ -461,7 +461,7 @@ class UploadTest(unittest.TestCase):
         client.run("remote login server1 lasote -p mypass")
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing -r server1")
-        client.run("remove * --force")
+        client.run("remove * --confirm")
         client.run("install --requires=hello0/1.2.1@user/testing -r server1")
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")

@@ -82,7 +82,7 @@ class TestUpdateFlows:
         self.client2.assert_listed_require({"liba/1.0.0": "Cache"})
         assert "liba/1.0.0: Already installed!" in self.client2.out
 
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -122,7 +122,7 @@ class TestUpdateFlows:
         # to the date in server0 and associate that remote but not install anything
 
         # we create a newer revision in client2
-        self.client2.run("remove * -f")
+        self.client2.run("remove * -c")
         self.client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV2")})
         self.client2.run("create .")
 
@@ -144,10 +144,10 @@ class TestUpdateFlows:
         assert self.client.cache.get_recipe_timestamp(latest_rrev) == self.server_times["server2"]
 
         # we create a newer revision in client
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV2")})
         self.client.run("create .")
-        self.client.run(f"remove {latest_rrev.repr_notime()} -f -r server2")
+        self.client.run(f"remove {latest_rrev.repr_notime()} -c -r server2")
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -213,11 +213,11 @@ class TestUpdateFlows:
         self.client.assert_listed_require({"liba/1.0.0": "Cache"})
         assert "liba/1.0.0: Already installed!" in self.client.out
 
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
 
-        self.client.run("remove '*' -f -r server0")
-        self.client.run("remove '*' -f -r server1")
-        self.client.run("remove '*' -f -r server2")
+        self.client.run("remove '*' -c -r server0")
+        self.client.run("remove '*' -c -r server1")
+        self.client.run("remove '*' -c -r server2")
 
         # create new older revisions in servers
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV4")})
@@ -227,7 +227,7 @@ class TestUpdateFlows:
 
         self._upload_ref_to_all_servers("liba/1.0.0", self.client)
 
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -280,10 +280,10 @@ class TestUpdateFlows:
         assert self.the_time == self.client.cache.get_recipe_timestamp(server_rrev)
         self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
-        self.client.run("remove * -f")
-        self.client.run("remove '*' -f -r server0")
-        self.client.run("remove '*' -f -r server1")
-        self.client.run("remove '*' -f -r server2")
+        self.client.run("remove * -c")
+        self.client.run("remove '*' -c -r server0")
+        self.client.run("remove '*' -c -r server1")
+        self.client.run("remove '*' -c -r server2")
 
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV6")})
         self.client.run("create .")
@@ -318,7 +318,7 @@ class TestUpdateFlows:
         # |             | REV0 (1000)|            |           |            |
         # |             |            |            |           |            |
 
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|
@@ -365,7 +365,7 @@ class TestUpdateFlows:
         assert "liba/[>0.9.0]: liba/1.0.0" in self.client.out
         assert "liba/1.0.0: Already installed!" in self.client.out
 
-        self.client.run("remove * -f")
+        self.client.run("remove * -c")
 
         # | CLIENT         | CLIENT2        | SERVER0        | SERVER1        | SERVER2        |
         # |----------------|----------------|----------------|----------------|----------------|
@@ -417,8 +417,8 @@ class TestUpdateFlows:
         # |                |                |                |                |                |
         # |                |                |                |                |                |
 
-        self.client.run("remove * -f")
-        self.client2.run("remove * -f")
+        self.client.run("remove * -c")
+        self.client2.run("remove * -c")
 
         # now we are uploading different revisions with different dates, but the same version
         for minor in range(3):

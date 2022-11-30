@@ -27,7 +27,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.run("create . --name=boost --version=1.69.0 --user=lasote --channel=stable")
         client.run("create . --name=boost --version=1.70.0 --user=lasote --channel=stable")
         client.run("upload * -r=default --confirm")
-        client.run("remove * -f")
+        client.run("remove * -c")
         conanfile = textwrap.dedent("""
             [requires]
             boost/[>=1.68.0]@lasote/stable
@@ -57,7 +57,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.run("create pkg.py --name=pkg --veersion=1.1 --user=lasote --channel=testing")
         client.run("create pkg.py --name=pkg --veersion=1.2 --user=lasote --channel=testing")
         client.run("upload pkg* -r=default --confirm")
-        client.run("remove pkg/1.2@lasote/testing -f")
+        client.run("remove pkg/1.2@lasote/testing -c")
 
         client.save({"consumer.py": GenConanfile().with_requirement("pkg/[~1]@lasote/testing")})
         client.run("install consumer.py")
@@ -72,10 +72,10 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.run("create pkg.py --name=pkg --veersion=1.3 --user=lasote --channel=testing")
         client.run("install consumer.py --update")
         self.assertIn("pkg/1.3@lasote/testing: Already installed!", client.out)
-        client.run("remove pkg/1.3@lasote/testing -f")
+        client.run("remove pkg/1.3@lasote/testing -c")
 
         # removes remote
-        client.run("remove Pkg* -r=default --f")
+        client.run("remove Pkg* -r=default --c")
         # Resolves to local package
         client.run("install consumer.py")
         self.assertIn("pkg/1.2@lasote/testing: Already installed!", client.out)
@@ -170,7 +170,7 @@ class HelloReuseConan(ConanFile):
                      upload=False)
 
         for remote, solution in [("default", "0.2"), ("other", "0.3")]:
-            self.client.run('remove "hello0/0.*" -f')
+            self.client.run('remove "hello0/0.*" -c')
             self.client.run("install . --build missing -r=%s" % remote)
             self.assertIn("Version range '>0.1,<0.4' required by "
                           "'conanfile.py (hello1/0.1)' "
@@ -213,7 +213,7 @@ class HelloReuseConan(ConanFile):
         self._export("hello1", "0.1", ["hello0/[>0.1,<0.3]@lasote/stable"], export=False,
                      upload=False)
 
-        self.client.run('remove "hello0/0.*" -f')
+        self.client.run('remove "hello0/0.*" -c')
         self.client.run("install . --build missing")
         self.assertIn("Version range '>0.1,<0.3' required by 'conanfile.py (hello1/0.1)' "
                       "resolved to 'hello0/0.2@lasote/stable'", self.client.out)
@@ -229,7 +229,7 @@ class HelloReuseConan(ConanFile):
                      export=False, upload=upload)
 
         if upload:
-            self.client.run('remove "*" -f')
+            self.client.run('remove "*" -c')
 
         self.client.run("install . --build missing")
 
@@ -246,7 +246,7 @@ class HelloReuseConan(ConanFile):
 
         if upload:
             self._export("hello0", "0.2.1", upload=upload)
-            self.client.run('remove hello0/0.2.1@lasote/stable -f')
+            self.client.run('remove hello0/0.2.1@lasote/stable -c')
             self._export("Hello3", "0.1", ["hello1/[>=0]@lasote/stable",
                                            "hello2/[~=0]@lasote/stable"],
                          export=False, upload=upload)
@@ -275,7 +275,7 @@ class HelloReuseConan(ConanFile):
                      ["RequirementTwo/[=4.5.6]@lasote/stable",
                       "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
 
-        self.client.run("remove '*' -f")
+        self.client.run("remove '*' -c")
         self.client.run("install --requires=Project/1.0.0@lasote/stable --build missing", assert_error=True)
         self.assertIn("Conflict in RequirementOne/1.2.3@lasote/stable:\n"
             "    'RequirementOne/1.2.3@lasote/stable' requires "
@@ -289,7 +289,7 @@ class HelloReuseConan(ConanFile):
                      ["RequirementOne/[=1.2.3]@lasote/stable",
                       "RequirementTwo/[=4.5.6]@lasote/stable",
                       ], upload=True)
-        self.client.run("remove '*' -f")
+        self.client.run("remove '*' -c")
         self.client.run("install --requires=Project/1.0.0@lasote/stable --build missing", assert_error=True)
         self.assertIn("Conflict in RequirementTwo/4.5.6@lasote/stable:\n"
               "    'RequirementTwo/4.5.6@lasote/stable' requires "
