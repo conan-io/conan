@@ -490,3 +490,18 @@ def test_variables_types(conanfile):
 
     contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
     assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents
+
+
+def test_compilers_block(conanfile):
+    cmake_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
+                     "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
+                     "hip": "HIP", "ispc": "ISPC"}
+    compilers = {"c": "path_to_c", "cuda": "path_to_cuda", "cpp": "path_to_cpp",
+                 "objc": "path_to_objc", "objcpp": "path_to_objcpp", "rc": "path_to_rc",
+                 'fortran': "path_to_fortran", 'asm': "path_to_asm", "hip": "path_to_hip",
+                 "ispc": "path_to_ispc"}
+    conanfile.conf.define("tools.build:compiler_executables", compilers)
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    for compiler, lang in cmake_mapping.items():
+        assert f'set(CMAKE_{lang}_COMPILER "path_to_{compiler}")' in content
