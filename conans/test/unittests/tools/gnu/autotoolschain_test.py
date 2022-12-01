@@ -130,7 +130,7 @@ def test_compilers_mapping():
 
 
 @patch("conan.tools.gnu.autotoolstoolchain.save_toolchain_args")
-def test_check_configure_args_overwriting(save_args):
+def test_check_configure_args_overwriting_and_deletion(save_args):
     # Issue: https://github.com/conan-io/conan/issues/12642
     settings_build = MockSettings({"os": "Linux",
                                    "arch": "x86_64",
@@ -138,11 +138,12 @@ def test_check_configure_args_overwriting(save_args):
                                    "compiler.version": "11",
                                    "compiler.libcxx": "libstdc++",
                                    "build_type": "Release"})
-    settings = MockSettings({"os": "Emscripten",
-                             "arch": "wasm"})
+    settings_target = MockSettings({"os": "Android", "arch": "armv8"})
+    settings = MockSettings({"os": "Emscripten", "arch": "wasm"})
     conanfile = ConanFileMock()
     conanfile.settings = settings
     conanfile.settings_build = settings_build
+    conanfile.settings_target = settings_target
     at = AutotoolsToolchain(conanfile)
     at.configure_args.extend([
         "--with-cross-build=my_path",
@@ -152,5 +153,15 @@ def test_check_configure_args_overwriting(save_args):
     configure_args = save_args.call_args[0][0]['configure_args']
     assert "--build=x86_64-linux-gnu" in configure_args
     assert "--host=wasm32-local-emscripten" in configure_args
+    assert "--target=aarch64-linux-android" in configure_args
+    assert "--with-cross-build=my_path" in configure_args
+    assert "--something-host=my_host" in configure_args
+    # https://github.com/conan-io/conan/issues/12431
+    at.configure_args.remove("--build=x86_64-linux-gnu")
+    at.configure_args.remove("--host=wasm32-local-emscripten")
+    at.generate_args()
+    configure_args = save_args.call_args[0][0]['configure_args']
+    assert "--build=x86_64-linux-gnu" not in configure_args  # removed
+    assert "--host=wasm32-local-emscripten" not in configure_args  # removed
     assert "--with-cross-build=my_path" in configure_args
     assert "--something-host=my_host" in configure_args

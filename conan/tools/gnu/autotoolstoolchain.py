@@ -55,12 +55,19 @@ class AutotoolsToolchain:
         self.sysroot_flag = None
 
         if cross_building(self._conanfile):
+            # Host triplet
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-
+            # Target triplet
+            if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
+                settings_target = conanfile.settings_target
+                os_target = settings_target.get_safe("os")
+                arch_target = settings_target.get_safe("arch")
+                self._target = _get_gnu_triplet(os_target, arch_target, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos":
                 sdk_path = apple_sdk_path(conanfile)
@@ -73,6 +80,12 @@ class AutotoolsToolchain:
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+
+        # Initializing the triplets values
+        for flag, value in (("--host=", self._host), ("--build=", self._build),
+                            ("--target=", self._target)):
+            if value:
+                self.configure_args.append(f"{flag}{value}")
 
         check_using_build_profile(self._conanfile)
 
@@ -182,16 +195,7 @@ class AutotoolsToolchain:
         return ["--force", "--install"]
 
     def generate_args(self):
-        configure_args = []
-        configure_args.extend(self.configure_args)
-        user_args_str = args_to_string(self.configure_args)
-        for flag, var in (("--host=", self._host), ("--build=", self._build),
-                          ("--target=", self._target)):
-            if var and flag not in user_args_str:
-                configure_args.append('{}{}'.format(flag, var))
-
-        args = {"configure_args": args_to_string(configure_args),
+        args = {"configure_args": args_to_string(self.configure_args),
                 "make_args":  args_to_string(self.make_args),
                 "autoreconf_args": args_to_string(self.autoreconf_args)}
-
         save_toolchain_args(args, namespace=self._namespace)
