@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from conan.tools.gnu import AutotoolsToolchain
@@ -139,3 +141,30 @@ def test_linker_scripts():
     env = autotoolschain.environment().vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
+
+
+@patch("conan.tools.gnu.autotoolstoolchain.save_toolchain_args")
+def test_check_configure_args_overwriting(save_args):
+    # Issue: https://github.com/conan-io/conan/issues/12642
+    settings_build = MockSettings({"os": "Linux",
+                                   "arch": "x86_64",
+                                   "compiler": "gcc",
+                                   "compiler.version": "11",
+                                   "compiler.libcxx": "libstdc++",
+                                   "build_type": "Release"})
+    settings = MockSettings({"os": "Emscripten",
+                             "arch": "wasm"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings_build
+    at = AutotoolsToolchain(conanfile)
+    at.configure_args.extend([
+        "--with-cross-build=my_path",
+        "--something-host=my_host"
+    ])
+    at.generate_args()
+    configure_args = save_args.call_args[0][0]['configure_args']
+    assert "--build=x86_64-linux-gnu" in configure_args
+    assert "--host=wasm32-local-emscripten" in configure_args
+    assert "--with-cross-build=my_path" in configure_args
+    assert "--something-host=my_host" in configure_args

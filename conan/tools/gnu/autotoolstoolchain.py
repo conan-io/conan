@@ -187,9 +187,10 @@ class AutotoolsToolchain:
         configure_args = []
         configure_args.extend(self.configure_args)
         user_args_str = args_to_string(self.configure_args)
-        for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
+        for flag, var in (("--host=", self._host), ("--build=", self._build),
+                          ("--target=", self._target)):
             if var and flag not in user_args_str:
-                configure_args.append('--{}={}'.format(flag, var))
+                configure_args.append('{}{}'.format(flag, var))
 
         args = {"configure_args": args_to_string(configure_args),
                 "make_args":  args_to_string(self.make_args),
