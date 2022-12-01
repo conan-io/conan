@@ -17,7 +17,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Folders, Infos
+from conans.model.layout import Folders, Infos, Layouts
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
@@ -110,6 +110,7 @@ class ConanFile(object):
     topics = None
     homepage = None
     build_policy = None
+    upload_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
@@ -143,6 +144,7 @@ class ConanFile(object):
 
     # Run in windows bash
     win_bash = None
+    win_bash_run = None  # For run scope
     tested_reference_str = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
@@ -163,6 +165,7 @@ class ConanFile(object):
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_runenv = None
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
@@ -172,6 +175,7 @@ class ConanFile(object):
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
+        self.layouts = Layouts()
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
@@ -209,8 +213,19 @@ class ConanFile(object):
             self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
-    def initialize(self, settings, env, buildenv=None):
+    @property
+    def runenv(self):
+        # Lazy computation of the package runenv based on the profile one
+        from conan.tools.env import Environment
+        if not isinstance(self._conan_runenv, Environment):
+            # TODO: missing user/channel
+            ref_str = "{}/{}".format(self.name, self.version)
+            self._conan_runenv = self._conan_runenv.get_profile_env(ref_str)
+        return self._conan_runenv
+
+    def initialize(self, settings, env, buildenv=None, runenv=None):
         self._conan_buildenv = buildenv
+        self._conan_runenv = runenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
@@ -410,8 +425,12 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuild"):
+            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
+
+        if env == "":  # This default allows not breaking for users with ``env=None`` indicating
+            # they don't want any env-file applied
+            env = "conanbuild" if scope == "build" else "conanrun"
 
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
@@ -420,8 +439,10 @@ class ConanFile(object):
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
             envfiles_folder = self.generators_folder or os.getcwd()
-            _env = [_env] if _env and isinstance(_env, str) else []
-            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder)
+            _env = [_env] if _env and isinstance(_env, str) else (_env or [])
+            assert isinstance(_env, list)
+            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder,
+                                              scope=scope)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:

@@ -52,7 +52,7 @@ class GnuDepsFlags(object):
         if str(compiler) not in self._GCC_LIKE:
             return []
         if is_path:
-            return ["-F %s" % self._adjust_path(framework_path) for framework_path in frameworks]
+            return ["-F\"%s\"" % self._adjust_path(framework_path) for framework_path in frameworks]
         else:
             return ["-framework %s" % framework for framework in frameworks]
 

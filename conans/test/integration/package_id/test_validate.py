@@ -118,16 +118,36 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
                       client.out)
 
-        client.run("create . pkg/0.1@ -s os=Windows")
+        # This is the main difference, building from source for the specified conf, fails
+        client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
+        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("Windows not supported", client.out)
+
+        client.run("install pkg/0.1@ -s os=Windows --build=pkg", assert_error=True)
+        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("Windows not supported", client.out)
+
+        client.run("install pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
                       "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
                       client.out)
         self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
+
+        # --build=missing means "use existing binary if possible", and compatibles are valid binaries
+        client.run("install pkg/0.1@ -s os=Windows --build=missing")
+        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      client.out)
+        self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
+
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
                       "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
                       client.out)
         self.assertIn("ID: cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
+
+        client.run("info pkg/0.1@ -s os=Windows --dry-build=pkg")
+        self.assertIn("Binary: Invalid", client.out)
 
     def test_validate_compatible_also_invalid(self):
         client = TestClient()
@@ -333,3 +353,55 @@ class TestValidate(unittest.TestCase):
         assert "conanfile.py: ERROR: Invalid ID: never ever" in c.out
         assert "Trying to install dependencies, but this configuration will fail to build a package"\
                in c.out
+
+
+class TestValidateCppstd:
+    """ aims to be a very close to real use case of cppstd management and validation in recipes
+    """
+    def test_build_17_consume_14(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate_build(self):
+                    # Explicit logic instead of using check_min_cppstd that hides details
+                    if int(str(self.settings.compiler.cppstd)) < 17:
+                        raise ConanInvalidConfiguration("I need at least cppstd=17 to build")
+
+                def validate(self):
+                    if int(str(self.settings.compiler.cppstd)) < 14:
+                        raise ConanInvalidConfiguration("I need at least cppstd=14 to be used")
+
+                def compatibility(conanfile):
+                    return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create . {settings} -s compiler.cppstd=17")
+        assert "pkg/0.1:7558a15eea8c5762fa0602874a38dde9d36229c1 - Build" in client.out
+
+        # create with cppstd=14 fails, not enough
+        client.run(f"create . {settings} -s compiler.cppstd=14", assert_error=True)
+        assert "pkg/0.1:e480cd97ef8f9dfdc31a7c0710c26d9b8d78375a - Invalid" in client.out
+        assert "pkg/0.1: Cannot build for this configuration: I need at least cppstd=17 to build" \
+               in client.out
+
+        # Install with cppstd=14 can fallback to the previous one
+        client.run(f"install pkg/0.1@ {settings} -s compiler.cppstd=14")
+        assert "Using compatible package '7558a15eea8c5762fa0602874a38dde9d36229c1'" in client.out
+        assert "pkg/0.1:7558a15eea8c5762fa0602874a38dde9d36229c1 - Cache" in client.out
+
+        # FIXME 2.0: install with not enough cppstd should fail, but it doesnt
+        # It is important to know that this only happens with "compatible_packages", otherwise
+        # it will also fail (ConanCenter)
+        client.run(f"install pkg/0.1@ {settings} -s compiler.cppstd=11")
+        # not even trying to fallback to compatibles
+        assert "Using compatible package '7558a15eea8c5762fa0602874a38dde9d36229c1'" in client.out
+        assert "pkg/0.1:7558a15eea8c5762fa0602874a38dde9d36229c1 - Cache" in client.out

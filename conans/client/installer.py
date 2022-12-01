@@ -689,6 +689,12 @@ class BinaryInstaller(object):
                         conanfile.cpp_info.public_deps = public_deps
 
                         if not is_editable:
+                            # IMPORTANT: Need to go first, otherwise fill_old_cppinfo() destroys
+                            # component information
+                            conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
+                            conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)
+                            conanfile.runenv_info.compose_env(conanfile.layouts.package.runenv_info)
+                            conanfile.conf_info.compose_conf(conanfile.layouts.package.conf_info)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
@@ -701,9 +707,10 @@ class BinaryInstaller(object):
                         # cppinfos inside
                         # convert directory entries to be relative to the declared folders.build
                         conanfile.cpp.build.set_relative_base_folder(conanfile.build_folder)
-
+                        conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
                         # convert directory entries to be relative to the declared folders.source
                         conanfile.cpp.source.set_relative_base_folder(conanfile.source_folder)
+                        conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                         full_editable_cppinfo = NewCppInfo()
                         full_editable_cppinfo.merge(conanfile.cpp.source)
@@ -711,6 +718,12 @@ class BinaryInstaller(object):
                         # Paste the editable cpp_info but prioritizing it, only if a
                         # variable is not declared at build/source, the package will keep the value
                         fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+                        conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
+                        conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                        conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
+                        conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:

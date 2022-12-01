@@ -92,6 +92,7 @@ class Node(object):
         self.id_indirect_prefs = None
 
         self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+        self.should_build = False  # If the --build or policy wants to build this binary
 
     @property
     def id(self):
@@ -237,7 +238,7 @@ class Edge(object):
         return self.require.build_require
 
     def __eq__(self, other):
-        return self.src == self.src and self.dst == other.dst
+        return self.src == other.src and self.dst == other.dst
 
     def __ne__(self, other):
         return not self.__eq__(other)

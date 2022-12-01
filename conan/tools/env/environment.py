@@ -154,6 +154,12 @@ class _EnvValue:
         previous_value = os.getenv(self._name)
         return self.get_str(previous_value, subsystem, pathsep)
 
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        self._values = [os.path.join(folder, v) if v != _EnvVarPlaceHolder else v
+                        for v in self._values]
+
 
 class Environment:
     def __init__(self):
@@ -233,6 +239,10 @@ class Environment:
     def vars(self, conanfile, scope="build"):
         return EnvVars(conanfile, self._values, scope)
 
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
+
 
 class EnvVars:
     def __init__(self, conanfile, values, scope):
@@ -251,16 +261,34 @@ class EnvVars:
     def keys(self):
         return self._values.keys()
 
-    def get(self, name, default=None):
+    def get(self, name, default=None, variable_reference=None):
+        """
+        :param name: The name of the environment variable
+        :param default: The returned value if the variable doesn't exist, by default None
+        :param variable_reference: if specified, use a variable reference instead of the
+        pre-existing value of environment variable, where {name} can be used to refer to the
+        name of the variable.
+        """
         v = self._values.get(name)
         if v is None:
             return default
-        return v.get_value(self._subsystem, self._pathsep)
+        if variable_reference:
+            return v.get_str(variable_reference, self._subsystem, self._pathsep)
+        else:
+            return v.get_value(self._subsystem, self._pathsep)
 
-    def items(self):
-        """returns {str: str} (varname: value)"""
-        return {k: v.get_value(self._subsystem, self._pathsep)
-                for k, v in self._values.items()}.items()
+    def items(self, variable_reference=None):
+        """returns {str: str} (varname: value)
+         :param variable_reference: if specified, use a variable reference instead of the
+        pre-existing value of environment variable, where {name} can be used to refer to the
+        name of the variable.
+        """
+        if variable_reference:
+            return {k: v.get_str(variable_reference, self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
+        else:
+            return {k: v.get_value(self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
 
     @contextmanager
     def apply(self):
@@ -350,7 +378,7 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo "echo Restoring environment" >> "{deactivate_file}"
+           echo "echo Restoring environment" > "{deactivate_file}"
            for v in {vars}
            do
                is_defined="true"

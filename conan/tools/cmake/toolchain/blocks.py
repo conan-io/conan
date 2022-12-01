@@ -11,7 +11,8 @@ from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
-from conan.tools.microsoft.visual import is_msvc, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
 
@@ -102,8 +103,15 @@ class VSRuntimeBlock(Block):
     def context(self):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
+        if settings.get_safe("os") != "Windows":
+            return
+
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
+        if compiler not in ("Visual Studio", "msvc", "clang", "intel-cc"):
+            return
+
+        runtime = settings.get_safe("compiler.runtime")
+        if runtime is None:
             return
 
         config_dict = {}
@@ -119,18 +127,26 @@ class VSRuntimeBlock(Block):
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
         if build_type is None:
             return None
-        runtime = settings.get_safe("compiler.runtime")
+
         if compiler == "Visual Studio":
             config_dict[build_type] = {"MT": "MultiThreaded",
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc" or compiler == "intel-cc":
+        elif compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
                 rt += "DLL"
             config_dict[build_type] = rt
+
+            # If clang is being used the CMake check of compiler will try to create a simple
+            # test application, and will fail because the Debug runtime is not there
+            if compiler == "clang":
+                if config_dict.get("Debug") is None:
+                    clang_rt = "MultiThreadedDebug" + ("DLL" if runtime != "static" else "")
+                    config_dict["Debug"] = clang_rt
+
         return {"vs_runtimes": config_dict}
 
 
@@ -138,7 +154,7 @@ class FPicBlock(Block):
     template = textwrap.dedent("""
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }} CACHE BOOL "Position independent code")
         {% endif %}
         """)
 
@@ -224,7 +240,7 @@ class CppStdBlock(Block):
 class SharedLibBock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS = {{ shared_libs }}")
-        set(BUILD_SHARED_LIBS {{ shared_libs }})
+        set(BUILD_SHARED_LIBS {{ shared_libs }} CACHE BOOL "Build shared libraries")
         """)
 
     def context(self):
@@ -544,6 +560,34 @@ class FindFiles(Block):
         }
 
 
+class PkgConfigBlock(Block):
+    template = textwrap.dedent("""
+        {% if pkg_config %}
+        set(PKG_CONFIG_EXECUTABLE {{ pkg_config }} CACHE FILEPATH "pkg-config executable")
+        {% endif %}
+        {% if pkg_config_path %}
+        if (DEFINED ENV{PKG_CONFIG_PATH})
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}$ENV{PKG_CONFIG_PATH}")
+        else()
+        set(ENV{PKG_CONFIG_PATH} "{{ pkg_config_path }}")
+        endif()
+        {% endif %}
+        """)
+
+    def context(self):
+        pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str)
+        if pkg_config:
+            pkg_config = pkg_config.replace("\\", "/")
+        pkg_config_path = self._conanfile.generators_folder
+        if pkg_config_path:
+            # hardcoding scope as "build"
+            subsystem = deduce_subsystem(self._conanfile, "build")
+            pathsep = ":" if subsystem != WINDOWS else ";"
+            pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
+        return {"pkg_config": pkg_config,
+                "pkg_config_path": pkg_config_path}
+
+
 class UserToolchain(Block):
     template = textwrap.dedent("""
         {% for user_toolchain in paths %}
@@ -623,6 +667,30 @@ class TryCompileBlock(Block):
         """)
 
 
+class CompilersBlock(Block):
+    template = textwrap.dedent(r"""
+        {% for lang, compiler_path in compilers.items() %}
+        set(CMAKE_{{ lang }}_COMPILER "{{ compiler_path|replace('\\', '/') }}")
+        {% endfor %}
+    """)
+
+    def context(self):
+        # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        # Map the possible languages
+        compilers = {}
+        # Allowed <LANG> variables (and <LANG>_LAUNCHER)
+        compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
+                             "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
+                             "hip": "HIP", "ispc": "ISPC"}
+        for comp, lang in compilers_mapping.items():
+            # To set CMAKE_<LANG>_COMPILER
+            if comp in compilers_by_conf:
+                compilers[lang] = compilers_by_conf[comp]
+        return {"compilers": compilers}
+
+
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
         {% if cmake_sysroot %}
@@ -645,17 +713,6 @@ class GenericSystemBlock(Block):
         {% endif %}
         {% if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
-        {% endif %}
-        {% if compiler %}
-        set(CMAKE_C_COMPILER {{ compiler }})
-        {% endif %}
-        {% if compiler_cpp %}
-        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
-        {% endif %}
-        {% if compiler_rc %}
-        if(NOT DEFINED ENV{RC})
-        set(CMAKE_RC_COMPILER {{ compiler_rc }})
-        endif()
         {% endif %}
         """)
 
@@ -689,10 +746,11 @@ class GenericSystemBlock(Block):
                     toolset = msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator:
+                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
                     toolset = "ClangCL"
                 else:
-                    raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
+                    raise ConanException("CMakeToolchain with compiler=clang and a CMake "
+                                         "'Visual Studio' generator requires VS16 or VS17")
         toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
@@ -709,32 +767,13 @@ class GenericSystemBlock(Block):
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
+        if (compiler in ("Visual Studio", "msvc", "clang") or compiler_base == "Visual Studio") and \
                 generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
                     "armv8": "ARM64"}.get(arch)
         return None
-
-    def _get_compiler(self, generator):
-        compiler = self._conanfile.settings.get_safe("compiler")
-        os_ = self._conanfile.settings.get_safe("os")
-
-        compiler_c = compiler_cpp = compiler_rc = None
-
-        # TODO: Check if really necessary now that conanvcvars is used
-        if "Ninja" in str(generator) and is_msvc(self._conanfile):
-            compiler_c = compiler_cpp = "cl"
-        elif os_ == "Windows" and compiler == "clang" and "Visual" not in str(generator):
-            compiler_rc = "clang"
-            compiler_c = "clang"
-            compiler_cpp = "clang++"
-
-        compiler_c = self._conanfile.conf.get("tools.build:c_compiler", default=compiler_c)
-        compiler_cpp = self._conanfile.conf.get("tools.build:cxx_compiler", default=compiler_cpp)
-
-        return compiler_c, compiler_cpp, compiler_rc
 
     def _get_generic_system_name(self):
         os_host = self._conanfile.settings.get_safe("os")
@@ -796,19 +835,13 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-
-        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
-
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        return {"compiler": compiler,
-                "compiler_rc": compiler_rc,
-                "compiler_cpp": compiler_cpp,
-                "toolset": toolset,
+        return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,

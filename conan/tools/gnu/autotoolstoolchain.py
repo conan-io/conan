@@ -17,8 +17,7 @@ class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None, compile_wrapper=None, ar_wrapper=None):
         self._conanfile = conanfile
         self._namespace = namespace
-        self._compile_wrapper = compile_wrapper
-        self._ar_wrapper = ar_wrapper
+        self._prefix = prefix
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
         self.autoreconf_args = self._default_autoreconf_flags()
@@ -49,6 +48,8 @@ class AutotoolsToolchain:
         # standard build toolchains env vars
         self.cc = self._get_cc()
         self.cxx = self._get_cxx()
+        self.cuda = self._get_cuda()
+        self.fortran = self._get_fortran()
         self.ld = self._get_ld()
         self.ar = self._get_ar()
         self.nm = self._get_nm()
@@ -56,8 +57,8 @@ class AutotoolsToolchain:
         self.ranlib = self._get_ranlib()
         self.strip = self._get_strip()
 
-        # Cross build
-        self._host = None
+        # Cross build triplets
+        self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
         self._build = None
         self._target = None
 
@@ -69,7 +70,8 @@ class AutotoolsToolchain:
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             compiler = self._conanfile.settings.get_safe("compiler")
-            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            if not self._host:
+                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
@@ -133,8 +135,7 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
-    def _tools_build_exe_to_unix_path(self, conf, default=None, extra_options=None, wrapper=None):
-        exe = self._conanfile.conf.get(conf, default=default)
+    def _curated_path(self, exe, default=None):
         if exe:
             if os.path.exists(exe):
                 if " " in exe and os.name == "nt":
@@ -143,50 +144,32 @@ class AutotoolsToolchain:
                 exe = unix_path(self._conanfile, exe)
                 if " " in exe:
                     exe = default
-        if exe:
-            if extra_options:
-                for option in extra_options:
-                    if option not in exe:
-                        exe += f" {option}"
-            if wrapper:
-                if extra_options:
-                    exe = f"\"{exe}\""
-                exe = f"{unix_path(self._conanfile, wrapper)} {exe}"
         return exe
 
     def _get_cc(self):
-        return self._tools_build_exe_to_unix_path(
-            "tools.build:c_compiler",
-            "cl" if is_msvc(self._conanfile) else None,
-            ["-nologo"] if is_msvc(self._conanfile) else [],
-            self._compile_wrapper,
-        )
+        cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
+        return self._curated_path(cc, "cl" if is_msvc(self._conanfile) else None)
 
     def _get_cxx(self):
-        return self._tools_build_exe_to_unix_path(
-            "tools.build:cxx_compiler",
-            "cl" if is_msvc(self._conanfile) else None,
-            ["-nologo"] if is_msvc(self._conanfile) else [],
-            self._compile_wrapper,
-        )
+        cxx = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cpp")
+        return self._curated_path(cxx, "cl" if is_msvc(self._conanfile) else None)
+
+    def _get_cuda(self):
+        cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
+        return self._curated_path(cxx, None)
+
+    def _get_fortran(self):
+        fc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
+        return self._curated_path(fc, None)
 
     def _get_ld(self):
-        return self._tools_build_exe_to_unix_path(
-            "tools.build:linker",
-            "link" if is_msvc(self._conanfile) else None,
-            ["-nologo"] if is_msvc(self._conanfile) else [],
-        )
+        return "link" if is_msvc(self._conanfile) else None
 
     def _get_ar(self):
-        return self._tools_build_exe_to_unix_path(
-            "tools.build:archiver",
-            "lib" if is_msvc(self._conanfile) else None,
-            ["-nologo"] if is_msvc(self._conanfile) else [],
-            self._ar_wrapper,
-        )
+        return "lib" if is_msvc(self._conanfile) else None
 
     def _get_nm(self):
-        return "dumpbin -nologo -symbols" if is_msvc(self._conanfile) else None
+        return "dumpbin -symbols" if is_msvc(self._conanfile) else None
 
     def _get_objdump(self):
         return ":" if is_msvc(self._conanfile) else None
@@ -202,6 +185,8 @@ class AutotoolsToolchain:
         for env_var, env_var_value in [
             ("CC", self.cc),
             ("CXX", self.cxx),
+            ("FC", self.fortran),
+            ("NVCC", self.cuda),
             ("LD", self.ld),
             ("AR", self.ar),
             ("NM", self.nm),
@@ -250,7 +235,7 @@ class AutotoolsToolchain:
             return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
 
         # If someone want arguments but not the defaults can pass them in args manually
-        configure_install_flags.extend(["--prefix=/",
+        configure_install_flags.extend([f"--prefix={self._prefix}",
                                        _get_argument("bindir", "bindirs"),
                                        _get_argument("sbindir", "bindirs"),
                                        _get_argument("libdir", "libdirs"),

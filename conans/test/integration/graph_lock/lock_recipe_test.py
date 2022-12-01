@@ -20,6 +20,17 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("Lockfiles with --base do not contain profile information, "
                       "cannot be used. Create a full lockfile", client.out)
 
+    def test_error_pass_base_update(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
+        client.run("lock create conanfile.py --base --lockfile-out=conan2.lock")
+        client.run("lock update conan.lock conan2.lock", assert_error=True)
+        self.assertIn("Lockfiles with --base do not contain profile information, "
+                      "cannot be used. Create a full lockfile", client.out)
+
     def test_lock_recipe(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_setting("os")})

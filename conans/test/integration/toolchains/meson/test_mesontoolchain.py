@@ -1,13 +1,9 @@
-import sys
 import textwrap
-
-import pytest
 
 from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_apple_meson_keep_user_custom_flags():
     default = textwrap.dedent("""
     [settings]
@@ -58,11 +54,10 @@ def test_apple_meson_keep_user_custom_flags():
     content = t.load(MesonToolchain.cross_filename)
     assert "c_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
     assert "c_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
-    assert "cpp_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
-    assert "cpp_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7']" in content
+    assert "cpp_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7', '-stdlib=libc++']" in content
+    assert "cpp_link_args = ['-isysroot', '/other/sdk/path', '-arch', 'myarch', '-otherminversion=10.7', '-stdlib=libc++']" in content
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_extra_flags_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -71,7 +66,7 @@ def test_extra_flags_via_conf():
         compiler=gcc
         compiler.version=9
         compiler.cppstd=17
-        compiler.libcxx=libstdc++11
+        compiler.libcxx=libstdc++
         build_type=Release
 
         [buildenv]
@@ -91,13 +86,12 @@ def test_extra_flags_via_conf():
 
     t.run("install . -pr=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2']" in content
+    assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
     assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
     assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6']" in content
 
 
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_correct_quotes():
     profile = textwrap.dedent("""
        [settings]

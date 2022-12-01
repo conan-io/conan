@@ -17,17 +17,23 @@ class Meson(object):
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
         deps_flags = os.path.join(generators_folder, MesonDeps.filename)  # extra machine files layer
-        has_deps_flags = os.path.exists(deps_flags)
-
+        meson_filenames = []
         if os.path.exists(cross):
-            cmd += ' --cross-file "{}"'.format(cross)
-            if has_deps_flags:
-                cmd += ' --cross-file "{}"'.format(deps_flags)
+            cmd_param = " --cross-file"
+            meson_filenames.append(cross)
         else:
-            cmd += ' --native-file "{}"'.format(native)
-            if has_deps_flags:
-                cmd += ' --native-file "{}"'.format(deps_flags)
+            cmd_param = " --native-file"
+            meson_filenames.append(native)
 
+        if os.path.exists(deps_flags):
+            meson_filenames.append(deps_flags)
+
+        machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
+                                                 default=[], check_type=list)
+        if machine_files:
+            meson_filenames.extend(machine_files)
+
+        cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)

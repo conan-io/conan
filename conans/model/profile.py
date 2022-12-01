@@ -24,6 +24,7 @@ class Profile(object):
         self.build_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
+        self.runenv = ProfileEnvironment()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -94,6 +95,10 @@ class Profile(object):
             result.append("[buildenv]")
             result.append(self.buildenv.dumps())
 
+        if self.runenv:
+            result.append("[runenv]")
+            result.append(self.runenv.dumps())
+
         return "\n".join(result).replace("\n\n", "\n")
 
     def compose_profile(self, other):
@@ -121,6 +126,7 @@ class Profile(object):
 
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
+        self.runenv.update_profile_env(other.runenv)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

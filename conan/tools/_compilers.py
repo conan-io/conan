@@ -18,7 +18,15 @@ def architecture_flag(settings):
     if the_os == "Android":
         return ""
 
-    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+    if compiler == "clang" and the_os == "Windows":
+        # LLVM/Clang and VS/Clang must define runtime. msys2 clang won't
+        runtime = settings.get_safe("compiler.runtime")  # runtime is Windows only
+        if runtime is not None:
+            return ""
+        # TODO: Maybe Clang-Mingw runtime does, but with C++ is impossible to test
+        return {"x86_64": "-m64",
+                "x86": "-m32"}.get(arch, "")
+    elif str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
@@ -142,11 +150,8 @@ def build_type_flags(settings):
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
         if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
-            # FIXME: It is not clear that the "-s" is something related with the build type
-            # cmake is not adjusting it
-            # -s: Remove all symbol table and relocation information from the executable.
             flags = {"Debug": ["-g"],
-                     "Release": ["-O3", "-s"] if str(compiler) == "gcc" else ["-O3"],
+                     "Release": ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": ["-Os"],
                      }.get(build_type, [])

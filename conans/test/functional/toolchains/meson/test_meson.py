@@ -1,10 +1,14 @@
 import os
 import platform
+import sys
 import textwrap
+
+import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
+from conans.test.utils.tools import TestClient
 
 
 class MesonToolchainTest(TestMesonBase):
@@ -167,3 +171,57 @@ class MesonToolchainTest(TestMesonBase):
         # res/tutorial -> tutorial is being added automatically by Meson
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file1.txt"))
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file2.txt"))
+
+
+@pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
+def test_meson_and_additional_machine_files_composition():
+    """
+    Testing when users wants to append their own meson machine files and override/complement some
+    sections from Conan file ones.
+
+    See more information in Meson web page: https://mesonbuild.com/Machine-files.html
+
+    In this test, we're overriding only the Meson section ``[binaries]`` for instance.
+    """
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.meson.mesontoolchain:extra_machine_files=["myfilename.ini"]
+   """)
+    myfilename = textwrap.dedent("""
+    [project options]
+    my_option = 'fake-option'
+    """)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import Meson
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+        def build(self):
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "build/myfilename.ini": myfilename,
+                 "meson.build": "project('tutorial', 'cpp')",  # dummy one
+                 "profile": profile})
+
+    client.run("install . -pr=profile -if build")
+    client.run("build . -bf build", assert_error=True)
+    # Checking the order of the appended user file (the order matters)
+    conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
+    assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
+    # Meson fails because of an unknown option
+    assert 'ERROR: Unknown options: "my_option"' in client.out

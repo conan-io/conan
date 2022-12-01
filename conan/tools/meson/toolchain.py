@@ -111,6 +111,8 @@ class MesonToolchain(object):
         self._default_library = ("shared" if shared else "static") if shared is not None else None
 
         compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler is None:
+            raise ConanException("MesonToolchain needs 'settings.compiler', but it is not defined")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
@@ -163,13 +165,17 @@ class MesonToolchain(object):
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
 
-        # Read the VirtualBuildEnv to update the variables. Values from conf have precedence.
+        # Read configuration for compilers
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
-        self.c = self._conanfile.conf.get("tools.build:c_compiler", default=build_env.get("CC") or default_comp)
-        self.cpp = self._conanfile.conf.get("tools.build:cxx_compiler", default=build_env.get("CXX") or default_comp_cpp)
-        self.c_ld = self._conanfile.conf.get("tools.build:linker", default=build_env.get("CC_LD") or build_env.get("LD"))
-        self.cpp_ld = self._conanfile.conf.get("tools.build:linker", default=build_env.get("CXX_LD") or build_env.get("LD"))
-        self.ar = self._conanfile.conf.get("tools.build:archiver", default=build_env.get("AR"))
+        self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
+        self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
+        self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
+        self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
+        self.ar = build_env.get("AR")
         self.strip = build_env.get("STRIP")
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
@@ -190,7 +196,7 @@ class MesonToolchain(object):
         self.objcpp_args = []
         self.objcpp_link_args = []
 
-        self._resolve_apple_flags_and_variables(build_env)
+        self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
         self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
@@ -232,7 +238,7 @@ class MesonToolchain(object):
             ret["libdir"] = libdir
         return ret
 
-    def _resolve_apple_flags_and_variables(self, build_env):
+    def _resolve_apple_flags_and_variables(self, build_env, compilers_by_conf):
         if not self._is_apple_system:
             return
         # SDK path is mandatory for cross-building
@@ -251,8 +257,8 @@ class MesonToolchain(object):
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
-        self.objc = "clang"
-        self.objcpp = "clang++"
+        self.objc = compilers_by_conf.get("objc", "clang")
+        self.objcpp = compilers_by_conf.get("objcpp", "clang++")
         self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
         self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
         self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
@@ -317,6 +323,7 @@ class MesonToolchain(object):
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
+            self.cpp_link_args.append(self.libcxx)
         if self.gcc_cxx11_abi:
             self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
