@@ -18,10 +18,6 @@ class AutotoolsToolchain:
         self._namespace = namespace
         self._prefix = prefix
 
-        self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
-        self.autoreconf_args = self._default_autoreconf_flags()
-        self.make_args = []
-
         # Flags
         self.extra_cxxflags = []
         self.extra_cflags = []
@@ -81,11 +77,11 @@ class AutotoolsToolchain:
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
-        # Initializing the triplets values
-        for flag, value in (("--host=", self._host), ("--build=", self._build),
-                            ("--target=", self._target)):
-            if value:
-                self.configure_args.append(f"{flag}{value}")
+        self.configure_args = self._default_configure_shared_flags() + \
+                              self._default_configure_install_flags() + \
+                              self._get_triplets()
+        self.autoreconf_args = self._default_autoreconf_flags()
+        self.make_args = []
 
         check_using_build_profile(self._conanfile)
 
@@ -195,6 +191,14 @@ class AutotoolsToolchain:
 
     def _default_autoreconf_flags(self):
         return ["--force", "--install"]
+
+    def _get_triplets(self):
+        triplets = []
+        for flag, value in (("--host=", self._host), ("--build=", self._build),
+                            ("--target=", self._target)):
+            if value:
+                triplets.append(f'{flag}{value}')
+        return triplets
 
     def generate_args(self):
         args = {"configure_args": args_to_string(self.configure_args),
