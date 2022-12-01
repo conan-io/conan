@@ -156,13 +156,13 @@ class AutotoolsToolchain:
         default_cxx = "cl" if is_msvc(self._conanfile) else None
         return self._curated_path(cxx or default_cxx, default_cxx)
 
-    def _get_cuda(self):
-        cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
-        return self._curated_path(cuda, None)
-
     def _get_fortran(self):
         fc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
         return self._curated_path(fc, None)
+
+    def _get_cuda(self):
+        cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
+        return self._curated_path(cuda, None)
 
     def _get_ld(self):
         return "link" if is_msvc(self._conanfile) else None
