@@ -135,34 +135,32 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
-    def _curated_path(self, exe, default=None):
+    def _curated_path(self, exe):
         if exe:
             if os.path.exists(exe):
                 if " " in exe and os.name == "nt":
                     from conan.tools.microsoft.win32api import win32api
                     exe = win32api.get_short_path_name(exe)
                 exe = unix_path(self._conanfile, exe)
-                if " " in exe:
-                    exe = default
         return exe
 
     def _get_cc(self):
         cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
         default_cc = "cl" if is_msvc(self._conanfile) else None
-        return self._curated_path(cc or default_cc, default_cc)
+        return self._curated_path(cc or default_cc)
 
     def _get_cxx(self):
         cxx = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cpp")
         default_cxx = "cl" if is_msvc(self._conanfile) else None
-        return self._curated_path(cxx or default_cxx, default_cxx)
+        return self._curated_path(cxx or default_cxx)
 
     def _get_fortran(self):
         fc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
-        return self._curated_path(fc, None)
+        return self._curated_path(fc)
 
     def _get_cuda(self):
         cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
-        return self._curated_path(cuda, None)
+        return self._curated_path(cuda)
 
     def _get_ld(self):
         return "link" if is_msvc(self._conanfile) else None
