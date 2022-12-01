@@ -115,6 +115,19 @@ class CMakeDeps(object):
             ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
+        """
+        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
+        the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
+        `cmake_find_mode`, `cmake_module_file_name` and `cmake_module_target_name` properties.
+
+        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
+         components use the syntax: ``dep_name::component_name``.
+        :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
+        :param value: Value of the property. Use ``None`` to invalidate any value set by the
+         upstream recipe.
+        :param build_context: Set to ``True`` if you want to set the property for a dependency that
+         belongs to the build context (``False`` by default).
+        """
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 

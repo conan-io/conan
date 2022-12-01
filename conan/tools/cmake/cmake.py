@@ -71,6 +71,7 @@ class CMake(object):
                           work in the toolchain approach.
         :param build_script_folder: Path to the CMakeLists.txt in case it is not in the declared
                                     ``self.folders.source`` at the ``layout()`` method.
+        :param cli_args: List of extra arguments provided when calling to CMake.
         """
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
