@@ -135,14 +135,13 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
         return self._filter_list_empty_fields(ret)
 
-    def _curated_path(self, exe):
-        if exe:
-            if os.path.exists(exe):
-                if " " in exe and os.name == "nt":
-                    from conan.tools.microsoft.win32api import win32api
-                    exe = win32api.get_short_path_name(exe)
-                exe = unix_path(self._conanfile, exe)
-        return exe
+    def _curated_path(self, path):
+        if path and os.path.exists(path):
+            if " " in path and os.name == "nt":
+                from conan.tools.microsoft.win32api import win32api
+                path = win32api.get_short_path_name(path)
+            path = unix_path(self._conanfile, path)
+        return path
 
     def _get_cc(self):
         cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
