@@ -14,7 +14,7 @@ import os
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None, compile_wrapper=None, ar_wrapper=None):
+    def __init__(self, conanfile, namespace=None, prefix="/"):
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
