@@ -168,7 +168,7 @@ class AutotoolsToolchain:
     def environment(self):
         env = Environment()
         for env_var, env_var_value in [
-            ("CCAS", self._ccas)
+            ("CCAS", self._ccas),
             ("CC", self._cc),
             ("CXX", self._cxx),
             ("NVCC", self._cuda),
