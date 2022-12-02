@@ -45,15 +45,6 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
-        self._toolchain_env_vars = {
-            "ccas": self._get_ccas(),
-            "cc": self._get_cc(),
-            "cxx": self._get_cxx(),
-            "cuda": self._get_cuda(),
-            "fortran": self._get_fortran(),
-            "rc": self._get_rc(),
-        }
-
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
         self._build = None
@@ -140,43 +131,49 @@ class AutotoolsToolchain:
             path = unix_path(self._conanfile, path)
         return path
 
-    def _get_ccas(self):
+    @property
+    def _ccas(self):
         ccas = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("asm")
         return self._curated_path(ccas)
 
-    def _get_cc(self):
+    @property
+    def _cc(self):
         cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
         if not cc and is_msvc(self._conanfile):
             cc = "cl"
         return self._curated_path(cc)
 
-    def _get_cxx(self):
+    @property
+    def _cxx(self):
         cxx = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cpp")
         if not cxx and is_msvc(self._conanfile):
             cxx = "cl"
         return self._curated_path(cxx)
 
-    def _get_cuda(self):
+    @property
+    def _cuda(self):
         cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
         return self._curated_path(cuda)
 
-    def _get_fortran(self):
+    @property
+    def _fortran(self):
         fortran = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
         return self._curated_path(fortran)
 
-    def _get_rc(self):
+    @property
+    def _rc(self):
         rc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("rc")
         return self._curated_path(rc)
 
     def environment(self):
         env = Environment()
         for env_var, env_var_value in [
-            ("CCAS", self._toolchain_env_vars.get("ccas"))
-            ("CC", self._toolchain_env_vars.get("cc")),
-            ("CXX", self._toolchain_env_vars.get("cxx")),
-            ("NVCC", self._toolchain_env_vars.get("cuda")),
-            ("FC", self._toolchain_env_vars.get("fortran")),
-            ("RC", self._toolchain_env_vars.get("rc")),
+            ("CCAS", self._ccas)
+            ("CC", self._cc),
+            ("CXX", self._cxx),
+            ("NVCC", self._cuda),
+            ("FC", self._fortran),
+            ("RC", self._rc),
         ]:
             if env_var_value:
                 env.define(env_var, env_var_value)
