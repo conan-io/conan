@@ -17,7 +17,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Folders, Infos
+from conans.model.layout import Folders, Infos, Layouts
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
@@ -175,6 +175,7 @@ class ConanFile(object):
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
+        self.layouts = Layouts()
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
