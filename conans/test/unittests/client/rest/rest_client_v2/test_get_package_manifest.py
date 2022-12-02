@@ -33,12 +33,12 @@ class GetPackageManifestTestCase(unittest.TestCase):
 
     def test_unexpected_results_from_search(self):
         remote_url = "http://some.url"
-        with patch.object(RestV1Methods, "get_json", return_value={"results": None}):
+        with patch.object(RestV2Methods, "get_json", return_value={"results": None}):
             v2 = RestV2Methods(remote_url, token=None, custom_headers=None, output=None,
                                requester=None, config=None, verify_ssl=None)
             with self.assertRaises(ConanException) as exc:
                 v2.search()
             
             self.assertIn("Unexpected response from server.\n"
-                        "URL: `{}`\n"
-                        "Expected an iterable, but got {}.".format(remote_url, None), str(exc.exception))
+                          "URL: `http://some.url/v2/conans/search`\n"
+                          "Expected an iterable, but got <class 'NoneType'>.", str(exc.exception))

@@ -43,5 +43,5 @@ class GetPackageManifestTestCase(unittest.TestCase):
                 v1.search()
             
             self.assertIn("Unexpected response from server.\n"
-                        "URL: `{}`\n"
-                        "Expected an iterable, but got {}.".format(remote_url, None), str(exc.exception))
+                          "URL: `http://some.url/v1/conans/search`\n"
+                          "Expected an iterable, but got <class 'NoneType'>.", str(exc.exception))
