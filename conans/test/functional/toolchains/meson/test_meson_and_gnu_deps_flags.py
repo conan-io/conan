@@ -144,12 +144,6 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                     clean_first=True)
 
         client.run("build . -c 'tools.build:cxxflags=[%s]'" % flags)
-        meson_log_path = os.path.join(client.current_folder, "build", "meson-logs", "meson-log.txt")
-        meson_log = load(None, meson_log_path)
-        meson_log = meson_log.replace("\\", "/")
-        assert "'--native-file {folder}/conan_meson_native.ini' " \
-               "'--native-file {folder}/conan_meson_deps_flags.ini'" \
-               "".format(folder=client.current_folder.replace("\\", "/")) in meson_log
 
         app_name = "demo.exe" if platform.system() == "Windows" else "demo"
         client.run_command(os.path.join("build", app_name))
