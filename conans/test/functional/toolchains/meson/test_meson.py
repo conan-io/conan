@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import sys
 import textwrap
 
@@ -220,10 +221,8 @@ def test_meson_and_additional_machine_files_composition():
                  "meson.build": "project('tutorial', 'cpp')",  # dummy one
                  "profile": profile})
 
-    client.run("install . -pr=profile -if build")
-    client.run("build . -bf build", assert_error=True)
+    client.run("install . -pr:h=profile -pr:b=profile")
+    client.run("build . -pr:h=profile -pr:b=profile", assert_error=True)
     # Checking the order of the appended user file (the order matters)
-    conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
-    assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
-    # Meson fails because of an unknown option
-    assert 'ERROR: Unknown options: "my_option"' in client.out
+    match = re.search(r"meson setup --native-file .* --native-file \"myfilename\.ini\"", client.out)
+    assert match
