@@ -131,52 +131,14 @@ class AutotoolsToolchain:
             path = unix_path(self._conanfile, path)
         return path
 
-    @property
-    def _ccas(self):
-        ccas = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("asm")
-        return self._curated_path(ccas)
-
-    @property
-    def _cc(self):
-        cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
-        if not cc and is_msvc(self._conanfile):
-            cc = "cl"
-        return self._curated_path(cc)
-
-    @property
-    def _cxx(self):
-        cxx = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cpp")
-        if not cxx and is_msvc(self._conanfile):
-            cxx = "cl"
-        return self._curated_path(cxx)
-
-    @property
-    def _cuda(self):
-        cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
-        return self._curated_path(cuda)
-
-    @property
-    def _fortran(self):
-        fortran = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
-        return self._curated_path(fortran)
-
-    @property
-    def _rc(self):
-        rc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("rc")
-        return self._curated_path(rc)
-
     def environment(self):
         env = Environment()
-        for env_var, env_var_value in [
-            ("CCAS", self._ccas),
-            ("CC", self._cc),
-            ("CXX", self._cxx),
-            ("NVCC", self._cuda),
-            ("FC", self._fortran),
-            ("RC", self._rc),
-        ]:
-            if env_var_value:
-                env.define(env_var, env_var_value)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        if compilers_by_conf:
+            compilers_mapping = {"asm": "CCAS", "c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_by_conf:
+                    env.define(env_var, self._curated_path(compilers_by_conf[comp]))
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
