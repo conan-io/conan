@@ -245,7 +245,9 @@ class RestCommonMethods(object):
         try:
             return [ConanFileReference.loads(reference) for reference in response]
         except TypeError as te:
-            raise Exception("Unexpected response from server url: `%s`." % url)
+            raise ConanException("Unexpected response from server.\n"
+                                 "URL: `{}`\n"
+                                 "Expected an iterable, but got {}.".format(url, type(response)))
 
     def search_packages(self, ref):
         """Client is filtering by the query"""
