@@ -1,45 +1,35 @@
-import copy
 import os
 
-from conans.model.build_info import CppInfo, _Component, DefaultOrderedDict
+from conans.model.build_info import CppInfo
 from conans.model.conf import Conf
 
 
-class _SubInfo(CppInfo):
-    # TODO: This can probably be unified with the ``CppInfo`` class
-    def __init__(self, set_defaults=False):
-        super().__init__(set_defaults)
+class Infos(object):
+
+    def __init__(self):
+        self.source = CppInfo()
+        self.build = CppInfo()
+        self.package = CppInfo(set_defaults=True)
+
+
+class PartialLayout(object):
+    def __init__(self):
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         self.conf_info = Conf()
 
     def set_relative_base_folder(self, folder):
-        super().set_relative_base_folder(folder)
         self.buildenv_info.set_relative_base_folder(folder)
         self.runenv_info.set_relative_base_folder(folder)
         self.conf_info.set_relative_base_folder(folder)
 
-    def copy(self):
-        # Only used at the moment by layout() editable merging build+source .cpp data
-        ret = _SubInfo()
-        ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _Component())
-        for comp_name in self.components:
-            ret.components[comp_name] = copy.copy(self.components[comp_name])
 
-        ret.buildenv_info = self.buildenv_info.copy()
-        ret.runenv_info = self.runenv_info.copy()
-        ret.conf_info = self.conf_info.copy()
-        return ret
-
-
-class Infos(object):
-
+class Layouts(object):
     def __init__(self):
-        self.source = _SubInfo()
-        self.build = _SubInfo()
-        self.package = _SubInfo(set_defaults=True)
+        self.source = PartialLayout()
+        self.build = PartialLayout()
+        self.package = PartialLayout()
 
 
 class Folders(object):

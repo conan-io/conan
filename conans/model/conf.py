@@ -1,5 +1,4 @@
 import re
-import fnmatch
 import os
 
 from collections import OrderedDict
@@ -99,9 +98,9 @@ BUILT_IN_CONFS = {
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
 
-CORE_CONF_PATTERN = re.compile(r"^core[\.:]")
-TOOLS_CONF_PATTERN = re.compile(r"^tools[\.:]")
-USER_CONF_PATTERN = re.compile(r"^user[\.:]")
+CORE_CONF_PATTERN = re.compile(r"^core[.:]")
+TOOLS_CONF_PATTERN = re.compile(r"^tools[.:]")
+USER_CONF_PATTERN = re.compile(r"^user[.:]")
 
 
 def _is_profile_module(module_name):

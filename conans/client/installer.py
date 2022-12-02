@@ -365,10 +365,12 @@ class BinaryInstaller:
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build.copy()
                     build_cppinfo.set_relative_base_folder(conanfile.build_folder)
+                    conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.source_folder)
+                    conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)
@@ -379,12 +381,17 @@ class BinaryInstaller:
 
                     # Paste the editable cpp_info but prioritizing it, only if a
                     # variable is not declared at build/source, the package will keep the value
-                    conanfile.buildenv_info.compose_env(conanfile.cpp.source.buildenv_info)
-                    conanfile.buildenv_info.compose_env(conanfile.cpp.build.buildenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.cpp.source.runenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.cpp.build.runenv_info)
-                    conanfile.conf_info.compose_conf(conanfile.cpp.source.conf_info)
-                    conanfile.conf_info.compose_conf(conanfile.cpp.build.conf_info)
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                else:
+                    conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.package.runenv_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.package.conf_info)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 

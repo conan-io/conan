@@ -605,7 +605,7 @@ class CompilersBlock(Block):
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
         compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
-                             "objcxx": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
+                             "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
                              "hip": "HIP", "ispc": "ISPC"}
         for comp, lang in compilers_mapping.items():
             # To set CMAKE_<LANG>_COMPILER

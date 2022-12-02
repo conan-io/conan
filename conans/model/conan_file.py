@@ -7,8 +7,9 @@ from conans.errors import ConanException
 from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Infos
+from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
+
 from conans.model.requires import Requirements
 
 
@@ -260,6 +261,7 @@ class ConanFile:
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
+        self.layouts = Layouts()
 
     def serialize(self):
         result = {}
@@ -428,7 +430,6 @@ class ConanFile:
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
             # they don't want any env-file applied
             env = "conanbuild" if scope == "build" else "conanrun"
-
 
         env = [env] if env and isinstance(env, str) else (env or [])
         assert isinstance(env, list), "env argument to ConanFile.run() should be a list"

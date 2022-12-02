@@ -297,7 +297,7 @@ class MesonToolchain(object):
         self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
         # Objective C/C++ ones
         self.objc = compilers_by_conf.get("objc", "clang")
-        self.objcpp = compilers_by_conf.get("objcxx", "clang++")
+        self.objcpp = compilers_by_conf.get("objcpp", "clang++")
         self.objc_args = self._get_env_list(build_env.get('OBJCFLAGS', []))
         self.objc_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
         self.objcpp_args = self._get_env_list(build_env.get('OBJCXXFLAGS', []))
