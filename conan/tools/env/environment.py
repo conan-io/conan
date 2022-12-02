@@ -164,6 +164,12 @@ class _EnvValue:
             rel_path = os.path.relpath(v, package_folder)
             self._values[i] = os.path.join(deploy_folder, rel_path)
 
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        self._values = [os.path.join(folder, v) if v != _EnvVarPlaceHolder else v
+                        for v in self._values]
+
 
 class Environment:
     """
@@ -179,6 +185,7 @@ class Environment:
 
     def copy(self):
         e = Environment()
+        # TODO: Check this, the internal list is not being copied
         e._values = self._values.copy()
         return e
 
@@ -301,6 +308,10 @@ class Environment:
         for varvalues in self._values.values():
             varvalues.deploy_base_folder(package_folder, deploy_folder)
 
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
+
 
 class EnvVars:
     """
@@ -323,20 +334,36 @@ class EnvVars:
     def keys(self):
         return self._values.keys()
 
-    def get(self, name, default=None):
+    def get(self, name, default=None, variable_reference=None):
+        """ get the value of a env-var
+
+        :param name: The name of the environment variable.
+        :param default: The returned value if the variable doesn't exist, by default None.
+        :param variable_reference: if specified, use a variable reference instead of the
+                                   pre-existing value of environment variable, where {name}
+                                   can be used to refer to the name of the variable.
+        """
         v = self._values.get(name)
         if v is None:
             return default
-        return v.get_value(self._subsystem, self._pathsep)
+        if variable_reference:
+            return v.get_str(variable_reference, self._subsystem, self._pathsep)
+        else:
+            return v.get_value(self._subsystem, self._pathsep)
 
-    def items(self):
-        """
-        Returns a dict with variable name as keys and variable values as values
+    def items(self, variable_reference=None):
+        """returns {str: str} (varname: value)
 
-        :return: ``{str: str}`` (varname: value)
+        :param variable_reference: if specified, use a variable reference instead of the
+                                   pre-existing value of environment variable, where {name}
+                                   can be used to refer to the name of the variable.
         """
-        return {k: v.get_value(self._subsystem, self._pathsep)
-                for k, v in self._values.items()}.items()
+        if variable_reference:
+            return {k: v.get_str(variable_reference, self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
+        else:
+            return {k: v.get_value(self._subsystem, self._pathsep)
+                    for k, v in self._values.items()}.items()
 
     @contextmanager
     def apply(self):

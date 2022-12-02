@@ -8,15 +8,6 @@ from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, Gen
 
 class DownloadRevisionsTest(unittest.TestCase):
 
-    def test_download_revs_enabled_with_fake_rrev(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
-        client.run("upload * --confirm -r default")
-        client.run("remove * -f")
-        client.run("download pkg/1.0@user/channel#fakerevision -r default", assert_error=True)
-        self.assertIn("ERROR: There are no recipes matching 'pkg/1.0@user/channel#fakerevision'", client.out)
-
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev(self):
         ref = RecipeReference.loads("pkg/1.0@user/channel")
@@ -26,7 +17,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         # create new revision from recipe
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
         client.run("upload pkg/1.0@user/channel --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
         self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.package_id),
                       client.out)
@@ -44,7 +35,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         # create new revision from recipe
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
         client.run("upload pkg/1.0@ --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/1.0@#{}".format(pref.ref.revision))
         self.assertIn("pkg/1.0: Package installed {}".format(pref.package_id), client.out)
         search_result = client.search("pkg/1.0@ --revisions")[0]
@@ -59,7 +50,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("upload pkg/1.0@user/channel --confirm -r default")
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
         client.run("upload pkg/1.0@user/channel --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/1.0@user/channel#{}:{}#{}".format(pref.ref.revision,
                                                                    pref.package_id,
                                                                    pref.revision))

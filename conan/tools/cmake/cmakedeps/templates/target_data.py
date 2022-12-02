@@ -4,8 +4,8 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conan.tools.cmake.utils import get_cmake_package_name, get_find_mode
 from conans.model.dependencies import get_transitive_requires
+
 
 """
 
@@ -46,15 +46,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
-        # package_folder might not be defined if Editable and layout()
-        package_folder = self.conanfile.package_folder or ""
-        package_folder = package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        root_folder = self._root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
                 "pkg_name": self.pkg_name,
                 "file_name": self.file_name,
-                "package_folder": package_folder,
+                "package_folder": root_folder,
                 "config_suffix": self.config_suffix,
                 "components_names": components_names,
                 "components_cpp": components_cpp,
@@ -121,6 +119,15 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_NO_SONAME_MODE{{ config_suffix }} {{ global_cpp.no_soname }})
 
 
+              # COMPOUND VARIABLES
+              set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
+                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
+              set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>")
+
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
               {%- for comp_variable_name, comp_target_name, cpp in components_cpp %}
@@ -147,12 +154,15 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ cpp.exelinkflags_list }})
               set({{ pkg_name }}_{{ comp_variable_name }}_NO_SONAME_MODE{{ config_suffix }} {{ cpp.no_soname }})
 
+              # COMPOUND VARIABLES
               set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
-
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                  "$<$<COMPILE_LANGUAGE:CXX>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }}}>"
+                  "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
 
               {%- endfor %}
           """)
@@ -161,9 +171,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        # TODO: Read a property to discard this is shared
-        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self._root_folder,
                                   self.require, self.cmake_package_type, self.is_host_windows)
+
+    @property
+    def _root_folder(self):
+        return self.conanfile.recipe_folder if self.conanfile.package_folder is None \
+            else self.conanfile.package_folder
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -172,10 +186,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for comp_name, comp in sorted_comps.items():
-            # TODO: Read a property from the component to discard this is shared
-            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
-                                                self.conanfile.package_folder, self.require,
-                                                self.cmake_package_type, self.is_host_windows)
+            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
+                                                self.require, self.cmake_package_type,
+                                                self.is_host_windows)
+
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -193,11 +207,13 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_dependency_filenames(self):
         if self.conanfile.is_build_context:
             return []
+
         transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         # Previously it was filtering here components, but not clear why the file dependency
         # should be skipped if components are not being required, why would it declare a
         # dependency to it?
-        ret = [get_cmake_package_name(r, self.generating_module) for r in transitive_reqs.values()]
+        ret = [self.cmakedeps.get_cmake_package_name(r, self.generating_module)
+               for r in transitive_reqs.values()]
         return ret
 
     def _get_dependencies_find_modes(self):
@@ -206,8 +222,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             return ret
         deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for dep in deps.values():
-            dep_file_name = get_cmake_package_name(dep, self.generating_module)
-            find_mode = get_find_mode(dep)
+            dep_file_name = self.cmakedeps.get_cmake_package_name(dep, self.generating_module)
+            find_mode = self.cmakedeps.get_find_mode(dep)
             default_value = "NO_MODULE" if not self.generating_module else "MODULE"
             values = {
                 FIND_MODE_NONE: "",
@@ -236,9 +252,7 @@ class _TargetDataContext(object):
                 assert os.path.isabs(p), "{} is not absolute".format(p)
 
                 # Trying to use a ${mypkg_PACKAGE_FOLDER}/include path instead of full
-                # TODO: We could do something similar for some build_folder for editables
-                # package_folder can be None if editable and layout()
-                if package_folder is not None and p.startswith(package_folder):
+                if p.startswith(package_folder):
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
                     rel = p[len(package_folder):]
                     rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")

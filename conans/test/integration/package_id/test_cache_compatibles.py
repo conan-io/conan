@@ -121,13 +121,10 @@ def test_cppstd_validated():
 
     base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
     client.run(f"create dep {base_settings} -s compiler.cppstd=20")
-    package_id = client.created_package_id("dep/0.1")
 
-    client.run(f"install consumer {base_settings} -s compiler.cppstd=17")
-    # This message here proves it, only 1 configuraton passed the check
-    assert "dep/0.1: Checking 1 compatible configurations" in client.out
-    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing. "\
-           f"Using compatible package '{package_id}'" in client.out
+    client.run(f"install consumer {base_settings} -s compiler.cppstd=17", assert_error=True)
+    assert "dep/0.1: Invalid: Current cppstd (17) is lower than the required C++ standard (20)." \
+           in client.out
 
 
 class TestDefaultCompat:
@@ -253,9 +250,9 @@ class TestDefaultCompat:
         c.run(f"create .  {settings} -s compiler.cppstd=17")
         assert "pkg/0.1: valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out
-        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14")
-        assert "valid standard!!" in c.out
-        assert "pkg/0.1: CPPSTD: 17" in c.out
+        c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14", assert_error=True)
+        assert "pkg/0.1: Invalid: Current cppstd (14) is lower than the required C++ standard (17)."\
+               in c.out
         c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
         assert "valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out
@@ -263,11 +260,11 @@ class TestDefaultCompat:
     def test_check_min_cppstd_interface(self):
         """ test that says that compatible binaries are ok, as long as the user defined
         cppstd>=14. The syntax is a bit forced, maybe we want to improve ``check_min_cppstd``
-        capabilities to be able to raise ConanErrorConfiguration too
+        capabilities to be able to raise ConanInvalidConfiguration too
         """
         conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conan.errors import ConanErrorConfiguration
+            from conan.errors import ConanInvalidConfiguration
             from conan.tools.build import check_min_cppstd, valid_min_cppstd
             class Pkg(ConanFile):
                 name = "pkg"
@@ -275,7 +272,7 @@ class TestDefaultCompat:
                 settings = "os", "arch", "compiler", "build_type"
                 def validate(self):
                     if int(str(self.info.settings.compiler.cppstd).replace("gnu", "")) <= 14:
-                        raise ConanErrorConfiguration("incompatible cppstd!")
+                        raise ConanInvalidConfiguration("incompatible cppstd!")
                     check_min_cppstd(self, "17", False)  # based on self.info
                     self.output.info("valid standard!!")
                 def package_info(self):
@@ -290,7 +287,20 @@ class TestDefaultCompat:
         assert "pkg/0.1: CPPSTD: 17" in c.out
         c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=14", assert_error=True)
         assert "valid standard!!" not in c.out
-        assert "pkg/0.1: ConfigurationError: incompatible cppstd!" in c.out
+        assert "pkg/0.1: Invalid: incompatible cppstd!" in c.out
         c.run(f"install {settings} --requires=pkg/0.1 -s compiler.cppstd=20")
         assert "valid standard!!" in c.out
         assert "pkg/0.1: CPPSTD: 17" in c.out
+
+    def test_can_create_multiple(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch", "compiler",
+                                                                         "build_type")})
+        settings = "-s os=Linux -s arch=x86_64 -s compiler=gcc -s compiler.version=9 "\
+                   "-s compiler.libcxx=libstdc++11"
+        c.run(f"create . {settings} -s compiler.cppstd=11")
+        c.assert_listed_binary({"pkg/0.1": ("0d5f0b9d89187b4e62abb10ae409997e152db9de", "Build")})
+        c.run(f"create . {settings} -s compiler.cppstd=14")
+        c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
+        c.run(f"create . {settings} -s compiler.cppstd=17")
+        c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})

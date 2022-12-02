@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 
 from conan.api.output import Color, cli_out_write
-from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_json_formatter
 from conan.cli.formatters.list import list_packages_html
 from conans.errors import ConanException, InvalidNameException, NotFoundException
@@ -96,7 +96,7 @@ def print_list_package_ids(results):
 
 
 def _add_remotes_and_cache_options(subparser):
-    subparser.add_argument("-r", "--remote", default=None, action=Extender,
+    subparser.add_argument("-r", "--remote", default=None, action="append",
                            help="Remote names. Accepts wildcards")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
@@ -271,8 +271,8 @@ def list_packages(conan_api, parser, subparser, *args):
     return results
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def list(conan_api, parser, *args):
     """
-    Gets information about a recipe or package reference
+    List existing recipes, revisions or packages in the cache or in remotes
     """

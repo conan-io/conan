@@ -3,10 +3,9 @@ import os
 import shutil
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
-from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_profiles_from_args, scope_options
+from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
 from conan.api.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
@@ -21,7 +20,7 @@ def json_create(deps_graph):
     cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_create})
+@conan_command(group="Creator", formatters={"json": json_create})
 def create(conan_api, parser, *args):
     """
     Create a package
@@ -37,7 +36,7 @@ def create(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     # Now if parameter --test-folder=None (string None) we have to skip tests
     test_folder = False if args.test_folder == "None" else args.test_folder
     test_conanfile_path = _get_test_conanfile_path(test_folder, path)
@@ -47,7 +46,7 @@ def create(conan_api, parser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
     remotes = conan_api.remotes.list(args.remote)
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     out = ConanOutput()
     out.highlight("Exporting the recipe")

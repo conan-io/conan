@@ -20,7 +20,7 @@ class Pkg(ConanFile):
         client.run("upload pkg* -r=server2 --confirm")
 
         # It takes the default remote
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         # Exported recipe gets binary from default remote
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
@@ -31,7 +31,7 @@ class Pkg(ConanFile):
                       "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Explicit remote also defines the remote
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --requires=pkg/0.1@lasote/testing -r=server2")
         client.assert_listed_binary(
@@ -40,8 +40,8 @@ class Pkg(ConanFile):
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Ordered search of binary works
-        client.run("remove * -f")
-        client.run("remove * -f -r=server1")
+        client.run("remove * -c")
+        client.run("remove * -c -r=server1")
         client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
@@ -50,8 +50,8 @@ class Pkg(ConanFile):
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Download recipe and binary from the remote2 by iterating
-        client.run("remove * -f")
-        client.run("remove * -f -r=server1")
+        client.run("remove * -c")
+        client.run("remove * -c -r=server1")
         client.run("install --requires=pkg/0.1@lasote/testing")
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
@@ -70,11 +70,11 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=1")
         client.run("upload pkg* -r=server1 --confirm")
-        client.run("remove * -p -f")
+        client.run("remove *:* -c")
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=2")
         package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
         client.run("upload pkg* -r=server2 --confirm")
-        client.run("remove * -p -f")
+        client.run("remove *:* -c")
 
         # recipe is cached, takes binary from server2
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2")

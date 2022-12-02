@@ -38,7 +38,7 @@ class CollectLibsTest(unittest.TestCase):
         self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)
 
         # rebuilding the binary in cache
-        client.run('remove "*" -p -f')
+        client.run('remove "*" -p -c')
         client.run('install . --build -g cmake')
         conanbuildinfo = client.load("mylib-release-data.cmake")
         self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)

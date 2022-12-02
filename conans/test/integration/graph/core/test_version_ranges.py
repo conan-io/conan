@@ -358,7 +358,7 @@ def test_mixed_user_channel():
     t.run("create . --name=pkg --version=1.1 --user=user --channel=testing")
     t.run("create . --name=pkg --version=2.0 --user=user --channel=testing")
     t.run("upload * --confirm -r default")
-    t.run("remove * -f")
+    t.run("remove * -c")
 
     t.run('install --requires="pkg/[>0 <2]@"')
     t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
@@ -383,7 +383,7 @@ def test_remote_version_ranges():
                            ("~2", "2.2.1"),
                            ("~2.1", "2.1"),
                            ]:
-        t.run("remove * -f")
+        t.run("remove * -c")
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1

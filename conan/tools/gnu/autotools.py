@@ -1,4 +1,5 @@
 import os
+import re
 
 from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.tools.files.files import load_toolchain_args
@@ -74,7 +75,8 @@ class Autotools(object):
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
-        if "-j" not in str_args and "nmake" not in make_program.lower():
+        jobs_already_passed = re.search(r"(^-j\d+)|(\W-j\d+\s*)", join_arguments([str_args, str_extra_args]))
+        if not jobs_already_passed and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
             if njobs:
                 jobs = "-j{}".format(njobs)
@@ -91,7 +93,10 @@ class Autotools(object):
                      :ref:`tools.microsoft.unix_path() function<conan_tools_microsoft_unix_path>`
         :param target: (Optional, Defaulted to ``None``): Choose which target to install.
         """
-        args = args if args is not None else ["DESTDIR={}".format(self._conanfile.package_folder)]
+        args = args if args else []
+        str_args = " ".join(args)
+        if "DESTDIR=" not in str_args:
+            args.insert(0, "DESTDIR={}".format(unix_path(self._conanfile, self._conanfile.package_folder)))
         self.make(target=target, args=args)
 
     def autoreconf(self, args=None):

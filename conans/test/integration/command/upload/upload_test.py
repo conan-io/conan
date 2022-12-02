@@ -4,8 +4,7 @@ import platform
 import stat
 import textwrap
 import unittest
-from collections import OrderedDict, defaultdict
-from copy import copy
+from collections import OrderedDict
 
 import pytest
 import requests
@@ -18,7 +17,6 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
-from conans.util.env import environment_update
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conan import ConanFile
@@ -56,7 +54,7 @@ class UploadTest(unittest.TestCase):
                       % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # TODO: cache2.0 check if this makes sense for 2.0, xfail test for the moment
-        client.run("remove hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
+        client.run("remove hello/0.1@lasote/testing -p=%s -c" % NO_SETTINGS_PACKAGE_ID)
         client.run("upload * --confirm")
 
     @pytest.mark.artifactory_ready
@@ -73,7 +71,7 @@ class UploadTest(unittest.TestCase):
         package_file_path = os.path.join(package_folder, "myfile.sh")
 
         if platform.system() == "Linux":
-            client.run("remove '*' -f")
+            client.run("remove '*' -c")
             client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
             os.system('chmod +x "{}"'.format(package_file_path))
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
@@ -89,50 +87,10 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-> conan_package.tgz", client.out)
 
         if platform.system() == "Linux":
-            client.run("remove '*' -f")
+            client.run("remove '*' -c")
             client.run("install --requires={}".format(ref))
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
-
-    def test_upload_binary_not_existing(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . --name=hello --version=0.1 --user=lasote --channel=testing")
-        client.run("upload hello/0.1@lasote/testing#latest:123 -r default "
-                   "--only-recipe", assert_error=True)
-        self.assertIn("There are no packages matching hello/0.1@lasote/testing#latest:123",
-                      client.out)
-
-    def test_not_existing_error(self):
-        """ Trying to upload with pattern not matched must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload some_nonsense* -r default --only-recipe", assert_error=True)
-        self.assertIn("No recipes found matching pattern 'some_nonsense*'", client.out)
-
-    def test_non_existing_recipe_error(self):
-        """ Trying to upload a non-existing recipe must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload pkg/0.1@user/channel -r default --only-recipe", assert_error=True)
-        self.assertIn("No recipes found matching pattern 'pkg/0.1@user/channel'", client.out)
-
-    def test_non_existing_package_error(self):
-        """ Trying to upload a non-existing package must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload pkg/0.1@user/channel -r default --only-recipe", assert_error=True)
-        self.assertIn("No recipes found matching pattern 'pkg/0.1@user/channel'", client.out)
-
-    def test_upload_with_pref(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --user=user --channel=testing")
-        client.run("upload hello0/1.2.1@user/testing#*:{} -c "
-                   "-r default --only-recipe".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("Uploading package 'hello0/1.2.1@user/testing#e9865516f03b8acbe2bd918d26b1460f"
-                      ":da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e'",
-                      client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
@@ -503,7 +461,7 @@ class UploadTest(unittest.TestCase):
         client.run("remote login server1 lasote -p mypass")
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing -r server1")
-        client.run("remove * --force")
+        client.run("remove * --confirm")
         client.run("install --requires=hello0/1.2.1@user/testing -r server1")
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")
@@ -660,210 +618,6 @@ class UploadTest(unittest.TestCase):
                                                                         pref.package_id))[
             0]
         self.assertIn(pref.revision, search_result["revision"])
-
-
-@pytest.fixture(scope="module")
-def populate_client():
-    ret = defaultdict(list)
-    client = TurboTestClient(default_server_user=True)
-
-    package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), ' \
-                    'os.getenv("var_test", "Na"))'
-    conanfile = str(GenConanfile().with_settings("build_type").with_package(package_lines)\
-                              .with_import("from conan.tools.files import save")\
-                              .with_import("import os")\
-                              .with_import("import time"))
-    for ref in [RecipeReference.loads("foo/1.0"), RecipeReference.loads("bar/1.1")]:
-        for i in range(2):
-            conanfile += "\n"*i  # Create 2 rrev
-            for j in range(2):  # Create 2 prev
-                with environment_update({'var_test': str(j)}):
-                    pref = client.create(ref, args="-s build_type=Debug", conanfile=conanfile)
-                    ret[pref.ref].append(pref)
-                    pref = client.create(ref, args="-s build_type=Release", conanfile=conanfile)
-                    ret[pref.ref].append(pref)
-    return client, ret
-
-
-def test_upload_recipe_selection(populate_client):
-    client, refs = populate_client
-    foo_rrevs = [r for r in refs.keys() if r.name == "foo"]
-    bar_rrevs = [r for r in refs.keys() if r.name == "bar"]
-    # Foo all revision upload
-    for pattern in ("foo*", "foo/*", "f*"):
-        # Clean the server test executions (client module scope)
-        client.run("remove '*' -f -r default")
-        # Upload the pattern
-        client.run("upload {} -c -r default".format(pattern))
-        # List recipes in the server
-        client.run("list recipe-revisions foo/1.0 -r default")
-        for ref in foo_rrevs:
-            assert ref.repr_notime() in client.out
-        client.run("list recipe-revisions bar/1.0 -r default")
-        for ref in bar_rrevs:
-            assert ref.repr_notime() not in client.out
-
-    # All revisions upload
-    for pattern in ("*", "*/*", "*/*#*"):
-        # Clean the server test executions (client module scope)
-        client.run("remove '*' -f -r default")
-        # Upload the pattern
-        client.run("upload {} -c -r default".format(pattern))
-        # List recipes in the server
-        client.run("list recipe-revisions foo/1.0 -r default")
-        for ref in foo_rrevs:
-            assert ref.repr_notime() in client.out
-        client.run("list recipe-revisions bar/1.1 -r default")
-        for ref in bar_rrevs:
-            assert ref.repr_notime() in client.out
-
-    # A single bar revision upload (latest)
-    single_bar = bar_rrevs[1]
-    for pattern in ("bar/1.*#{}".format(single_bar.revision),
-                    "bar/1.*#{}*".format(single_bar.revision[0:6]),
-                    "bar/1.*#latest"):
-        # Clean the server test executions (client module scope)
-        client.run("remove '*' -f -r default")
-        # Upload the pattern
-        client.run("upload {} -c -r default".format(pattern))
-        # List recipes in the server
-        client.run("list recipe-revisions foo/1.0 -r default")
-        for ref in foo_rrevs:
-            assert ref.repr_notime() not in client.out
-        client.run("list recipe-revisions bar/1.1 -r default")
-        for ref in bar_rrevs:
-            if ref == single_bar:
-                assert ref.repr_notime() in client.out
-            else:
-                assert ref.repr_notime() not in client.out
-
-
-def test_upload_package_selection(populate_client):
-    client, refs = populate_client
-
-    def get_prev(ref, build_type, latest_prev):
-        prevs = refs[ref]
-        # [debug (#prev1), release (#prev1), debug (#prev2), release (#prev2)]
-        if build_type == "Debug":
-            return prevs[2] if latest_prev else prevs[0]
-        return prevs[3] if latest_prev else prevs[1]
-
-    foo_revs = [r for r in refs.keys() if r.name == "foo"]
-    foo_first, foo_latest = foo_revs
-    bar_revs = [r for r in refs.keys() if r.name == "bar"]
-    bar_first, bar_latest = bar_revs
-
-    # Uploading the recipe uploads all the package revisions
-    # Clean the server test executions (client module scope)
-    client.run("remove '*' -f -r default")
-    # Upload the pattern
-    client.run("upload foo/1.0 -c -r default")
-    for ref in foo_revs:
-        for pref in (get_prev(ref, "Release", True),
-                     get_prev(ref, "Release", False),
-                     get_prev(ref, "Debug", False),
-                     get_prev(ref, "Debug", True)):
-            tmp = PkgReference.loads(pref.repr_notime())
-            tmp.revision = None
-            client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-            assert pref.repr_notime() in client.out
-
-    # Foo all revision upload
-    for pattern in ("foo/*#latest:*#latest",
-                    "foo/*#{}:*#latest".format(foo_latest.revision)):
-        # Clean the server test executions (client module scope)
-        client.run("remove '*' -f -r default")
-        # Upload the pattern
-        client.run("upload {} -c -r default".format(pattern))
-        # List package revisions in the server
-        for pref in (get_prev(foo_latest, "Release", True), get_prev(foo_latest, "Debug", True)):
-            tmp = PkgReference.loads(pref.repr_notime())
-            tmp.revision = None
-            client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-            assert pref.repr_notime() in client.out
-
-        for pref in (get_prev(foo_latest, "Release", False), get_prev(foo_latest, "Debug", False)):
-            tmp = PkgReference.loads(pref.repr_notime())
-            tmp.revision = None
-            client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-            assert pref.repr_notime() not in client.out
-
-    # Only the release package from the latest revision and the latest package revision
-    for pattern in ("foo/*#latest:*#latest -p 'build_type=Release'",
-                    "foo/*#{}:*#latest -p 'build_type=Release'".format(foo_latest.revision)):
-        # Clean the server test executions (client module scope)
-        client.run("remove '*' -f -r default")
-        # Upload the pattern
-        client.run("upload {} -c -r default".format(pattern))
-        # List package revisions in the server
-        pref = get_prev(foo_latest, "Release", True)
-        tmp = PkgReference.loads(pref.repr_notime())
-        tmp.revision = None
-        client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-        assert pref.repr_notime() in client.out
-
-        # No Debug packages and not the release not latest prev
-        for pref in (get_prev(foo_latest, "Release", False),
-                     get_prev(foo_latest, "Debug", False),
-                     get_prev(foo_latest, "Debug", True)):
-            tmp = PkgReference.loads(pref.repr_notime())
-            tmp.revision = None
-            client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-            assert pref.repr_notime() not in client.out
-
-    # Upload a fixed prev
-    client.run("remove '*' -f -r default")
-    prev = get_prev(bar_first, "Release", True)
-    client.run("upload {} -c -r default".format(prev.repr_notime()))
-    tmp = PkgReference.loads(prev.repr_notime())
-    tmp.revision = None
-    client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-    assert prev.repr_notime() in client.out
-    for prev in (get_prev(bar_first, "Release", False),
-                 get_prev(bar_first, "Debug", True),
-                 get_prev(bar_first, "Debug", False),
-                 get_prev(bar_latest, "Release", True),
-                 get_prev(bar_latest, "Debug", False),
-                 get_prev(bar_latest, "Release", False),
-                 get_prev(bar_latest, "Debug", True)):
-        tmp = PkgReference.loads(prev.repr_notime())
-        tmp.revision = None
-        client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-        assert prev.repr_notime() not in client.out
-    # The recipe also uploaded
-    tmp = RecipeReference.loads(bar_first.repr_notime())
-    tmp.revision = None
-    client.run("list recipe-revisions {} -r default".format(tmp.repr_notime()))
-    assert bar_first.repr_notime() in client.out
-
-    # Debug both prevs
-    client.run("remove '*' -f -r default")
-    prev = get_prev(bar_first, "Debug", True)
-    tmp = PkgReference.loads(prev.repr_notime())
-    tmp.ref.revision = "*"
-    tmp.revision = "*"
-    client.run("upload {} -c -r default".format(tmp.repr_notime()))
-    tmp = PkgReference.loads(prev.repr_notime())
-    tmp.revision = None
-    client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-    assert prev.repr_notime() in client.out
-    for prev in (get_prev(bar_first, "Debug", True),
-                 get_prev(bar_first, "Debug", False),
-                 get_prev(bar_latest, "Debug", True),
-                 get_prev(bar_latest, "Debug", False)):
-        tmp = copy(prev)
-        tmp.revision = None
-        client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-        assert prev.repr_notime() in client.out
-
-    for prev in (get_prev(bar_first, "Release", True),
-                 get_prev(bar_first, "Release", False),
-                 get_prev(bar_latest, "Release", True),
-                 get_prev(bar_latest, "Release", False)):
-        tmp = copy(prev)
-        tmp.revision = None
-        client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
-        assert prev.repr_notime() not in client.out
 
 
 def test_upload_only_without_user_channel():

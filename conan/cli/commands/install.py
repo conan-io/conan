@@ -2,11 +2,10 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, Extender, COMMAND_GROUPS
+from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
-from conan.cli.common import get_profiles_from_args, scope_options
-from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
-    _help_build_policies
+from conan.cli.common import scope_options
+from conan.cli.args import common_graph_args
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 
 from conans.errors import ConanException
@@ -18,43 +17,9 @@ def json_install(info):
     cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
-def _get_conanfile_path(path, cwd, py):
-    """
-    param py= True: Must be .py, False: Must be .txt, None: Try .py, then .txt
-    """
-    candidate_paths = list()
-    path = make_abs_path(path, cwd)
-
-    if os.path.isdir(path):  # Can be a folder
-        if py:
-            path = os.path.join(path, "conanfile.py")
-            candidate_paths.append(path)
-        elif py is False:
-            path = os.path.join(path, "conanfile.txt")
-            candidate_paths.append(path)
-        else:
-            path_py = os.path.join(path, "conanfile.py")
-            candidate_paths.append(path_py)
-            if os.path.exists(path_py):
-                path = path_py
-            else:
-                path = os.path.join(path, "conanfile.txt")
-                candidate_paths.append(path)
-    else:
-        candidate_paths.append(path)
-
-    if not os.path.isfile(path):  # Must exist
-        raise ConanException("Conanfile not found at %s" % " or ".join(candidate_paths))
-
-    if py and not path.endswith(".py"):
-        raise ConanException("A conanfile.py is needed, " + path + " is not acceptable")
-
-    return path
-
-
 def graph_compute(args, conan_api, partial=False, allow_error=False):
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     requires = [RecipeReference.loads(r) for r in args.requires] \
         if ("requires" in args and args.requires) else None
@@ -70,7 +35,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
                                                conanfile_path=path,
                                                cwd=cwd,
                                                partial=partial)
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     out = ConanOutput()
     out.title("Input profiles")
@@ -116,21 +81,7 @@ def graph_compute(args, conan_api, partial=False, allow_error=False):
     return deps_graph, lockfile
 
 
-def common_graph_args(subparser):
-    subparser.add_argument("path", nargs="?",
-                           help="Path to a folder containing a recipe (conanfile.py "
-                                "or conanfile.txt) or to a recipe file. e.g., "
-                                "./my_project/conanfile.txt.")
-    add_reference_args(subparser)
-    subparser.add_argument("--requires", action="append",
-                           help='Directly provide requires instead of a conanfile')
-    subparser.add_argument("--tool-requires", action='append',
-                           help='Directly provide tool-requires instead of a conanfile')
-    _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
-    add_lockfile_args(subparser)
-
-
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_install})
+@conan_command(group="Consumer", formatters={"json": json_install})
 def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
@@ -146,11 +97,11 @@ def install(conan_api, parser, *args):
     generators.
     """
     common_graph_args(parser)
-    parser.add_argument("-g", "--generator", nargs=1, action=Extender,
+    parser.add_argument("-g", "--generator", action="append",
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("--deploy", action=Extender,
+    parser.add_argument("--deploy", action="append",
                         help='Deploy using the provided deployer to the output folder')
     args = parser.parse_args(*args)
 
@@ -161,7 +112,7 @@ def install(conan_api, parser, *args):
 
     cwd = os.getcwd()
     if args.path:
-        path = _get_conanfile_path(args.path, cwd, py=None)
+        path = conan_api.local.get_conanfile_path(args.path, cwd, py=None)
         source_folder = os.path.dirname(path)
     else:
         source_folder = cwd

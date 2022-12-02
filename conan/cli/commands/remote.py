@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 
 from conan.api.output import cli_out_write
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
@@ -52,7 +52,7 @@ def output_remotes_json(results):
 
 
 @conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
-def remote_list(conan_api: ConanAPIV2, parser, subparser, *args):
+def remote_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List current remotes
     """
@@ -261,7 +261,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     return ret
 
 
-@conan_command()
+@conan_command(group="Consumer")
 def remote(conan_api, parser, *args):
     """
     Manages the remote list and the users authenticated on them.

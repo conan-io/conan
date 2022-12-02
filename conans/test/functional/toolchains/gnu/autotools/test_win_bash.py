@@ -21,6 +21,7 @@ def test_autotools_bash_complete():
     save(client.cache.new_config_path, textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
+            tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
             """.format(bash_path)))
 
     main = gen_function_cpp(name="main")
@@ -32,7 +33,6 @@ def test_autotools_bash_complete():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.gnu import Autotools
-        from conan.tools.env import Environment
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -67,3 +67,41 @@ def test_autotools_bash_complete():
     # To check that the ``autotools.install()`` has worked correctly
     # FIXME IN CONAN 2.0 this will break, no local `package_folder`
     assert os.path.exists(os.path.join(client.current_folder, "package", "bin", "main.exe"))
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_add_msys2_path_automatically():
+    """ Check that commands like ar, autoconf, etc, that are in the /usr/bin folder together
+    with the bash.exe, can be automaticallly used when running in windows bash, without user
+    extra addition to [buildenv] of that msys64/usr/bin path
+
+    # https://github.com/conan-io/conan/issues/12110
+    """
+    client = TestClient(path_with_spaces=False)
+    bash_path = None
+    try:
+        bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
+    except KeyError:
+        pytest.skip("msys2 path not defined")
+
+    save(client.cache.new_config_path, textwrap.dedent("""
+            tools.microsoft.bash:subsystem=msys2
+            tools.microsoft.bash:path={}
+            """.format(bash_path)))
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            win_bash = True
+
+            def build(self):
+                self.run("ar -h")
+                """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    assert "ar.exe" in client.out

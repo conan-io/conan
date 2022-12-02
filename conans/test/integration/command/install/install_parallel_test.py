@@ -18,7 +18,7 @@ class InstallParallelTest(unittest.TestCase):
         for i in range(counter):
             client.run("create . --name=pkg%s --version=0.1 --user=user --channel=testing" % i)
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         # Lets consume the packages
         conanfile_txt = ["[requires]"]

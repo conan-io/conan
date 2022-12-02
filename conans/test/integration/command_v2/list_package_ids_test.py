@@ -160,10 +160,6 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run(f'list packages -c -r="*" {rrev}')
         assert expected_output == self.client.out
 
-    def test_fail_no_revision(self):
-        self.client.run('list packages -r="*" whatever/1.0', assert_error=True)
-        assert "ERROR: Invalid 'whatever/1.0' missing revision" in self.client.out
-
     def test_fail_if_no_configured_remotes(self):
         self.client.run('list packages -r="*" whatever/1.0#123', assert_error=True)
         assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out

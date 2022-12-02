@@ -1,9 +1,8 @@
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, conan_subcommand, COMMAND_GROUPS
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_text_formatter, default_json_formatter
-from conan.cli.common import get_profiles_from_args
 from conan.cli.args import add_profiles_args
 from conans.errors import ConanException
 from conans.util.files import save
@@ -35,7 +34,7 @@ def profile_show(conan_api, parser, subparser, *args):
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-    result = get_profiles_from_args(conan_api, args)
+    result = conan_api.profiles.get_profiles_from_args(args)
     return result
 
 
@@ -83,7 +82,7 @@ def profile_list(conan_api, parser, subparser, *args):
     return result
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def profile(conan_api, parser, *args):
     """
     Manages profiles

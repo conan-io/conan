@@ -2,9 +2,8 @@ import json
 import os
 
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS
-from conan.cli.commands.install import _get_conanfile_path
-from conan.cli.common import get_profiles_from_args, scope_options
+from conan.cli.command import conan_command
+from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 
 
@@ -13,7 +12,7 @@ def json_export_pkg(info):
     cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export_pkg})
+@conan_command(group="Creator", formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache, and create a package directly from pre-compiled binaries
@@ -25,13 +24,13 @@ def export_pkg(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
 
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,

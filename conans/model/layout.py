@@ -1,6 +1,7 @@
 import os
 
 from conans.model.build_info import CppInfo
+from conans.model.conf import Conf
 
 
 class Infos(object):
@@ -9,6 +10,26 @@ class Infos(object):
         self.source = CppInfo()
         self.build = CppInfo()
         self.package = CppInfo(set_defaults=True)
+
+
+class PartialLayout(object):
+    def __init__(self):
+        from conan.tools.env import Environment
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
+        self.conf_info = Conf()
+
+    def set_relative_base_folder(self, folder):
+        self.buildenv_info.set_relative_base_folder(folder)
+        self.runenv_info.set_relative_base_folder(folder)
+        self.conf_info.set_relative_base_folder(folder)
+
+
+class Layouts(object):
+    def __init__(self):
+        self.source = PartialLayout()
+        self.build = PartialLayout()
+        self.package = PartialLayout()
 
 
 class Folders(object):

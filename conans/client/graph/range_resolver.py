@@ -9,7 +9,6 @@ class RangeResolver(object):
     def __init__(self, conan_app):
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
-        self._conan_app = conan_app
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
@@ -23,7 +22,8 @@ class RangeResolver(object):
             pattern_cached.update({remote.name: results})
         return results
 
-    def resolve(self, require, base_conanref, remotes):
+    def resolve(self, require, base_conanref, remotes, update):
+        self._update = update
         version_range = require.version_range
         if version_range is None:
             return require.ref
@@ -39,7 +39,7 @@ class RangeResolver(object):
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if resolved_ref is None or self._conan_app.update:
+        if resolved_ref is None or self._update:
             remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
@@ -72,7 +72,7 @@ class RangeResolver(object):
                               if ref.user == search_ref.user
                               and ref.channel == search_ref.channel]
             resolved_version = self._resolve_version(version_range, remote_results)
-            if resolved_version and not self._conan_app.update:
+            if resolved_version and not self._update:
                 return resolved_version
             elif resolved_version:
                 results.append({"remote": remote.name,

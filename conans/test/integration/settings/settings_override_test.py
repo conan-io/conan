@@ -100,7 +100,7 @@ def test_exclude_patterns_settings():
     client.run("install --requires consumer/1.0 -s consumer/*:build_type=Debug")
 
     # Priority between package scoped settings
-    client.run('remove consumer/*#* -p="build_type=Debug" -f')
+    client.run('remove consumer/*#* -p="build_type=Debug" -c')
     client.run("install --reference consumer/1.0 -s build_type=Debug", assert_error=True)
     # Pre-check, there is no Debug package for any of them
     assert "ERROR: Missing prebuilt package for 'consumer/1.0', 'openssl/1.0', 'zlib/1.0'"

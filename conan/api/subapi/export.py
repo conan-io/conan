@@ -38,7 +38,7 @@ class ExportAPI:
         pkg_node = nodes[0]
         ref = pkg_node.ref
         if pkg_node.binary == BINARY_INVALID:
-            binary, reason = pkg_node.conanfile.info.invalid
+            binary, reason = "Invalid", pkg_node.conanfile.info.invalid
             msg = "{}: Invalid ID: {}: {}".format(ref, binary, reason)
             raise ConanInvalidConfiguration(msg)
         conanfile = pkg_node.conanfile

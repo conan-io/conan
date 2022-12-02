@@ -24,7 +24,6 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
-BINARY_ERROR = "ConfigurationError"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -62,6 +61,7 @@ class Node(object):
         self.dependants = []  # Edges
         self.error = None
         self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+        self.should_build = False  # If the --build or policy wants to build this binary
 
     def __lt__(self, other):
         """

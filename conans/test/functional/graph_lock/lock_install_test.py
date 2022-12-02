@@ -46,7 +46,7 @@ def test_install_recipes():
     assert "pkgb/0.1@user/channel:cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23 - Cache" in client.out
 
     client.run("upload * -c -r default")
-    client.run("remove * -f")
+    client.run("remove * -c")
     client.run("lock install lock1.lock --recipes")
 
     assert "pkga/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download" in client.out

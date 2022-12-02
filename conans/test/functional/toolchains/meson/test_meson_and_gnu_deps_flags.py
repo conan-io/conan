@@ -144,8 +144,6 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                     clean_first=True)
 
         client.run("build . -c 'tools.build:cxxflags=[%s]'" % flags)
-        deps_flags = deps_flags.replace('"', "").replace(",", "")
-        flags = flags.replace('"', "").replace(",", "")
         meson_log_path = os.path.join(client.current_folder, "build", "meson-logs", "meson-log.txt")
         meson_log = load(None, meson_log_path)
         meson_log = meson_log.replace("\\", "/")

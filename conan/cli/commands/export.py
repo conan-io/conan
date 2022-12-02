@@ -2,8 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
-from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_reference_args
 
 
@@ -16,7 +15,7 @@ def json_export(ref):
     cli_out_write(json.dumps({"reference": ref.repr_notime()}))
 
 
-@conan_command(group=COMMAND_GROUPS['creator'], formatters={"json": json_export})
+@conan_command(group="Creator", formatters={"json": json_export})
 def export(conan_api, parser, *args):
     """
     Export recipe to the Conan package cache
@@ -33,7 +32,7 @@ def export(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
