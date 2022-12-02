@@ -45,17 +45,14 @@ class AutotoolsToolchain:
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
-        # standard build toolchains env vars
-        self.cc = self._get_cc()
-        self.cxx = self._get_cxx()
-        self.cuda = self._get_cuda()
-        self.fortran = self._get_fortran()
-        self.ld = self._get_ld()
-        self.ar = self._get_ar()
-        self.nm = self._get_nm()
-        self.objdump = self._get_objdump()
-        self.ranlib = self._get_ranlib()
-        self.strip = self._get_strip()
+        self._toolchain_env_vars = {
+            "ccas": self._get_ccas(),
+            "cc": self._get_cc(),
+            "cxx": self._get_cxx(),
+            "cuda": self._get_cuda(),
+            "fortran": self._get_fortran(),
+            "rc": self._get_rc(),
+        }
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
@@ -143,6 +140,10 @@ class AutotoolsToolchain:
             path = unix_path(self._conanfile, path)
         return path
 
+    def _get_ccas(self):
+        ccas = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("asm")
+        return self._curated_path(ccas)
+
     def _get_cc(self):
         cc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("c")
         if not cc and is_msvc(self._conanfile):
@@ -155,45 +156,27 @@ class AutotoolsToolchain:
             cxx = "cl"
         return self._curated_path(cxx)
 
-    def _get_fortran(self):
-        fortran = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
-        return self._curated_path(fortran)
-
     def _get_cuda(self):
         cuda = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("cuda")
         return self._curated_path(cuda)
 
-    def _get_ld(self):
-        return "link" if is_msvc(self._conanfile) else None
+    def _get_fortran(self):
+        fortran = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("fortran")
+        return self._curated_path(fortran)
 
-    def _get_ar(self):
-        return "lib" if is_msvc(self._conanfile) else None
-
-    def _get_nm(self):
-        return "dumpbin -symbols" if is_msvc(self._conanfile) else None
-
-    def _get_objdump(self):
-        return ":" if is_msvc(self._conanfile) else None
-
-    def _get_ranlib(self):
-        return ":" if is_msvc(self._conanfile) else None
-
-    def _get_strip(self):
-        return ":" if is_msvc(self._conanfile) else None
+    def _get_rc(self):
+        rc = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict).get("rc")
+        return self._curated_path(rc)
 
     def environment(self):
         env = Environment()
         for env_var, env_var_value in [
-            ("CC", self.cc),
-            ("CXX", self.cxx),
-            ("FC", self.fortran),
-            ("NVCC", self.cuda),
-            ("LD", self.ld),
-            ("AR", self.ar),
-            ("NM", self.nm),
-            ("OBJDUMP", self.objdump),
-            ("RANLIB", self.ranlib),
-            ("STRIP", self.strip),
+            ("CCAS", self._toolchain_env_vars.get("ccas"))
+            ("CC", self._toolchain_env_vars.get("cc")),
+            ("CXX", self._toolchain_env_vars.get("cxx")),
+            ("NVCC", self._toolchain_env_vars.get("cuda")),
+            ("FC", self._toolchain_env_vars.get("fortran")),
+            ("RC", self._toolchain_env_vars.get("rc")),
         ]:
             if env_var_value:
                 env.define(env_var, env_var_value)
