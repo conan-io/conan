@@ -42,8 +42,14 @@ def export_pkg(conan_api, parser, *args):
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
     scope_options(profile_host, requires=[ref], tool_requires=None)
-    root_node = conan_api.graph.load_root_virtual_conanfile(requires=[ref],
-                                                            profile_host=profile_host)
+    root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
+                                                             name=args.name,
+                                                             version=args.version,
+                                                             user=args.user,
+                                                             channel=args.channel,
+                                                             lockfile=lockfile)
+    # Imbue the root node with the ref revision computed during export
+    root_node.ref = ref
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
