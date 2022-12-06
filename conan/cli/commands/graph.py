@@ -119,7 +119,8 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
-
+    if not args.path and not args.requires and not args.tool_requires:
+        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
@@ -134,18 +135,19 @@ def graph_info(conan_api, parser, subparser, *args):
                                                partial=args.lockfile_partial)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    check_updates = args.check_updates if "check_updates" in args else False
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update,
-                                                         allow_error=True)
+                                                         allow_error=True,
+                                                         check_updates=args.check_updates)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update,
-                                                         allow_error=True)
+                                                         allow_error=True,
+                                                         check_updates=args.check_updates)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

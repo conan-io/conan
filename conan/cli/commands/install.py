@@ -41,8 +41,10 @@ def install(conan_api, parser, *args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
-
+    if not args.path and not args.requires and not args.tool_requires:
+        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
     cwd = os.getcwd()
+
     if args.path:
         path = conan_api.local.get_conanfile_path(args.path, cwd, py=None)
         source_folder = os.path.dirname(path)

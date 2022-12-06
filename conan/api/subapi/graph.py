@@ -128,7 +128,7 @@ class GraphAPI:
         out.title("Computing necessary packages")
         if deps_graph.error:
             if allow_error:
-                return deps_graph, lockfile
+                return deps_graph
             raise deps_graph.error
 
         self.analyze_binaries(deps_graph, build, remotes=remotes, update=update, lockfile=lockfile)
@@ -138,7 +138,7 @@ class GraphAPI:
     @api_method
     def load_graph_consumer(self, path, name, version, user, channel,
                             profile_host, profile_build, lockfile, remotes, build, update,
-                            allow_error=False):
+                            allow_error=False, check_updates=False):
         out = ConanOutput()
         out.title("Input profiles")
         out.info("Profile host:")
@@ -152,7 +152,6 @@ class GraphAPI:
                                                       remotes=remotes, update=update)
 
         out.title("Computing dependency graph")
-        check_updates = False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
