@@ -35,7 +35,16 @@ class NMakeToolchain(object):
         flag = msvc_runtime_flag(self._conanfile)
         if flag:
             cppflags.append("-{}".format(flag))
+        cppflags.extend(self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list))
+        cppflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list))
         return " ".join(cppflags).replace("-", "/")
+
+    @property
+    def link_flags(self):
+        linkflags = []
+        linkflags.extend(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list))
+        linkflags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list))
+        return " ".join(linkflags).replace("-", "/")
 
     @property
     def environment(self):
@@ -44,6 +53,7 @@ class NMakeToolchain(object):
             env = Environment()
             # The whole injection of toolchain happens in CL env-var, the others LIBS, _LINK_
             env.append("CL", self.cl_flags)
+            env.append("_LINK_", self.link_flags)
             self._environment = env
         return self._environment
 
