@@ -1,5 +1,6 @@
 from conan.tools._compilers import cppstd_flag, build_type_flags, build_type_link_flags
 from conan.tools.env import Environment
+from conan.tools.microsoft.visual import msvc_runtime_flag, VCVars
 
 
 class NMakeToolchain(object):
@@ -35,7 +36,6 @@ class NMakeToolchain(object):
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
 
     def _get_msvc_runtime_flag(self):
-        from conan.tools.microsoft import msvc_runtime_flag
         flag = msvc_runtime_flag(self._conanfile)
         if flag:
             flag = f"/{flag}"
@@ -109,5 +109,4 @@ class NMakeToolchain(object):
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conannmaketoolchain")
-        from conan.tools.microsoft import VCVars
         VCVars(self._conanfile).generate(scope=scope)
