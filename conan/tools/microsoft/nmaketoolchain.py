@@ -61,9 +61,10 @@ class NMakeToolchain(object):
 
     @property
     def ldflags(self):
+        bt_ldflags = self.build_type_link_flags if self.build_type_link_flags else []
         conf_shared_ldflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         conf_exe_ldflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        return self._curate_options(conf_shared_ldflags + conf_exe_ldflags + self.extra_ldflags)
+        return self._curate_options(bt_ldflags + conf_shared_ldflags + conf_exe_ldflags + self.extra_ldflags)
 
     @property
     def defines(self):
