@@ -1,7 +1,10 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
+from conan.cli.common import scope_options
+from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -18,7 +21,6 @@ class GraphAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def load_root_consumer_conanfile(self, path, profile_host, profile_build,
                                      name=None, version=None, user=None, channel=None,
                                      update=None, remotes=None, lockfile=None):
@@ -95,6 +97,75 @@ class GraphAPI:
         consumer_definer(conanfile, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
+
+    @api_method
+    def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
+                            lockfile, remotes, build, update, check_updates=False,
+                            allow_error=False):
+        requires = [RecipeReference.loads(r) for r in requires] if requires else None
+        tool_requires = [RecipeReference.loads(r) for r in tool_requires] if tool_requires else None
+
+        out = ConanOutput()
+        out.title("Input profiles")
+        out.info("Profile host:")
+        out.info(profile_host.dumps())
+        out.info("Profile build:")
+        out.info(profile_build.dumps())
+
+        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
+        root_node = self.load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,
+                                                     profile_host=profile_host)
+
+        out.title("Computing dependency graph")
+        # check_updates = args.check_updates if "check_updates" in args else False
+        deps_graph = self.load_graph(root_node, profile_host=profile_host,
+                                     profile_build=profile_build,
+                                     lockfile=lockfile,
+                                     remotes=remotes,
+                                     update=update,
+                                     check_update=check_updates)
+        print_graph_basic(deps_graph)
+        out.title("Computing necessary packages")
+        if deps_graph.error:
+            if allow_error:
+                return deps_graph, lockfile
+            raise deps_graph.error
+
+        self.analyze_binaries(deps_graph, build, remotes=remotes, update=update, lockfile=lockfile)
+        print_graph_packages(deps_graph)
+        return deps_graph
+
+    @api_method
+    def load_graph_consumer(self, path, name, version, user, channel,
+                            profile_host, profile_build, lockfile, remotes, build, update,
+                            allow_error=False):
+        out = ConanOutput()
+        out.title("Input profiles")
+        out.info("Profile host:")
+        out.info(profile_host.dumps())
+        out.info("Profile build:")
+        out.info(profile_build.dumps())
+
+        root_node = self.load_root_consumer_conanfile(path, profile_host, profile_build,
+                                                      name=name, version=version, user=user,
+                                                      channel=channel, lockfile=lockfile,
+                                                      remotes=remotes, update=update)
+
+        out.title("Computing dependency graph")
+        check_updates = False
+        deps_graph = self.load_graph(root_node, profile_host=profile_host,
+                                     profile_build=profile_build, lockfile=lockfile,
+                                     remotes=remotes, update=update, check_update=check_updates)
+        print_graph_basic(deps_graph)
+        out.title("Computing necessary packages")
+        if deps_graph.error:
+            if allow_error:
+                return deps_graph
+            raise deps_graph.error
+
+        self.analyze_binaries(deps_graph, build, remotes=remotes, update=update, lockfile=lockfile)
+        print_graph_packages(deps_graph)
+        return deps_graph
 
     @api_method
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
