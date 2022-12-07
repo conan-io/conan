@@ -24,16 +24,16 @@ class NMakeToolchain(object):
         self.extra_defines = []
 
         # Defines
-        self.ndebug = None
+        self._ndebug = None
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type in ["Release", "RelWithDebInfo", "MinSizeRel"]:
-            self.ndebug = "NDEBUG"
+            self._ndebug = "NDEBUG"
 
-        self.build_type_flags = build_type_flags(self._conanfile.settings)
-        self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
+        self._build_type_flags = build_type_flags(self._conanfile.settings)
+        self._build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
-        self.cppstd = cppstd_flag(self._conanfile.settings)
-        self.msvc_runtime_flag = self._get_msvc_runtime_flag()
+        self._cppstd = cppstd_flag(self._conanfile.settings)
+        self._msvc_runtime_flag = self._get_msvc_runtime_flag()
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -63,38 +63,38 @@ class NMakeToolchain(object):
         return sanitized_defines
 
     @property
-    def cflags(self):
-        bt_flags = self.build_type_flags if self.build_type_flags else []
-        rt_flags = [self.msvc_runtime_flag] if self.msvc_runtime_flag else []
+    def _cflags(self):
+        bt_flags = self._build_type_flags if self._build_type_flags else []
+        rt_flags = [self._msvc_runtime_flag] if self._msvc_runtime_flag else []
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         return self._sanitized_options(bt_flags + rt_flags + conf_cflags + self.extra_cflags)
 
     @property
-    def cxxflags(self):
-        bt_flags = self.build_type_flags if self.build_type_flags else []
-        rt_flags = [self.msvc_runtime_flag] if self.msvc_runtime_flag else []
-        cppstd_flags = [self.cppstd] if self.cppstd else []
+    def _cxxflags(self):
+        bt_flags = self._build_type_flags if self._build_type_flags else []
+        rt_flags = [self._msvc_runtime_flag] if self._msvc_runtime_flag else []
+        cppstd_flags = [self._cppstd] if self._cppstd else []
         conf_cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         return self._sanitized_options(bt_flags + rt_flags + cppstd_flags + conf_cxxflags + self.extra_cxxflags)
 
     @property
-    def ldflags(self):
-        bt_ldflags = self.build_type_link_flags if self.build_type_link_flags else []
+    def _ldflags(self):
+        bt_ldflags = self._build_type_link_flags if self._build_type_link_flags else []
         conf_shared_ldflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         conf_exe_ldflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         return self._sanitized_options(bt_ldflags + conf_shared_ldflags + conf_exe_ldflags + self.extra_ldflags)
 
     @property
-    def defines(self):
-        ndebug_defines = [self.ndebug] if self.ndebug else []
+    def _defines(self):
+        ndebug_defines = [self._ndebug] if self._ndebug else []
         conf_defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        return ndebug_defines + conf_defines + self.extra_defines
+        return self._sanitized_defines(ndebug_defines + conf_defines + self.extra_defines)
 
     @property
     def _cl(self):
         nologo = ["/nologo"]
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        return nologo + self.cxxflags + self._sanitized_options(conf_cflags) + self._sanitized_defines(self.defines)
+        return nologo + self._cxxflags + self._sanitized_options(conf_cflags) + self._defines
 
     @property
     def _link(self):
@@ -123,9 +123,9 @@ class NMakeToolchain(object):
             for env_var, comp in compilers_mapping.items():
                 if comp in conf_compilers:
                     env.define(env_var, conf_compilers[comp])
-        env.append("CFLAGS", self.cflags)
-        env.append("CPPFLAGS", self.cxxflags)
-        env.append("CXXFLAGS", self.cxxflags)
+        env.append("CFLAGS", self._cflags)
+        env.append("CPPFLAGS", self._cxxflags)
+        env.append("CXXFLAGS", self._cxxflags)
         return env
 
     def vars(self):
