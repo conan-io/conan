@@ -50,7 +50,7 @@ class MockInfoProperty(object):
     def __getattr__(self, attr):
         if attr != "_message":
             ConanOutput().warning(self._message)
-        return list()
+        return []
 
     def __setattr__(self, attr, value):
         if attr != "_message":
