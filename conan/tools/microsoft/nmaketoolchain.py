@@ -93,7 +93,13 @@ class NMakeToolchain(object):
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
         conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
         if conf_compilers:
-            compilers_mapping = {"AS": "asm", "CC": "c", "CPP": "cpp", "CXX": "cpp", "RC": "rc"}
+            compilers_mapping = {
+                "AS": "asm",
+                "CC": "c",
+                "CPP": "cpp",
+                "CXX": "cpp",
+                "RC": "rc",
+            }
             for env_var, comp in compilers_mapping.items():
                 if comp in conf_compilers:
                     env.define(env_var, conf_compilers[comp])
