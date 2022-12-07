@@ -44,6 +44,19 @@ class NMakeToolchain(object):
     def _curate_options(self, options):
         return [f"{opt[0].replace('-', '/')}{opt[1:]}" for opt in options if len(opt) > 1]
 
+    def _defines_for_cl(self, defines):
+        curated_defines = []
+        for define in defines:
+            if "=" in define:
+                macro, value = define.split("=", 1)
+                if value.isnumeric():
+                    curated_defines.append(f"/D{macro}#{value}")
+                else:
+                    curated_defines.append(f"/D{macro}#\\\"{value}\\\"")
+            else:
+                curated_defines.append(f"/D{define}")
+        return curated_defines
+
     @property
     def cflags(self):
         bt_flags = self.build_type_flags if self.build_type_flags else []
@@ -78,8 +91,7 @@ class NMakeToolchain(object):
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
         # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
-        defines = [f"/D{d.replace('=', '#')}" for d in self.defines]
-        return nologo + self.cxxflags + self._curate_options(conf_cflags) + defines
+        return nologo + self.cxxflags + self._curate_options(conf_cflags) + self._defines_for_cl(self.defines)
 
     @property
     def _link(self):
