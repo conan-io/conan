@@ -83,7 +83,7 @@ class NMakeToolchain(object):
 
     def environment(self):
         env = Environment()
-        # Injection of compile flags CL env-var:
+        # Injection of compile flags in CL env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
         env.append("CL", self._cl)
         # Injection of link flags in LINK env-var:
