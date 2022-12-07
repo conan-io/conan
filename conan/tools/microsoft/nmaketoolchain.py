@@ -48,10 +48,13 @@ class NMakeToolchain(object):
         curated_defines = []
         for define in defines:
             if "=" in define:
+                # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
+                # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                 macro, value = define.split("=", 1)
                 if value.isnumeric():
                     curated_defines.append(f"/D{macro}#{value}")
                 else:
+                    # if value of macro is a string, it must be protected by protected quotes
                     curated_defines.append(f"/D{macro}#\\\"{value}\\\"")
             else:
                 curated_defines.append(f"/D{define}")
@@ -89,8 +92,6 @@ class NMakeToolchain(object):
     def _cl(self):
         nologo = ["/nologo"]
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
-        # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
         return nologo + self.cxxflags + self._curate_options(conf_cflags) + self._defines_for_cl(self.defines)
 
     @property
