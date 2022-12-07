@@ -74,7 +74,7 @@ class NMakeToolchain(object):
 
     @property
     def _cl(self):
-        nologo = ["/NOLOGO"]
+        nologo = ["/nologo"]
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
         # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
@@ -83,7 +83,7 @@ class NMakeToolchain(object):
 
     @property
     def _link(self):
-        nologo = ["/NOLOGO"]
+        nologo = ["/nologo"]
         return nologo + self.ldflags
 
     def environment(self):
