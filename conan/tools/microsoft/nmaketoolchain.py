@@ -41,33 +41,33 @@ class NMakeToolchain(object):
             flag = f"/{flag}"
         return flag
 
-    def _curate_options(self, options):
+    def _sanitized_options(self, options):
         return [f"{opt[0].replace('-', '/')}{opt[1:]}" for opt in options if len(opt) > 1]
 
-    def _defines_for_cl(self, defines):
-        curated_defines = []
+    def _sanitized_defines(self, defines):
+        sanitized_defines = []
         for define in defines:
             if "=" in define:
                 # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
                 # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                 macro, value = define.split("=", 1)
                 if not value:
-                    curated_defines.append(f"/D{macro}")
+                    sanitized_defines.append(f"/D{macro}")
                 elif value.isnumeric():
-                    curated_defines.append(f"/D{macro}#{value}")
+                    sanitized_defines.append(f"/D{macro}#{value}")
                 else:
                     # if value of macro is a string, it must be protected by protected quotes
-                    curated_defines.append(f"/D{macro}#\\\"{value}\\\"")
+                    sanitized_defines.append(f"/D{macro}#\\\"{value}\\\"")
             else:
-                curated_defines.append(f"/D{define}")
-        return curated_defines
+                sanitized_defines.append(f"/D{define}")
+        return sanitized_defines
 
     @property
     def cflags(self):
         bt_flags = self.build_type_flags if self.build_type_flags else []
         rt_flags = [self.msvc_runtime_flag] if self.msvc_runtime_flag else []
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        return self._curate_options(bt_flags + rt_flags + conf_cflags + self.extra_cflags)
+        return self._sanitized_options(bt_flags + rt_flags + conf_cflags + self.extra_cflags)
 
     @property
     def cxxflags(self):
@@ -75,14 +75,14 @@ class NMakeToolchain(object):
         rt_flags = [self.msvc_runtime_flag] if self.msvc_runtime_flag else []
         cppstd_flags = [self.cppstd] if self.cppstd else []
         conf_cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        return self._curate_options(bt_flags + rt_flags + cppstd_flags + conf_cxxflags + self.extra_cxxflags)
+        return self._sanitized_options(bt_flags + rt_flags + cppstd_flags + conf_cxxflags + self.extra_cxxflags)
 
     @property
     def ldflags(self):
         bt_ldflags = self.build_type_link_flags if self.build_type_link_flags else []
         conf_shared_ldflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         conf_exe_ldflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        return self._curate_options(bt_ldflags + conf_shared_ldflags + conf_exe_ldflags + self.extra_ldflags)
+        return self._sanitized_options(bt_ldflags + conf_shared_ldflags + conf_exe_ldflags + self.extra_ldflags)
 
     @property
     def defines(self):
@@ -94,7 +94,7 @@ class NMakeToolchain(object):
     def _cl(self):
         nologo = ["/nologo"]
         conf_cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        return nologo + self.cxxflags + self._curate_options(conf_cflags) + self._defines_for_cl(self.defines)
+        return nologo + self.cxxflags + self._sanitized_options(conf_cflags) + self._sanitized_defines(self.defines)
 
     @property
     def _link(self):
