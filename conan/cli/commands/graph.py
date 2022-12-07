@@ -66,9 +66,9 @@ def graph_build_order(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update)
-    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
-    print_graph_packages(graph)
+    print_graph_packages(deps_graph)
 
     out = ConanOutput()
     out.title("Computing the build order")

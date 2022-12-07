@@ -40,7 +40,8 @@ def export_pkg(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
-    deps_graph = conan_api.graph.load_graph_requires([ref], profile_host=profile_host,
+    deps_graph = conan_api.graph.load_graph_requires([ref], tool_requires=None,
+                                                     profile_host=profile_host,
                                                      profile_build=profile_build,
                                                      lockfile=lockfile,
                                                      remotes=None,

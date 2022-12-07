@@ -21,8 +21,8 @@ class GraphAPI:
         self.conan_api = conan_api
 
     def _load_root_consumer_conanfile(self, path, profile_host, profile_build,
-                                     name=None, version=None, user=None, channel=None,
-                                     update=None, remotes=None, lockfile=None):
+                                      name=None, version=None, user=None, channel=None,
+                                      update=None, remotes=None, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
 
         if path.endswith(".py"):
@@ -114,8 +114,10 @@ class GraphAPI:
     @api_method
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
                             lockfile, remotes, update, check_updates=False, allow_error=False):
-        requires = [RecipeReference.loads(r) for r in requires] if requires else None
-        tool_requires = [RecipeReference.loads(r) for r in tool_requires] if tool_requires else None
+        requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
+            if requires else None
+        tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
+                         for r in tool_requires] if tool_requires else None
 
         out = ConanOutput()
         out.title("Input profiles")
@@ -157,9 +159,9 @@ class GraphAPI:
         out.info(profile_build.dumps())
 
         root_node = self._load_root_consumer_conanfile(path, profile_host, profile_build,
-                                                      name=name, version=version, user=user,
-                                                      channel=channel, lockfile=lockfile,
-                                                      remotes=remotes, update=update)
+                                                       name=name, version=version, user=user,
+                                                       channel=channel, lockfile=lockfile,
+                                                       remotes=remotes, update=update)
 
         out.title("Computing dependency graph")
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
