@@ -12,7 +12,9 @@ from conans.test.utils.tools import TestClient
     "compiler, version, runtime, cppstd, build_type, defines, cflags, cxxflags, sharedlinkflags, exelinkflags",
     [
         ("msvc", "193", "dynamic", "14", "Release", [], [], [], [], []),
-        ("msvc", "193", "dynamic", "14", "Release", ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=TestPpdValue3"], ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
+        ("msvc", "193", "dynamic", "14", "Release",
+         ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4"],
+         ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
         ("msvc", "193", "static", "17", "Debug", [], [], [], [], []),
     ],
 )
@@ -47,7 +49,10 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
     for define in defines:
         if "=" in define:
             key, value = define.split("=", 1)
-            conf_preprocessors[key] = value
+            if not value:
+                conf_preprocessors[key] = "1"
+            else:
+                conf_preprocessors[key] = value
         else:
             conf_preprocessors[define] = "1"
 
