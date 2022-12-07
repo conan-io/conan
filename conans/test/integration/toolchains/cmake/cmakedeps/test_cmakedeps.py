@@ -386,3 +386,33 @@ def test_props_from_consumer_build_context_activated():
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
+
+
+def test_error_missing_config_build_context():
+    """
+    CMakeDeps was failing, not generating the zlib-config.cmake in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "zlib/1.0"
+            generators = "CMakeDeps"
+            settings = "os", "compiler", "build_type", "arch"
+            def build(self):
+                assert os.path.exists("zlib-config.cmake")
+            """)
+    c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+            "example/conanfile.py": example,
+            "example/test_package/conanfile.py": GenConanfile().with_requires("example/1.0")
+                                                               .with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create zlib")
+    c.run("create example -pr:b=default -pr:h=default")
+    # This used to crash because of the assert inside the build() method
