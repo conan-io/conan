@@ -8,13 +8,17 @@ from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("compiler, version, runtime, cppstd, build_type, cflags, cxxflags, sharedlinkflags, exelinkflags",
-                         [("msvc", "190", "dynamic", "14", "Release", [], [], [], []),
-                          ("msvc", "190", "dynamic", "14", "Release", ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
-                          ("msvc", "191", "static", "17", "Debug", [], [], [], [])])
+@pytest.mark.parametrize(
+    "compiler, version, runtime, cppstd, build_type, defines, cflags, cxxflags, sharedlinkflags, exelinkflags",
+    [
+        ("msvc", "193", "dynamic", "14", "Release", [], [], [], [], []),
+        ("msvc", "193", "dynamic", "14", "Release", ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=TestPpdValue3"], ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
+        ("msvc", "193", "static", "17", "Debug", [], [], [], [], []),
+    ],
+)
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
-                         cflags, cxxflags, sharedlinkflags, exelinkflags):
+                         defines, cflags, cxxflags, sharedlinkflags, exelinkflags):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
                 "compiler.version": version,
@@ -23,19 +27,29 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
                 "build_type": build_type,
                 "arch": "x86_64"}
 
+    serialize_array = lambda arr: "[{}]".format(",".join([f"'{v}'" for v in arr]))
     conf = {
-        "tools.build:cflags": "[{}]".format(",".join([f"'{flag}'" for flag in cflags])) if cflags else "",
-        "tools.build:cxxflags": "[{}]".format(",".join([f"'{flag}'" for flag in cxxflags])) if cxxflags else "",
-        "tools.build:sharedlinkflags": "[{}]".format(",".join([f"'{flag}'" for flag in sharedlinkflags])) if sharedlinkflags else "",
-        "tools.build:exelinkflags": "[{}]".format(",".join([f"'{flag}'" for flag in exelinkflags])) if exelinkflags else "",
+        "tools.build:defines": serialize_array(defines) if defines else "",
+        "tools.build:cflags": serialize_array(cflags) if cflags else "",
+        "tools.build:cxxflags": serialize_array(cxxflags) if cxxflags else "",
+        "tools.build:sharedlinkflags": serialize_array(sharedlinkflags) if sharedlinkflags else "",
+        "tools.build:exelinkflags": serialize_array(exelinkflags) if exelinkflags else "",
     }
 
     # Build the profile according to the settings provided
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
     conf = " ".join(f'-c {k}="{v}"' for k, v in conf.items() if v)
     client.run("new dep/1.0 -m=cmake_lib")
-    client.run(f'create . -tf=None {settings} {conf} '
-               f'-c tools.cmake.cmaketoolchain:generator="Visual Studio 15"')
+    client.run(f'create . -tf=None {settings} {conf}')
+
+    # Rearrange defines to macro / value dict
+    conf_preprocessors = {}
+    for define in defines:
+        if "=" in define:
+            key, value = define.split("=", 1)
+            conf_preprocessors[key] = value
+        else:
+            conf_preprocessors[define] = "1"
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -51,17 +65,20 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
         all: simple.exe
 
         .cpp.obj:
-          cl $(cppflags) $*.cpp
+          $(CPP) $(CPPFLAGS) $*.cpp
 
         simple.exe: simple.obj
-          cl $(cppflags) simple.obj
+          $(CPP) $(CPPFLAGS) simple.obj
         """)
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
-                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"])},
+                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"], preprocessor=conf_preprocessors.keys())},
                 clean_first=True)
     client.run(f"install . {settings} {conf}")
     client.run("build .")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
+    assert f"main: {'Debug' if build_type == 'Debug' else 'Release'}!" in client.out
+    for preprocessor_name, preprocessor_value in conf_preprocessors.items():
+        assert f"{preprocessor_name}: {preprocessor_value}" in client.out
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
