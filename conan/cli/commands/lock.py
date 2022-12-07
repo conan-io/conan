@@ -4,6 +4,7 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli.commands import make_abs_path
 from conan.cli.args import common_graph_args
+from conan.cli.printers.graph import print_graph_packages
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
@@ -45,6 +46,10 @@ def lock_create(conan_api, parser, subparser, *args):
         graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                     profile_host, profile_build, lockfile,
                                                     remotes, args.build, args.update)
+
+    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(graph)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

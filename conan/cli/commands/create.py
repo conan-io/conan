@@ -5,7 +5,6 @@ import shutil
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
-from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
 from conan.api.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
@@ -70,16 +69,13 @@ def create(conan_api, parser, *args):
         # TODO: This section might be overlapping with ``graph_compute()``
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
-        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
-        root_node = conan_api.graph.load_root_virtual_conanfile(requires=requires,
-                                                                tool_requires=tool_requires,
-                                                                profile_host=profile_host)
 
         out.title("Computing dependency graph")
-        deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                                profile_build=profile_build, lockfile=lockfile,
-                                                remotes=remotes, update=args.update)
-        print_graph_basic(deps_graph)
+        deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
+                                                         profile_host=profile_host,
+                                                         profile_build=profile_build,
+                                                         lockfile=lockfile,
+                                                         remotes=remotes, update=args.update)
         deps_graph.report_graph_error()
 
         out.title("Computing necessary packages")

@@ -2,6 +2,7 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
+from conan.cli.printers.graph import print_graph_packages
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand, CommandResult
 from conan.cli.commands import make_abs_path
@@ -65,6 +66,9 @@ def graph_build_order(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update)
+    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(graph)
 
     out = ConanOutput()
     out.title("Computing the build order")
@@ -148,6 +152,9 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          remotes, args.build, args.update,
                                                          allow_error=True,
                                                          check_updates=args.check_updates)
+    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(graph)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

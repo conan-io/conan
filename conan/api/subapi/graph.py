@@ -3,8 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
 from conan.api.conan_app import ConanApp
-from conan.cli.common import scope_options
-from conan.cli.printers.graph import print_graph_basic, print_graph_packages
+from conan.cli.printers.graph import print_graph_basic
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -21,7 +20,7 @@ class GraphAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def load_root_consumer_conanfile(self, path, profile_host, profile_build,
+    def _load_root_consumer_conanfile(self, path, profile_host, profile_build,
                                      name=None, version=None, user=None, channel=None,
                                      update=None, remotes=None, lockfile=None):
         app = ConanApp(self.conan_api.cache_folder)
@@ -77,7 +76,8 @@ class GraphAPI:
         conanfile = loader.load_consumer(path, user=tested_reference.user,
                                          channel=tested_reference.channel,
                                          graph_lock=lockfile, remotes=remotes,
-                                         tested_python_requires=tested_python_requires)
+                                         tested_python_requires=tested_python_requires,
+                                         update=update)
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
         conanfile.output.scope = conanfile.display_name
@@ -89,7 +89,7 @@ class GraphAPI:
         return root_node
 
     @api_method
-    def load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
+    def _load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
         app = ConanApp(self.conan_api.cache_folder)
@@ -98,10 +98,22 @@ class GraphAPI:
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
 
+    @staticmethod
+    def _scope_options(profile, requires, tool_requires):
+        """
+        Command line helper to scope options when ``command -o myoption=myvalue`` is used,
+        that needs to be converted to "-o pkg:myoption=myvalue". The "pkg" value will be
+        computed from the given requires/tool_requires
+        """
+        # FIXME: This helper function here is not great, find a better place
+        if requires and len(requires) == 1 and not tool_requires:
+            profile.options.scope(requires[0])
+        if tool_requires and len(tool_requires) == 1 and not requires:
+            profile.options.scope(tool_requires[0])
+
     @api_method
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, build, update, check_updates=False,
-                            allow_error=False):
+                            lockfile, remotes, update, check_updates=False, allow_error=False):
         requires = [RecipeReference.loads(r) for r in requires] if requires else None
         tool_requires = [RecipeReference.loads(r) for r in tool_requires] if tool_requires else None
 
@@ -112,9 +124,9 @@ class GraphAPI:
         out.info("Profile build:")
         out.info(profile_build.dumps())
 
-        scope_options(profile_host, requires=requires, tool_requires=tool_requires)
-        root_node = self.load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,
-                                                     profile_host=profile_host)
+        self._scope_options(profile_host, requires=requires, tool_requires=tool_requires)
+        root_node = self._load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,
+                                                      profile_host=profile_host)
 
         out.title("Computing dependency graph")
         # check_updates = args.check_updates if "check_updates" in args else False
@@ -131,13 +143,11 @@ class GraphAPI:
                 return deps_graph
             raise deps_graph.error
 
-        self.analyze_binaries(deps_graph, build, remotes=remotes, update=update, lockfile=lockfile)
-        print_graph_packages(deps_graph)
         return deps_graph
 
     @api_method
     def load_graph_consumer(self, path, name, version, user, channel,
-                            profile_host, profile_build, lockfile, remotes, build, update,
+                            profile_host, profile_build, lockfile, remotes, update,
                             allow_error=False, check_updates=False):
         out = ConanOutput()
         out.title("Input profiles")
@@ -146,7 +156,7 @@ class GraphAPI:
         out.info("Profile build:")
         out.info(profile_build.dumps())
 
-        root_node = self.load_root_consumer_conanfile(path, profile_host, profile_build,
+        root_node = self._load_root_consumer_conanfile(path, profile_host, profile_build,
                                                       name=name, version=version, user=user,
                                                       channel=channel, lockfile=lockfile,
                                                       remotes=remotes, update=update)
@@ -162,8 +172,6 @@ class GraphAPI:
                 return deps_graph
             raise deps_graph.error
 
-        self.analyze_binaries(deps_graph, build, remotes=remotes, update=update, lockfile=lockfile)
-        print_graph_packages(deps_graph)
         return deps_graph
 
     @api_method
