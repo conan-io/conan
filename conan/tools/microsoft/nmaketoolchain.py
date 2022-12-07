@@ -81,14 +81,19 @@ class NMakeToolchain(object):
         defines = [f"/D{d.replace('=', '#')}" for d in self.defines]
         return nologo + self.cxxflags + self._curate_options(conf_cflags) + defines
 
+    @property
+    def _link(self):
+        nologo = ["/NOLOGO"]
+        return nologo + self.ldflags
+
     def environment(self):
         env = Environment()
         # Injection of compile flags in CL env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
         env.append("CL", self._cl)
-        # Injection of link flags in LINK env-var:
+        # Injection of link flags in _LINK_ env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/linking
-        env.append("LINK", self.ldflags)
+        env.append("_LINK_", self._link)
         # Also define some special env-vars which can override special NMake macros:
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
         conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
