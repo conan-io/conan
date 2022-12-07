@@ -113,6 +113,5 @@ class NMakeToolchain(object):
 
     def generate(self, env=None, scope="build"):
         env = env or self.environment()
-        env = env.vars(self._conanfile, scope=scope)
-        env.save_script("conannmaketoolchain")
+        env.vars(self._conanfile, scope=scope).save_script("conannmaketoolchain")
         VCVars(self._conanfile).generate(scope=scope)
