@@ -402,17 +402,32 @@ def test_error_missing_config_build_context():
         class Example(ConanFile):
             name = "example"
             version = "1.0"
-            requires = "zlib/1.0"
+            requires = "game/1.0"
             generators = "CMakeDeps"
-            settings = "os", "compiler", "build_type", "arch"
+            settings = "build_type"
             def build(self):
-                assert os.path.exists("zlib-config.cmake")
+                assert os.path.exists("math-config.cmake")
+                assert os.path.exists("engine-config.cmake")
+                assert os.path.exists("game-config.cmake")
             """)
-    c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
             "example/conanfile.py": example,
             "example/test_package/conanfile.py": GenConanfile().with_requires("example/1.0")
                                                                .with_build_requires("example/1.0")
                                                                .with_test("pass")})
-    c.run("create zlib")
-    c.run("create example -pr:b=default -pr:h=default")
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
     # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+
+    assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
+    assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out
