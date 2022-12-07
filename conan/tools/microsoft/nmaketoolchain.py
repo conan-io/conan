@@ -99,7 +99,7 @@ class NMakeToolchain(object):
     @property
     def _link(self):
         nologo = ["/nologo"]
-        return nologo + self.ldflags
+        return nologo + self._ldflags
 
     def environment(self):
         env = Environment()
