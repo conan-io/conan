@@ -100,6 +100,12 @@ class BaseConanCommand(object):
             kwargs["conan_api"] = conan_api
         if isinstance(info, CommandResult):
             kwargs.update(info.filter(parameters))
+            missing_params = set(parameters).difference(kwargs)
+            if missing_params:
+                extra = " Maybe you want to implement your own 'text' formatter?" \
+                        if getattr(parser_args, "format", None) is None else ""
+                raise ConanException(f"Formatter '{formatarg}' "
+                                     f"parameters {missing_params} not defined.{extra}")
             formatter(**kwargs)
         else:
             formatter(info, **kwargs)
