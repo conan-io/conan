@@ -152,9 +152,10 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          remotes, args.update,
                                                          allow_error=True,
                                                          check_updates=args.check_updates)
-    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
-                                     lockfile=lockfile)
-    print_graph_packages(deps_graph)
+    if not deps_graph.error:
+        conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                         lockfile=lockfile)
+        print_graph_packages(deps_graph)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
