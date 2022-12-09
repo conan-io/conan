@@ -143,18 +143,18 @@ def graph_info(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.build, args.update,
+                                                         remotes, args.update,
                                                          allow_error=True,
                                                          check_updates=args.check_updates)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.build, args.update,
+                                                         remotes, args.update,
                                                          allow_error=True,
                                                          check_updates=args.check_updates)
-    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
-    print_graph_packages(graph)
+    print_graph_packages(deps_graph)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
