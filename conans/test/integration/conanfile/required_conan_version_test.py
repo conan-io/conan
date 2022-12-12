@@ -77,3 +77,19 @@ class RequiredConanVersionTest(unittest.TestCase):
                             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0")
+
+    def test_required_conan_version_invalid_syntax(self):
+            """ required_conan_version used to warn of mismatching versions if spaces were present,
+             but now we have a nicer error"""
+            # https://github.com/conan-io/conan/issues/12692
+            client = TestClient()
+            conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            required_conan_version = ">= 1.0"
+            class Lib(ConanFile):
+                pass""")
+            client.save({"conanfile.py": conanfile})
+            client.run("export . --name=pkg --version=1.0", assert_error=True)
+            self.assertNotIn(f"Current Conan version ({__version__}) does not satisfy the defined one "
+                            "(>= 1.0)", client.out)
+            self.assertIn("Error parsing version range >=", client.out)
