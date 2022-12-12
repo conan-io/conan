@@ -11,7 +11,7 @@ def test_basic():
         class Pkg(ConanFile):
 
             def package_info(self):
-                self.conf_info["tools.android:ndk_path"] = "MY-NDK!!!"
+                self.conf_info.define("tools.android:ndk_path", "MY-NDK!!!")
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=android_ndk --version=1.0")

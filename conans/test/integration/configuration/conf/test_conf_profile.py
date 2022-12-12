@@ -191,7 +191,7 @@ def test_conf_package_patterns():
     conanfile = GenConanfile()
     generate = """
     def generate(self):
-        value = self.conf["user.build:myconfig"]
+        value = self.conf.get("user.build:myconfig")
         self.output.warning("{} Config:{}".format(self.ref.name, value))
 """
     client.save({"dep/conanfile.py": str(conanfile) + generate,
