@@ -82,7 +82,7 @@ class RequiredConanVersionTest(unittest.TestCase):
         """Used to not be able to comment out required_conan_version"""
         client = TestClient()
         conanfile = textwrap.dedent("""
-                            from conan import missing_import
+                            from conan import ConanFile
                             # required_conan_version = ">=100.0"
                             class Lib(ConanFile):
                                 pass
