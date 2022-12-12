@@ -3,7 +3,6 @@ import os
 
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
-from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 
 
@@ -41,14 +40,12 @@ def export_pkg(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
-    scope_options(profile_host, requires=[ref], tool_requires=None)
-    root_node = conan_api.graph.load_root_virtual_conanfile(requires=[ref],
-                                                            profile_host=profile_host)
-    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                            profile_build=profile_build,
-                                            lockfile=lockfile,
-                                            remotes=None,
-                                            update=None)
+    deps_graph = conan_api.graph.load_graph_requires([ref], tool_requires=None,
+                                                     profile_host=profile_host,
+                                                     profile_build=profile_build,
+                                                     lockfile=lockfile,
+                                                     remotes=None,
+                                                     update=None)
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()
