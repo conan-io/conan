@@ -85,7 +85,7 @@ class RequiredConanVersionTest(unittest.TestCase):
             client = TestClient()
             conanfile = textwrap.dedent("""
             from conan import missing
-            required_conan_version = "
+            required_conan_version = ">= 1.0"
             class Lib(ConanFile):
                 pass""")
             client.save({"conanfile.py": conanfile})
