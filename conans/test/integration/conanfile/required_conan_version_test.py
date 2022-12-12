@@ -78,16 +78,16 @@ class RequiredConanVersionTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0")
 
-def test_commented_out_required_conan_version(self):
-    """Used to not be able to comment out required_conan_version"""
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-                        from conan import missing_import
-                        # required_conan_version = ">=100.0"
-                        class Lib(ConanFile):
-                            pass
-                        """)
-    client.save({"conanfile.py": conanfile})
-    client.run("export . --name=pkg --version=1.0", assert_error=False)
-    self.assertNotIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
-                     % __version__, client.out)
+    def test_commented_out_required_conan_version(self):
+        """Used to not be able to comment out required_conan_version"""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                            from conan import missing_import
+                            # required_conan_version = ">=100.0"
+                            class Lib(ConanFile):
+                                pass
+                            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=pkg --version=1.0", assert_error=False)
+        self.assertNotIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
+                         % __version__, client.out)
