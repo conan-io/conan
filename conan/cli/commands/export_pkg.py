@@ -3,7 +3,6 @@ import os
 
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
-from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 from conans.errors import ConanInvalidConfiguration
 
@@ -42,20 +41,13 @@ def export_pkg(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
-    scope_options(profile_host, requires=[ref], tool_requires=None)
-    root_node = conan_api.graph.load_root_consumer_conanfile(path, profile_host, profile_build,
-                                                             name=args.name,
-                                                             version=args.version,
-                                                             user=args.user,
-                                                             channel=args.channel,
-                                                             lockfile=lockfile)
-    # Imbue the root node with the ref revision computed during export
-    root_node.ref = ref
-    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                            profile_build=profile_build,
-                                            lockfile=lockfile,
-                                            remotes=None,
-                                            update=None)
+    deps_graph = conan_api.graph.load_graph_consumer(path,
+                                                     ref.name, ref.version, ref.user, ref.channel,
+                                                     profile_host=profile_host,
+                                                     profile_build=profile_build,
+                                                     lockfile=lockfile,
+                                                     remotes=None,
+                                                     update=None)
 
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
@@ -63,6 +55,7 @@ def export_pkg(conan_api, parser, *args):
 
     # FIXME: This code is duplicated from install_consumer() from InstallAPI
     root_node = deps_graph.root
+    root_node.ref = ref
     conanfile = root_node.conanfile
 
     if conanfile.info is not None and conanfile.info.invalid:

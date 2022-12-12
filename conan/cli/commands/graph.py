@@ -2,10 +2,10 @@ import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
+from conan.cli.printers.graph import print_graph_packages
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand, CommandResult
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import graph_compute
 from conan.cli.args import common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
@@ -46,7 +46,29 @@ def graph_build_order(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
+    cwd = os.getcwd()
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
+
+    # Basic collaborators, remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+
+    if path:
+        deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                         args.user, args.channel,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.build, args.update)
+    else:
+        deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.build, args.update)
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(deps_graph)
 
     out = ConanOutput()
     out.title("Computing the build order")
@@ -101,12 +123,39 @@ def graph_info(conan_api, parser, subparser, *args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
-
+    if not args.path and not args.requires and not args.tool_requires:
+        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
     if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial,
-                                         allow_error=True)
+    cwd = os.getcwd()
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
+
+    # Basic collaborators, remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+
+    if path:
+        deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                         args.user, args.channel,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update,
+                                                         allow_error=True,
+                                                         check_updates=args.check_updates)
+    else:
+        deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update,
+                                                         allow_error=True,
+                                                         check_updates=args.check_updates)
+    if not deps_graph.error:
+        conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                         lockfile=lockfile)
+        print_graph_packages(deps_graph)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
