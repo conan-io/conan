@@ -61,15 +61,16 @@ class PkgA(ConanFile):
         client.run("export-pkg . --name=pkga --version=0.1 --user=user --channel=testing "
                    "-pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)
+        self.assertIn(f"conanfile.py (pkga/0.1@user/testing): "
+                      f"Package '{package_id}' created", client.out)
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
-                      client.out)
+        self.assertIn("conanfile.py (hello/0.1@lasote/stable) package(): "
+                      "WARN: No files in this package!", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
@@ -119,7 +120,8 @@ class helloPythonConan(ConanFile):
                      "myprofile": profile})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    " -pr=myprofile")
-        self.assertIn("hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
+        self.assertIn("conanfile.py (hello/0.1@lasote/stable): ENV-VALUE: MYCUSTOMVALUE!!!",
+                      client.out)
 
     def _consume(self, client, install_args):
         consumer = """
@@ -254,9 +256,9 @@ class TestConan(ConanFile):
 """
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
-        client.run("export-pkg . --user=conan --channel=stable ")
-        self.assertIn("hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt",
-                      client.out)
+        client.run("export-pkg . --user=conan --channel=stable")
+        self.assertIn("conanfile.py (hello/0.1@conan/stable) package(): "
+                      "Packaged 1 '.txt' file: file.txt", client.out)
 
         # Specify different name or version is not working
         client.run("export-pkg . --name=lib", assert_error=True)
@@ -277,8 +279,8 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --name=anyname --version=1.222 --user=conan --channel=stable")
-        self.assertIn("anyname/1.222@conan/stable package(): Packaged 1 '.txt' file: file.txt",
-                      client.out)
+        self.assertIn("conanfile.py (anyname/1.222@conan/stable) package(): "
+                      "Packaged 1 '.txt' file: file.txt", client.out)
 
     def test_with_deps(self):
         client = TestClient()
@@ -460,13 +462,13 @@ def test_build_policy_never():
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "conanfile.py (pkg/1.0) package(): Packaged 1 '.h' file: header.h" in client.out
     # check for https://github.com/conan-io/conan/issues/10736
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "conanfile.py (pkg/1.0) package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
-    assert "pkg/1.0: Calling build()" not in client.out
+    assert "conanfile.py (pkg/1.0): Calling build()" not in client.out
 
 
 def test_build_policy_never_missing():
@@ -527,7 +529,7 @@ def test_export_pkg_json_formatter():
     for n in nodes:
         ref = n["ref"]
         if ref == hello_pkg_ref:
-            assert n['binary'] == "Missing"
+            assert n['binary'] == None  # The exported package has no binary status
             hello_cpp_info = n['cpp_info']
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"
@@ -586,3 +588,15 @@ def test_export_pkg_dont_update_src():
     c.run("export-pkg .")
     c.run("install --requires=hello/0.1@ --build=hello*")
     assert "hello/0.1: CONTENT: updated code!" in c.out
+
+
+def test_negate_tool_requires():
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [tool_requires]
+        !mypkg/*:cmake/3.24
+        """)
+    c.save({"myprofile": profile,
+            "conanfile.py": GenConanfile("mypkg", "0.1")})
+    c.run("export-pkg . -pr=myprofile")
+    assert "conanfile.py (mypkg/0.1): Created package" in c.out

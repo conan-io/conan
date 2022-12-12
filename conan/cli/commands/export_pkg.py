@@ -5,6 +5,7 @@ from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
 from conan.cli.common import scope_options
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
+from conans.errors import ConanInvalidConfiguration
 
 
 def json_export_pkg(info):
@@ -55,9 +56,24 @@ def export_pkg(conan_api, parser, *args):
                                             lockfile=lockfile,
                                             remotes=None,
                                             update=None)
+
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()
+
+    # FIXME: This code is duplicated from install_consumer() from InstallAPI
+    root_node = deps_graph.root
+    conanfile = root_node.conanfile
+
+    if conanfile.info is not None and conanfile.info.invalid:
+        binary, reason = "Invalid", conanfile.info.invalid
+        msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
+        raise ConanInvalidConfiguration(msg)
+
+    if root_node.cant_build:
+        binary, reason = "Cannot build for this configuration", root_node.cant_build
+        msg = "{}: {}: {}".format(conanfile, binary, reason)
+        raise ConanInvalidConfiguration(msg)
 
     conan_api.export.export_pkg(deps_graph, path)
 
