@@ -81,4 +81,4 @@ def test_test_requires():
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
-    client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")})
+    client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)

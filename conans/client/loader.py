@@ -215,6 +215,9 @@ class ConanFileLoader:
         for build_reference in parser.tool_requirements:
             # TODO: Improve this interface
             conanfile.requires.tool_require(build_reference)
+        for ref in parser.test_requirements:
+            # TODO: Improve this interface
+            conanfile.requires.test_require(ref)
 
         if parser.layout:
             layout_method = {"cmake_layout": cmake_layout,
