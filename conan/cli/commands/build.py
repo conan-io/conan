@@ -5,7 +5,7 @@ from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
     _help_build_policies
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
 

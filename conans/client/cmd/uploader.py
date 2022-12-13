@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException

@@ -2,7 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
@@ -88,7 +88,6 @@ class GraphAPI:
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         return root_node
 
-    @api_method
     def _load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
