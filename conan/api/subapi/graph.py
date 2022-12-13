@@ -88,7 +88,6 @@ class GraphAPI:
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         return root_node
 
-    @api_method
     def _load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
