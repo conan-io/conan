@@ -185,5 +185,6 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     new_autoreconf_args = args_to_string(at.autoreconf_args)
     assert "--force" not in new_autoreconf_args
     at.make_args.append("--complex-flag=complex-value")
-    at.update_autoreconf_args(**{"complex-flag": "new-value"})
-    assert "--complex-flag=new-value" not in new_autoreconf_args
+    at.update_make_args(**{"complex-flag": "new-value"})
+    new_make_args = args_to_string(at.make_args)
+    assert "--complex-flag=new-value" in new_make_args
