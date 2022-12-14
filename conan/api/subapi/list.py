@@ -1,7 +1,7 @@
 from typing import Dict
 
 from conan.api.model import Remote
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages

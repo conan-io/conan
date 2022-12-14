@@ -1,5 +1,5 @@
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller, call_system_requirements

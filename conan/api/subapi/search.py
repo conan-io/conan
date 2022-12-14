@@ -1,6 +1,6 @@
 from conan.api.model import SelectBundle
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException
 from conans.search.search import search_recipes
 

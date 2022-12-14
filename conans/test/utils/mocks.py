@@ -4,7 +4,7 @@ from io import StringIO
 
 
 from conan import ConanFile
-from conan.api.conan_app import ConanFileHelpers
+from conan.internal.conan_app import ConanFileHelpers
 from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
