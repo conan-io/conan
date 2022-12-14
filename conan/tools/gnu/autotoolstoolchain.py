@@ -7,7 +7,7 @@ from conan.tools.build.cross_building import cross_building, get_cross_building_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
 from conans.tools import args_to_string
 
@@ -189,7 +189,8 @@ class AutotoolsToolchain:
                                        _get_argument("datarootdir", "resdirs")])
         return [el for el in configure_install_flags if el]
 
-    def _default_autoreconf_flags(self):
+    @staticmethod
+    def _default_autoreconf_flags():
         return ["--force", "--install"]
 
     def _get_triplets(self):
@@ -199,6 +200,48 @@ class AutotoolsToolchain:
             if value:
                 triplets.append(f'{flag}{value}')
         return triplets
+
+    def update_configure_args(self, **updated_flags):
+        """
+        Helper to update/prune flags from ``self.configure_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("configure_args", **updated_flags)
+
+    def update_make_args(self, **updated_flags):
+        """
+        Helper to update/prune arguments from ``self.make_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("make_args", **updated_flags)
+
+    def update_autoreconf_args(self, **updated_flags):
+        """
+        Helper to update/prune arguments from ``self.autoreconf_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("autoreconf_args", **updated_flags)
+
+    def _update_flags(self, attr_name, **updated_flags):
+        _new_flags = []
+        self_args = getattr(self, attr_name)
+        for index, flag in enumerate(self_args):
+            flag_name = flag.split("=")[0].replace("--", "")
+            if flag_name in updated_flags:
+                new_flag_value = updated_flags[flag_name]
+                # if {"build": None} is passed, then "--build=xxxx" will be pruned
+                if new_flag_value is not None:
+                    _new_flags.append(f"--{flag_name}={new_flag_value}")
+            else:
+                _new_flags.append(flag)
+        # Update the current ones
+        setattr(self, attr_name, _new_flags)
 
     def generate_args(self):
         args = {"configure_args": args_to_string(self.configure_args),
