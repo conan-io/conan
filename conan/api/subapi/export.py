@@ -16,9 +16,10 @@ class ExportAPI:
         self.conan_api = conan_api
 
     @api_method
-    def export(self, path, name, version, user, channel, lockfile=None):
+    def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
         app = ConanApp(self.conan_api.cache_folder)
-        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile)
+        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
+                          remotes=remotes)
 
     @api_method
     def export_pkg(self, deps_graph, path):

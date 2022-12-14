@@ -1080,3 +1080,38 @@ class TestTestPackagePythonRequire:
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
+
+
+class TestResolveRemote:
+    def test_resolve_remote_export(self):
+        """ a "conan export" command should work even when a python_requires
+        is in the server
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"common/conanfile.py": GenConanfile("tool", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("export common")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("create pkg")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("export pkg")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("export pkg -r=default")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("create pkg -r=default")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+    def test_missing_python_require_error(self):
+        """ make sure the error is clear enough for users UX
+        """
+        c = TestClient()
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("create pkg", assert_error=True)
+        assert "Cannot resolve python_requires 'tool/0.1'" in c.out

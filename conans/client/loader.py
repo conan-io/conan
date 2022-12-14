@@ -137,10 +137,12 @@ class ConanFileLoader:
 
         return conanfile
 
-    def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None):
+    def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None,
+                    remotes=None):
         """ loads the conanfile and evaluates its name, version, and enforce its existence
         """
-        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
+        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock,
+                                    remotes=remotes)
         if not conanfile.name:
             raise ConanException("conanfile didn't specify name")
         if not conanfile.version:
