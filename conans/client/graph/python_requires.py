@@ -112,7 +112,10 @@ class PyRequireLoader(object):
         return ref
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
-        recipe = self._proxy.get_recipe(ref, remotes, update, check_update)
+        try:
+            recipe = self._proxy.get_recipe(ref, remotes, update, check_update)
+        except ConanException as e:
+            raise ConanException(f"Cannot resolve python_requires '{ref}': {str(e)}")
         path, recipe_status, remote, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, graph_lock, update, check_update)
         conanfile.name = new_ref.name
