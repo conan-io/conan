@@ -437,6 +437,9 @@ class DepsGraphBuilder(object):
         if context_switch:
             profile = profile_build
             context = CONTEXT_BUILD
+        elif requirement.force_host_context:
+            profile = profile_host
+            context = CONTEXT_HOST
         else:
             profile = profile_host if current_node.context == CONTEXT_HOST else profile_build
             context = current_node.context
