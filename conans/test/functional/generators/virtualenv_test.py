@@ -20,6 +20,10 @@ os_info = OSInfo()
 
 
 def _load_env_file(filename):
+    # TODO Revert the follwoing 3 lines before merge
+    print(load(filename))
+    print(load(filename).splitlines())
+    print([l.split("=", 1) for l in load(filename).splitlines()])
     return dict(l.split("=", 1) for l in load(filename).splitlines())
 
 
