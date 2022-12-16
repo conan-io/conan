@@ -143,7 +143,7 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.cli.command import conan_command, conan_subcommand
+            from conan.cli.command import conan_command
             from conan.api.output import cli_out_write
 
             @conan_command()
@@ -165,3 +165,24 @@ class TestCustomCommands:
         assert "Hello world" in client.out
         client.run("install")
         assert "Hello world" in client.out
+
+    def test_command_result_error_text(self):
+        # https://github.com/conan-io/conan/issues/12668
+        complex_command = textwrap.dedent("""
+            from conan.cli.command import conan_command, CommandResult
+
+            @conan_command()
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \"""
+                this is a command with subcommands
+                \"""
+                return CommandResult({"mydata": 42})
+            """)
+
+        client = TestClient()
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        client.save({f"{command_file_path}": complex_command})
+        client.run("mycommand", assert_error=True)
+        assert "ERROR: Formatter 'text' parameters {'x'} not defined. " \
+               "Maybe you want to implement your own 'text' formatter?" in client.out
