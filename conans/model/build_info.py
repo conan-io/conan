@@ -43,6 +43,7 @@ class MockInfoProperty(object):
 
     def __getitem__(self, key):
         ConanOutput().warning(self._message)
+        return []
 
     def __setitem__(self, key, value):
         ConanOutput().warning(self._message)
