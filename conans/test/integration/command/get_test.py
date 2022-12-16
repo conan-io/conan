@@ -50,7 +50,7 @@ class ConanGetTest(unittest.TestCase):
                           self.client.out)
 
         self.client.run('get {} other/path/to/exported'.format(self.reference))
-        self.assertEqual("2\n", self.client.out)
+        self.assertEqual("2", self.client.out)
 
         # Local search, conanfile print
         self.client.run('get {} --raw'.format(self.reference))
