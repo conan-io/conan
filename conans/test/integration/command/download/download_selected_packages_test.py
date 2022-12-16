@@ -24,6 +24,7 @@ def setup():
     return client, ref, package_ids, str(conanfile)
 
 
+@pytest.mark.artifactory_ready
 def test_download_all(setup):
     client, ref, package_ids, _ = setup
     new_client = TestClient(servers=client.servers, users=client.users)
