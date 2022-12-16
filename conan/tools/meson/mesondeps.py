@@ -4,6 +4,7 @@ from jinja2 import Template
 
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conan.tools.meson.helpers import to_meson_value
+from conans.errors import ConanException
 from conans.model.build_info import CppInfo
 from conans.util.files import save
 
@@ -22,6 +23,10 @@ class MesonDeps:
     """)
 
     def __init__(self, conanfile):
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         self._ordered_deps = []
         # constants

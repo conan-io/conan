@@ -1,6 +1,7 @@
 import os
 
 from conan.tools.env import Environment
+from conans.errors import ConanException
 
 
 def runenv_from_cpp_info(dep, os_name):
@@ -33,6 +34,10 @@ class VirtualRunEnv:
 
         :param conanfile:  The current recipe object. Always use ``self``.
         """
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"

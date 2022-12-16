@@ -1,5 +1,6 @@
 from conan.tools.env import Environment
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
+from conans.errors import ConanException
 
 
 class VirtualBuildEnv:
@@ -8,6 +9,10 @@ class VirtualBuildEnv:
     """
 
     def __init__(self, conanfile):
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"

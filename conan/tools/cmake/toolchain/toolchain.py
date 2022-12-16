@@ -115,6 +115,10 @@ class CMakeToolchain(object):
         """)
 
     def __init__(self, conanfile, generator=None):
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
         self.variables = Variables()

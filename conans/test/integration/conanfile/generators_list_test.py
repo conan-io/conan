@@ -61,3 +61,25 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t.run("export pyreq.py --name=base --version=1.0")
         t.run("install conanfile.py")
         self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)
+
+    def test_duplicated_generator_in_member_and_attribue(self):
+        """
+        Ensure we raise an error when a generator is present both in the generators attribute
+        and instanced in the generate() method by the user, which we didn't use to do before 2.0
+        """
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Recipe(ConanFile):
+            generators = "CMakeToolchain"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.generate()
+        """)
+
+        t = TestClient()
+        t.save({'conanfile.py': conanfile})
+        # This used to not throw any errors
+        t.run("install .", assert_error=True)

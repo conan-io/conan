@@ -15,6 +15,10 @@ from conans.util.files import save
 class CMakeDeps(object):
 
     def __init__(self, conanfile):
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)

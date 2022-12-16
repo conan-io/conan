@@ -49,6 +49,10 @@ class MSBuildToolchain(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
+        if self.__class__.__name__ in conanfile.generators:
+            raise ConanException(f"{self.__class__.__name__} is declared in the generators"
+                                 "attribute, but was also instantiated in the generate() method."
+                                 "It should only be present in one of them.")
         self._conanfile = conanfile
         #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
