@@ -28,24 +28,20 @@ def _get_generator_class(generator_name):
     if generator_name == "QbsToolchain":
         generator_name = "QbsProfile"
 
-    if generator_name not in _generators:
+    try:
+        generator_class = _generators[generator_name]
+        # This is identical to import ... form ... in terms of cacheing
+        return getattr(importlib.import_module(generator_class), generator_name)
+    except KeyError as e:
         raise ConanException(f"Invalid generator '{generator_name}'. "
-                             f"Available types: {', '.join(_generators)}")
-
-    generator_class = _generators.get(generator_name, None)
-    if generator_class is not None:
-        try:
-            # This is identical to import . form . in terms of cacheing
-            return getattr(importlib.import_module(generator_class), generator_name)
-        except ImportError as e:
-            raise ConanException("Internal Conan error:"
-                                 f"Could not find module {generator_class}") from e
-        except AttributeError as e:
-            raise ConanException("Internal Conan error:"
-                                 f"Could not find name {generator_name}"
-                                 f"inside module {generator_class}") from e
-    else:
-        raise ConanException(f"Internal Conan error: Generator '{generator_name}' not complete")
+                             f"Available types: {', '.join(_generators)}") from e
+    except ImportError as e:
+        raise ConanException("Internal Conan error: "
+                             f"Could not find module {generator_class}") from e
+    except AttributeError as e:
+        raise ConanException("Internal Conan error: "
+                             f"Could not find name {generator_name}"
+                             f"inside module {generator_class}") from e
 
 
 def write_generators(conanfile, hook_manager):
