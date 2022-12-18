@@ -228,7 +228,12 @@ class RestCommonMethods(object):
         # We need to filter the "_/_" user and channel from Artifactory
         ret = []
         for reference in response:
-            ref = RecipeReference.loads(reference)
+            try:
+                ref = RecipeReference.loads(reference)
+            except TypeError as te:
+                raise ConanException("Unexpected response from server.\n"
+                                     "URL: `{}`\n"
+                                     "Expected an iterable, but got {}.".format(url, type(response)))
             if ref.user == "_":
                 ref.user = None
             if ref.channel == "_":

@@ -6,6 +6,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
 
 
+@pytest.mark.artifactory_ready
 class DownloadRevisionsTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
