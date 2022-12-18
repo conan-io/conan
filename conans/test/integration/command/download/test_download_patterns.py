@@ -7,6 +7,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 
+@pytest.mark.artifactory_ready
 class TestDownloadPatterns:
     # FIXME The fixture is copied from TestUploadPatterns, reuse it
     @pytest.fixture(scope="class")  # Takes 6 seconds, reuse it
