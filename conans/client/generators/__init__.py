@@ -98,23 +98,25 @@ def write_generators(conanfile, hook_manager):
     # They would raise an exception here if we don't invalidate the field while we call them
     old_generators = set(conanfile.generators)
     conanfile.generators = []
-    for generator_name in old_generators:
-        generator_class = _get_generator_class(generator_name)
-        if generator_class:
-            try:
-                generator = generator_class(conanfile)
-                conanfile.output.highlight(f"Generator '{generator_name}' calling 'generate()'")
-                mkdir(new_gen_folder)
-                with chdir(new_gen_folder):
-                    generator.generate()
-                continue
-            except Exception as e:
-                # When a generator fails, it is very useful to have the whole stacktrace
-                conanfile.output.error(traceback.format_exc())
-                raise ConanException("Error in generator '{}': {}".format(generator_name, str(e)))
-    # restore the generators attribute, so it can be checked and raise
-    # if the user tries to instantiate a generator present in generators
-    conanfile.generators = old_generators
+    try:
+        for generator_name in old_generators:
+            generator_class = _get_generator_class(generator_name)
+            if generator_class:
+                try:
+                    generator = generator_class(conanfile)
+                    conanfile.output.highlight(f"Generator '{generator_name}' calling 'generate()'")
+                    mkdir(new_gen_folder)
+                    with chdir(new_gen_folder):
+                        generator.generate()
+                    continue
+                except Exception as e:
+                    # When a generator fails, it is very useful to have the whole stacktrace
+                    conanfile.output.error(traceback.format_exc())
+                    raise ConanException(f"Error in generator '{generator_name}': {str(e)}") from e
+    finally:
+        # restore the generators attribute, so it can raise
+        # if the user tries to instantiate a generator already present in generators
+        conanfile.generators = old_generators
     if hasattr(conanfile, "generate"):
         conanfile.output.highlight("Calling generate()")
         mkdir(new_gen_folder)
