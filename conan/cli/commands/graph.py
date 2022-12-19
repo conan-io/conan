@@ -157,12 +157,12 @@ def graph_info(conan_api, parser, subparser, *args):
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
 
-    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                  clean=args.lockfile_clean)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
-    if args.deploy:
-        base_folder = os.getcwd()
-        do_deploys(conan_api, deps_graph, args.deploy, base_folder)
+        lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                      clean=args.lockfile_clean)
+        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
+        if args.deploy:
+            base_folder = os.getcwd()
+            do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
     return {"graph": deps_graph,
             "field_filter": args.filter,

@@ -24,6 +24,8 @@ def format_graph_info(result):
                 continue
         out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, field_filter, indent="  ")
+    if graph.error:
+        raise graph.error
 
 
 def _serial_pretty_printer(data, field_filter, indent=""):
