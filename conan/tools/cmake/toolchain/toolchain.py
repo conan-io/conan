@@ -151,7 +151,6 @@ class CMakeToolchain(object):
     def _context(self):
         """ Returns dict, the context for the template
         """
-        _check_duplicated_generator(self, self._conanfile)
         self.preprocessor_definitions.quote_preprocessor_strings()
 
         blocks = self.blocks.process_blocks()
@@ -175,6 +174,7 @@ class CMakeToolchain(object):
         """
           This method will save the generated files to the conanfile.generators_folder
         """
+        _check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
