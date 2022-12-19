@@ -510,6 +510,7 @@ class TestClient(object):
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
+            self.out = ""
             with self.mocked_io():
                 real_servers = any(isinstance(s, (str, ArtifactoryServer))
                                    for s in self.servers.values())
@@ -671,13 +672,15 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
-    def assert_listed_require(self, requires, build=False, python=False):
+    def assert_listed_require(self, requires, build=False, python=False, test=False):
         """ parses the current command output, and extract the first "Requirements" section
         """
         lines = self.out.splitlines()
         header = "Requirements" if not build else "Build requirements"
         if python:
             header = "Python requires"
+        if test:
+            header = "Test requirements"
         line_req = lines.index(header)
         reqs = []
         for line in lines[line_req+1:]:
@@ -691,13 +694,17 @@ class TestClient(object):
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
-    def assert_listed_binary(self, requires, build=False):
+    def assert_listed_binary(self, requires, build=False, test=False):
         """ parses the current command output, and extract the second "Requirements" section
         belonging to the computed package binaries
         """
         lines = self.out.splitlines()
         line_req = lines.index("-------- Computing necessary packages --------")
-        line_req = lines.index("Requirements" if not build else "Build requirements", line_req)
+        header = "Requirements" if not build else "Build requirements"
+        if test:
+            header = "Test requirements"
+        line_req = lines.index(header, line_req)
+
         reqs = []
         for line in lines[line_req+1:]:
             if not line.startswith("    "):

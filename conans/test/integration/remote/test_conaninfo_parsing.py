@@ -2,9 +2,12 @@
 
 import textwrap
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.artifactory_ready
 def test_conaninfo_special_chars():
 
     t = TestClient(default_server_user=True)

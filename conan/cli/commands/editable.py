@@ -3,7 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.model.recipe_ref import RecipeReference
 
 

@@ -143,7 +143,7 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.cli.command import conan_command, conan_subcommand
+            from conan.cli.command import conan_command
             from conan.api.output import cli_out_write
 
             @conan_command()

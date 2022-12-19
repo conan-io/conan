@@ -1,7 +1,7 @@
 import fnmatch
 
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.client.cache.remote_registry import Remote
 from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.errors import ConanException

@@ -6,8 +6,8 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
-from conan.api.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_basic, print_graph_packages
+from conan.internal.conan_app import ConanApp
+from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir
@@ -52,7 +52,8 @@ def create(conan_api, parser, *args):
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,
                                              user=args.user, channel=args.channel,
-                                             lockfile=lockfile)
+                                             lockfile=lockfile,
+                                             remotes=remotes)
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,

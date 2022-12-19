@@ -14,6 +14,7 @@ def test_legacy_names_filenames():
                 self.cpp_info.components["comp"].names["cmake_find_package"] = "hello"
                 self.cpp_info.components["comp"].names["cmake_find_package_multi"] = "hello"
                 self.cpp_info.components["comp"].build_modules["cmake_find_package"] = ["nice_rel_path"]
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append("some_file_name")
                 self.cpp_info.components["comp"].build_modules["cmake_find_package_multi"] = ["nice_rel_path"]
 
                 self.cpp_info.names["cmake_find_package"] = "absl"

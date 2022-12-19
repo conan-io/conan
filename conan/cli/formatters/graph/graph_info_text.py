@@ -3,7 +3,10 @@ import fnmatch
 from conan.api.output import ConanOutput
 
 
-def format_graph_info(graph, field_filter, package_filter):
+def format_graph_info(result):
+    graph = result["graph"]
+    field_filter = result["field_filter"]
+    package_filter = result["package_filter"]
     """ More complete graph output, including information for every node in the graph
     Used for 'graph info' command
     """
