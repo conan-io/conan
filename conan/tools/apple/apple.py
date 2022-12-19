@@ -167,22 +167,14 @@ def fix_apple_shared_install_name(conanfile):
         install_name = check_output_runner(command).strip().split(":")[1].strip()
         return install_name
 
+    def _darwin_is_binary(file, binary_type):
+        if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
+            return False
+        check_file = f"otool -hv {file}"
+        return True if binary_type in check_output_runner(check_file) else False
+
     def _darwin_collect_binaries(folder, binary_type):
-        ret = []
-        if binary_type not in ("DYLIB", "EXECUTE"):
-            return ret
-
-        for root, _, files in os.walk(folder):
-            for f in files:
-                full_path = os.path.join(root, f)
-                if os.path.islink(full_path):
-                    continue
-
-                check_lib = f"otool -hv {full_path}"
-                if binary_type in check_output_runner(check_lib):
-                    ret.append(full_path)
-
-        return ret
+        return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
 
     def _fix_install_name(dylib_path, new_name):
         command = f"install_name_tool {dylib_path} -id {new_name}"
