@@ -4,7 +4,7 @@ import os
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.printers.graph import print_graph_packages
 from conan.internal.deploy import do_deploys
-from conan.cli.command import conan_command, conan_subcommand, CommandResult
+from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
 from conan.cli.args import common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
@@ -164,6 +164,7 @@ def graph_info(conan_api, parser, subparser, *args):
         base_folder = os.getcwd()
         do_deploys(conan_api, deps_graph, args.deploy, base_folder)
 
-    return CommandResult({"graph": deps_graph,
-                          "field_filter": args.filter,
-                          "package_filter": args.package_filter})
+    return {"graph": deps_graph,
+            "field_filter": args.filter,
+            "package_filter": args.package_filter,
+            "conan_api": conan_api}
