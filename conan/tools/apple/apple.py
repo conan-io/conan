@@ -167,9 +167,14 @@ def fix_apple_shared_install_name(conanfile):
         install_name = check_output_runner(command).strip().split(":")[1].strip()
         return install_name
 
-    def _darwin_collect_dylibs(lib_folder):
-        return [os.path.join(lib_folder, f) for f in os.listdir(lib_folder) if f.endswith(".dylib")
-                and not os.path.islink(os.path.join(lib_folder, f))]
+    def _darwin_is_binary(file, binary_type):
+        if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
+            return False
+        check_file = f"otool -hv {file}"
+        return binary_type in check_output_runner(check_file)
+
+    def _darwin_collect_binaries(folder, binary_type):
+        return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
 
     def _fix_install_name(dylib_path, new_name):
         command = f"install_name_tool {dylib_path} -id {new_name}"
@@ -178,17 +183,6 @@ def fix_apple_shared_install_name(conanfile):
     def _fix_dep_name(dylib_path, old_name, new_name):
         command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
         conanfile.run(command)
-
-    def _darwin_collect_executables(bin_folder):
-        ret = []
-        for f in os.listdir(bin_folder):
-            full_path = os.path.join(bin_folder, f)
-
-            # Run "otool -hv" to verify it is an executable
-            check_bin = "otool -hv {}".format(full_path)
-            if "EXECUTE" in check_output_runner(check_bin):
-                ret.append(full_path)
-        return ret
 
     def _get_rpath_entries(binary_file):
         entries = []
@@ -215,7 +209,7 @@ def fix_apple_shared_install_name(conanfile):
             if not os.path.exists(full_folder):
                 raise ConanException(f"Trying to locate shared libraries, but `{libdir}` "
                                      f" not found inside package folder {conanfile.package_folder}")
-            shared_libs = _darwin_collect_dylibs(full_folder)
+            shared_libs = _darwin_collect_binaries(full_folder, "DYLIB")
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
                 install_name = _get_install_name(shared_lib)
@@ -242,7 +236,7 @@ def fix_apple_shared_install_name(conanfile):
                 # Skip if the folder does not exist inside the package
                 # (e.g. package does not contain executables but bindirs is defined)
                 continue
-            executables = _darwin_collect_executables(full_folder)
+            executables = _darwin_collect_binaries(full_folder, "EXECUTE")
             for executable in executables:
 
                 # Fix install names of libraries from within the same package
