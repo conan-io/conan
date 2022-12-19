@@ -69,7 +69,8 @@ def print_list_package_revisions(results):
                     cli_out_write(f"  {pref.repr_humantime()}", fg=recipe_color)
 
 
-def print_list_package_ids(results):
+def print_list_package_ids(result):
+    results = result["results"]
     for remote, result in results.items():
         name = remote if remote is not None else "Local Cache"
         cli_out_write(f"{name}:", fg=remote_color)
@@ -204,7 +205,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     return results
 
 
-def _list_packages_json(results):
+def _list_packages_json(result):
+    results = result["results"]
     for remote, d in results.items():
         d["reference"] = repr(d["reference"])
         try:
@@ -268,7 +270,8 @@ def list_packages(conan_api, parser, subparser, *args):
             results[name] = {"error": str(e)}
         results[name]["reference"] = ref
 
-    return results
+    return {"results": results,
+            "conan_api": conan_api}
 
 
 @conan_command(group="Consumer")
