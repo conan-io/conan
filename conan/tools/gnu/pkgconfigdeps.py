@@ -4,6 +4,7 @@ from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.tools import _check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
 from conans.util.files import save
@@ -360,10 +361,7 @@ class _PCGenerator:
 class PkgConfigDeps:
 
     def __init__(self, conanfile):
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         # Activate the build *.pc files for the specified libraries
         self.build_context_activated = []

@@ -1,3 +1,4 @@
+from conan.tools import _check_duplicated_generator
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string
@@ -6,7 +7,7 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
 
 
@@ -23,10 +24,7 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix

@@ -1,15 +1,12 @@
+from conan.tools import _check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.errors import ConanException
 from conans.model.build_info import CppInfo
 
 
 class AutotoolsDeps:
     def __init__(self, conanfile):
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._environment = None
         self._ordered_deps = []

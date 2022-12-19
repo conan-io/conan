@@ -4,6 +4,7 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
+from conan.tools import _check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
@@ -49,10 +50,7 @@ class MSBuildToolchain(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}

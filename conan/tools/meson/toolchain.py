@@ -3,6 +3,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.tools import _check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
@@ -93,10 +94,7 @@ class MesonToolchain(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
         self._is_apple_system = is_apple_os(self._conanfile)

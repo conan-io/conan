@@ -21,6 +21,7 @@ import os
 import platform
 import textwrap
 
+from conan.tools import _check_duplicated_generator
 from conans.errors import ConanException
 
 
@@ -39,10 +40,7 @@ class IntelCC:
 
     def __init__(self, conanfile):
         # Let's check the compatibility
-        if self.__class__.__name__ in conanfile.generators:
-            raise ConanException(f"{self.__class__.__name__} is declared in the generators "
-                                 "attribute, but was also instantiated in the generate() method. "
-                                 "It should only be present in one of them.")
+        _check_duplicated_generator(self, conanfile)
         compiler_version = conanfile.settings.get_safe("compiler.version")
         mode = conanfile.settings.get_safe("compiler.mode")
         if _is_using_intel_oneapi(compiler_version):
