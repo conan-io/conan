@@ -171,7 +171,7 @@ def fix_apple_shared_install_name(conanfile):
         if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
             return False
         check_file = f"otool -hv {file}"
-        return True if binary_type in check_output_runner(check_file) else False
+        return binary_type in check_output_runner(check_file)
 
     def _darwin_collect_binaries(folder, binary_type):
         return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
