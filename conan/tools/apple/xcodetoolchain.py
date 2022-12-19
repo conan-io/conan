@@ -33,7 +33,6 @@ class XcodeToolchain(object):
         """)
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         arch = conanfile.settings.get_safe("arch")
         self.architecture = to_apple_arch(self._conanfile, default=arch)
@@ -48,6 +47,7 @@ class XcodeToolchain(object):
         self._global_ldflags = sharedlinkflags + exelinkflags
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
         save(self._vars_xconfig_filename, self._vars_xconfig_content)
         if self._check_if_extra_flags:

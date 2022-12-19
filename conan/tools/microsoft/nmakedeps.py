@@ -11,7 +11,6 @@ class NMakeDeps(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._environment = None
 
@@ -60,4 +59,5 @@ class NMakeDeps(object):
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        _check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conannmakedeps")

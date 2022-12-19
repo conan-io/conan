@@ -11,10 +11,10 @@ from conans.util.files import save
 
 class BazelDeps(object):
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         local_repositories = []
         generators_folder = self._conanfile.generators_folder
 

@@ -361,7 +361,6 @@ class _PCGenerator:
 class PkgConfigDeps:
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         # Activate the build *.pc files for the specified libraries
         self.build_context_activated = []
@@ -416,6 +415,7 @@ class PkgConfigDeps:
         """
         Save all the `*.pc` files
         """
+        _check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():

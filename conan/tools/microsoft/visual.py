@@ -81,7 +81,6 @@ class VCVars:
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
 
     def generate(self, scope="build"):
@@ -92,6 +91,7 @@ class VCVars:
         :param scope: ``str`` Launcher to be used to run all the variables. For instance,
                       if ``build``, then it'll be used the ``conanbuild`` launcher.
         """
+        _check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
         os_ = conanfile.settings.get_safe("os")
         if os_ != "Windows":

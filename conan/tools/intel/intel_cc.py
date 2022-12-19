@@ -40,7 +40,6 @@ class IntelCC:
 
     def __init__(self, conanfile):
         # Let's check the compatibility
-        _check_duplicated_generator(self, conanfile)
         compiler_version = conanfile.settings.get_safe("compiler.version")
         mode = conanfile.settings.get_safe("compiler.mode")
         if _is_using_intel_oneapi(compiler_version):
@@ -74,6 +73,7 @@ class IntelCC:
 
     def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
+        _check_duplicated_generator(self, self._conanfile)
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off

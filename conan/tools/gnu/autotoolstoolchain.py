@@ -24,7 +24,6 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
@@ -160,6 +159,7 @@ class AutotoolsToolchain:
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        _check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")

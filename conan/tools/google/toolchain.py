@@ -5,11 +5,11 @@ from conan.tools.files.files import save_toolchain_args
 class BazelToolchain(object):
 
     def __init__(self, conanfile, namespace=None):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._namespace = namespace
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         content = {}
         configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
                                                     default=[],

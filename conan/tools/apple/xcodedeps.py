@@ -106,7 +106,6 @@ class XcodeDeps(object):
         """)
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
         arch = conanfile.settings.get_safe("arch")
@@ -117,6 +116,7 @@ class XcodeDeps(object):
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("XcodeDeps.configuration is None, it should have a value")
         if self.architecture is None:

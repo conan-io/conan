@@ -16,7 +16,6 @@ from conans.util.files import save
 class CMakeDeps(object):
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
@@ -37,6 +36,7 @@ class CMakeDeps(object):
         """
         This method will save the generated files to the conanfile.generators_folder
         """
+        _check_duplicated_generator(self, self._conanfile)
         # FIXME: Remove this in 2.0
         if not hasattr(self._conanfile, "settings_build") and \
                       (self.build_context_activated or self.build_context_build_modules or

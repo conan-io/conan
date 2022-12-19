@@ -9,7 +9,6 @@ class VirtualBuildEnv:
     """
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"
@@ -80,6 +79,6 @@ class VirtualBuildEnv:
 
         :param scope: Scope to be used.
         """
-
+        _check_duplicated_generator(self, self._conanfile)
         build_env = self.environment()
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

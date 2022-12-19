@@ -6,7 +6,6 @@ from conans.model.build_info import CppInfo
 
 class AutotoolsDeps:
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._environment = None
         self._ordered_deps = []
@@ -81,4 +80,5 @@ class AutotoolsDeps:
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self,  scope="build"):
+        _check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")

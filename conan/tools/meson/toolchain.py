@@ -94,7 +94,6 @@ class MesonToolchain(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
         self._is_apple_system = is_apple_os(self._conanfile)
@@ -429,6 +428,7 @@ class MesonToolchain(object):
         ``conan_meson_cross.ini`` (if cross builds) with the proper content.
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
+        _check_duplicated_generator(self, self._conanfile)
         filename = self.native_filename if not self.cross_build else self.cross_filename
         save(filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?

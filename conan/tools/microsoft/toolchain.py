@@ -50,7 +50,6 @@ class MSBuildToolchain(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
@@ -93,6 +92,7 @@ class MSBuildToolchain(object):
         valid XML format with all the good settings like any other VS project ``*.props`` file. The
         last one emulates the ``vcvarsall.bat`` env script. See also :class:`VCVars`.
         """
+        _check_duplicated_generator(self, self._conanfile)
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files

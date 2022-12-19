@@ -39,10 +39,10 @@ class _PremakeTemplate(object):
 class PremakeDeps(object):
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():

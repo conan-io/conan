@@ -261,7 +261,6 @@ class QbsProfile(object):
         ''')
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         _check_for_compiler(conanfile)
         self._conanfile = conanfile
         _setup_toolchains(conanfile)
@@ -287,6 +286,7 @@ class QbsProfile(object):
             conanfile.options.get_safe('fPIC'))
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         save(self.old_filename, self.content)
         save(self.filename, self.content)
 

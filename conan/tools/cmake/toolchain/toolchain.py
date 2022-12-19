@@ -116,7 +116,6 @@ class CMakeToolchain(object):
         """)
 
     def __init__(self, conanfile, generator=None):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
         self.variables = Variables()
@@ -152,6 +151,7 @@ class CMakeToolchain(object):
     def _context(self):
         """ Returns dict, the context for the template
         """
+        _check_duplicated_generator(self, self._conanfile)
         self.preprocessor_definitions.quote_preprocessor_strings()
 
         blocks = self.blocks.process_blocks()

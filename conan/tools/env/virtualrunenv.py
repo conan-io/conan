@@ -34,7 +34,6 @@ class VirtualRunEnv:
 
         :param conanfile:  The current recipe object. Always use ``self``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"
@@ -91,5 +90,6 @@ class VirtualRunEnv:
 
         :param scope: Scope to be used.
         """
+        _check_duplicated_generator(self, self._conanfile)
         run_env = self.environment()
         run_env.vars(self._conanfile, scope=scope).save_script(self._filename)

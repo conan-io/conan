@@ -93,7 +93,6 @@ class MSBuildDeps(object):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         #: Defines the build type. By default, ``settings.build_type``.
         self.configuration = conanfile.settings.build_type
@@ -115,6 +114,7 @@ class MSBuildDeps(object):
         Generates ``conan_<pkg>_<config>_vars.props``, ``conan_<pkg>_<config>.props``,
         and ``conan_<pkg>.props`` files into the ``conanfile.generators_folder``.
         """
+        _check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:

@@ -23,7 +23,6 @@ class MesonDeps:
     """)
 
     def __init__(self, conanfile):
-        _check_duplicated_generator(self, conanfile)
         self._conanfile = conanfile
         self._ordered_deps = []
         # constants
@@ -104,4 +103,5 @@ class MesonDeps:
         return content
 
     def generate(self):
+        _check_duplicated_generator(self, self._conanfile)
         save(self.filename, self._content())
