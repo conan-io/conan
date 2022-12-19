@@ -698,3 +698,31 @@ def test_profile_override_conflict():
     assert "protoc/0.2 (test package)" in client.out
     assert "WARN: The package created was 'protoc/0.1' but the reference being tested " \
            "is 'protoc/0.2'" in client.out
+
+
+def test_both_context_options_error():
+    # https://github.com/conan-io/conan/issues/11385
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "arch"
+            options = {"neon": [True, "check", False]}
+            default_options = {"neon": True}
+
+            def config_options(self):
+                if "arm" not in self.settings.arch:
+                    del self.options.neon
+            """)
+    c.save({"pkg/conanfile.py": pkg,
+            "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                   .with_build_requires("pkg/0.1")})
+    c.run("export pkg")
+    c.run("install consumer -s:b arch=x86_64 -s:h arch=armv8 --build=missing")
+    # This failed in Conan 1.X, but now it works
+    c.assert_listed_binary({"pkg/0.1": ("a0a41a189feabff576a535d071858191b90beceb", "Build")})
+    c.assert_listed_binary({"pkg/0.1": ("62e589af96a19807968167026d906e63ed4de1f5", "Build")},
+                           build=True)
+    assert "Finalizing install" in c.out
