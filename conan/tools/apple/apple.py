@@ -1,6 +1,5 @@
 import os
 
-from conans.errors import ConanException
 from conans.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException

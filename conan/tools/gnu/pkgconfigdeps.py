@@ -4,6 +4,7 @@ from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
 from conans.util.files import save
@@ -414,6 +415,7 @@ class PkgConfigDeps:
         """
         Save all the `*.pc` files
         """
+        check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():

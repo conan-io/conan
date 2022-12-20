@@ -1,3 +1,4 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
 
@@ -78,6 +79,6 @@ class VirtualBuildEnv:
 
         :param scope: Scope to be used.
         """
-
+        check_duplicated_generator(self, self._conanfile)
         build_env = self.environment()
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

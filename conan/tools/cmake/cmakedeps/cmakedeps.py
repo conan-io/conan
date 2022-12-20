@@ -1,5 +1,6 @@
 import os
 
+from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
@@ -35,6 +36,7 @@ class CMakeDeps(object):
         """
         This method will save the generated files to the conanfile.generators_folder
         """
+        check_duplicated_generator(self, self._conanfile)
         # FIXME: Remove this in 2.0
         if not hasattr(self._conanfile, "settings_build") and \
                       (self.build_context_activated or self.build_context_build_modules or
