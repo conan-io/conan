@@ -103,6 +103,8 @@ def format_graph_html(result):
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
     cli_out_write(_render_graph(graph, template, template_folder))
+    if graph.error:
+        raise graph.error
 
 
 def format_graph_dot(result):
@@ -112,6 +114,8 @@ def format_graph_dot(result):
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
     cli_out_write(_render_graph(graph, template, template_folder))
+    if graph.error:
+        raise graph.error
 
 
 def format_graph_json(result):
@@ -119,3 +123,5 @@ def format_graph_json(result):
     serialized = graph.serialize()
     json_result = json.dumps(serialized, indent=4)
     cli_out_write(json_result)
+    if graph.error:
+        raise graph.error

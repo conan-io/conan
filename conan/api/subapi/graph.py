@@ -138,7 +138,6 @@ class GraphAPI:
                                      update=update,
                                      check_update=check_updates)
         print_graph_basic(deps_graph)
-        out.title("Computing necessary packages")
         if deps_graph.error:
             if allow_error:
                 return deps_graph
@@ -167,7 +166,6 @@ class GraphAPI:
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
         print_graph_basic(deps_graph)
-        out.title("Computing necessary packages")
         if deps_graph.error:
             if allow_error:
                 return deps_graph
@@ -218,6 +216,7 @@ class GraphAPI:
         :param update: (False by default), if Conan should look for newer versions or
             revisions for already existing recipes in the Conan cache
         """
+        ConanOutput().title("Computing necessary packages")
         conan_app = ConanApp(self.conan_api.cache_folder)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update)
