@@ -40,7 +40,7 @@ def _get_generator_class(generator_name):
                              f"Could not find module {generator_class}") from e
     except AttributeError as e:
         raise ConanException("Internal Conan error: "
-                             f"Could not find name {generator_name}"
+                             f"Could not find name {generator_name} "
                              f"inside module {generator_class}") from e
 
 
