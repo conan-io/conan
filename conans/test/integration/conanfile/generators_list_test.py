@@ -83,3 +83,4 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t.save({'conanfile.py': conanfile})
         # This used to not throw any errors
         t.run("install .", assert_error=True)
+        assert "was instantiated in the generate() method too" in t.out
