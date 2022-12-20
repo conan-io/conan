@@ -1,88 +1,47 @@
 import os
 import traceback
+import importlib
 
 from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
 
-_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
-               "MesonToolchain", "MesonDeps", "MSBuildDeps", "QbsToolchain",
-               "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
-               "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "IntelCC", "XcodeDeps", "PremakeDeps", "XcodeToolchain",
-               "NMakeToolchain", "NMakeDeps"]
+_generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.cmake",
+               "MesonToolchain": "conan.tools.meson", "MesonDeps": "conan.tools.meson",
+               "MSBuildDeps": "conan.tools.microsoft", "MSBuildToolchain": "conan.tools.microsoft",
+               "NMakeToolchain": "conan.tools.microsoft", "NMakeDeps": "conan.tools.microsoft",
+               "VCVars": "conan.tools.microsoft",
+               "QbsProfile": "conan.tools.qbs.qbsprofile",
+               "VirtualRunEnv": "conan.tools.env.virtualrunenv",
+               "VirtualBuildEnv": "conan.tools.env.virtualbuildenv",
+               "AutotoolsDeps": "conan.tools.gnu", "AutotoolsToolchain": "conan.tools.gnu",
+               "PkgConfigDeps": "conan.tools.gnu",
+               "BazelDeps": "conan.tools.google", "BazelToolchain": "conan.tools.google",
+               "IntelCC": "conan.tools.intel",
+               "XcodeDeps": "conan.tools.apple", "XcodeToolchain": "conan.tools.apple",
+               "PremakeDeps": "conan.tools.premake",
+               }
 
 
 def _get_generator_class(generator_name):
-    if generator_name not in _generators:
-        raise ConanException("Invalid generator '%s'. Available types: %s" %
-                             (generator_name, ", ".join(_generators)))
-    if generator_name == "CMakeToolchain":
-        from conan.tools.cmake import CMakeToolchain
-        return CMakeToolchain
-    elif generator_name == "CMakeDeps":
-        from conan.tools.cmake import CMakeDeps
-        return CMakeDeps
-    elif generator_name == "AutotoolsDeps":
-        from conan.tools.gnu import AutotoolsDeps
-        return AutotoolsDeps
-    elif generator_name == "AutotoolsToolchain":
-        from conan.tools.gnu import AutotoolsToolchain
-        return AutotoolsToolchain
-    elif generator_name == "PkgConfigDeps":
-        from conan.tools.gnu import PkgConfigDeps
-        return PkgConfigDeps
-    elif generator_name == "MSBuildToolchain":
-        from conan.tools.microsoft import MSBuildToolchain
-        return MSBuildToolchain
-    elif generator_name == "MesonToolchain":
-        from conan.tools.meson import MesonToolchain
-        return MesonToolchain
-    elif generator_name == "MesonDeps":
-        from conan.tools.meson import MesonDeps
-        return MesonDeps
-    elif generator_name == "MSBuildDeps":
-        from conan.tools.microsoft import MSBuildDeps
-        return MSBuildDeps
-    elif generator_name == "VCVars":
-        from conan.tools.microsoft import VCVars
-        return VCVars
-    elif generator_name == "IntelCC":
-        from conan.tools.intel import IntelCC
-        return IntelCC
-    elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
-        from conan.tools.qbs.qbsprofile import QbsProfile
-        return QbsProfile
-    elif generator_name == "VirtualBuildEnv":
-        from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-        return VirtualBuildEnv
-    elif generator_name == "VirtualRunEnv":
-        from conan.tools.env.virtualrunenv import VirtualRunEnv
-        return VirtualRunEnv
-    elif generator_name == "BazelDeps":
-        from conan.tools.google import BazelDeps
-        return BazelDeps
-    elif generator_name == "BazelToolchain":
-        from conan.tools.google import BazelToolchain
-        return BazelToolchain
-    elif generator_name == "XcodeDeps":
-        from conan.tools.apple import XcodeDeps
-        return XcodeDeps
-    elif generator_name == "PremakeDeps":
-        from conan.tools.premake import PremakeDeps
-        return PremakeDeps
-    elif generator_name == "XcodeToolchain":
-        from conan.tools.apple import XcodeToolchain
-        return XcodeToolchain
-    elif generator_name == "NMakeToolchain":
-        from conan.tools.microsoft import NMakeToolchain
-        return NMakeToolchain
-    elif generator_name == "NMakeDeps":
-        from conan.tools.microsoft import NMakeDeps
-        return NMakeDeps
-    else:
-        raise ConanException("Internal Conan error: Generator '{}' "
-                             "not complete".format(generator_name))
+    # QbsToolchain is an alias for QbsProfile
+    if generator_name == "QbsToolchain":
+        generator_name = "QbsProfile"
+
+    try:
+        generator_class = _generators[generator_name]
+        # This is identical to import ... form ... in terms of cacheing
+        return getattr(importlib.import_module(generator_class), generator_name)
+    except KeyError as e:
+        raise ConanException(f"Invalid generator '{generator_name}'. "
+                             f"Available types: {', '.join(_generators)}") from e
+    except ImportError as e:
+        raise ConanException("Internal Conan error: "
+                             f"Could not find module {generator_class}") from e
+    except AttributeError as e:
+        raise ConanException("Internal Conan error: "
+                             f"Could not find name {generator_name} "
+                             f"inside module {generator_class}") from e
 
 
 def write_generators(conanfile, hook_manager):
