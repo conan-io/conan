@@ -4,6 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
+from conans.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
 
@@ -185,6 +186,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        pkg_deps = self.conanfile.dependencies.filter({"direct": True})
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
@@ -194,8 +196,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
-                    req = transitive_requires[pkg]
-                    public_comp_deps.append(self.get_component_alias(req, cmp_name))
+                    try:  # Make sure the declared dependency is at least in the recipe requires
+                        self.conanfile.dependencies[pkg]
+                    except KeyError:
+                        raise ConanException(f"{self.conanfile}: component '{comp_name}' required "
+                                             f"'{require}', but '{pkg}' is not a direct dependency")
+                    try:
+                        req = transitive_requires[pkg]
+                    except KeyError:  # The transitive dep might have been skipped
+                        pass
+                    else:
+                        public_comp_deps.append(self.get_component_alias(req, cmp_name))
                 else:  # Points to a component of same package
                     public_comp_deps.append(self.get_component_alias(self.conanfile, require))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
