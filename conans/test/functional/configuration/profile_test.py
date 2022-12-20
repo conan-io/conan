@@ -70,7 +70,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile2", assert_error=True)
         self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
         self.client.run("install .. -pr=sub/profile")
-        self.assertIn("Installing (downloading, building) binaries", self.client.out)
+        self.assertIn("Installing packages", self.client.out)
 
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})

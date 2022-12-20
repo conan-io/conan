@@ -138,7 +138,7 @@ class ConanOutput:
             else:
                 ret = "{}: ".format(self._scope)
 
-        if self._color and not self._scope:
+        if self._color:
             ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         else:
             ret += "{}".format(msg)

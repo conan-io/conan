@@ -44,7 +44,7 @@ def test_config_home_custom_install():
         client = TestClient(cache_folder=cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("install .")
-        assert "Installing (downloading, building) binaries" in client.out
+        assert "Installing packages" in client.out
 
 
 def test_config_list():

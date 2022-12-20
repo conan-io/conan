@@ -219,12 +219,12 @@ class TestDefaultCompat:
         client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Build")})
         # Just check that it works and doesn't fail
-        assert "Installing (downloading, building) binaries" in client.out
+        assert "Installing packages" in client.out
         client.run("create . -s compiler.cppstd=14 --build missing")
         # Now it will not build, as package exist
         client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Cache")})
-        assert "Installing (downloading, building) binaries" in client.out
+        assert "Installing packages" in client.out
 
     def test_check_min_cppstd(self):
         """ test that the check_min_cppstd works fine wiht compatibility, as it is based

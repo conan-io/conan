@@ -78,7 +78,6 @@ def install(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
-    out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
 
     out.title("Finalizing install (deploy, generators)")

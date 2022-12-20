@@ -200,7 +200,7 @@ class BinaryInstaller:
     def install(self, deps_graph, remotes):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
-        ConanOutput().title("Installing (downloading, building) binaries...")
+        ConanOutput().title("Installing packages")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
@@ -226,6 +226,7 @@ class BinaryInstaller:
         if not downloads:
             return
 
+        ConanOutput().title("Downloading packages")
         parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
@@ -261,6 +262,8 @@ class BinaryInstaller:
         call_system_requirements(package.nodes[0].conanfile)
 
         if package.binary == BINARY_BUILD:
+            ConanOutput().title(f"Building package {pref.ref} from source")
+            ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
             self._handle_node_build(package, package_layout, remotes)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed

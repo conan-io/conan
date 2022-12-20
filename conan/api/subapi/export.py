@@ -17,6 +17,7 @@ class ExportAPI:
 
     @api_method
     def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
+        ConanOutput().title("Exporting the recipe to the cache")
         app = ConanApp(self.conan_api.cache_folder)
         return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
                           remotes=remotes)

@@ -38,10 +38,6 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
-
-    # FIXME: Not always passed conanfile
-    if conanfile:
-        report_files_copied(copied_files, conanfile.output)
     return copied_files
 
 

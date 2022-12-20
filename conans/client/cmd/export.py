@@ -7,7 +7,7 @@ from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, DATA_YML
+from conans.paths import DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 from conans.util.runners import check_output_runner
 
@@ -32,7 +32,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     hook_manager.execute("pre_export", conanfile=conanfile)
 
-    scoped_output.highlight("Exporting package recipe")
+    scoped_output.info("Exporting package recipe")
 
     export_folder = recipe_layout.export()
     export_src_folder = recipe_layout.export_sources()
@@ -61,9 +61,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     ref.revision = revision
     recipe_layout.reference = ref
     cache.assign_rrev(recipe_layout)
-    # TODO: cache2.0 check if this is the message we want to output
-    scoped_output.success('A new %s version was exported' % CONANFILE)
-    scoped_output.info('Folder: %s' % recipe_layout.export())
+    scoped_output.info('Exported to cache folder: %s' % recipe_layout.export())
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part
@@ -80,7 +78,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             scoped_output.warning(str(e))
             set_dirty(source_folder)
 
-    scoped_output.info("Exported revision: %s" % revision)
+    scoped_output.success(f"Exported revision: {ref.repr_notime()}")
     return ref, conanfile
 
 

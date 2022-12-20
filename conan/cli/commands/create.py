@@ -48,7 +48,6 @@ def create(conan_api, parser, *args):
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     out = ConanOutput()
-    out.highlight("Exporting the recipe")
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,
                                              user=args.user, channel=args.channel,
@@ -71,7 +70,6 @@ def create(conan_api, parser, *args):
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
 
-        out.title("Computing dependency graph")
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
@@ -79,14 +77,12 @@ def create(conan_api, parser, *args):
                                                          remotes=remotes, update=args.update)
         deps_graph.report_graph_error()
 
-        out.title("Computing necessary packages")
         # Not specified, force build the tested library
         build_modes = [ref.repr_notime()] if args.build is None else args.build
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
 
-        out.title("Installing packages")
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
                                            update=args.update)
         # We update the lockfile, so it will be updated for later ``test_package``
