@@ -83,6 +83,7 @@ class RequiredConanVersionTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
                             from conan import ConanFile
+                            from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
                             # required_conan_version = ">=100.0"
                             class Lib(ConanFile):
                                 pass
