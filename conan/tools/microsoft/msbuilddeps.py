@@ -6,7 +6,7 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
@@ -114,7 +114,7 @@ class MSBuildDeps(object):
         Generates ``conan_<pkg>_<config>_vars.props``, ``conan_<pkg>_<config>.props``,
         and ``conan_<pkg>.props`` files into the ``conanfile.generators_folder``.
         """
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:

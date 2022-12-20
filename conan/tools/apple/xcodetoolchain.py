@@ -1,6 +1,6 @@
 import textwrap
 
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
@@ -47,7 +47,7 @@ class XcodeToolchain(object):
         self._global_ldflags = sharedlinkflags + exelinkflags
 
     def generate(self):
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
         save(self._vars_xconfig_filename, self._vars_xconfig_content)
         if self._check_if_extra_flags:

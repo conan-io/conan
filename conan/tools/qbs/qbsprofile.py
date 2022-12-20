@@ -5,7 +5,7 @@ import textwrap
 from io import StringIO
 from jinja2 import Template
 
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -286,7 +286,7 @@ class QbsProfile(object):
             conanfile.options.get_safe('fPIC'))
 
     def generate(self):
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         save(self.old_filename, self.content)
         save(self.filename, self.content)
 

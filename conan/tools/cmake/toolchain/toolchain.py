@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
@@ -174,7 +174,7 @@ class CMakeToolchain(object):
         """
           This method will save the generated files to the conanfile.generators_folder
         """
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)

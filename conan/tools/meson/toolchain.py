@@ -3,7 +3,7 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
@@ -428,7 +428,7 @@ class MesonToolchain(object):
         ``conan_meson_cross.ini`` (if cross builds) with the proper content.
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         filename = self.native_filename if not self.cross_build else self.cross_filename
         save(filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?

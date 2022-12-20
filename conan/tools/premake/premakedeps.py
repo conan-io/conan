@@ -1,4 +1,4 @@
-from conan.tools import _check_duplicated_generator
+from conan.internal import check_duplicated_generator
 from conans.model.build_info import CppInfo
 from conans.util.files import save
 
@@ -42,7 +42,7 @@ class PremakeDeps(object):
         self._conanfile = conanfile
 
     def generate(self):
-        _check_duplicated_generator(self, self._conanfile)
+        check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
