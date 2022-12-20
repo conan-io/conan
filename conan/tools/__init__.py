@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
 CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
