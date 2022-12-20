@@ -390,3 +390,32 @@ def test_props_from_consumer_build_context_activated():
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
+
+
+def test_skip_transitive_components():
+    """ when a transitive depenency is skipped, because its binary is not necessary
+    (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
+    was erroring with KeyError, as the dependency info was not there
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "shared-library"
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].requires = ["dep::dep"]
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": pkg,
+            "consumer/conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_requires("pkg/0.1")})
+    c.run("create dep")
+    c.run("create pkg")
+    c.run("install consumer -g CMakeDeps")
+    c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
+    # This used to error, as CMakeDeps was raising a KeyError
+    assert "'CMakeDeps' calling 'generate()'" in c.out
