@@ -26,13 +26,13 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def suffix(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return ""
         return self.cmakedeps.build_context_suffix.get(self.conanfile.ref.name, "")
 
     @property
     def build_modules_activated(self):
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
         else:
             return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
@@ -60,7 +60,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def configuration(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return self.cmakedeps.configuration \
                 if self.cmakedeps.configuration else None
         else:
@@ -68,7 +68,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def arch(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return self.cmakedeps.arch if self.cmakedeps.arch else None
         else:
             return self.conanfile.settings_build.get_safe("arch")

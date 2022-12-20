@@ -216,7 +216,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
     def _get_dependency_filenames(self):
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return []
 
         transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
@@ -229,7 +229,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     def _get_dependencies_find_modes(self):
         ret = {}
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return ret
         deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for dep in deps.values():
