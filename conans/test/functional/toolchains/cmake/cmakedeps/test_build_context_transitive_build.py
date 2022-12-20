@@ -4,6 +4,8 @@ import textwrap
 import pytest
 
 from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
@@ -50,7 +52,7 @@ def client():
 
 def test_zlib_not_included(client):
 
-    main = gen_function_cpp(name="main", include="doxygen.h")
+    main = gen_function_cpp(name="main", includes=["doxygen.h"])
     cmake = gen_cmakelists(find_package=["doxygen"], appsources=["main.cpp"], appname="main")
 
     conanfile_consumer = textwrap.dedent('''
@@ -82,3 +84,53 @@ def test_zlib_not_included(client):
 
     # The -config files for zlib are not there
     assert not os.path.exists(os.path.join(client.current_folder, "zlib-config.cmake"))
+
+
+def test_error_cmakedeps_transitive_build_requires():
+    """
+    CMakeDeps when building an intermediate "tool_requires" that has a normal "requires"
+    to other package, needs to use ``require.build`` trait instead of the more global
+    "dep.is_build_context"
+    We do build "protobuf" in the "build" context to make sure the whole CMakeDeps is
+    working correctly
+    """
+    c = TestClient()
+    c.save(pkg_cmake("zlib", "0.1"))
+    c.run("create .")
+    c.save(pkg_cmake("openssl", "0.1", requires=["zlib/0.1"]), clean_first=True)
+    c.run("create .")
+    # Protobuf binary is missing, to force a build below with ``--build=missing``
+    c.save(pkg_cmake_app("protobuf", "0.1", requires=["openssl/0.1"]), clean_first=True)
+    c.run("export .")
+
+    # This conanfile used to fail, creating protobuf_mybuild*.cmake files even if for "tool" the
+    # protobuf/0.1 is a regular "requires" and it is in its host context
+    # TODO: This approach still not works in 1.X when using simultaneously the same require
+    #  and tool_requires over a tool_requires that needs to be built from source
+    tool = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+
+        class Tool(ConanFile):
+            name = "tool"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "protobuf/0.1"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.build_context_activated = ["protobuf"]
+                deps.build_context_suffix = {"protobuf": "_mybuild"}
+                deps.generate()
+
+            def build(self):
+                assert os.path.exists("protobufTargets.cmake")
+                assert os.path.exists("protobuf-Target-release.cmake")
+        """)
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": GenConanfile().with_build_requires("tool/0.1")},
+           clean_first=True)
+    c.run("export tool")
+    c.run("install consumer --build=missing -s:b build_type=Release -s:h build_type=Debug")
+    assert "tool/0.1: Created package" in c.out
