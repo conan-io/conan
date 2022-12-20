@@ -749,8 +749,8 @@ def test_error_missing_pc_build_context():
             "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
                                                             .with_requires("engine/1.0"),
             "example/conanfile.py": example,
-            "example/test_package/conanfile.py": GenConanfile().with_requires("example/1.0")
-                                                               .with_build_requires("example/1.0")
+            # With ``with_test()`` it already generates a requires(example/1.0)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
                                                                .with_test("pass")})
     c.run("create math")
     c.run("create engine")
@@ -762,5 +762,5 @@ def test_error_missing_pc_build_context():
     c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
           "--build=example")
 
-    assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
-    assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)
