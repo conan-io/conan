@@ -78,19 +78,52 @@ class RequiredConanVersionTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0")
 
-    def test_commented_out_required_conan_version(self):
-        """Used to not be able to comment out required_conan_version"""
+    def test_comment_after_required_conan_version(self):
+        """
+        An error used to pop out if you tried
+        """
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
-            # required_conan_version = ">=100.0"
-            class Lib(ConanFile):
-                pass
-            """)
+                                    from conan import ConanFile
+                                    from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
+                                    required_conan_version = ">=10.0" # This should work
+                                    class Lib(ConanFile):
+                                        pass
+                                    """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0", assert_error=True)
-        self.assertNotIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
+        self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=10.0)"
+                      % __version__, client.out)
+
+    def test_commented_out_required_conan_version(self):
+        """
+        Used to not be able to comment out required_conan_version if we had to fall back
+        to regex check because of an error importing the recipe
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                                    from conan import ConanFile
+                                    from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
+                                    required_conan_version = ">=1.0" # required_conan_version = ">=100.0"
+                                    class Lib(ConanFile):
+                                        pass
+                                    """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=pkg --version=10.0", assert_error=True)
+        self.assertNotIn("Current Conan version (%s) does not satisfy the defined one (>=1.0)"
+                      % __version__, client.out)
+
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                    from conan import ConanFile
+                    from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
+                    # required_conan_version = ">=10.0"
+                    class Lib(ConanFile):
+                        pass
+                    """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=pkg --version=1.0", assert_error=True)
+        self.assertNotIn("Current Conan version (%s) does not satisfy the defined one (>=10.0)"
                          % __version__, client.out)
 
     def test_required_conan_version_invalid_syntax(self):

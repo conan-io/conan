@@ -364,9 +364,9 @@ def _get_required_conan_version_without_loading(conan_file_path):
     txt_version = None
 
     try:
-        found = re.search(r"(.*)required_conan_version\s*=\s*(.*)", contents)
+        found = re.search(r"(.*)required_conan_version\s*=\s*[\"'](.*)[\"']", contents)
         if found and "#" not in found.group(1):
-            txt_version = found.group(2).replace('"', "")
+            txt_version = found.group(2)
     except:
         pass
 
