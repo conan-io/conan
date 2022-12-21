@@ -153,20 +153,16 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
 
 
 def _get_test_conanfile_path(tf, conanfile_path):
-    """Searches in the declared test_folder or in the standard locations"""
+    """Searches in the declared test_folder or in the standard "test_package"
+    """
 
     if tf is False:
         # Look up for testing conanfile can be disabled if tf (test folder) is False
         return None
 
-    test_folders = [tf] if tf else ["test_package", "test"]
     base_folder = os.path.dirname(conanfile_path)
-    for test_folder_name in test_folders:
-        test_folder = os.path.join(base_folder, test_folder_name)
-        test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-        if os.path.exists(test_conanfile_path):
-            return test_conanfile_path
-    else:
-        if tf:
-            raise ConanException("test folder '%s' not available, or it doesn't have a conanfile.py"
-                                 % tf)
+    test_conanfile_path = os.path.join(base_folder, tf or "test_package", "conanfile.py")
+    if os.path.exists(test_conanfile_path):
+        return test_conanfile_path
+    if tf:
+        raise ConanException("test folder '{tf}' not available, or it doesn't have a conanfile.py")
