@@ -80,16 +80,18 @@ class RequiredConanVersionTest(unittest.TestCase):
 
     def test_comment_after_required_conan_version(self):
         """
-        An error used to pop out if you tried
+        An error used to pop out if you tried to add a comment in the same line than
+        required_conan_version, as it was trying to compare against >=10.0 # This should work
+        instead of just >= 10.0
         """
         client = TestClient()
         conanfile = textwrap.dedent("""
-                                    from conan import ConanFile
-                                    from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
-                                    required_conan_version = ">=10.0" # This should work
-                                    class Lib(ConanFile):
-                                        pass
-                                    """)
+                    from conan import ConanFile
+                    from LIB_THAT_DOES_NOT_EXIST import MADE_UP_NAME
+                    required_conan_version = ">=10.0" # This should work
+                    class Lib(ConanFile):
+                        pass
+                    """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0", assert_error=True)
         self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=10.0)"
@@ -132,10 +134,10 @@ class RequiredConanVersionTest(unittest.TestCase):
             # https://github.com/conan-io/conan/issues/12692
             client = TestClient()
             conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            required_conan_version = ">= 1.0"
-            class Lib(ConanFile):
-                pass""")
+                        from conan import ConanFile
+                        required_conan_version = ">= 1.0"
+                        class Lib(ConanFile):
+                            pass""")
             client.save({"conanfile.py": conanfile})
             client.run("export . --name=pkg --version=1.0", assert_error=True)
             self.assertNotIn(f"Current Conan version ({__version__}) does not satisfy the defined one "
