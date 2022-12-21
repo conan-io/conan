@@ -12,6 +12,7 @@ BUILT_IN_CONFS = {
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
+    "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
     "core.download:parallel": "Number of concurrent threads to download packages",
