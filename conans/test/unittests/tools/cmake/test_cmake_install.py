@@ -42,8 +42,7 @@ def test_run_install_component(generator):
     cmake = CMake(conanfile)
     cmake.install(component="foo")
 
-    search_pattern = "--component foo" if platform.system() == "Windows" else "'--component' 'foo'"
-    assert search_pattern in conanfile.command
+    assert "--component foo" in conanfile.command
 
 
 @pytest.mark.parametrize("generator", [
