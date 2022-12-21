@@ -88,9 +88,8 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
+    # TODO: could it be possible to merge this with subapi.search.select?
     def select(self, pattern, package_query=None, remote=None):
-        """
-        """
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")

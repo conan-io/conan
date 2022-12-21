@@ -4,6 +4,7 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.internal.api.select_pattern import ListPattern
 
 remote_color = Color.BRIGHT_BLUE
+recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 error_color = Color.BRIGHT_RED
@@ -13,25 +14,40 @@ value_color = Color.CYAN
 
 def print_list_results(results):
     results = results["results"]
+
     for remote, refs in results.items():
         cli_out_write(f"{remote}", fg=remote_color)
+        if not refs:
+            cli_out_write(f"  No recipes were found", fg=recipe_color)
+            return
+        showed_ref_names = []
+        indentation = "  "
         for ref, prefs in refs.items():
-            cli_out_write(f"  {ref}", fg=value_color)
+            # FIXME: ref should be a RecipeReference instead of a string
+            ref_name = ref.split("/", 1)[0]
+            if ref_name not in showed_ref_names:
+                showed_ref_names.append(ref_name)
+                cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
+            cli_out_write(f"{indentation * 2}{ref}", fg=recipe_color)
             if prefs:
                 for pref, binary_info in prefs:
-                    cli_out_write(f"    {pref.repr_notime()}", fg=reference_color)
-                    if binary_info is None:
+                    cli_out_write(f"{indentation * 3}ID: {pref.package_id}", fg=reference_color)
+                    if not binary_info:
+                        if pref.revision:
+                            cli_out_write(f"{indentation * 4}Revision: {pref.revision}", fg=field_color)
+                        else:
+                            cli_out_write(f"{indentation * 4}No revisions were found.", fg=field_color)
                         continue
                     for item, contents in binary_info.items():
                         if not contents:
                             continue
-                        cli_out_write(f"      {item}:", fg=field_color)
+                        cli_out_write(f"{indentation * 4}{item}:", fg=field_color)
                         if isinstance(contents, dict):
                             for k, v in contents.items():
-                                cli_out_write(f"        {k}={v}", fg=value_color)
+                                cli_out_write(f"{indentation * 5}{k}={v}", fg=value_color)
                         else:
                             for c in contents:
-                                cli_out_write(f"        {c}", fg=value_color)
+                                cli_out_write(f"{indentation * 5}{c}", fg=value_color)
 
 
 @conan_command(group="Creator", formatters={"text": print_list_results})

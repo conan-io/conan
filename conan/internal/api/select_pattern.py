@@ -18,7 +18,9 @@ class SelectPattern:
         recipe, package = split(expression, ":")
         self.raw = expression
         self.ref, rrev = split(recipe, "#", rrev)
-        self.name, self.version = split(self.ref, "/")
+        ref, user_channel = split(self.ref, "@")
+        self.name, self.version = split(ref, "/")
+        self.user, self.channel = split(user_channel, "/")
         self.rrev, _ = split(rrev, "%")
         self.package_id, prev = split(package, "#", prev)
         self.prev, _ = split(prev, "%")
