@@ -1,7 +1,5 @@
 from typing import Dict
 
-from conan.api.conan_app import ConanApp
-
 from conan.api.model import Remote, SelectBundle
 from conan.internal.api.select_pattern import ListPatternMode
 from conan.internal.conan_app import ConanApp
