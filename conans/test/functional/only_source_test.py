@@ -128,12 +128,17 @@ class OnlySourceTest(unittest.TestCase):
         self.assertNotIn("Copying sources to build folder", other_client.out)
 
 
-def test_build_policy_installer():
+def test_build_policy_missing():
     c = TestClient(default_server_user=True)
     conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "missing"')\
                                           .with_class_attribute('upload_policy = "skip"')
     c.save({"conanfile.py": conanfile})
     c.run("export .")
+
+    # the --build=never has higher priority
+    c.run("install --requires=pkg/1.0@ --build=never", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
     c.run("install --requires=pkg/1.0@")
     assert "pkg/1.0: Building package from source as defined by build_policy='missing'" in c.out
 
