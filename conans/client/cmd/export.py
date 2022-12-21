@@ -22,7 +22,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                                    remotes=remotes)
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
-    ref.validate_ref()
+    ref.validate_ref(allow_uppercase=cache.new_config.get("core:allow_uppercase_pkg_names",
+                                                          check_type=bool))
 
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
