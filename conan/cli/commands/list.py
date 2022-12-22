@@ -4,7 +4,6 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands import default_json_formatter
 from conan.cli.formatters.list import list_packages_html
 from conan.internal.api.select_pattern import ListPattern
-from conans.errors import ConanException, InvalidNameException, NotFoundException
 from conans.util.dates import timestamp_to_str
 
 remote_color = Color.BRIGHT_BLUE
@@ -44,12 +43,12 @@ def print_list_results(results):
                     pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp else ""
                     cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
                                   fg=reference_color)
-                    if not binary_info:
-                        if pref.revision:
-                            cli_out_write(f"{indentation * 4}PREV: {pref.revision}", fg=field_color)
-                        else:
-                            cli_out_write(f"{indentation * 4}No package revisions were found.",
-                                          fg=field_color)
+                    if not binary_info and pref.revision:
+                        cli_out_write(f"{indentation * 4}PREV: {pref.revision}", fg=field_color)
+                        continue
+                    elif not binary_info:
+                        cli_out_write(f"{indentation * 4}No package info/revision was found.",
+                                      fg=field_color)
                         continue
                     for item, contents in binary_info.items():
                         if not contents:

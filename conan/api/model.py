@@ -88,10 +88,10 @@ class SelectBundle:
     def serialize(self):
         ret = {}
         for ref, prefs in self.recipes.items():
-            pref_ret = []
+            pref_ret = {}
             if prefs:
                 for pref, binary_info in prefs:
-                    pref_ret.append({pref.repr_notime(): binary_info})
+                    pref_ret[pref.repr_notime()] = binary_info
             ret[ref.repr_notime()] = pref_ret
         return ret
 

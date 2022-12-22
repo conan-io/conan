@@ -2,11 +2,10 @@ import json
 import os
 import re
 import textwrap
-from unittest.mock import Mock, patch
+from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.client.remote_manager import RemoteManager
 from conans.errors import ConanException, ConanConnectionError
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -56,16 +55,6 @@ class TestListPackageIdsBase:
 
 class TestParams(TestListPackageIdsBase):
 
-    @pytest.mark.parametrize("ref", [
-        "whatever",
-        "whatever/"
-    ])
-    def test_fail_if_reference_is_not_correct(self, ref):
-        self.client.run(f"list {ref}", assert_error=True)
-        assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
-               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" \
-               in self.client.out
-
     def test_query_param_is_required(self):
         self._add_remote("remote1")
 
@@ -81,12 +70,6 @@ class TestParams(TestListPackageIdsBase):
         self.client.run("list --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-    def test_wildcard_not_accepted(self):
-        self.client.run('list -r="*" -c test_*', assert_error=True)
-        expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
-                          "reference in the form name/version[@user/channel][#RECIPE_REVISION]"
-        assert expected_output in self.client.out
-
     def test_list_python_requires(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("export . --name=tool --version=1.1.1")
@@ -97,15 +80,17 @@ class TestParams(TestListPackageIdsBase):
                    """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --name foo --version 1.0")
-        self.client.run('list foo/1.0#latest')
+        self.client.run('list foo/1.0:*')
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          foo/1.0#b2ab5ffa95e8c5c19a5d1198be33103a:170e82ef3a6bf0bbcda5033467ab9d7805b11d0b
-            python_requires:
-              tool/1.1.Z
+          foo
+            foo/1.0#b2ab5ffa95e8c5c19a5d1198be33103a .*
+              PID: 170e82ef3a6bf0bbcda5033467ab9d7805b11d0b .*
+                python_requires:
+                  tool/1.1.Z
         """)
-        assert self.client.out == expected_output
+        assert bool(re.match(expected_output, self.client.out, re.MULTILINE))
 
     def test_list_build_requires(self):
         self.client.save({"conanfile.py": GenConanfile()})
@@ -119,15 +104,17 @@ class TestParams(TestListPackageIdsBase):
                    """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --name foo --version 1.0")
-        self.client.run('list foo/1.0#latest')
+        self.client.run('list foo/1.0:*')
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          foo/1.0#75821be6dc510628d538fffb2f00a51f:d01be73a295dca843e5e198334f86ae7038423d7
-            build_requires:
-              tool/1.1.Z
+          foo
+            foo/1.0#75821be6dc510628d538fffb2f00a51f .*
+              PID: d01be73a295dca843e5e198334f86ae7038423d7 .*
+                build_requires:
+                  tool/1.1.Z
         """)
-        assert self.client.out == expected_output
+        assert bool(re.match(expected_output, self.client.out, re.MULTILINE))
 
 
 class TestListPackagesFromRemotes(TestListPackageIdsBase):
@@ -137,7 +124,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no packages""")
+          ERROR: Recipe 'whatever/0.1' not found""")
 
         self.client.run(f"list {self._get_fake_recipe_refence('whatever/0.1')}")
         assert expected_output in self.client.out
@@ -146,14 +133,13 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
-        # TODO: Improve consistency of error messages
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no packages
+          ERROR: Recipe 'whatever/0.1' not found
         remote1:
-          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote1]
+          ERROR: Recipe 'whatever/0.1' not found
         remote2:
-          ERROR: Recipe not found: 'whatever/0.1'. [Remote: remote2]
+          ERROR: Recipe 'whatever/0.1' not found
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
@@ -180,13 +166,9 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
         self._add_remote("remote2")
-        rrev = self._get_fake_recipe_refence("whatever/1.0")
-        with patch.object(RemoteManager, "search_packages",
-                          new=Mock(side_effect=exc)):
-            self.client.run(f'list {rrev} -r="*" -c')
+        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+            self.client.run(f'list whatever/1.0 -r="*"')
         expected_output = textwrap.dedent(f"""\
-        Local Cache:
-          There are no packages
         remote1:
           {output}
         remote2:
@@ -197,7 +179,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
 class TestRemotes(TestListPackageIdsBase):
 
-    def test_search_with_full_reference_but_no_packages_in_cache(self):
+    def test_search_with_full_reference_in_cache(self):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
@@ -206,31 +188,9 @@ class TestRemotes(TestListPackageIdsBase):
         self.client.run(f"list {rrev.repr_notime()}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no packages
+          test_recipe
+            test_recipe/1.0.0@user/channel#ddfadce26d00a560850eb8767fe76ae4 .*
         """)
-        assert expected_output == str(self.client.out)
-
-    @pytest.mark.xfail(reason="conaninfo.txt only stores requires=pkg/0.X now")
-    def test_search_with_full_reference(self):
-        remote_name = "remote1"
-        recipe_name = "test_recipe/1.0.0@user/channel"
-        self._add_remote(remote_name)
-        self._upload_full_recipe(remote_name, recipe_name)
-        rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list -r remote1 {rrev.repr_notime()}")
-
-        expected_output = textwrap.dedent("""\
-        remote1:
-          %s:.{40}
-            settings:
-              arch=.*
-              build_type=.*
-              os=.*
-            options:
-              shared=False
-            requires:
-              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % rrev.repr_notime())
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_with_full_reference_but_package_has_no_properties(self):
@@ -239,90 +199,77 @@ class TestRemotes(TestListPackageIdsBase):
         self._add_remote(remote_name)
         self._upload_recipe(remote_name, recipe_name)
         rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list -r remote1 {rrev.repr_notime()}")
-
+        self.client.run(f"list {rrev.repr_notime()}:* -r remote1")
         expected_output = textwrap.dedent("""\
         remote1:
-          %s:.{40}
-        """ % rrev.repr_notime())
-
+          test_recipe
+            test_recipe/1.0.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                No package info/revision was found.
+        """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    @pytest.mark.xfail(reason="conaninfo.txt only stores requires=pkg/0.X now")
-    def test_search_with_reference_without_revision_in_cache_and_remotes(self):
-        remote_name = "remote1"
-        ref = "test_recipe/1.0.0@user/channel"
-        self._add_remote(remote_name)
-        self._upload_full_recipe(remote_name, ref)
-        self.client.run(f'list -r="*" -c {ref}')
-        # Now, let's check that we're using the latest one by default
-        rrev = self._get_lastest_recipe_ref(ref)
-        expected_output = textwrap.dedent("""\
-        Local Cache:
-          %(rrev)s:.{40}
-            settings:
-              arch=.*
-              build_type=.*
-              os=.*
-            options:
-              shared=False
-            requires:
-              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        remote1:
-          %(rrev)s:.{40}
-            settings:
-              arch=.*
-              build_type=.*
-              os=.*
-            options:
-              shared=False
-            requires:
-              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % {"rrev": rrev.repr_notime()})
-
-        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
-
-    @pytest.mark.xfail(reason="conaninfo.txt only stores requires=pkg/0.X now")
-    def test_search_in_all_remotes_and_cache(self):
+    def test_search_package_ids_in_all_remotes_and_cache(self):
         remote1 = "remote1"
         remote2 = "remote2"
 
         self._add_remote(remote1)
-        self._upload_full_recipe(remote1, "test_recipe/1.0.0@user/channel")
-        self._upload_full_recipe(remote1, "test_recipe/1.1.0@user/channel")
-
+        self._upload_full_recipe(remote1, RecipeReference(name="test_recipe", version="1.0",
+                                                          user="user", channel="channel"))
         self._add_remote(remote2)
-        self._upload_full_recipe(remote2, "test_recipe/2.0.0@user/channel")
-        self._upload_full_recipe(remote2, "test_recipe/2.1.0@user/channel")
-
+        self._upload_full_recipe(remote2, RecipeReference(name="test_recipe", version="2.1",
+                                                          user="user", channel="channel"))
         # Getting the latest recipe ref
-        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f'list -r="*" -c {rrev.repr_notime()}')
+        self.client.run(f'list test_recipe/*:* -r="*" -c')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
         Local Cache:
-          %(rrev)s:.{40}
-            settings:
-              arch=.*
-              build_type=.*
-              os=.*
-            options:
-              shared=False
-            requires:
-              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+          test_recipe
+            test_recipe/2.1@user/channel#a22316c3831b70763e4405841ee93f27 .*
+              PID: 630ddee056279fad89b691ac0f36eb084f40da38 .*
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Macos
+                options:
+                  shared=False
+                requires:
+                  pkg/0.1.Z@user/channel
+            test_recipe/1.0@user/channel#a22316c3831b70763e4405841ee93f27 .*
+              PID: 630ddee056279fad89b691ac0f36eb084f40da38 .*
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Macos
+                options:
+                  shared=False
+                requires:
+                  pkg/0.1.Z@user/channel
         remote1:
-          %(rrev)s:.{40}
-            settings:
-              arch=.*
-              build_type=.*
-              os=.*
-            options:
-              shared=False
-            requires:
-              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+          test_recipe
+            test_recipe/1.0@user/channel#a22316c3831b70763e4405841ee93f27 .*
+              PID: 630ddee056279fad89b691ac0f36eb084f40da38
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Macos
+                options:
+                  shared=False
+                requires:
+                  pkg/0.1.Z@user/channel
         remote2:
-          There are no packages
-        """ % {"rrev": rrev.repr_notime()})
+          test_recipe
+            test_recipe/2.1@user/channel#a22316c3831b70763e4405841ee93f27 .*
+              PID: 630ddee056279fad89b691ac0f36eb084f40da38
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Macos
+                options:
+                  shared=False
+                requires:
+                  pkg/0.1.Z@user/channel
+        """)
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
@@ -353,9 +300,11 @@ class TestListPackages:
         # Revision is needed explicitly!
         c.run("list pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8")
         pref = "pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5"
-        expected = textwrap.dedent(f"""\
-            Local Cache:
-              {pref}
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          pkg
+            pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8 .*
+              PID: ec080285423a5e38126f0d5d51b524cf516ff7a5 .*
                 settings:
                   arch=x86
                   os=Windows
@@ -363,17 +312,17 @@ class TestListPackages:
                   shared=False
                 requires:
                   dep/1.2.Z
-            """)
-        assert expected == c.out
+        """)
+        assert bool(re.match(expected_output, c.out, re.MULTILINE))
 
-        c.run("list pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8 --format=json",
-              redirect_stdout="packages.json")
+        rrev = "pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8"
+        c.run(f"list {rrev} --format=json", redirect_stdout="packages.json")
         pkgs_json = c.load("packages.json")
         pkgs_json = json.loads(pkgs_json)
-        assert pkgs_json["Local Cache"]["packages"][pref]["settings"]["os"] == "Windows"
+        assert pkgs_json["Local Cache"][rrev][pref]["settings"]["os"] == "Windows"
 
-    def test_list_conf(self):
-        """ test that tools.info.package_id:confs works, affecting the package_id and
+    def test_list_packages_with_conf(self):
+        """Test that tools.info.package_id:confs works, affecting the package_id and
         can be listed when we are listing packages
         """
         client = TestClient()
@@ -391,13 +340,22 @@ class TestListPackages:
                                                  "Build")})
         revision = client.exported_recipe_revision()
         client.run(f"list pkg/0.1#{revision}")
-        assert "tools.build:cxxflags=['--flag1', '--flag2']" in client.out
-        assert "tools.build:cflags=['--flag3', '--flag4']" in client.out
-        assert "sharedlinkflags" not in client.out
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          pkg
+            pkg/0.1#db6569e42e3e9916209e2ef64d6a7b52 .*
+              PID: 89d32f25195a77f4ae2e77414b870781853bdbc1 .*
+                settings:
+                  os=Windows
+                conf:
+                  tools.build:cflags=\['--flag3', '--flag4'\]
+                  tools.build:cxxflags=\['--flag1', '--flag2'\]
+        """)
+        assert bool(re.match(expected_output, client.out, re.MULTILINE))
 
 
-class TestListPackagesHTML:
-    def test_list_packages_html(self):
+class TestListHTML:
+    def test_list_html(self):
         c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
                 "pkg/conanfile.py": GenConanfile("pkg", "2.3.4").with_requires("dep/1.2.3")
@@ -410,7 +368,7 @@ class TestListPackagesHTML:
         assert "<!DOCTYPE html>" in table
         # TODO: The actual good html is missing
 
-    def test_list_packages_html_custom(self):
+    def test_list_html_custom(self):
         """ test that tools.info.package_id:confs works, affecting the package_id and
         can be listed when we are listing packages
         """
