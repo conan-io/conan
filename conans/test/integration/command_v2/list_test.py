@@ -292,9 +292,12 @@ class TestListUseCases(TestListBase):
         self.client.save({"conanfile.py": GenConanfile("pkg", "0.1")
                                           .with_package_file("file.h", "0.1")
                                           .with_settings("os", "build_type", "arch")})
-        self.client.run("create . --user=user --channel=channel")
-        self.client.run("create . --user=user --channel=channel -s os=Windows")
-        self.client.run("create . --user=user --channel=channel -s arch=armv7")
+        self.client.run("create . --user=user --channel=channel "
+                        "-s os=Windows -s build_type=Release -s arch=x86_64")
+        self.client.run("create . --user=user --channel=channel "
+                        "-s os=Macos -s build_type=Release -s arch=x86_64")
+        self.client.run("create . --user=user --channel=channel "
+                        "-s os=Macos -s build_type=Release -s arch=armv7")
         self.client.run(f'list pkg/0.1#*:*')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
