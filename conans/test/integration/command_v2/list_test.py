@@ -235,7 +235,7 @@ class TestListUseCases(TestListBase):
         self._add_remote(remote2)
         self._upload_full_recipe(remote2, RecipeReference(name="test_recipe", version="2.1",
                                                           user="user", channel="channel"))
-        self.client.run(f'list test_recipe/*:* -r="*" -c')
+        self.client.run(f'list test_recipe/*:*')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -259,7 +259,11 @@ class TestListUseCases(TestListBase):
                 options:
                   shared=False
                 requires:
-                  pkg/0.1.Z@user/channel
+                  pkg/0.1.Z@user/channel""")
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+        self.client.run(f'list test_recipe/*:* -r=remote1')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
         remote1:
           test_recipe
             test_recipe/1.0@user/channel#a22316c3831b70763e4405841ee93f27 .*
@@ -271,7 +275,11 @@ class TestListUseCases(TestListBase):
                 options:
                   shared=False
                 requires:
-                  pkg/0.1.Z@user/channel
+                  pkg/0.1.Z@user/channel""")
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+        self.client.run(f'list test_recipe/*:* -r=remote2')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
         remote2:
           test_recipe
             test_recipe/2.1@user/channel#a22316c3831b70763e4405841ee93f27 .*
@@ -283,8 +291,7 @@ class TestListUseCases(TestListBase):
                 options:
                   shared=False
                 requires:
-                  pkg/0.1.Z@user/channel
-        """)
+                  pkg/0.1.Z@user/channel""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_list_package_query_options(self):
