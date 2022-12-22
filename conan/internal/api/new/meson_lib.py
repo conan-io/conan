@@ -45,7 +45,7 @@ class {{package_name}}Conan(ConanFile):
 
 test_conanfile_v2 = """import os
 from conan import ConanFile
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 from conan.tools.meson import MesonToolchain, Meson
 from conan.tools.layout import basic_layout
 
@@ -66,8 +66,8 @@ class {{package_name}}TestConan(ConanFile):
         basic_layout(self)
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "example")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "example")
             self.run(cmd, env="conanrun")
 """
 
