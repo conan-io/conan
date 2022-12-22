@@ -2,7 +2,24 @@ import unittest
 
 import pytest
 
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, RequirementsInfo, PythonRequiresInfo
+from conans.model.options import Options
+from conans.model.settings import Settings
+
+
+def test_false_values_affect_none():
+    """ False value do become part of conaninfo.txt and package_id
+    Only "None" Python values are discarded from conaninfo.txt
+    """
+    reqs = RequirementsInfo({})
+    build_reqs = RequirementsInfo({})
+    python_reqs = PythonRequiresInfo({}, default_package_id_mode=None)
+    options = Options({"shared": [True, False], "other": [None, "1"]}, {"shared": False})
+    c = ConanInfo(Settings(), options, reqs, build_reqs, python_reqs)
+    conaninfo = c.dumps()
+    assert "shared=False" in conaninfo
+    assert "other" not in conaninfo
+
 
 info_text = '''[settings]
     arch=x86_64
