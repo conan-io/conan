@@ -12,7 +12,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class TestListPackageIdsBase:
+class TestListBase:
     @pytest.fixture(autouse=True)
     def _setup(self):
         self.client = TestClient()
@@ -53,7 +53,7 @@ class TestListPackageIdsBase:
         return self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
 
 
-class TestParams(TestListPackageIdsBase):
+class TestParams(TestListBase):
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -70,54 +70,8 @@ class TestParams(TestListPackageIdsBase):
         self.client.run("list --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-    def test_list_python_requires(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . --name=tool --version=1.1.1")
-        conanfile = textwrap.dedent("""
-                   from conan import ConanFile
-                   class Pkg(ConanFile):
-                       python_requires ="tool/[*]"
-                   """)
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . --name foo --version 1.0")
-        self.client.run('list foo/1.0:*')
 
-        expected_output = textwrap.dedent("""\
-        Local Cache:
-          foo
-            foo/1.0#b2ab5ffa95e8c5c19a5d1198be33103a .*
-              PID: 170e82ef3a6bf0bbcda5033467ab9d7805b11d0b .*
-                python_requires:
-                  tool/1.1.Z
-        """)
-        assert bool(re.match(expected_output, self.client.out, re.MULTILINE))
-
-    def test_list_build_requires(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=tool --version=1.1.1")
-        conanfile = textwrap.dedent("""
-                   from conan import ConanFile
-                   class Pkg(ConanFile):
-                       def requirements(self):
-                           # We set the package_id_mode so it is part of the package_id
-                           self.tool_requires("tool/1.1.1", package_id_mode="minor_mode")
-                   """)
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . --name foo --version 1.0")
-        self.client.run('list foo/1.0:*')
-
-        expected_output = textwrap.dedent("""\
-        Local Cache:
-          foo
-            foo/1.0#75821be6dc510628d538fffb2f00a51f .*
-              PID: d01be73a295dca843e5e198334f86ae7038423d7 .*
-                build_requires:
-                  tool/1.1.Z
-        """)
-        assert bool(re.match(expected_output, self.client.out, re.MULTILINE))
-
-
-class TestListPackagesFromRemotes(TestListPackageIdsBase):
+class TestRemotes(TestListBase):
     def test_by_default_search_only_in_cache(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
@@ -177,7 +131,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         assert expected_output == self.client.out
 
 
-class TestRemotes(TestListPackageIdsBase):
+class TestListFromRemotes(TestListBase):
 
     def test_search_with_full_reference_in_cache(self):
         self.client.save({
@@ -290,16 +244,14 @@ class TestRemotes(TestListPackageIdsBase):
 
 
 class TestListPackages:
-    def test_list_packages(self):
+    def test_list_package_info_and_json_format(self):
         c = TestClient(default_server_user=True)
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
                 "pkg/conanfile.py": GenConanfile("pkg", "2.3.4").with_requires("dep/1.2.3")
                 .with_settings("os", "arch").with_shared_option(False)})
         c.run("create dep")
         c.run("create pkg -s os=Windows -s arch=x86")
-        # Revision is needed explicitly!
         c.run("list pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8")
-        pref = "pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5"
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           pkg
@@ -319,6 +271,7 @@ class TestListPackages:
         c.run(f"list {rrev} --format=json", redirect_stdout="packages.json")
         pkgs_json = c.load("packages.json")
         pkgs_json = json.loads(pkgs_json)
+        pref = "pkg/2.3.4#0fc07368b81b38197adc73ee2cb89da8:ec080285423a5e38126f0d5d51b524cf516ff7a5"
         assert pkgs_json["Local Cache"][rrev][pref]["settings"]["os"] == "Windows"
 
     def test_list_packages_with_conf(self):
@@ -350,6 +303,54 @@ class TestListPackages:
                 conf:
                   tools.build:cflags=\['--flag3', '--flag4'\]
                   tools.build:cxxflags=\['--flag1', '--flag2'\]
+        """)
+        assert bool(re.match(expected_output, client.out, re.MULTILINE))
+
+    def test_list_packages_python_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . --name=tool --version=1.1.1")
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class Pkg(ConanFile):
+                       python_requires ="tool/[*]"
+                   """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name foo --version 1.0")
+        client.run('list foo/1.0:*')
+
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          foo
+            foo/1.0#b2ab5ffa95e8c5c19a5d1198be33103a .*
+              PID: 170e82ef3a6bf0bbcda5033467ab9d7805b11d0b .*
+                python_requires:
+                  tool/1.1.Z
+        """)
+        assert bool(re.match(expected_output, client.out, re.MULTILINE))
+
+    def test_list_packages_build_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . --name=tool --version=1.1.1")
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class Pkg(ConanFile):
+                       def requirements(self):
+                           # We set the package_id_mode so it is part of the package_id
+                           self.tool_requires("tool/1.1.1", package_id_mode="minor_mode")
+                   """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name foo --version 1.0")
+        client.run('list foo/1.0:*')
+
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          foo
+            foo/1.0#75821be6dc510628d538fffb2f00a51f .*
+              PID: d01be73a295dca843e5e198334f86ae7038423d7 .*
+                build_requires:
+                  tool/1.1.Z
         """)
         assert bool(re.match(expected_output, client.out, re.MULTILINE))
 
