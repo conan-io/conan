@@ -529,7 +529,7 @@ def test_export_pkg_json_formatter():
     for n in nodes:
         ref = n["ref"]
         if ref == hello_pkg_ref:
-            assert n['binary'] == None  # The exported package has no binary status
+            assert n['binary'] is None  # The exported package has no binary status
             hello_cpp_info = n['cpp_info']
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"
@@ -543,17 +543,19 @@ def test_export_pkg_json_formatter():
     assert hello_cpp_info['root']["properties"] is None
     # pkg/0.2 cpp_info
     # root info
-    assert pkg_cpp_info['root']["libs"] is None
+
+    assert pkg_cpp_info['root']["libs"] == ['pkg']
     assert len(pkg_cpp_info['root']["bindirs"]) == 1
     assert len(pkg_cpp_info['root']["libdirs"]) == 1
-    assert pkg_cpp_info['root']["sysroot"] is None
-    assert pkg_cpp_info['root']["system_libs"] is None
-    assert pkg_cpp_info['root']['cflags'] is None
-    assert pkg_cpp_info['root']['cxxflags'] is None
-    assert pkg_cpp_info['root']['defines'] is None
-    assert pkg_cpp_info['root']["properties"] is None
+    assert pkg_cpp_info['root']["sysroot"] == '/path/to/folder/pkg'
+    assert pkg_cpp_info['root']["system_libs"] == ['pkg_onesystemlib', 'pkg_twosystemlib']
+    assert pkg_cpp_info['root']['cflags'] == ['pkg_a_c_flag']
+    assert pkg_cpp_info['root']['cxxflags'] == ['pkg_a_cxx_flag']
+    assert pkg_cpp_info['root']['defines'] == ['pkg_onedefinition', 'pkg_twodefinition']
+    assert pkg_cpp_info['root']["properties"] == {'pkg_config_name': 'pkg_other_name',
+                                                  'pkg_config_aliases': ['pkg_alias1', 'pkg_alias2']}
     # component info
-    assert pkg_cpp_info.get('cmp1') is None
+    assert pkg_cpp_info["cmp1"]["libs"] == ["libcmp1"]
 
 
 def test_export_pkg_dont_update_src():
@@ -600,3 +602,67 @@ def test_negate_tool_requires():
             "conanfile.py": GenConanfile("mypkg", "0.1")})
     c.run("export-pkg . -pr=myprofile")
     assert "conanfile.py (mypkg/0.1): Created package" in c.out
+
+
+def test_export_pkg_tool_requires():
+    """ when a package has "tool_requires" that it needs at the package() method, like
+    typical cmake.install() or autotools.install() (tool_require msys2), then it is necessary:
+    - to install the dependencies
+    - to inject the tool-requirements
+    - to propagate the environment and the conf
+    """
+    c = TestClient()
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class Tool(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                self.buildenv_info.define("MYVAR", "MYVALUE")
+                self.conf_info.define("user.team:conf", "CONF_VALUE")
+            """)
+    consumer = textwrap.dedent("""
+        import platform
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            tool_requires = "tool/0.1"
+            def package(self):
+                self.output.info(f"MYCONF {self.conf.get('user.team:conf')}")
+                cmd = "set MYVAR" if platform.system() == "Windows" else "echo $MYVAR"
+                self.run(cmd)
+            """)
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": consumer})
+
+    c.run("create tool")
+    c.run("export-pkg consumer")
+    assert "conanfile.py (consumer/0.1): MYCONF CONF_VALUE" in c.out
+    assert "MYVAR=MYVALUE" in c.out
+
+
+def test_export_pkg_output_folder():
+    """ If the local build is using a different output-folder, it should work and export it
+    """
+    c = TestClient()
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save, copy
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+
+            def build(self):
+                save(self, "myfile.txt", "")
+            def package(self):
+                copy(self, "*", src=self.build_folder, dst=self.package_folder)
+            """)
+    c.save({"conanfile.py": consumer})
+
+    c.run("build . -of=mytmp")
+    c.run("export-pkg . -of=mytmp")
+    assert "Copied 1 '.txt' file: myfile.txt" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "mytmp", "myfile.txt"))
