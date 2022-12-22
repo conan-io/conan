@@ -1,3 +1,4 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.files.files import save_toolchain_args
 
 
@@ -8,6 +9,7 @@ class BazelToolchain(object):
         self._namespace = namespace
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         content = {}
         configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
                                                     default=[],

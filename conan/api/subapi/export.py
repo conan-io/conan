@@ -2,7 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_INVALID
@@ -16,9 +16,10 @@ class ExportAPI:
         self.conan_api = conan_api
 
     @api_method
-    def export(self, path, name, version, user, channel, lockfile=None):
+    def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
         app = ConanApp(self.conan_api.cache_folder)
-        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile)
+        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
+                          remotes=remotes)
 
     @api_method
     def export_pkg(self, deps_graph, path):
@@ -30,12 +31,7 @@ class ExportAPI:
         # passing here the create_reference=ref argument is useful so the recipe is in "develop",
         # because the "package()" method is in develop=True already
 
-        # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
-        # which is the exported pkg
-        # TODO: Seems this could be changed, loading conanfile from cache, but locally setting
-        #   to local folder?
-        nodes = deps_graph.root.neighbors()
-        pkg_node = nodes[0]
+        pkg_node = deps_graph.root
         ref = pkg_node.ref
         if pkg_node.binary == BINARY_INVALID:
             binary, reason = "Invalid", pkg_node.conanfile.info.invalid

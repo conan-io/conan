@@ -12,16 +12,18 @@ from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, ch
 from conans.util.runners import check_output_runner
 
 
-def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None):
+def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None, remotes=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
     loader, cache, hook_manager = app.loader, app.cache, app.hook_manager
-    conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
+    conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
+                                   remotes=remotes)
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
-    ref.validate_ref()
+    ref.validate_ref(allow_uppercase=cache.new_config.get("core:allow_uppercase_pkg_names",
+                                                          check_type=bool))
 
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name

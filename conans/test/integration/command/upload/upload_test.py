@@ -35,6 +35,7 @@ class MyPkg(ConanFile):
 class UploadTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 will remove -p make sense for 2.0?")
+    @pytest.mark.artifactory_ready
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
@@ -92,6 +93,7 @@ class UploadTest(unittest.TestCase):
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
+    @pytest.mark.artifactory_ready
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
@@ -102,6 +104,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-> conanfile.py", client.out)
 
     @pytest.mark.xfail(reason="cache2.0 query not yet implemented")
+    @pytest.mark.artifactory_ready
     def test_query_upload(self):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
@@ -219,6 +222,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR:     'added.txt'", client.out)
         self.assertIn("ERROR: There are corrupted artifacts, check the error logs", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_modified_recipe(self):
         client = TestClient(default_server_user=True)
 
@@ -249,6 +253,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn(f"'hello0/1.2.1@frodo/stable#{rrev}' already "
                       "in server, skipping upload", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_unmodified_recipe(self):
         client = TestClient(default_server_user=True)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
@@ -278,6 +283,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn(f"Recipe 'hello0/1.2.1@frodo/stable#{rrev}' "
                       "already in server, skipping upload", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_unmodified_package(self):
         client = TestClient(default_server_user=True)
 
@@ -630,7 +636,7 @@ def test_upload_only_without_user_channel():
     c.save({"conanfile.py": GenConanfile("lib", "1.0")})
     c.run('create .')
     c.run("create . --user=user --channel=channel")
-    c.run("list recipes *")
+    c.run("list *")
     assert "lib/1.0@user/channel" in c.out
 
     c.run('upload */*@ -c -r=default')

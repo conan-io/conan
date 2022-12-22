@@ -40,7 +40,6 @@ class ConanAPI(object):
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
 
-        # Remotes management
         self.remotes = RemotesAPI(self)
         # Search recipes by wildcard and packages filtering by configuracion
         self.search = SearchAPI(self)
@@ -58,9 +57,3 @@ class ConanAPI(object):
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
-
-
-def set_conan_output_level(level, activate_logger=False):
-    from conan.api import output
-    output.conan_output_level = level
-    output.conan_output_logger_format = activate_logger

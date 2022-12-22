@@ -1,5 +1,6 @@
 import pytest
 
+from conans.errors import ConanException
 from conans.model.recipe_ref import Version
 from conans.model.version_range import VersionRange
 
@@ -50,3 +51,8 @@ def test_range(version_range, conditions, versions_in, versions_out):
 
     for v in versions_out:
         assert Version(v) not in r
+
+def test_wrong_range_syntax():
+    # https://github.com/conan-io/conan/issues/12692
+    with pytest.raises(ConanException) as e:
+        VersionRange(">= 1.0")

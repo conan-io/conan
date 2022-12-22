@@ -8,7 +8,7 @@ def test_help_command():
     assert "Consumer commands" in client.out
 
     client.run("search --help")
-    assert "Searches for package recipes in a remote or remotes" in client.out
+    assert "Recipe reference to search for." in client.out
 
-    client.run("list recipes --help")
-    assert "Search query to find package recipe reference" in client.out
+    client.run("list --help")
+    assert "Lists existing recipes, revisions or packages in the cache or" in client.out

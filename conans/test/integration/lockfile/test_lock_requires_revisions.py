@@ -57,7 +57,7 @@ def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     client.run("install consumer/conanfile.txt --lockfile=consumer.lock")
     assert "REV1!!!" in client.out
     assert "REV2!!!" not in client.out
-    client.run("list recipe-revisions dep/0.1@user/testing")
+    client.run("list dep/0.1@user/testing#*")
     client.run("install consumer/conanfile.txt")
     assert "REV2!!!" in client.out
     assert "REV1!!!" not in client.out

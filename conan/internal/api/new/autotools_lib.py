@@ -81,7 +81,7 @@ import os
 from conan import ConanFile
 from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 from conan.tools.layout import basic_layout
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -101,8 +101,8 @@ class {{package_name}}TestConan(ConanFile):
         basic_layout(self)
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "main")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "main")
             self.run(cmd, env="conanrun")
 """
 

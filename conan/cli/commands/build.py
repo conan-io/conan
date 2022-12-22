@@ -3,10 +3,10 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import graph_compute
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
     _help_build_policies
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
+from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
 
 
@@ -31,7 +31,20 @@ def build(conan_api, parser, *args):
     folder = os.path.dirname(path)
     remotes = conan_api.remotes.list(args.remote)
 
-    deps_graph, lockfile = graph_compute(args, conan_api, partial=args.lockfile_partial)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+
+    deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                     args.user, args.channel,
+                                                     profile_host, profile_build, lockfile, remotes,
+                                                     args.update)
+
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(deps_graph)
 
     out = ConanOutput()
     out.title("Installing packages")

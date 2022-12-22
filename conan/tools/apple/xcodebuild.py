@@ -1,5 +1,3 @@
-import os
-
 from conan.tools.apple import to_apple_arch
 from conans.errors import ConanException
 

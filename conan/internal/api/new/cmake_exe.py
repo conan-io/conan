@@ -53,7 +53,7 @@ install(TARGETS {{name}} DESTINATION "."
 
 test_conanfile_exe_v2 = """import os
 from conan import ConanFile
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -63,7 +63,7 @@ class {{package_name}}TestConan(ConanFile):
         self.requires(self.tested_reference_str)
 
     def test(self):
-        if not cross_building(self):
+        if can_run(self):
             self.run("{{name}}", env="conanrun")
 """
 
