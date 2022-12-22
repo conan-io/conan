@@ -15,9 +15,8 @@ def search(conan_api: ConanAPI, parser, *args):
     """
     Searches for package recipes in a remote or remotes
     """
-    parser.add_argument('reference', help="Recipe reference or package reference. "
-                                          "Both can contain * as wildcard at any reference field. "
-                                          "If revision is not specified, it is assumed latest one.")
+    parser.add_argument('reference', help="Recipe reference to search for."
+                                          "It can contain * as wildcard at any reference field.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only list packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
