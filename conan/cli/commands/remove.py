@@ -41,6 +41,6 @@ def remove(conan_api: ConanAPI, parser, *args):
                             "".format(ref.repr_notime())):
                 conan_api.remove.recipe(ref, remote=remote)
     else:
-        for pref in select_bundle.prefs():
+        for pref, _ in select_bundle.prefs():
             if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
                 conan_api.remove.package(pref, remote=remote)

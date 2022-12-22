@@ -67,8 +67,9 @@ class SelectBundle:
     def __init__(self):
         self.recipes = OrderedDict()
 
-    def add_ref(self, ref):
-        self.recipes.setdefault(ref, [])
+    def add_refs(self, refs):
+        for ref in refs:
+            self.recipes.setdefault(ref, [])
 
     def refs(self):
         return self.recipes.keys()
@@ -79,9 +80,20 @@ class SelectBundle:
             prefs.extend(v)
         return prefs
 
-    def add_prefs(self, prefs):
+    def add_prefs(self, prefs, configurations=None):
         for pref in prefs:
-            self.recipes.setdefault(pref.ref, []).append(pref)
+            binary_info = {} if not configurations else configurations.get(pref)
+            self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
+
+    def serialize(self):
+        ret = {}
+        for ref, prefs in self.recipes.items():
+            pref_ret = {}
+            if prefs:
+                for pref, binary_info in prefs:
+                    pref_ret[pref.repr_notime()] = binary_info
+            ret[ref.repr_notime()] = pref_ret
+        return ret
 
 
 class UploadBundle:
@@ -89,7 +101,8 @@ class UploadBundle:
         self.recipes = OrderedDict()
         # We reverse the bundle so older revisions are uploaded first
         for ref, prefs in reversed(select_bundle.recipes.items()):
-            self.recipes[ref] = _RecipeUploadData(reversed(prefs))
+            reversed_prefs = reversed([pref for pref, _ in prefs])
+            self.recipes[ref] = _RecipeUploadData(reversed_prefs)
 
     def serialize(self):
         return {r.repr_notime(): v.serialize() for r, v in self.recipes.items()}
