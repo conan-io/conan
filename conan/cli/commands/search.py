@@ -1,51 +1,29 @@
 from collections import OrderedDict
 
 from conan.api.conan_api import ConanAPI
-from conan.api.output import Color, cli_out_write
-from conan.cli.command import conan_command
+from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands import default_json_formatter
-# FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
+from conan.cli.commands.list import print_list_results
+from conan.internal.api.select_pattern import ListPattern
 from conans.errors import ConanException
 
-remote_color = Color.BRIGHT_BLUE
-recipe_color = Color.BRIGHT_WHITE
-reference_color = Color.WHITE
-error_color = Color.BRIGHT_RED
-field_color = Color.BRIGHT_YELLOW
-value_color = Color.CYAN
 
-
-def print_list_recipes(results):
-    for remote, result in results.items():
-        cli_out_write(f"{remote}:", fg=remote_color)
-        if result.get("error"):
-            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
-        else:
-            recipes = result.get("recipes", [])
-            if not recipes:
-                # FIXME: this should be an error message, NOT FOUND
-                cli_out_write("  There are no matching recipe references")
-            else:
-                current_recipe = None
-                for ref in recipes:
-                    if ref.name != current_recipe:
-                        current_recipe = ref.name
-                        cli_out_write(f"  {current_recipe}", fg=recipe_color)
-
-                    cli_out_write(f"    {ref}", fg=reference_color)
-
-
-@conan_command(group="Consumer", formatters={"text": print_list_recipes,
+# FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
+@conan_command(group="Consumer", formatters={"text": print_list_results,
                                              "json": default_json_formatter})
 def search(conan_api: ConanAPI, parser, *args):
     """
     Searches for package recipes in a remote or remotes
     """
-    parser.add_argument("query",
-                        help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
+    parser.add_argument('reference', help="Recipe reference or package reference. "
+                                          "Both can contain * as wildcard at any reference field. "
+                                          "If revision is not specified, it is assumed latest one.")
+    parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
+                        help="Only list packages matching a specific query. e.g: os=Windows AND "
+                             "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", action="append",
                         help="Remote names. Accepts wildcards. If not specified it searches "
-                             "in all remotes")
+                             "in all the remotes")
     args = parser.parse_args(*args)
 
     remotes = conan_api.remotes.list(args.remote)
@@ -54,9 +32,14 @@ def search(conan_api: ConanAPI, parser, *args):
 
     results = OrderedDict()
     for remote in remotes:
-        name = getattr(remote, "name", None)
+        ref_pattern = ListPattern(args.reference)
         try:
-            results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
+            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
         except Exception as e:
-            results[name] = {"error": str(e)}
-    return results
+            results[remote.name] = {"error": str(e)}
+        else:
+            results[remote.name] = list_bundle.serialize() if args.format == "json" else list_bundle.recipes
+    return {
+        "results": results,
+        "conan_api": conan_api
+    }

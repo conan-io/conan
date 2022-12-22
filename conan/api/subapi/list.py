@@ -109,7 +109,6 @@ class ListAPI:
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
-
             select_bundle.add_refs(rrevs)
             # Show only the latest recipe revision or all of them
             if list_mode in (ListPatternMode.SHOW_ALL_RREVS, ListPatternMode.SHOW_LATEST_RREV):

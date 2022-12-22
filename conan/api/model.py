@@ -86,7 +86,14 @@ class SelectBundle:
             self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
 
     def serialize(self):
-        return {r.repr_notime(): v for r, v in self.recipes.items()}
+        ret = {}
+        for ref, prefs in self.recipes.items():
+            pref_ret = []
+            if prefs:
+                for pref, binary_info in prefs:
+                    pref_ret.append({pref.repr_notime(): binary_info})
+            ret[ref.repr_notime()] = pref_ret
+        return ret
 
 
 class UploadBundle:

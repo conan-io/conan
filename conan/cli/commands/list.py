@@ -1,7 +1,11 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
+from conan.cli.commands import default_json_formatter
+from conan.cli.formatters.list import list_packages_html
 from conan.internal.api.select_pattern import ListPattern
+from conans.errors import ConanException, InvalidNameException, NotFoundException
+from conans.util.dates import timestamp_to_str
 
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
@@ -16,27 +20,36 @@ def print_list_results(results):
     results = results["results"]
 
     for remote, refs in results.items():
-        cli_out_write(f"{remote}", fg=remote_color)
+        cli_out_write(f"{remote}:", fg=remote_color)
+
+        if refs.get("error"):
+            cli_out_write(f"  ERROR: {refs.get('error')}", fg=error_color)
+            continue
+
         if not refs:
-            cli_out_write(f"  No recipes were found", fg=recipe_color)
-            return
+            cli_out_write(f"  There are no matching recipe references", fg=recipe_color)
+            continue
+
         showed_ref_names = []
         indentation = "  "
         for ref, prefs in refs.items():
-            # FIXME: ref should be a RecipeReference instead of a string
-            ref_name = ref.split("/", 1)[0]
+            ref_name = ref.name
             if ref_name not in showed_ref_names:
                 showed_ref_names.append(ref_name)
                 cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
-            cli_out_write(f"{indentation * 2}{ref}", fg=recipe_color)
+            cli_out_write(f"{indentation * 2}{ref.repr_humantime() if ref.timestamp else ref}",
+                          fg=recipe_color)
             if prefs:
                 for pref, binary_info in prefs:
-                    cli_out_write(f"{indentation * 3}ID: {pref.package_id}", fg=reference_color)
+                    pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp else ""
+                    cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
+                                  fg=reference_color)
                     if not binary_info:
                         if pref.revision:
-                            cli_out_write(f"{indentation * 4}Revision: {pref.revision}", fg=field_color)
+                            cli_out_write(f"{indentation * 4}PREV: {pref.revision}", fg=field_color)
                         else:
-                            cli_out_write(f"{indentation * 4}No revisions were found.", fg=field_color)
+                            cli_out_write(f"{indentation * 4}No package revisions were found.",
+                                          fg=field_color)
                         continue
                     for item, contents in binary_info.items():
                         if not contents:
@@ -50,15 +63,17 @@ def print_list_results(results):
                                 cli_out_write(f"{indentation * 5}{c}", fg=value_color)
 
 
-@conan_command(group="Creator", formatters={"text": print_list_results})
+@conan_command(group="Creator", formatters={"text": print_list_results,
+                                            "json": default_json_formatter,
+                                            "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions or packages in the cache or in remotes given a complete
     reference or a pattern.
     """
-    parser.add_argument('reference', help="Recipe reference or package reference, can contain * as "
-                                          "wildcard at any reference field. If revision is not "
-                                          "specified, it is assumed latest one.")
+    parser.add_argument('reference', help="Recipe reference or package reference. "
+                                          "Both can contain * as wildcard at any reference field. "
+                                          "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only list packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
@@ -77,9 +92,13 @@ def list(conan_api: ConanAPI, parser, *args):
     for remote in remotes:
         name = getattr(remote, "name", "Local Cache")
         ref_pattern = ListPattern(args.reference)
-        # Get all the package revisions (if only_revs is True, then only the recipe revisions)
-        list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
-        results[name] = list_bundle.serialize()
+        try:
+            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
+        except Exception as e:
+            results[name] = {"error": str(e)}
+        else:
+            results[name] = list_bundle.serialize() if args.format in ("json", "html") \
+                else list_bundle.recipes
     return {
         "results": results,
         "conan_api": conan_api
