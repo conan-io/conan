@@ -29,7 +29,7 @@ def search(conan_api: ConanAPI, parser, *args):
     for remote in remotes:
         ref_pattern = ListPattern(args.reference)
         try:
-            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
+            list_bundle = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
         except Exception as e:
             results[remote.name] = {"error": str(e)}
         else:
