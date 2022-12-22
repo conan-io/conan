@@ -24,7 +24,7 @@ def download(conan_api: ConanAPI, parser, *args):
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
-                        help='Upload to this specific remote')
+                        help='Download from this specific remote')
 
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
