@@ -631,7 +631,7 @@ def test_export_pkg_tool_requires():
             tool_requires = "tool/0.1"
             def package(self):
                 self.output.info(f"MYCONF {self.conf.get('user.team:conf')}")
-                cmd = "set MYVAR" if platform.system() == "Windows" else "echo $MYVAR"
+                cmd = "set MYVAR" if platform.system() == "Windows" else "echo MYVAR=$MYVAR"
                 self.run(cmd)
             """)
     c.save({"tool/conanfile.py": tool,
