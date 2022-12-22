@@ -206,6 +206,21 @@ class TestOptionsNone:
         text = self.sut.dumps()
         assert text == ""
 
+    def test_boolean_none(self):
+        options = Options({"static": [None, "None", 1, 2]})
+        assert options.static != 1
+        assert not (options.static == 1)
+        assert options.static != "None"
+        assert not (options.static == "None")
+        assert options.static == None
+        assert not (options.static != None)
+
+        options.static = "None"
+        assert options.static == "None"
+        assert not (options.static != "None")
+        assert not (options.static == None)
+        assert options.static != None
+
 '''
     def test_undefined_value(self):
         """ Not assigning a value to options will raise an error at validate() step
