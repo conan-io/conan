@@ -8,6 +8,7 @@ import pytest
 
 from conans.errors import ConanException, ConanConnectionError
 from conans.model.recipe_ref import RecipeReference
+from conans.model.package_ref import PkgReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -51,6 +52,9 @@ class TestListBase:
 
     def _get_lastest_recipe_ref(self, recipe_name):
         return self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
+
+    def _get_lastest_package_ref(self, pref):
+        return self.client.cache.get_latest_package_reference(PkgReference.loads(pref))
 
 
 class TestParams(TestListBase):
@@ -130,20 +134,78 @@ class TestRemotes(TestListBase):
         """)
         assert expected_output == self.client.out
 
+    def test_search_in_missing_remote(self):
+        remote1 = "remote1"
 
-class TestListFromRemotes(TestListBase):
+        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
+        remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-    def test_search_with_full_reference_in_cache(self):
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
+
+        self._add_remote(remote1)
+        self._upload_recipe(remote1, remote1_recipe1)
+        self._upload_recipe(remote1, remote1_recipe2)
+
+        rrev = self._get_fake_recipe_refence(remote1_recipe1)
+        self.client.run(f"list -r wrong_remote {rrev}", assert_error=True)
+        assert expected_output in self.client.out
+
+
+class TestListUseCases(TestListBase):
+
+    def test_list_recipes(self):
+        self.client.save({
+            "zlib.py": GenConanfile("zlib", "1.0.0"),
+            "zlib2.py": GenConanfile("zlib", "2.0.0"),
+            "zli.py": GenConanfile("zli", "1.0.0"),
+            "zlix.py": GenConanfile("zlix", "1.0.0"),
+        })
+        self.client.run("export zlib.py --user=user --channel=channel")
+        self.client.run("export zlib2.py --user=user --channel=channel")
+        self.client.run("export zli.py")
+        self.client.run("export zlix.py")
+        self.client.run(f"list z*")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          zlix
+            zlix/1.0.0
+          zli
+            zli/1.0.0
+          zlib
+            zlib/2.0.0@user/channel
+            zlib/1.0.0@user/channel
+        """)
+        assert expected_output == self.client.out
+
+    def test_list_latest_recipe_revision(self):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
         self.client.run("export . --user=user --channel=channel")
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list {rrev.repr_notime()}")
+        self.client.run(f"list test_recipe/1.0.0@user/channel")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          test_recipe
+            %s .*
+        """ % rrev.repr_notime())
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+
+    def test_list_latest_package_revisions(self):
+        self.client.save({
+            "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
+        })
+        self.client.run("create . --user=user --channel=channel")
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        pid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        prev = self._get_lastest_package_ref(f"{rrev.repr_notime()}:{pid}")
+        self.client.run(f"list {prev.repr_notime()}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           test_recipe
             test_recipe/1.0.0@user/channel#ddfadce26d00a560850eb8767fe76ae4 .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709 .*
+                PREV: 9c929aed65f04337a4143311d72fc897
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -225,22 +287,6 @@ class TestListFromRemotes(TestListBase):
                   pkg/0.1.Z@user/channel
         """)
         assert bool(re.match(expected_output, output, re.MULTILINE))
-
-    def test_search_in_missing_remote(self):
-        remote1 = "remote1"
-
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-        remote1_recipe2 = "test_recipe/1.1.0@user/channel"
-
-        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self._upload_recipe(remote1, remote1_recipe2)
-
-        rrev = self._get_fake_recipe_refence(remote1_recipe1)
-        self.client.run(f"list -r wrong_remote {rrev}", assert_error=True)
-        assert expected_output in self.client.out
 
 
 class TestListPackages:

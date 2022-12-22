@@ -67,7 +67,7 @@ def print_list_results(results):
                                             "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
-    List existing recipes, revisions or packages in the cache or in remotes given a complete
+    Lists existing recipes, revisions or packages in the cache or in remotes given a complete
     reference or a pattern.
     """
     parser.add_argument('reference', help="Recipe reference or package reference. "

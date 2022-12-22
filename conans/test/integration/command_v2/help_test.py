@@ -10,5 +10,5 @@ def test_help_command():
     client.run("search --help")
     assert "Searches for package recipes in a remote or remotes" in client.out
 
-    client.run("list recipes --help")
-    assert "Search query to find package recipe reference" in client.out
+    client.run("list --help")
+    assert "Lists existing recipes, revisions or packages in the cache or" in client.out
