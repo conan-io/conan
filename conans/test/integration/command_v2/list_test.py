@@ -225,7 +225,7 @@ class TestListUseCases(TestListBase):
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_search_package_ids_in_all_remotes_and_cache(self):
+    def test_search_package_ids_from_latest_rrev_in_all_remotes_and_cache(self):
         remote1 = "remote1"
         remote2 = "remote2"
 
@@ -235,7 +235,6 @@ class TestListUseCases(TestListBase):
         self._add_remote(remote2)
         self._upload_full_recipe(remote2, RecipeReference(name="test_recipe", version="2.1",
                                                           user="user", channel="channel"))
-        # Getting the latest recipe ref
         self.client.run(f'list test_recipe/*:* -r="*" -c')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
@@ -285,6 +284,50 @@ class TestListUseCases(TestListBase):
                   shared=False
                 requires:
                   pkg/0.1.Z@user/channel
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+
+    def test_list_package_query_options(self):
+        self.client.save({"conanfile.py": GenConanfile("pkg", "0.1")
+                                          .with_package_file("file.h", "0.1")
+                                          .with_settings("os", "build_type", "arch")})
+        self.client.run("create . --user=user --channel=channel")
+        self.client.run("create . --user=user --channel=channel -s os=Windows")
+        self.client.run("create . --user=user --channel=channel -s arch=armv7")
+        self.client.run(f'list pkg/0.1#*:*')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          pkg
+            pkg/0.1@user/channel#89ab3ffd306cb65a8ca8e2a1c8b96aae .*
+              PID: 5f2a74726e897f644b3f42dea59faecf8eee2b50 .*
+                settings:
+                  arch=armv7
+                  build_type=Release
+                  os=Macos
+              PID: 723257509aee8a72faf021920c2874abc738e029 .*
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Windows
+              PID: 9ac8640923e5284645f8852ef8ba335654f4020e .*
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Macos
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+        self.client.run(f'list pkg/0.1#*:* -p os=Windows')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          pkg
+            pkg/0.1@user/channel#89ab3ffd306cb65a8ca8e2a1c8b96aae .*
+              PID: 723257509aee8a72faf021920c2874abc738e029 .*
+                settings:
+                  arch=x86_64
+                  build_type=Release
+                  os=Windows
         """)
         assert bool(re.match(expected_output, output, re.MULTILINE))
 

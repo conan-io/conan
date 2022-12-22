@@ -26,12 +26,6 @@ class SelectPattern:
         self.prev, _ = split(prev, "%")
 
     @property
-    def is_complete_ref(self):
-        # FIXME: now, the server is returning for "conan search zlib" all the zlib versions,
-        #        but "conan search zli" is raising and error. Inconsistency?
-        return self.name and self.version
-
-    @property
     def is_latest_rrev(self):
         return self.rrev == "latest"
 
@@ -84,7 +78,9 @@ class ListPattern(SelectPattern):
     def mode(self):
         no_regex = "*" not in self.raw
         if no_regex:
-            if not self.is_complete_ref:
+            # FIXME: now, the server is returning for "conan search zlib" all the zlib versions,
+            #        but "conan search zli" is raising and error. Inconsistency?
+            if not (self.name and self.version):
                 # # zlib (server is going to get all the versions for zlib)
                 if self.package_id is None:
                     return ListPatternMode.SHOW_REFS

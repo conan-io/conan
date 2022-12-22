@@ -32,8 +32,6 @@ class ConanJSONEncoder(JSONEncoder):
 
 
 def default_json_formatter(data):
-    if isinstance(data, dict) and (data.get("json") or data.get("results")):
-        data = data.get("json") or data.get("results")
     myjson = json.dumps(data, indent=4, cls=ConanJSONEncoder)
     cli_out_write(myjson)
 

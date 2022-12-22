@@ -1,7 +1,9 @@
+import json
+
 from conan.api.conan_api import ConanAPI
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
-from conan.cli.commands import default_json_formatter
+from conan.cli.commands import ConanJSONEncoder
 from conan.cli.formatters.list import list_packages_html
 from conan.internal.api.select_pattern import ListPattern
 from conans.util.dates import timestamp_to_str
@@ -15,7 +17,7 @@ field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
 
 
-def print_list_results(results):
+def print_list_text(results):
     results = results["results"]
 
     for remote, refs in results.items():
@@ -62,8 +64,14 @@ def print_list_results(results):
                                 cli_out_write(f"{indentation * 5}{c}", fg=value_color)
 
 
-@conan_command(group="Creator", formatters={"text": print_list_results,
-                                            "json": default_json_formatter,
+def print_list_json(data):
+    results = data["results"]
+    myjson = json.dumps(results, indent=4, cls=ConanJSONEncoder)
+    cli_out_write(myjson)
+
+
+@conan_command(group="Creator", formatters={"text": print_list_text,
+                                            "json": print_list_json,
                                             "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
