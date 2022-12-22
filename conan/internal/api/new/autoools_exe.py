@@ -66,7 +66,7 @@ class {{package_name}}TestConan(ConanFile):
         basic_layout(self)
 
     def test(self):
-        if not can_run(self):
+        if can_run(self):
             self.run("{{name}}", env="conanrun")
 """
 
