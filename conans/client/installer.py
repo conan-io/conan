@@ -212,7 +212,7 @@ class BinaryInstaller:
                             for install_reference in level)])
         installed_count = 1
 
-        self._download_bulk(install_order, package_count)
+        self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
@@ -220,7 +220,7 @@ class BinaryInstaller:
                                          installed_count, package_count)
                     installed_count += 1
 
-    def _download_bulk(self, install_order, total_packages):
+    def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
         PREF
         """
@@ -233,8 +233,9 @@ class BinaryInstaller:
         if not downloads:
             return
 
-        ConanOutput().title(f"Downloading {total_packages} package"
-                            's' if total_packages != 1 else '')
+        download_count = len(downloads)
+        ConanOutput().title(f"Downloading {download_count} package"
+                            's' if download_count != 1 else '')
         parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
