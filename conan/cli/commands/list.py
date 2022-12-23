@@ -47,7 +47,7 @@ def print_list_text(results):
                         cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
                                       fg=reference_color)
                         if not binary_info:
-                            cli_out_write(f"{indentation * 4}Empty package information.",
+                            cli_out_write(f"{indentation * 4}Empty package information",
                                           fg=field_color)
                             continue
                     elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
