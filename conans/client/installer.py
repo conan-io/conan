@@ -218,6 +218,7 @@ class BinaryInstaller:
                 for package in install_reference.packages.values():
                     self._handle_package(package, install_reference, remotes,
                                          installed_count, package_count)
+                    installed_count += 1
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
