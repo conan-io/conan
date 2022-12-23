@@ -207,11 +207,17 @@ class BinaryInstaller:
         install_graph.raise_errors()
         install_order = install_graph.install_order()
 
+        package_count = sum([sum(len(install_reference.packages.values())
+                                for level in install_order
+                                for install_reference in level)])
+        installed_count = 1
+
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
-                    self._handle_package(package, install_reference, remotes)
+                    self._handle_package(package, install_reference, remotes,
+                                         installed_count, package_count)
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -244,7 +250,7 @@ class BinaryInstaller:
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, remotes):
+    def _handle_package(self, package, install_reference, remotes, installed_count, total_count):
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
@@ -262,7 +268,8 @@ class BinaryInstaller:
         call_system_requirements(package.nodes[0].conanfile)
 
         if package.binary == BINARY_BUILD:
-            ConanOutput().title(f"Building package {pref.ref} from source")
+            ConanOutput().title(f"Building package {pref.ref} from source "
+                                f"({installed_count} of {total_count})")
             ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
             self._handle_node_build(package, package_layout, remotes)
             # Just in case it was recomputed
