@@ -5,7 +5,7 @@ from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands import ConanJSONEncoder
 from conan.cli.formatters.list import list_packages_html
-from conan.internal.api.select_pattern import ListPattern
+from conan.internal.api.select_pattern import ListPattern, ListPatternMode
 from conans.util.dates import timestamp_to_str
 
 remote_color = Color.BRIGHT_BLUE
@@ -18,9 +18,9 @@ value_color = Color.CYAN
 
 
 def print_list_text(results):
-    results = results["results"]
-
-    for remote, refs in results.items():
+    info = results["results"]
+    search_mode = results["search_mode"]
+    for remote, refs in info.items():
         cli_out_write(f"{remote}:", fg=remote_color)
 
         if refs.get("error"):
@@ -43,13 +43,17 @@ def print_list_text(results):
             if prefs:
                 for pref, binary_info in prefs:
                     pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp else ""
-                    cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
-                                  fg=reference_color)
-                    if not binary_info and pref.revision:
-                        cli_out_write(f"{indentation * 4}PREV: {pref.revision}", fg=field_color)
-                        continue
-                    elif not binary_info:
-                        cli_out_write(f"{indentation * 4}No package info/revision was found.",
+                    if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
+                        cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
+                                      fg=reference_color)
+                        if not binary_info:
+                            cli_out_write(f"{indentation * 4}Empty package information.",
+                                          fg=field_color)
+                            continue
+                    elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
+                                         ListPatternMode.SHOW_LATEST_PREV):
+                        cli_out_write(f"{indentation * 3}PID: {pref.package_id}", fg=reference_color)
+                        cli_out_write(f"{indentation * 4}PREV: {pref.revision}{pref_date}",
                                       fg=field_color)
                         continue
                     for item, contents in binary_info.items():
@@ -62,6 +66,11 @@ def print_list_text(results):
                         else:
                             for c in contents:
                                 cli_out_write(f"{indentation * 5}{c}", fg=value_color)
+            elif search_mode in (ListPatternMode.SHOW_PACKAGE_IDS,
+                                 ListPatternMode.SHOW_ALL_PREVS,
+                                 ListPatternMode.SHOW_LATEST_PREV):
+                cli_out_write(f"{indentation * 3}There are no packages for this revision.",
+                              fg=field_color)
 
 
 def print_list_json(data):
@@ -89,6 +98,7 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
     args = parser.parse_args(*args)
+    ref_pattern = ListPattern(args.reference)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
     if args.cache or not args.remote:
@@ -98,7 +108,6 @@ def list(conan_api: ConanAPI, parser, *args):
     results = {}
     for remote in remotes:
         name = getattr(remote, "name", "Local Cache")
-        ref_pattern = ListPattern(args.reference)
         try:
             list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
         except Exception as e:
@@ -108,5 +117,6 @@ def list(conan_api: ConanAPI, parser, *args):
                 else list_bundle.recipes
     return {
         "results": results,
+        "search_mode": ref_pattern.mode,
         "conan_api": conan_api
     }

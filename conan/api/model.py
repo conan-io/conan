@@ -81,8 +81,9 @@ class SelectBundle:
         return prefs
 
     def add_prefs(self, prefs, configurations=None):
+        confs = configurations or {}
         for pref in prefs:
-            binary_info = {} if not configurations else configurations.get(pref)
+            binary_info = confs.get(pref, {})
             self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
 
     def serialize(self):
