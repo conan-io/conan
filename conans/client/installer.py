@@ -208,8 +208,8 @@ class BinaryInstaller:
         install_order = install_graph.install_order()
 
         package_count = sum([sum(len(install_reference.packages.values())
-                                for level in install_order
-                                for install_reference in level)])
+                            for level in install_order
+                            for install_reference in level)])
         installed_count = 1
 
         self._download_bulk(install_order)
