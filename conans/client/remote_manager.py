@@ -182,9 +182,20 @@ class RemoteManager(object):
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote) -> PkgReference:
+    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=None)
+        # These headers are useful to know what configurations are being requested in the server
+        headers = None
+        if info:
+            headers = {}
+            settings = [f'{k}={v}' for k, v in info.settings.items()]
+            if settings:
+                headers['Conan-PkgID-Settings'] = ';'.join(settings)
+            options = [f'{k}={v}' for k, v in info.options.serialize().items()
+                       if k in ("shared", "fPIC", "header_only")]
+            if options:
+                headers['Conan-PkgID-Options'] = ';'.join(options)
+        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"
