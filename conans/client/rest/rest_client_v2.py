@@ -5,14 +5,13 @@ import time
 from conan.api.output import ConanOutput
 
 from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
-from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 
 
@@ -47,7 +46,6 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(EXPORT_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME in files:
             files.remove(EXPORT_SOURCES_TGZ_NAME)
 
@@ -64,7 +62,6 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
         files = [EXPORT_SOURCES_TGZ_NAME, ]
@@ -79,7 +76,6 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
