@@ -237,7 +237,9 @@ class TestListUseCases(TestListBase):
             "bye.py": GenConanfile("bye", "1.0.0").with_package_file("file.h", "0.1")
         })
         self.client.run("create hello.py --user=user --channel=channel")
+        self.client.run("create hello.py --user=user --channel=channel")  # latest prev
         self.client.run("create bye.py --user=user --channel=channel")
+        self.client.run("create bye.py --user=user --channel=channel")   # latest prev
         self.client.run("list *:*#latest")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
