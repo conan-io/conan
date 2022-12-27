@@ -169,8 +169,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
     conanfile.settings = Settings()
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
@@ -223,8 +223,8 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
     conanfile.conf = Conf()
     conanfile.settings = MockSettings({"arch": f"{arch_host}"})
     conanfile.settings_build = MockSettings({"arch": "x86_64"})
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
@@ -251,8 +251,8 @@ def test_tools_install_archless(tool_class, result):
     conanfile.conf = Conf()
     conanfile.settings = MockSettings({"arch": "x86"})
     conanfile.settings_build = MockSettings({"arch": "x86_64"})
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
-    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile, arch_names={})
