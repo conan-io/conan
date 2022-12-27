@@ -33,8 +33,8 @@ class TestHelp:
 
     def test_help_subcommand(self):
         c = TestClient()
-        c.run("list -h")
+        c.run("cache -h")
         # When listing subcommands, but line truncated
-        assert "Search available recipes in the local cache" in c.out
-        c.run("list recipes -h")
-        assert "Search available recipes in the local cache or in the remotes" in c.out
+        assert "Performs file operations in the local cache (of recipes and packages)" in c.out
+        c.run("cache path -h")
+        assert "Shows the path in the Conan cache af a given reference" in c.out

@@ -390,3 +390,77 @@ def test_props_from_consumer_build_context_activated():
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
+
+
+def test_skip_transitive_components():
+    """ when a transitive depenency is skipped, because its binary is not necessary
+    (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
+    was erroring with KeyError, as the dependency info was not there
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "shared-library"
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].requires = ["dep::dep"]
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": pkg,
+            "consumer/conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_requires("pkg/0.1")})
+    c.run("create dep")
+    c.run("create pkg")
+    c.run("install consumer -g CMakeDeps")
+    c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
+    # This used to error, as CMakeDeps was raising a KeyError
+    assert "'CMakeDeps' calling 'generate()'" in c.out
+
+
+def test_error_missing_config_build_context():
+    """
+    CMakeDeps was failing, not generating the zlib-config.cmake in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "game/1.0"
+            generators = "CMakeDeps"
+            settings = "build_type"
+            def build(self):
+                assert os.path.exists("math-config.cmake")
+                assert os.path.exists("engine-config.cmake")
+                assert os.path.exists("game-config.cmake")
+            """)
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
+            "example/conanfile.py": example,
+            # The example test_package contains already requires(self.tested_reference_str)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
+    # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+    # listed as both requires and build_requires
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)

@@ -1224,7 +1224,7 @@ def test_find_program_for_tool_requires():
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
         "build_profile": build_profile}, clean_first=True)
-    client.run("install conanfile_consumer.py --requires=pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
+    client.run("install conanfile_consumer.py -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")

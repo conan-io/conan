@@ -1,3 +1,4 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string
@@ -6,7 +7,7 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
 
 
@@ -158,6 +159,7 @@ class AutotoolsToolchain:
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")

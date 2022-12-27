@@ -247,7 +247,7 @@ test_conanfile_v2 = """import os
 
 from conan import ConanFile
 from conan.tools.microsoft import MSBuildDeps, MSBuildToolchain, MSBuild, vs_layout
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -269,8 +269,8 @@ class {{package_name}}TestConan(ConanFile):
         msbuild.build("test_{{name}}.sln")
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "test_{{name}}")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "test_{{name}}")
             self.run(cmd, env="conanrun")
 """
 

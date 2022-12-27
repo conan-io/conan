@@ -77,6 +77,6 @@ def test_search_recipes_no_user_channel_only():
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name foo --version 1.0 --user user --channel channel")
     client.run("create . --name foo --version 1.0")
-    client.run("list recipes foo/1.0@")
+    client.run("list foo/1.0@")
     assert "foo/1.0@user/channel" not in client.out
     assert "foo/1.0" in client.out

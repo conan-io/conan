@@ -169,7 +169,7 @@ test_conanfile_v2 = """import os
 
 from conan import ConanFile
 from conan.tools.cmake import CMake, cmake_layout
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -188,8 +188,8 @@ class {{package_name}}TestConan(ConanFile):
         cmake_layout(self)
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "example")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "example")
             self.run(cmd, env="conanrun")
 """
 

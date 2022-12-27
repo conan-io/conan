@@ -4,6 +4,7 @@ from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
 from conans.util.files import save
@@ -403,7 +404,7 @@ class PkgConfigDeps:
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
-            if dep.is_build_context and dep.ref.name not in self.build_context_activated:
+            if require.build and dep.ref.name not in self.build_context_activated:
                 continue
 
             pc_generator = _PCGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
@@ -414,6 +415,7 @@ class PkgConfigDeps:
         """
         Save all the `*.pc` files
         """
+        check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():

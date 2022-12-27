@@ -51,3 +51,13 @@ def test_output_forced_but_conan_logger():
 
                 assert out.color is False
                 init.assert_not_called()
+
+
+def test_output_chainable():
+    try:
+        ConanOutput(scope="My package")\
+            .title("My title")\
+            .highlight("Worked")\
+            .info("But there was more that needed to be said")
+    except Exception as e:
+        assert False, f"Chained ConanOutput write methods raised an exception {e}"

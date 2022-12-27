@@ -44,6 +44,9 @@ def install(conan_api, parser, *args):
                              "--requires")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
+    if args.path and (args.requires or args.tool_requires):
+        raise ConanException("--requires and --tool-requires arguments are incompatible with "
+                             f"[path] '{args.path}' argument")
     cwd = os.getcwd()
 
     if args.path:

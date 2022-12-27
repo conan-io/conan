@@ -32,6 +32,12 @@ def test_install_reference_error(client):
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
 
 
+def test_install_args_error():
+    c = TestClient()
+    c.run("install . --requires=zlib/1.0", assert_error=True)
+    assert "--requires and --tool-requires arguments are incompatible" in c.out
+
+
 def test_four_subfolder_install(client):
     # https://github.com/conan-io/conan/issues/3950
     client.save({"path/to/sub/folder/conanfile.txt": ""})

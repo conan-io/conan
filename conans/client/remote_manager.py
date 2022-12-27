@@ -76,7 +76,6 @@ class RemoteManager(object):
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
-        check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
             uncompress_file(tgz_file, export_folder)
         mkdir(export_folder)
@@ -101,7 +100,6 @@ class RemoteManager(object):
         log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
         uncompress_file(tgz_file, export_sources_folder)
 
     def get_package(self, conanfile, pref, remote):
@@ -129,7 +127,6 @@ class RemoteManager(object):
             log_package_download(pref, duration, remote, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
-            check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
             package_folder = layout.package()
             if tgz_file:  # This must happen always, but just in case
                 # TODO: The output could be changed to the package one, but
@@ -182,9 +179,20 @@ class RemoteManager(object):
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote) -> PkgReference:
+    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
-        return self._call_remote(remote, "get_latest_package_reference", pref, headers=None)
+        # These headers are useful to know what configurations are being requested in the server
+        headers = None
+        if info:
+            headers = {}
+            settings = [f'{k}={v}' for k, v in info.settings.items()]
+            if settings:
+                headers['Conan-PkgID-Settings'] = ';'.join(settings)
+            options = [f'{k}={v}' for k, v in info.options.serialize().items()
+                       if k in ("shared", "fPIC", "header_only")]
+            if options:
+                headers['Conan-PkgID-Options'] = ';'.join(options)
+        return self._call_remote(remote, "get_latest_package_reference", pref, headers=headers)
 
     def get_recipe_revision_reference(self, ref, remote) -> bool:
         assert ref.revision is not None, "recipe_exists needs a revision"
@@ -211,17 +219,6 @@ class RemoteManager(object):
             raise
         except Exception as exc:
             raise ConanException(exc, remote=remote)
-
-
-# TODO: Consider removing this, we are not changing the compression format
-def check_compressed_files(tgz_name, files):
-    bare_name = os.path.splitext(tgz_name)[0]
-    for f in files:
-        if f == tgz_name:
-            continue
-        if bare_name == os.path.splitext(f)[0]:
-            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
-                                 "Please upgrade conan client." % f)
 
 
 def uncompress_file(src_path, dest_folder):
