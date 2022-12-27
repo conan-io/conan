@@ -214,14 +214,14 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
-                    self.output.info("PKG1 N: %s" % self.python_requires["pkg1"].conanfile.name)
-                    self.output.info("PKG1 V: %s" % self.python_requires["pkg1"].conanfile.version)
-                    self.output.info("PKG1 U: %s" % self.python_requires["pkg1"].conanfile.user)
-                    self.output.info("PKG1 C: %s" % self.python_requires["pkg1"].conanfile.channel)
-                    self.output.info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)
-                    self.output.info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)
-                    self.output.info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())
-                    self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
+                    self.output.info("PKG1 N: %s" % self.python_requires["pkg1"].conanfile.name)\
+                               .info("PKG1 V: %s" % self.python_requires["pkg1"].conanfile.version)\
+                               .info("PKG1 U: %s" % self.python_requires["pkg1"].conanfile.user)\
+                               .info("PKG1 C: %s" % self.python_requires["pkg1"].conanfile.channel)\
+                               .info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)\
+                               .info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)\
+                               .info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())\
+                               .info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing")
