@@ -193,6 +193,7 @@ class GraphBinariesAnalyzer(object):
             if node.package_id != locked.package_id:  # It was a compatible package
                 # https://github.com/conan-io/conan/issues/9002
                 # We need to iterate to search the compatible combination
+                self._compatibility.compatibles(node.conanfile)
                 for compatible_package in node.conanfile.compatible_packages:
                     comp_package_id = compatible_package.package_id()
                     if comp_package_id == locked.package_id:
