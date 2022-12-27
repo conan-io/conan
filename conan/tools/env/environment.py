@@ -58,7 +58,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
         return '{} && {}'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
-        launchers = " ; ".join('{}'.format(f) for f in ps1s)
+        launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
         return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
     else:
         return cmd

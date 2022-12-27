@@ -375,7 +375,22 @@ class TestValidate(unittest.TestCase):
             """)
         c.save({"conanfile.py": conanfile})
         c.run("export-pkg . --name=test --version=1.0", assert_error=True)
-        assert "Invalid: never ever" in c.out
+        assert "ERROR: conanfile.py (test/1.0): Invalid ID: Invalid: never ever" in c.out
+
+    def test_validate_build_export_pkg(self):
+        # https://github.com/conan-io/conan/issues/9797
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+               from conan.errors import ConanInvalidConfiguration
+
+               class TestConan(ConanFile):
+                   def validate_build(self):
+                       raise ConanInvalidConfiguration("never ever")
+               """)
+        c.save({"conanfile.py": conanfile})
+        c.run("export-pkg . --name=test --version=1.0", assert_error=True)
+        assert "conanfile.py (test/1.0): Cannot build for this configuration: never ever" in c.out
 
     def test_validate_install(self):
         # https://github.com/conan-io/conan/issues/10602

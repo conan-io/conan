@@ -2,7 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_basic
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
@@ -88,7 +88,6 @@ class GraphAPI:
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         return root_node
 
-    @api_method
     def _load_root_virtual_conanfile(self, profile_host, requires=None, tool_requires=None):
         if not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
@@ -139,7 +138,6 @@ class GraphAPI:
                                      update=update,
                                      check_update=check_updates)
         print_graph_basic(deps_graph)
-        out.title("Computing necessary packages")
         if deps_graph.error:
             if allow_error:
                 return deps_graph
@@ -168,7 +166,6 @@ class GraphAPI:
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
         print_graph_basic(deps_graph)
-        out.title("Computing necessary packages")
         if deps_graph.error:
             if allow_error:
                 return deps_graph
@@ -219,6 +216,7 @@ class GraphAPI:
         :param update: (False by default), if Conan should look for newer versions or
             revisions for already existing recipes in the Conan cache
         """
+        ConanOutput().title("Computing necessary packages")
         conan_app = ConanApp(self.conan_api.cache_folder)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update)

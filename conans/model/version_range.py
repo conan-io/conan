@@ -1,5 +1,6 @@
 from collections import namedtuple
 
+from conans.errors import ConanException
 from conans.model.recipe_ref import Version
 
 
@@ -35,6 +36,8 @@ class _ConditionSet:
                 operator += "="
                 index = 2
         version = expression[index:]
+        if version == "":
+            raise ConanException(f"Error parsing version range {expression}")
         if operator == "~":  # tilde minor
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0

@@ -137,10 +137,12 @@ class ConanFileLoader:
 
         return conanfile
 
-    def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None):
+    def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None,
+                    remotes=None):
         """ loads the conanfile and evaluates its name, version, and enforce its existence
         """
-        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
+        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock,
+                                    remotes=remotes)
         if not conanfile.name:
             raise ConanException("conanfile didn't specify name")
         if not conanfile.version:
@@ -215,6 +217,9 @@ class ConanFileLoader:
         for build_reference in parser.tool_requirements:
             # TODO: Improve this interface
             conanfile.requires.tool_require(build_reference)
+        for ref in parser.test_requirements:
+            # TODO: Improve this interface
+            conanfile.requires.test_require(ref)
 
         if parser.layout:
             layout_method = {"cmake_layout": cmake_layout,
@@ -359,9 +364,9 @@ def _get_required_conan_version_without_loading(conan_file_path):
     txt_version = None
 
     try:
-        found = re.search(r"required_conan_version\s*=\s*(.*)", contents)
-        if found:
-            txt_version = found.group(1).replace('"', "")
+        found = re.search(r"(.*)required_conan_version\s*=\s*[\"'](.*)[\"']", contents)
+        if found and "#" not in found.group(1):
+            txt_version = found.group(2)
     except:
         pass
 

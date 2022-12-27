@@ -82,11 +82,11 @@ class ConanOutput:
         return hasattr(self.stream, "isatty") and self.stream.isatty()
 
     def writeln(self, data, fg=None, bg=None):
-        self.write(data, fg, bg, newline=True)
+        return self.write(data, fg, bg, newline=True)
 
     def write(self, data, fg=None, bg=None, newline=False):
         if conan_output_level > LEVEL_NOTICE:
-            return
+            return self
         if self._color and (fg or bg):
             data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
 
@@ -94,12 +94,13 @@ class ConanOutput:
             data = "%s\n" % data
         self.stream.write(data)
         self.stream.flush()
+        return self
 
     def rewrite_line(self, line):
         tmp_color = self._color
         self._color = False
         TOTAL_SIZE = 70
-        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
+        LIMIT_SIZE = TOTAL_SIZE // 2 - 3
         if len(line) > TOTAL_SIZE:
             line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
@@ -148,18 +149,22 @@ class ConanOutput:
     def trace(self, msg):
         if log_level_allowed(LEVEL_TRACE):
             self._write_message(msg, "TRACE", fg=Color.BRIGHT_WHITE)
+        return self
 
     def debug(self, msg):
         if log_level_allowed(LEVEL_DEBUG):
             self._write_message(msg, "DEBUG")
+        return self
 
     def verbose(self, msg, fg=None, bg=None):
         if log_level_allowed(LEVEL_VERBOSE):
             self._write_message(msg, "VERBOSE", fg=fg, bg=bg)
+        return self
 
     def status(self, msg, fg=None, bg=None):
         if log_level_allowed(LEVEL_STATUS):
             self._write_message(msg, "STATUS", fg=fg, bg=bg)
+        return self
 
     # Remove in a later refactor of all the output.info calls
     info = status
@@ -168,22 +173,27 @@ class ConanOutput:
         if log_level_allowed(LEVEL_NOTICE):
             self._write_message("\n-------- {} --------".format(msg), "NOTICE",
                                 fg=Color.BRIGHT_MAGENTA)
+        return self
 
     def highlight(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
             self._write_message(msg, "NOTICE", fg=Color.BRIGHT_MAGENTA)
+        return self
 
     def success(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
             self._write_message(msg, "NOTICE", fg=Color.BRIGHT_GREEN)
+        return self
 
     def warning(self, msg):
         if log_level_allowed(LEVEL_WARNING):
             self._write_message("WARN: {}".format(msg), "WARN", Color.YELLOW)
+        return self
 
     def error(self, msg):
         if log_level_allowed(LEVEL_ERROR):
             self._write_message("ERROR: {}".format(msg), "ERROR", Color.RED)
+        return self
 
     def flush(self):
         self.stream.flush()

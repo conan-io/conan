@@ -24,7 +24,7 @@ def download(conan_api: ConanAPI, parser, *args):
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
-                        help='Upload to this specific remote')
+                        help='Download from this specific remote')
 
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
@@ -38,7 +38,7 @@ def download(conan_api: ConanAPI, parser, *args):
     if parallel <= 1:
         for ref in refs:
             conan_api.download.recipe(ref, remote)
-        for pref in prefs:
+        for pref, _ in prefs:
             conan_api.download.package(pref, remote)
     else:
         _download_parallel(parallel, conan_api, refs, prefs, remote)
@@ -58,6 +58,6 @@ def _download_parallel(parallel, conan_api, refs, prefs, remote):
     if prefs:
         thread_pool = ThreadPool(parallel)
         ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
-        thread_pool.starmap(conan_api.download.package,  [(pref, remote) for pref in prefs])
+        thread_pool.starmap(conan_api.download.package,  [(pref, remote) for pref, _ in prefs])
         thread_pool.close()
         thread_pool.join()

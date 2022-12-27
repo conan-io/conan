@@ -24,7 +24,7 @@ class TestConflictDiamondTest:
         assert "Version conflict: ai/1.0->math/1.0.1, game/1.0->math/1.0" in c.out
         # This shouldnt error, so we are able to diagnose our dependency graph
         # The UX still need to be improved, but this is start
-        c.run("graph info game --filter=requires")
+        c.run("graph info game --filter=requires", assert_error=True)
         assert "math/1.0" in c.out
 
         def _game_conanfile(version, reverse=False):

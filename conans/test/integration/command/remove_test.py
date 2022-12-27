@@ -159,7 +159,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("upload foobar/0.1@user/testing -r default -c")
         ref = self.client.cache.get_latest_recipe_reference(
                RecipeReference.loads("foobar/0.1@user/testing"))
-        self.client.run("list packages foobar/0.1@user/testing#{} -r default".format(ref.revision))
+        self.client.run("list foobar/0.1@user/testing#{} -r default".format(ref.revision))
         default_arch = self.client.get_default_host_profile().settings['arch']
         self.assertIn(f"arch={default_arch}", self.client.out)
         self.assertIn("arch=x86", self.client.out)

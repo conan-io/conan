@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+from conan.internal import check_duplicated_generator
 from conans.client.conf.detect_vs import vs_installation_path
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
@@ -90,6 +91,7 @@ class VCVars:
         :param scope: ``str`` Launcher to be used to run all the variables. For instance,
                       if ``build``, then it'll be used the ``conanbuild`` launcher.
         """
+        check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
         os_ = conanfile.settings.get_safe("os")
         if os_ != "Windows":

@@ -16,7 +16,7 @@ class TestCustomCommands:
                                          'commands', 'cmd_mycommand.py')
         client.save({f"{command_file_path}": mycommand})
         # Call to any other command, it will fail loading the custom command
-        client.run("list recipes '*'")
+        client.run("list *")
         assert "ERROR: Error loading custom command 'cmd_mycommand.py': " \
                "No module named 'this_doesnt_exist'" in client.out
 
@@ -143,7 +143,7 @@ class TestCustomCommands:
         complex_command = textwrap.dedent("""
             import json
 
-            from conan.cli.command import conan_command, conan_subcommand
+            from conan.cli.command import conan_command
             from conan.api.output import cli_out_write
 
             @conan_command()

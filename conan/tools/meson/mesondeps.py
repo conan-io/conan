@@ -2,6 +2,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conan.tools.meson.helpers import to_meson_value
 from conans.model.build_info import CppInfo
@@ -102,4 +103,5 @@ class MesonDeps:
         return content
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         save(self.filename, self._content())

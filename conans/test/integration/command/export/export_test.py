@@ -517,6 +517,17 @@ def test_export_invalid_refs():
     assert "ERROR: Invalid package channel 'channel%'" in c.out
 
 
+def test_allow_temp_uppercase():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=Pkg --version=0.1", assert_error=True)
+    assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+    c.save({"global.conf": "core:allow_uppercase_pkg_names=True"}, path=c.cache.cache_folder)
+    c.run("export . --name=Pkg --version=0.1")
+    assert "WARN: Package name 'Pkg/0.1' has uppercase, " \
+           "and has been allowed by temporary config." in c.out
+
+
 def test_warn_special_chars_refs():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile()})

@@ -97,8 +97,8 @@ class TestHooks:
         c.run("export-pkg . ")
         assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_export(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} pre_package(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} post_package(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_package(): Hello" in c.out
+        assert f"conanfile.py (pkg/0.1): {hook_msg} post_package(): Hello" in c.out
 
         c.run("create . ")
         assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out

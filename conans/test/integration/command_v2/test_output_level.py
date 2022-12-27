@@ -1,10 +1,15 @@
 import json
 
-from conan.api.conan_api import ConanAPI, set_conan_output_level
-from conans.model.recipe_ref import RecipeReference
+from conan.api.conan_api import ConanAPI
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import TestClient, redirect_output
+
+
+def set_conan_output_level(level, activate_logger=False):
+    from conan.api import output
+    output.conan_output_level = level
+    output.conan_output_logger_format = activate_logger
 
 
 def test_invalid_output_level():

@@ -1,6 +1,6 @@
 from conan.api.model import SelectBundle
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException
 from conans.search.search import search_recipes
 
@@ -52,9 +52,9 @@ class SearchAPI:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
 
+            select_bundle.add_refs(rrevs)
             # Add recipe revisions to bundle
             for rrev in rrevs:
-                select_bundle.add_ref(rrev)
                 if only_recipe:
                     continue
                 prefs = self.conan_api.list.packages_configurations(rrev, remote)

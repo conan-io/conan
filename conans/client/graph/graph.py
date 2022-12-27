@@ -39,7 +39,7 @@ class TransitiveRequirement:
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, context, recipe=None, path=None):
+    def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
@@ -54,6 +54,7 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.context = context
+        self.test = test
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
@@ -216,6 +217,7 @@ class Node(object):
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
         result["context"] = self.context
+        result["test"] = self.test
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 

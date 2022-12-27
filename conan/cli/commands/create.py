@@ -6,8 +6,8 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
-from conan.api.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_basic, print_graph_packages
+from conan.internal.conan_app import ConanApp
+from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir
@@ -52,7 +52,8 @@ def create(conan_api, parser, *args):
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,
                                              user=args.user, channel=args.channel,
-                                             lockfile=lockfile)
+                                             lockfile=lockfile,
+                                             remotes=remotes)
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
@@ -152,20 +153,16 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
 
 
 def _get_test_conanfile_path(tf, conanfile_path):
-    """Searches in the declared test_folder or in the standard locations"""
+    """Searches in the declared test_folder or in the standard "test_package"
+    """
 
     if tf is False:
         # Look up for testing conanfile can be disabled if tf (test folder) is False
         return None
 
-    test_folders = [tf] if tf else ["test_package", "test"]
     base_folder = os.path.dirname(conanfile_path)
-    for test_folder_name in test_folders:
-        test_folder = os.path.join(base_folder, test_folder_name)
-        test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-        if os.path.exists(test_conanfile_path):
-            return test_conanfile_path
-    else:
-        if tf:
-            raise ConanException("test folder '%s' not available, or it doesn't have a conanfile.py"
-                                 % tf)
+    test_conanfile_path = os.path.join(base_folder, tf or "test_package", "conanfile.py")
+    if os.path.exists(test_conanfile_path):
+        return test_conanfile_path
+    if tf:
+        raise ConanException("test folder '{tf}' not available, or it doesn't have a conanfile.py")

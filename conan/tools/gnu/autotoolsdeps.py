@@ -1,3 +1,4 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.model.build_info import CppInfo
@@ -79,4 +80,5 @@ class AutotoolsDeps:
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self,  scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")
