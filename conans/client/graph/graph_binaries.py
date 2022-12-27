@@ -56,7 +56,8 @@ class GraphBinariesAnalyzer(object):
         pref = node.pref
         for r in self._selected_remotes:
             try:
-                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
+                info = node.conanfile.info
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._update:
                     break
