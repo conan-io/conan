@@ -4,6 +4,7 @@ import platform
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
@@ -61,8 +62,8 @@ def test_locally_build_linux(build_type, shared, client):
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}".format(build_type,
                                                                                        shared)
     client.run("install . {}".format(settings))
-    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:
@@ -79,7 +80,7 @@ def test_locally_build_linux(build_type, shared, client):
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
     ldpath = os.path.join(client.current_folder, "mydeploy", "hello", "lib")
-    client.run_command("LD_LIBRARY_PATH='{}' ./mydeploy/hello/myapp".format(ldpath))
+    client.run_command("LD_LIBRARY_PATH='{}' ./mydeploy/hello/bin/myapp".format(ldpath))
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
 
@@ -111,7 +112,7 @@ def test_locally_build_msvc(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
-    client.run_command(r"mydeploy\hello\myapp.exe")
+    client.run_command(r"mydeploy\hello\bin\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 
@@ -170,7 +171,8 @@ def test_locally_build_gcc(build_type, shared, client):
 
     client.run_command("myapp.exe")
     # TODO: Need full gcc version check
-    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
+    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None,
+                  subsystem="mingw64")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
@@ -179,8 +181,8 @@ def test_locally_build_gcc(build_type, shared, client):
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
-    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchain.filename))
+    client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
+                       .format(CMakeToolchain.filename, build_type))
 
     client.run_command('ninja')
     if shared:
@@ -215,8 +217,10 @@ def test_ninja_conf():
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("install . -pr=profile")
-    conanbuild = load_toolchain_args(client.current_folder)
-    assert conanbuild["cmake_generator"] == "Ninja"
+    presets = load_cmake_presets(client.current_folder)
+    generator = presets["configurePresets"][0]["generator"]
+
+    assert generator == "Ninja"
     vcvars = client.load("conanvcvars.bat")
     assert "2017" in vcvars
 

@@ -43,6 +43,7 @@ def architecture_flag(settings):
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
@@ -50,7 +51,7 @@ def architecture_flag(settings):
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             apple_arch = to_apple_arch(arch)
             if apple_arch:
-                return '--target=%s-apple-ios-macabi' % apple_arch
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
@@ -279,4 +280,4 @@ def format_framework_paths(framework_paths, settings):
     compiler_base = settings.get_safe("compiler.base")
     if (str(compiler) not in GCC_LIKE) and (str(compiler_base) not in GCC_LIKE):
         return []
-    return ["-F %s" % adjust_path(framework_path, settings) for framework_path in framework_paths]
+    return ["-F\"%s\"" % adjust_path(framework_path, settings) for framework_path in framework_paths]

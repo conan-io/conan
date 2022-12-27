@@ -11,18 +11,27 @@ def architecture_flag(settings):
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
     subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
     if the_os == "Android":
         return ""
 
-    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+    if compiler == "clang" and the_os == "Windows":
+        # LLVM/Clang and VS/Clang must define runtime. msys2 clang won't
+        runtime = settings.get_safe("compiler.runtime")  # runtime is Windows only
+        if runtime is not None:
+            return ""
+        # TODO: Maybe Clang-Mingw runtime does, but with C++ is impossible to test
+        return {"x86_64": "-m64",
+                "x86": "-m32"}.get(arch, "")
+    elif str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
-                return '--target=%s-apple-ios-macabi' % apple_arch
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
@@ -54,6 +63,39 @@ def architecture_flag(settings):
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(str(arch), "")
     return ""
+
+
+def libcxx_flags(conanfile):
+    libcxx = conanfile.settings.get_safe("compiler.libcxx")
+    if not libcxx:
+        return None, None
+    compiler = conanfile.settings.get_safe("compiler")
+    lib = stdlib11 = None
+    if compiler == "apple-clang":
+        # In apple-clang 2 only values atm are "libc++" and "libstdc++"
+        lib = "-stdlib={}".format(libcxx)
+    elif compiler == "clang" or compiler == "intel-cc":
+        if libcxx == "libc++":
+            lib = "-stdlib=libc++"
+        elif libcxx == "libstdc++" or libcxx == "libstdc++11":
+            lib = "-stdlib=libstdc++"
+        # FIXME, something to do with the other values? Android c++_shared?
+    elif compiler == "sun-cc":
+        lib = {"libCstd": "-library=Cstd",
+               "libstdcxx": "-library=stdcxx4",
+               "libstlport": "-library=stlport4",
+               "libstdc++": "-library=stdcpp"
+               }.get(libcxx)
+    elif compiler == "qcc":
+        lib = "-Y _{}".format(libcxx)
+
+    if compiler in ['clang', 'apple-clang', 'gcc']:
+        if libcxx == "libstdc++":
+            stdlib11 = "_GLIBCXX_USE_CXX11_ABI=0"
+        elif libcxx == "libstdc++11" and conanfile.conf.get("tools.gnu:define_libcxx11_abi",
+                                                            check_type=bool):
+            stdlib11 = "_GLIBCXX_USE_CXX11_ABI=1"
+    return lib, stdlib11
 
 
 def build_type_link_flags(settings):
@@ -108,11 +150,8 @@ def build_type_flags(settings):
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
         if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
-            # FIXME: It is not clear that the "-s" is something related with the build type
-            # cmake is not adjusting it
-            # -s: Remove all symbol table and relocation information from the executable.
             flags = {"Debug": ["-g"],
-                     "Release": ["-O3", "-s"] if str(compiler) == "gcc" else ["-O3"],
+                     "Release": ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": ["-Os"],
                      }.get(build_type, [])
@@ -220,7 +259,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
 
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
     if Version(clang_version) >= "4.0":
         v98 = "c++98"
@@ -235,24 +274,32 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(clang_version) >= "6.1":
+    # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
+    # Note: cmake allows c++17 since version 10.0
+    if Version(clang_version) >= "9.1":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+    elif Version(clang_version) >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "9.1":
-        # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
-        v17 = "c++17"
-        vgnu17 = "gnu++17"
-
-    if Version(clang_version) >= "10.0":
+    if Version(clang_version) >= "13.0":
+        v20 = "c++20"
+        vgnu20 = "gnu++20"
+    elif Version(clang_version) >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
+
+    if Version(clang_version) >= "13.0":
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd, None)
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
 
     return "-std=%s" % flag if flag else None
 

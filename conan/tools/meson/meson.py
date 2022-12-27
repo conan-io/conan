@@ -1,7 +1,9 @@
 import os
 
 from conan.tools.build import build_jobs
-from conan.tools.meson import MesonToolchain
+from conan.tools.meson.toolchain import MesonToolchain
+from conan.tools.meson.mesondeps import MesonDeps
+
 
 class Meson(object):
     def __init__(self, conanfile):
@@ -14,10 +16,24 @@ class Meson(object):
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
+        deps_flags = os.path.join(generators_folder, MesonDeps.filename)  # extra machine files layer
+        meson_filenames = []
         if os.path.exists(cross):
-            cmd += ' --cross-file "{}"'.format(cross)
+            cmd_param = " --cross-file"
+            meson_filenames.append(cross)
         else:
-            cmd += ' --native-file "{}"'.format(native)
+            cmd_param = " --native-file"
+            meson_filenames.append(native)
+
+        if os.path.exists(deps_flags):
+            meson_filenames.append(deps_flags)
+
+        machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
+                                                 default=[], check_type=list)
+        if machine_files:
+            meson_filenames.extend(machine_files)
+
+        cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
@@ -44,6 +60,8 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def test(self):
+        if self._conanfile.conf.get("tools.build:skip_test"):
+            return
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson test -v -C "{}"'.format(meson_build_folder)
         # TODO: Do we need vcvars for test?

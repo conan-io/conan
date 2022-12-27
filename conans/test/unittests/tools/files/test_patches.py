@@ -38,6 +38,7 @@ def mock_patch_ng(monkeypatch):
 def test_single_patch_file(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file')
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
@@ -49,6 +50,7 @@ def test_single_patch_file(mock_patch_ng):
 def test_single_patch_file_from_forced_build(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='/my_build/patch-file')
     assert mock_patch_ng.filename == '/my_build/patch-file'
@@ -60,16 +62,20 @@ def test_single_patch_file_from_forced_build(mock_patch_ng):
 def test_base_path(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
+    conanfile.folders.source = "src"  # This not applies to find the patch file but for applying it
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file', base_path="subfolder")
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
     assert mock_patch_ng.string is None
-    assert mock_patch_ng.apply_args == (os.path.join("/my_source", "subfolder"), 0, False)
+    assert mock_patch_ng.apply_args == (os.path.join("/my_source", "src", "subfolder"), 0, False)
     assert len(str(conanfile.output)) == 0
+
 
 def test_apply_in_build_from_patch_in_source(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("/my_source")
+    conanfile.folders.set_base_export_sources("/my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file', base_path="/my_build/subfolder")
     assert mock_patch_ng.filename.replace("\\", "/") == '/my_source/patch-file'
@@ -83,6 +89,7 @@ def test_apply_in_build_from_patch_in_source(mock_patch_ng):
 def test_single_patch_string(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.folders.set_base_source("my_folder")
+    conanfile.folders.set_base_export_sources("my_folder")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_string='patch_string')
     assert mock_patch_ng.string == b'patch_string'
@@ -95,6 +102,7 @@ def test_single_patch_arguments(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
     conanfile.folders.set_base_source("/path/to/sources")
+    conanfile.folders.set_base_export_sources("/path/to/sources")
     patch(conanfile, patch_file='patch-file', strip=23, fuzz=True)
     assert mock_patch_ng.filename.replace("\\", "/") == '/path/to/sources/patch-file'
     assert mock_patch_ng.apply_args == ("/path/to/sources", 23, True)
@@ -167,7 +175,7 @@ def test_multiple_no_version(mock_patch_ng):
 def test_multiple_with_version(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    conanfile.conan_data = {'patches': {
+    conandata_contents = {'patches': {
         "1.11.0": [
             {'patch_file': 'patches/0001-buildflatbuffers-cmake.patch',
              'base_path': 'source_subfolder', },
@@ -182,6 +190,8 @@ def test_multiple_with_version(mock_patch_ng):
              'base_path': 'source_subfolder', },
         ]}}
 
+    conanfile.conan_data = conandata_contents.copy()
+
     with pytest.raises(AssertionError) as excinfo:
         apply_conandata_patches(conanfile)
     assert 'Can only be applied if conanfile.version is already defined' == str(excinfo.value)
@@ -194,3 +204,6 @@ def test_multiple_with_version(mock_patch_ng):
     apply_conandata_patches(conanfile)
     assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
            == str(conanfile.output)
+    
+    # Ensure the function is not mutating the `conan_data` structure
+    assert conanfile.conan_data == conandata_contents

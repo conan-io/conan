@@ -9,7 +9,7 @@ class Version(str):
     version_pattern = re.compile('[.-]')
 
     def __new__(cls, content):
-        return str.__new__(cls, content.strip())
+        return str.__new__(cls, str(content).strip())
 
     @property
     def as_list(self):

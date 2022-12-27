@@ -20,7 +20,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
     # which the tools generate code
     os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
-    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
+    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106, xtensalx7]
 
     # Rest of the settings are "host" settings:
     # - For native building/cross building: Where the library/program will run.
@@ -34,27 +34,40 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             platform: ANY
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
-        Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
-            sdk: [None, "macosx"]
-            subsystem: [None, catalyst]
-        Android:
-            api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+            version: &ios_version
+                     ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
                       "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                       "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
-                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
+                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8",
+                      "15.0", "15.1", "15.2", "15.3", "15.4", "15.5", "15.6", "16.0", "16.1"]
             sdk: [None, "iphoneos", "iphonesimulator"]
+            sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                          "13.0", "13.1", "13.2", "13.4", "13.5", "13.6", "13.7",
+                          "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "15.0", "15.2", "15.4", "15.5", "16.0", "16.1"]
         watchOS:
             version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
-                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
+                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1", "8.3", "8.4", "8.5", "8.6", "8.7", "9.0", "9.1"]
             sdk: [None, "watchos", "watchsimulator"]
+            sdk_version: [None, "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                          "7.0", "7.1", "7.2", "7.4", "8.0", "8.0.1", "8.3", "8.5", "9.0", "9.1"]
         tvOS:
             version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
                       "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
-                      "15.0", "15.1"]
+                      "15.0", "15.1", "15.2", "15.3", "15.4", "15.5", "15.6", "16.0", "16.1"]
             sdk: [None, "appletvos", "appletvsimulator"]
+            sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                          "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4", "16.0", "16.1"]
+        Macos:
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
+            sdk: [None, "macosx"]
+            sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0"]
+            subsystem:
+                None:
+                catalyst:
+                    ios_version: *ios_version
+        Android:
+            api_level: ANY
         FreeBSD:
         SunOS:
         AIX:
@@ -66,7 +79,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         baremetal:
         VxWorks:
             version: ["7"]
-    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
+    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106, xtensalx7]
     compiler:
         sun-cc:
             version: ["5.10", "5.11", "5.12", "5.13", "5.14", "5.15"]
@@ -78,9 +91,10 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "6", "6.1", "6.2", "6.3", "6.4", "6.5",
                       "7", "7.1", "7.2", "7.3", "7.4", "7.5",
                       "8", "8.1", "8.2", "8.3", "8.4",
-                      "9", "9.1", "9.2", "9.3",
+                      "9", "9.1", "9.2", "9.3", "9.4",
                       "10", "10.1", "10.2", "10.3",
-                      "11", "11.1", "11.2"]
+                      "11", "11.1", "11.2", "11.3",
+                      "12", "12.1", "12.2"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32]  # Windows MinGW
             exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
@@ -95,22 +109,25 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       llvm, ClangCL, v143]
             cppstd: [None, 14, 17, 20, 23]
         msvc:
-            version: [190, 191, 192, 193]
+            version: [170, 180, 190, 191, 192, 193]
             update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             runtime: [static, dynamic]
             runtime_type: [Debug, Release]
-            cppstd: [14, 17, 20, 23]
+            cppstd: [98, 14, 17, 20, 23]
+            toolset: [None, v110_xp, v120_xp, v140_xp, v141_xp]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10", "11", "12", "13", "14"]
+                      "8", "9", "10", "11", "12", "13", "14", "15", "16"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
-            runtime: [None, MD, MT, MTd, MDd]
+            runtime: [None, MD, MT, MTd, MDd, static, dynamic]
+            runtime_type: [None, Debug, Release]
+            runtime_version: [None, v140, v141, v142, v143]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0"]
             libcxx: [libstdc++, libc++]
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         intel:
             version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
             update: [None, ANY]

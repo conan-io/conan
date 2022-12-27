@@ -242,10 +242,15 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(reference) for reference in response]
+        try:
+            return [ConanFileReference.loads(reference) for reference in response]
+        except TypeError as te:
+            raise ConanException("Unexpected response from server.\n"
+                                 "URL: `{}`\n"
+                                 "Expected an iterable, but got {}.".format(url, type(response)))
 
-    def search_packages(self, ref, query):
+    def search_packages(self, ref):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref, query)
+        url = self.router.search_packages(ref)
         package_infos = self.get_json(url)
         return package_infos

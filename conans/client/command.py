@@ -7,8 +7,6 @@ import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from six.moves import input as user_input
-
 from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -22,7 +20,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError, ConanInvalidSystemRequirements
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
-from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -488,7 +486,6 @@ class Command(object):
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
         parser.add_argument("-of", "--output-folder",
                             help='The root output folder for generated and build files')
-        parser.add_argument("-sf", "--source-folder", help='The root source folder')
         _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
@@ -536,7 +533,6 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           source_folder=args.source_folder,
                                            output_folder=args.output_folder,
                                            lockfile=args.lockfile,
                                            lockfile_out=args.lockfile_out,
@@ -663,8 +659,8 @@ class Command(object):
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.writeln("{}: {}".format(key, value))
+            for key, description in BUILT_IN_CONFS.items():
+                self._out.writeln("{}: {}".format(key, description))
 
     def info(self, *args):
         """
@@ -1579,7 +1575,7 @@ class Command(object):
         parser_add.add_argument('remote', help='Name of the remote')
         parser_add.add_argument('url', help='URL of the remote')
         parser_add.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
+                                help='Verify SSL certificate. Defaulted to True')
         parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
                                 help="insert remote at specific index")
         parser_add.add_argument("-f", "--force", default=False, action='store_true',
@@ -1591,7 +1587,7 @@ class Command(object):
 
         parser_upd.add_argument('url', help='URL')
         parser_upd.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
+                                help='Verify SSL certificate. Defaulted to True')
         parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
                                 help="Insert remote at specific index")
         parser_rename = subparsers.add_parser('rename', help='Update the remote name')
@@ -1899,7 +1895,6 @@ class Command(object):
                                 'then to local cache "layouts" folder')
         add_parser.add_argument("-of", "--output-folder",
                                 help='The root output folder for generated and build files')
-        add_parser.add_argument("-sf", "--source-folder", help='The root source folder')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
         remove_parser.add_argument('reference',
@@ -1911,8 +1906,8 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.path, args.reference, args.layout, args.source_folder,
-                                     args.output_folder, cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, args.layout, args.output_folder,
+                                     cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
@@ -2170,31 +2165,11 @@ class Command(object):
         version = sys.version_info
         if version.major == 2:
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                " stopped supporting it officially. We strongly recommend"
-                                " you to use Python >= 3.5. Conan will completely stop"
-                                " working with Python 2 in the following releases", width)
+            msg = textwrap.fill("Python 2 support has been removed 30/05/2022 (1.49) because of "
+                                "security vulnerabilities. Please use Python >=3.6.", width)
             self._out.writeln(msg, front=Color.BRIGHT_RED)
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
-                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
-                # deprecated and some libraries we use as dependencies have stopped supporting it.
-                # Conan might fail to run and we are no longer fixing errors related to Python 2.
-                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
-                                                width))
-            else:
-                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
-                                    " CI without this interactive input, please contact us"
-                                    " at info@conan.io", width)
-                self._out.writeln(msg, front=Color.BRIGHT_RED)
-                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
-                self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
-                                              drop_whitespace=False), front=Color.BRIGHT_RED)
-                ret = user_input().lower()
-                if ret not in ["yes", "ye", "y"]:
-                    self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
-                    sys.exit(0)
+            sys.exit(0)
         elif version.minor == 4:
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
             self._out.writeln(textwrap.fill("Python 3.4 support has been dropped. It is strongly "

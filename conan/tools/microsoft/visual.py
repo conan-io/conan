@@ -2,17 +2,57 @@ import os
 import textwrap
 
 from conans.client.tools import vs_installation_path
-from conans.errors import ConanException
+from conans.client.tools.version import Version
+from conans.errors import ConanException, ConanInvalidConfiguration
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
+def check_min_vs(conanfile, version):
+    """ this is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
+    withoug breaking recipes
+    The legacy "Visual Studio" with different toolset is not managed, not worth the complexity
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = None
+    if compiler == "Visual Studio":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_version = {"17": "193",
+                            "16": "192",
+                            "15": "191",
+                            "14": "190",
+                            "12": "180",
+                            "11": "170"}.get(compiler_version)
+    elif compiler == "msvc":
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        compiler_update = conanfile.settings.get_safe("compiler.update")
+        if compiler_version and compiler_update is not None:
+            compiler_version += ".{}".format(compiler_update)
+
+    if compiler_version and Version(compiler_version) < version:
+        msg = "This package doesn't work with VS compiler version '{}'" \
+              ", it requires at least '{}'".format(compiler_version, version)
+        raise ConanInvalidConfiguration(msg)
+
+
 def msvc_version_to_vs_ide_version(version):
-    _visuals = {'190': '14',
+    _visuals = {'170': '11',
+                '180': '12',
+                '190': '14',
                 '191': '15',
                 '192': '16',
                 '193': '17'}
     return _visuals[str(version)]
+
+
+def msvc_version_to_toolset_version(version):
+    toolsets = {'170': 'v110',
+                '180': 'v120',
+                '190': 'v140',
+                '191': 'v141',
+                '192': 'v142',
+                "193": 'v143'}
+    return toolsets[str(version)]
 
 
 class VCVars:
@@ -29,14 +69,31 @@ class VCVars:
             return
 
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler != "Visual Studio" and compiler != "msvc":
+        if compiler not in ("Visual Studio", "msvc", "clang"):
             return
 
-        vs_version = vs_ide_version(conanfile)
+        if compiler == "clang":
+            # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
+            if not conanfile.settings.get_safe("compiler.runtime"):
+                # NMake Makefiles will need vcvars activated, for VS target, defined with runtime
+                return
+            toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
+            vs_version = {"v140": "14",
+                          "v141": "15",
+                          "v142": "16",
+                          "v143": "17"}.get(toolset_version)
+            if vs_version is None:
+                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
+            vcvars_ver = {"v140": "14.0",
+                          "v141": "14.1",
+                          "v142": "14.2",
+                          "v143": "14.3"}.get(toolset_version)
+        else:
+            vs_version = vs_ide_version(conanfile)
+            vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = vcvars_arch(conanfile)
-        vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
 
-        vs_install_path = conanfile.conf["tools.microsoft.msbuild:installation_path"]
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
@@ -54,11 +111,14 @@ class VCVars:
 
 
 def vs_ide_version(conanfile):
+    """
+    Get the VS IDE version as string
+    """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        toolset_override = conanfile.conf.get("tools.microsoft.msbuild:vs_version", check_type=str)
         if toolset_override:
             visual_version = toolset_override
         else:
@@ -74,9 +134,17 @@ def msvc_runtime_flag(conanfile):
     runtime = settings.get_safe("compiler.runtime")
     if compiler == "Visual Studio":
         return runtime
-    if compiler == "msvc" or compiler == "intel-cc":
+    if compiler == "clang" and runtime in ("MD", "MT", "MTd", "MDd"):
+        # TODO: Remove in 2.0
+        return runtime
+    if runtime is not None:
+        if runtime == "static":
+            runtime = "MT"
+        elif runtime == "dynamic":
+            runtime = "MD"
+        else:
+            raise ConanException("compiler.runtime should be 'static' or 'dynamic'")
         runtime_type = settings.get_safe("compiler.runtime_type")
-        runtime = "MT" if runtime == "static" else "MD"
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         return runtime
@@ -147,6 +215,11 @@ def vcvars_arch(conanfile):
                 'x86_64': 'x86_amd64',
                 'armv7': 'x86_arm',
                 'armv8': 'x86_arm64'}.get(arch_host)
+    elif arch_build == 'armv8':
+        arch = {'x86': 'arm64_x86',
+                'x86_64': 'arm64_x64',
+                'armv7': 'arm64_arm',
+                'armv8': 'arm64'}.get(arch_host)
 
     if not arch:
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
@@ -175,12 +248,17 @@ def _vcvars_vers(conanfile, compiler, vs_version):
     return vcvars_ver
 
 
-def is_msvc(conanfile):
+def is_msvc(conanfile, build_context=False):
     """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
     :param conanfile: ConanFile instance
+    :param build_context: If True, will use the settings from the build context, not host ones
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
-    settings = conanfile.settings
+    # FIXME: 2.0: remove "hasattr()" condition
+    if not build_context or not hasattr(conanfile, "settings_build"):
+        settings = conanfile.settings
+    else:
+        settings = conanfile.settings_build
     return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
 
 

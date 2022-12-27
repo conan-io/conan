@@ -31,6 +31,8 @@ class _RecipeBuildRequires(OrderedDict):
                 self.add(build_require, context=self._default_context)
 
     def add(self, build_require, context, force_host_context=False):
+        if build_require is None:
+            return
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
         build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
@@ -122,6 +124,7 @@ class GraphManager(object):
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id, is_build_require,
                                          require_overrides)
+
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)

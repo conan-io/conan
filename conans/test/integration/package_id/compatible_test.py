@@ -2,8 +2,9 @@ import textwrap
 import time
 import unittest
 
+
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import save
 
 
@@ -85,6 +86,53 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Build",
                       client.out)
+
+    def test_compatible_setting_debug_release(self):
+        # From issue https://github.com/conan-io/conan/issues/9398
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                settings = "build_type"
+
+                def package_id(self):
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.build_type = "Release"
+                    self.compatible_packages.append(compatible_pkg)
+            """)
+        client.save({"conanfile.py": conanfile})
+        # Create the recipe and upload it into the remote
+        client.run("create . -s build_type=Release")
+        client.run("upload pkg* -r=default --confirm --all")
+        client.run("remove * -f")
+
+        # Install locally the uploaded package
+        client.run("install pkga/0.1@")
+
+        # Create a middle package and export it
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class PkgB(ConanFile):
+                name = "pkgb"
+                version = "0.1"
+                build_requires = "pkga/0.1"
+               """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("export .")
+
+        # Create a final package and install it changing the "build_type"
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class PkgC(ConanFile):
+               requires = "pkgb/0.1"
+               build_requires = "pkga/0.1"
+               """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("install . -s build_type=Debug --build=missing")
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
@@ -576,3 +624,130 @@ def test_msvc_visual_incompatible():
     save(client.cache.new_config_path, new_config)
     client.run("install pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
+
+
+class TestAppleClang13Compatible:
+    def test_apple_clang_compatible(self):
+        """
+        From apple-clang version 13 we detect apple-clang version as 13 and we make
+        this compiler version compatible with 13.0
+        """
+        conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+        client = TestClient()
+        profile = textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            compiler.libcxx=libc++
+            build_type=Release
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        client.run('create . pkg/0.1@ -pr=profile -s compiler.version=13.0')
+        client.run("install pkg/0.1@ -pr=profile -s compiler.version=13")
+        assert "Using compatible package" in client.out
+
+    def test_apple_clang_not_compatible(self):
+        """
+        From apple-clang version 13 we detect apple-clang version as 13 and we make
+        this compiler version compatible with 13.0
+        """
+        conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+        client = TestClient()
+        profile = textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            compiler.libcxx=libc++
+            build_type=Release
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        client.run('create . pkg/0.1@ -pr=profile -s compiler.version=13.0')
+        client.run("install pkg/0.1@ -pr=profile -s compiler.version=13.1", assert_error=True)
+        assert "Using compatible package" not in client.out
+        assert "ERROR: Missing binary" in client.out
+
+
+class TestNewCompatibility:
+
+    def test_compatible_setting(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler"
+
+                def compatibility(self):
+                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                        return [{"settings": [("compiler.version", v)]}
+                                for v in ("4.8", "4.7", "4.6")]
+
+                def package_info(self):
+                    self.output.info("PackageInfo!: Gcc version: %s!"
+                                     % self.settings.compiler.version)
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+        # Create package with gcc 4.8
+        c.run("create .  -pr=myprofile -s compiler.version=4.8")
+        assert "pkg/0.1: Package '22c594d7fed4994c59a1eacb24ff6ff48bc5c51c' created" in c.out
+
+        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
+        c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("install . -pr=myprofile")
+        assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
+        assert "pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c" in c.out
+        assert "pkg/0.1: Already installed!" in c.out
+
+    # FIXME: This test already exists in Conan 2.0 (in this file). Please, remove this one.
+    def test_compatible_option(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+             from conan import ConanFile
+
+             class Pkg(ConanFile):
+                 options = {"optimized": [1, 2, 3]}
+                 default_options = {"optimized": 1}
+
+                 def compatibility(self):
+                     return [{"options": [("optimized", v)]}
+                             for v in range(int(self.options.optimized), 0, -1)]
+
+                 def package_info(self):
+                     self.output.info("PackageInfo!: Option optimized %s!"
+                                      % self.options.optimized)
+             """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable")
+        package_id = "a97db2488658dd582a070ba8b6c6975eb1601a33"
+        # package_id = client.created_package_id("pkg/0.1@user/stable")
+        assert f"pkg/0.1@user/stable: Package '{package_id}' created" in client.out
+
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
+        client.run("install . -o pkg/*:optimized=2")
+        # Information messages
+        missing_id = "d97fb97a840e4ac3b5e7bb8f79c87f1d333a85bc"
+        assert "pkg/0.1@user/stable: PackageInfo!: Option optimized 1!" in client.out
+        assert f"pkg/0.1@user/stable: Compatible package ID " \
+               f"{missing_id} equal to the default package ID" in client.out
+        assert f"pkg/0.1@user/stable: Main binary package '{missing_id}' missing. " \
+               f"Using compatible package '{package_id}'" in client.out
+        # checking the resulting dependencies
+        assert f"pkg/0.1@user/stable:{package_id} - Cache" in client.out
+        assert "pkg/0.1@user/stable: Already installed!" in client.out
+        client.run("install . -o pkg/*:optimized=3")
+        assert "pkg/0.1@user/stable: Already installed!" in client.out
+        assert f"pkg/0.1@user/stable:{package_id} - Cache" in client.out

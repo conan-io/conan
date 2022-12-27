@@ -23,9 +23,9 @@ class VirtualBuildEnv:
     def _filename(self):
         f = self.basename
         if self.configuration:
-            f += "-" + self.configuration
+            f += "-" + self.configuration.replace(".", "_")
         if self.arch:
-            f += "-" + self.arch
+            f += "-" + self.arch.replace(".", "_")
         return f
 
     def environment(self):
@@ -69,5 +69,4 @@ class VirtualBuildEnv:
 
     def generate(self, scope="build"):
         build_env = self.environment()
-        if build_env:  # Only if there is something defined
-            build_env.vars(self._conanfile, scope=scope).save_script(self._filename)
+        build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

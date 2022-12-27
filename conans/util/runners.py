@@ -8,6 +8,7 @@ import six
 
 from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr
+from conans.util.files import rmdir
 from conans.util.log import logger
 
 
@@ -100,6 +101,6 @@ def check_output_runner(cmd, stderr=None):
         return output
     finally:
         try:
-            os.unlink(tmp_file)
+            rmdir(d)
         except OSError:
             pass

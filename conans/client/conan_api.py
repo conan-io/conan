@@ -583,7 +583,7 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None,
-                source_folder=None, output_folder=None, cwd=None,
+                output_folder=None, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
@@ -601,13 +601,14 @@ class ConanAPIV1(object):
                                         lockfile=lockfile)
 
             install_folder = _make_abs_path(install_folder, cwd)
+            if output_folder:
+                output_folder = _make_abs_path(output_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
-                         source_folder=source_folder,
                          output_folder=output_folder,
                          base_folder=cwd,
                          remotes=remotes,
@@ -830,6 +831,7 @@ class ConanAPIV1(object):
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
         conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
@@ -1300,7 +1302,7 @@ class ConanAPIV1(object):
             return self.app.remote_manager.get_package_revisions(pref, remote=remote)
 
     @api_method
-    def editable_add(self, path, reference, layout, source_folder, output_folder, cwd):
+    def editable_add(self, path, reference, layout, output_folder, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
@@ -1319,13 +1321,10 @@ class ConanAPIV1(object):
         if layout_abs_path:
             self.app.out.success("Using layout file: %s" % layout_abs_path)
 
-        if source_folder is not None:
-            source_folder = _make_abs_path(source_folder)
         if output_folder is not None:
             build_folder = _make_abs_path(output_folder)
 
-        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path, source_folder,
-                                             output_folder)
+        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path, output_folder)
 
     @api_method
     def editable_remove(self, reference):
@@ -1344,6 +1343,9 @@ class ConanAPIV1(object):
         old_lock = GraphLockFile.load(old_lockfile, revisions_enabled)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
         new_lock = GraphLockFile.load(new_lockfile, revisions_enabled)
+        if old_lock.profile_host is None or new_lock.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
         if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
                                  % (old_lockfile, old_lock.profile_host.dumps(),

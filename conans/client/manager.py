@@ -23,7 +23,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
                  is_build_require=False, add_txt_generator=True, require_overrides=None,
-                 conanfile_path=None, test=None, source_folder=None, output_folder=None):
+                 conanfile_path=None, test=None, output_folder=None):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -77,6 +77,18 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     except ConanException:  # Setting os doesn't exist
         pass
 
+    if hasattr(conanfile, "layout") and not test:
+        conanfile.folders.set_base_folders(conanfile_path, output_folder)
+    else:
+        conanfile.folders.set_base_install(install_folder)
+        conanfile.folders.set_base_imports(install_folder)
+        conanfile.folders.set_base_generators(base_folder)
+        conanfile.folders.set_base_source(base_folder)
+        conanfile.folders.set_base_build(base_folder)
+
+    if hasattr(conanfile, "layout") and test:
+        install_folder = conanfile.generators_folder
+
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
@@ -95,17 +107,12 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_source(source_folder or conanfile_path)
-        conanfile.folders.set_base_install(output_folder or conanfile_path)
-        conanfile.folders.set_base_imports(output_folder or conanfile_path)
-        conanfile.folders.set_base_generators(output_folder or conanfile_path)
-    else:
-        conanfile.folders.set_base_install(install_folder)
-        conanfile.folders.set_base_imports(install_folder)
-        conanfile.folders.set_base_generators(base_folder)
-
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
+
+    if conanfile.info.invalid:
+        msg = "Invalid ID: {}. ".format(conanfile.info.invalid)
+        msg += "Trying to install dependencies, but this configuration will fail to build a package"
+        output.error(msg)
 
     if install_folder:
         # Write generators
@@ -140,3 +147,5 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)
+
+    return install_folder, conanfile

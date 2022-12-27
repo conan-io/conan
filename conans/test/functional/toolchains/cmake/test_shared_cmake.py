@@ -1,6 +1,5 @@
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -18,7 +17,7 @@ def test_shared_cmake_toolchain():
 
     client = TestClient(servers=client.servers, users=client.users)
     client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
-    command = environment_wrap_command("conanrun", "app", cwd=client.current_folder)
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
 
     client.run_command(command)
     assert "main: Release!" in client.out

@@ -4,6 +4,8 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -254,6 +256,8 @@ class PkgConfigConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
                                                                          "componentdir=${prefix}/mydir")
+                    self.cpp_info.components["mycomponent"].set_property("component_version",
+                                                                         "19.8.199")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -262,6 +266,7 @@ class PkgConfigConan(ConanFile):
 
         pc_content = client.load("mycomponent.pc")
         self.assertIn("componentdir=${prefix}/mydir", pc_content)
+        self.assertIn("Version: 19.8.199", pc_content)
 
 
 def test_components_and_package_pc_creation_order():
@@ -317,3 +322,24 @@ def test_components_and_package_pc_creation_order():
     assert "Requires:" not in pc_content
     pc_content = client.load("pkgb.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires pkg-config")
+@pytest.mark.tool_pkg_config
+def test_pkg_config_definitions_escape():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent(r'''
+        from conans import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.defines.append("USER_CONFIG=\"user_config.h\"")
+                self.cpp_info.defines.append('OTHER="other.h"')
+                self.cpp_info.cflags.append("flag1=\"my flag1\"")
+                self.cpp_info.cxxflags.append('flag2="my flag2"')
+        ''')
+    client.save({"conanfile.py": conanfile})
+    client.run("export . hello/1.0@")
+    client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
+    client.run("install . --build=missing -g pkg_config")
+    client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
+    assert r'flag2=\"my flag2\" flag1=\"my flag1\" -DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out

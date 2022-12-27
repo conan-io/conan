@@ -1,17 +1,16 @@
 import jinja2
 from jinja2 import Template
 
-from conan.tools.cmake.utils import get_file_name
 from conans.errors import ConanException
 
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, require, conanfile, find_module_mode=False):
+    def __init__(self, cmakedeps, require, conanfile, generating_module=False):
         self.cmakedeps = cmakedeps
         self.require = require
         self.conanfile = conanfile
-        self.find_module_mode = find_module_mode
+        self.generating_module = generating_module
 
     @property
     def pkg_name(self):
@@ -23,23 +22,26 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
+        return self.cmakedeps.get_cmake_package_name(self.conanfile, module_mode=self.generating_module) + self.suffix
 
     @property
     def suffix(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return ""
         return self.cmakedeps.build_context_suffix.get(self.conanfile.ref.name, "")
 
     @property
     def build_modules_activated(self):
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
         else:
             return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
 
     def render(self):
-        context = self.context
+        try:
+            context = self.context
+        except Exception as e:
+            raise ConanException("error generating context for '{}': {}".format(self.conanfile, e))
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True,
@@ -58,7 +60,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def configuration(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return self.cmakedeps.configuration \
                 if self.cmakedeps.configuration else None
         else:
@@ -66,7 +68,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def arch(self):
-        if not self.conanfile.is_build_context:
+        if not self.require.build:
             return self.cmakedeps.arch if self.cmakedeps.arch else None
         else:
             return self.conanfile.settings_build.get_safe("arch")
@@ -75,20 +77,17 @@ class CMakeDepsFileTemplate(object):
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_file_name(self):
-        return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
-
     @staticmethod
     def _get_target_default_name(req, component_name="", suffix=""):
         return "{name}{suffix}::{cname}{suffix}".format(cname=component_name or req.ref.name,
                                                         name=req.ref.name, suffix=suffix)
 
     def get_root_target_name(self, req, suffix=""):
-        if self.find_module_mode:
-            ret = req.cpp_info.get_property("cmake_module_target_name")
+        if self.generating_module:
+            ret = self.cmakedeps.get_property("cmake_module_target_name", req)
             if ret:
                 return ret
-        ret = req.cpp_info.get_property("cmake_target_name")
+        ret = self.cmakedeps.get_property("cmake_target_name", req)
         return ret or self._get_target_default_name(req, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
@@ -98,11 +97,12 @@ class CMakeDepsFileTemplate(object):
                 return self.get_root_target_name(req)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
-        if self.find_module_mode:
-            ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name")
+        if self.generating_module:
+            ret = self.cmakedeps.get_property("cmake_module_target_name", req, comp_name=comp_name)
             if ret:
                 return ret
-        ret = req.cpp_info.components[comp_name].get_property("cmake_target_name")
+        ret = self.cmakedeps.get_property("cmake_target_name", req, comp_name=comp_name)
+
         # If we don't specify the `cmake_target_name` property for the component it will
         # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name
         # property because that is also an absolute name (Greetings::Greetings), it is not a namespace

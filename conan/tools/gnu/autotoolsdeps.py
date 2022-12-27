@@ -8,16 +8,31 @@ class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
+        self._ordered_deps = []
         check_using_build_profile(self._conanfile)
+
+    @property
+    def ordered_deps(self):
+        if not self._ordered_deps:
+            deps = self._conanfile.dependencies.host.topological_sort
+            self._ordered_deps = [dep for dep in reversed(deps.values())]
+        return self._ordered_deps
 
     def _get_cpp_info(self):
         ret = NewCppInfo()
-        for dep in self._conanfile.dependencies.host.values():
+        for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
             ret.merge(dep_cppinfo)
         return ret
+
+    def _rpaths_flags(self):
+        flags = []
+        for dep in self.ordered_deps:
+            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
+                          if dep.options.get_safe("shared", False)])
+        return flags
 
     @property
     def environment(self):
@@ -37,19 +52,21 @@ class AutotoolsDeps:
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
 
+            ## set the rpath in Macos so that the library are found in the configure step
+            if self._conanfile.settings.get_safe("os") == "Macos":
+                ldflags.extend(self._rpaths_flags())
+
+            # libs
+            libs = flags.libs
+            libs.extend(flags.system_libs)
+
             # cflags
             cflags = flags.cflags
             cxxflags = flags.cxxflags
 
-            srf = flags.sysroot
-            if srf:
-                cflags.append(srf)
-                cxxflags.append(srf)
-                ldflags.append(srf)
-
             env = Environment()
             env.append("CPPFLAGS", cpp_flags)
-            env.append("LIBS", flags.libs)
+            env.append("LIBS", libs)
             env.append("LDFLAGS", ldflags)
             env.append("CXXFLAGS", cxxflags)
             env.append("CFLAGS", cflags)

@@ -1,6 +1,7 @@
 import sys
 import unittest
 
+import pytest
 import six
 
 from conans.errors import ConanException
@@ -280,6 +281,14 @@ class OptionsValuesTest(unittest.TestCase):
         Boost:thread.multi=off
         """)
 
+    def test_get_safe(self):
+        option_values = OptionsValues(self.sut.as_list())
+        assert option_values.get_safe("missing") is None
+        assert option_values.get_safe("optimized") == 3
+        with pytest.raises(ConanException):
+            # This is not supported at the moment
+            option_values["Boost"].get_safe("thread")
+
     def test_from_list(self):
         option_values = OptionsValues(self.sut.as_list())
         self.assertEqual(option_values.dumps(), self.sut.dumps())
@@ -376,3 +385,21 @@ class OptionsValuesTest(unittest.TestCase):
     def test_package_with_spaces(self):
         self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
                          OptionsValues([('pck2 :opt', 50), ]).dumps())
+
+
+def test_validate_any_as_list():
+    package_options = PackageOptions.loads("""{
+    path: ["ANY", "kk"]}""")
+    values = PackageOptionValues()
+    values.add_option("path", "FOO")
+    package_options.values = values
+    sut = Options(package_options)
+    assert sut.path == "FOO"
+
+    package_options = PackageOptions.loads("""{
+        path: "ANY"}""")
+    values = PackageOptionValues()
+    values.add_option("path", "WHATEVER")
+    package_options.values = values
+    sut = Options(package_options)
+    assert sut.path == "WHATEVER"

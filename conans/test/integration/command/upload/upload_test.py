@@ -34,6 +34,7 @@ class MyPkg(ConanFile):
 
 class UploadTest(unittest.TestCase):
 
+    @pytest.mark.artifactory_ready
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
@@ -124,6 +125,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_deprecated_p_arg(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
@@ -133,6 +135,7 @@ class UploadTest(unittest.TestCase):
                       "Use a full reference instead: `conan upload [...] "
                       "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_with_pref(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
@@ -145,6 +148,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading package 1/1: {} to 'default'".format(NO_SETTINGS_PACKAGE_ID),
                       client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_with_pref_and_p(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
@@ -156,6 +160,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Use a full package reference (preferred) or the "
                       "`--package` command argument, but not both.", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
@@ -165,6 +170,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_query_upload(self):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
@@ -281,6 +287,7 @@ class UploadTest(unittest.TestCase):
                       "Upload package to 'default' failed: Cannot upload corrupted package",
                       client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_modified_recipe(self):
         client = TestClient(default_server_user=True)
 
@@ -314,6 +321,7 @@ class UploadTest(unittest.TestCase):
             client.run("upload Hello0/1.2.1@frodo/stable")
             self.assertIn("Recipe is up to date, upload skipped", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_unmodified_recipe(self):
         client = TestClient(default_server_user=True)
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
@@ -341,6 +349,7 @@ class UploadTest(unittest.TestCase):
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
         self.assertIn("Recipe is up to date, upload skipped", client.out)
 
+    @pytest.mark.artifactory_ready
     def test_upload_unmodified_package(self):
         client = TestClient(default_server_user=True)
 
@@ -374,6 +383,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Package is up to date, upload skipped", client2.out)
 
+    @pytest.mark.artifactory_ready
     def test_no_overwrite_argument_collision(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,

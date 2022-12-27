@@ -68,6 +68,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         return ret
 
     def _pc_file_content(self, name, cpp_info, requires_gennames):
+        version = cpp_info.get_property("component_version") or cpp_info.version
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -92,7 +93,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % cpp_info.version)
+        lines.append("Version: %s" % version)
         libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
@@ -116,9 +117,9 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
-             cpp_info.cxxflags,
-             cpp_info.cflags,
-             ["-D%s" % d for d in cpp_info.defines]]))
+             [flag.replace('"', '\\"') for flag in cpp_info.cxxflags],
+             [flag.replace('"', '\\"') for flag in cpp_info.cflags],
+             ["-D%s" % d.replace('"', '\\"') for d in cpp_info.defines]]))
 
         if requires_gennames:
             public_deps = " ".join(requires_gennames)

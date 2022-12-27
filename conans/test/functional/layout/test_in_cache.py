@@ -26,7 +26,7 @@ def conanfile():
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
-        tools.save("my_sources/source.h", "foo")
+        tools.save("source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))
@@ -268,7 +268,8 @@ def test_cpp_package():
     assert "**includedirs:['foo/include']**" in out
     assert "**libdirs:['foo/libs']**" in out
     assert "**libs:['foo']**" in out
-    cmake = client.load("hello-release-x86_64-data.cmake")
+    arch = client.get_default_host_profile().settings['arch']
+    cmake = client.load(f"hello-release-{arch}-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake
@@ -282,13 +283,13 @@ def test_git_clone_with_source_layout():
            import os
            from conans import ConanFile
            class Pkg(ConanFile):
-               exports = "*.txt"
+               exports_sources = "*.txt"
 
                def layout(self):
                    self.folders.source = "src"
 
                def source(self):
-                   self.run('git clone "{}" src')
+                   self.run('git clone "{}" .')
        """).format(repo.replace("\\", "/"))
 
     client.save({"conanfile.py": conanfile,

@@ -111,7 +111,8 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                               self._requester, self._verify_ssl, self._artifacts_properties)
+                               self._requester, self._config, self._verify_ssl,
+                               self._artifacts_properties)
 
         if self._refresh_token and self._token:
             token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)
@@ -137,11 +138,8 @@ class RestApiClient(object):
     def search(self, pattern=None, ignorecase=True):
         return self._get_api().search(pattern, ignorecase)
 
-    def search_packages(self, reference, query):
-        # Do not send the query to the server, as it will fail
-        # https://github.com/conan-io/conan/issues/4951
-        package_infos = self._get_api().search_packages(reference, query=None)
-        return filter_packages(query, package_infos)
+    def search_packages(self, reference):
+        return self._get_api().search_packages(reference)
 
     def remove_recipe(self, ref):
         return self._get_api().remove_conanfile(ref)

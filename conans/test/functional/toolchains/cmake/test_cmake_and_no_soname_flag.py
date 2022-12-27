@@ -134,4 +134,4 @@ def test_no_soname_flag():
                 clean_first=True)
     client.run('install . ')
     client.run_command('cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
-                       ' && cmake --build . && ./example')
+                       ' -DCMAKE_BUILD_TYPE=Release && cmake --build . && ./example')

@@ -15,10 +15,39 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.tool_mingw64
+@pytest.mark.tool_cmake(version="3.15")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_mingw():
+    client = TestClient()
+    client.run("new hello/1.0 -m cmake_lib")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        compiler.cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
+                  subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
+    check_vs_runtime("test_package/build/Release/example.exe", client, "15", build_type="Release",
+                     static_runtime=False, subsystem="mingw64")
+
+# TODO: How to link with mingw statically?
+
+
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(r"""
         from conans import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
@@ -36,10 +65,10 @@ class Base(unittest.TestCase):
                 tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
                 tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
                 tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
-                tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions["MYDEFINE"] = "\"MYDEF_VALUE\""
                 tc.preprocessor_definitions["MYDEFINEINT"] = 42
-                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
-                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "\"MYDEF_DEBUG\""
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "\"MYDEF_RELEASE\""
                 tc.preprocessor_definitions.debug["MYDEFINEINT_CONFIG"] = 421
                 tc.preprocessor_definitions.release["MYDEFINEINT_CONFIG"] = 422
                 tc.generate()
@@ -325,7 +354,7 @@ class WinTest(Base):
                        "MYVAR_CONFIG": "MYVAR_{}".format(build_type.upper()),
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_{}".format(build_type.upper())
-                       })
+                       }, subsystem="mingw64")
 
         self._modify_code()
         time.sleep(2)
@@ -411,16 +440,26 @@ class AppleTest(Base):
         vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
-                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
                 "CMAKE_CXX_FLAGS_DEBUG": "-g",
                 "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_C_FLAGS": "-m64",
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "-m64",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
+
+        host_arch = self.client.get_default_host_profile().settings['arch']
+
+        if host_arch == "x86_64":
+            vals.update({
+                "CMAKE_C_FLAGS": "-m64",
+                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                "CMAKE_EXE_LINKER_FLAGS": "-m64",
+            })
+        else:
+            vals.update({
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+            })
 
         def _verify_out(marker=">>"):
             if shared:
@@ -513,9 +552,7 @@ class CMakeInstallTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
             project(App C)
-            if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
-                include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
-            endif()
+
             if(NOT CMAKE_TOOLCHAIN_FILE)
                 message(FATAL ">> Not using toolchain")
             endif()
@@ -544,6 +581,56 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+
+@pytest.mark.tool_cmake
+class CMakeTestTest(unittest.TestCase):
+    """
+    test the cmake.test() helper
+    """
+    def test_test(self):
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+                exports_sources = "CMakeLists.txt", "example.cpp"
+
+                def build_requirements(self):
+                    self.test_requires("test/0.1")
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    cmake.test()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(App CXX)
+            find_package(test CONFIG REQUIRED)
+            add_executable(example example.cpp)
+            target_link_libraries(example test::test)
+
+            enable_testing()
+            add_test(NAME example
+                      COMMAND example)
+            """)
+        c = TestClient()
+        c.run("new test/0.1 -m=cmake_lib")
+        c.run("create .  -tf=None -o test*:shared=True")
+
+        c.save({"conanfile.py": conanfile,
+                "CMakeLists.txt": cmakelist,
+                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+               clean_first=True)
+
+        # The create flow must work
+        c.run("create . pkg/0.1@ -pr:b=default -o test*:shared=True")
+        assert "1/1 Test #1: example ..........................   Passed" in c.out
 
 
 @pytest.mark.tool_cmake

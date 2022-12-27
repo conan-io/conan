@@ -194,7 +194,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
     test_cmakelists = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 3.0)
+        cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
         %s
@@ -586,10 +586,10 @@ class TestComponentsCMakeGenerators:
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         basic_cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
             project(middle CXX)
-            cmake_minimum_required(VERSION 3.1)
             add_library({name} {name}.cpp)
             """)
         client = TestClient()
@@ -599,10 +599,10 @@ class TestComponentsCMakeGenerators:
                          "src/CMakeLists.txt": basic_cmake.format(name=name)})
             client.run("create . {name}/1.0@".format(name=name))
         middle_cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
             project(middle CXX)
-            cmake_minimum_required(VERSION 3.1)
 
             find_package(expected)
             find_package(variant)
@@ -665,10 +665,10 @@ class TestComponentsCMakeGenerators:
                     self.run(cmd, env="conanrun")
             """)
         cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
             project(consumer CXX)
-            cmake_minimum_required(VERSION 3.1)
 
             find_package(middle)
 

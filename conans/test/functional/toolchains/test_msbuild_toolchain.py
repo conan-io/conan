@@ -31,11 +31,13 @@ def test_toolchain_win(compiler, version, runtime):
             settings = "os", "compiler", "build_type", "arch"
             def generate(self):
                 msbuild = MSBuildToolchain(self)
+                msbuild.properties["IncludeExternals"] = "true"
                 msbuild.generate()
             """)
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     props = client.load("conantoolchain_release_x64.props")
+    assert "<IncludeExternals>true</IncludeExternals>" in props
     assert "<LanguageStandard>stdcpp17</LanguageStandard>" in props
     if version == "190":
         assert "<PlatformToolset>v140</PlatformToolset>" in props

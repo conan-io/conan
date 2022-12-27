@@ -104,6 +104,7 @@ class _PackageBuilder(object):
         retrieve_exports_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
@@ -217,10 +218,10 @@ class _PackageBuilder(object):
                 conanfile.folders.set_base_build(base_build)
                 conanfile.folders.set_base_imports(base_build)
                 conanfile.folders.set_base_package(base_package)
+                # In local cache, generators folder always in build_folder
+                conanfile.folders.set_base_generators(base_build)
 
                 if not skip_build:
-                    # In local cache, generators folder always in build_folder
-                    conanfile.folders.set_base_generators(base_build)
                     # In local cache, install folder always is build_folder
                     conanfile.folders.set_base_install(base_build)
                     self._build(conanfile, pref)
@@ -367,13 +368,15 @@ class BinaryInstaller(object):
         else:
             build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
 
+        search_ref = str(ref)
+        search_ref = search_ref + "@" if "@" not in search_ref else search_ref
         raise ConanException(textwrap.dedent('''\
             Missing prebuilt package for '%s'
             Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
             Or try to build locally from sources with '%s'
 
             More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, ref, build_str)))
+            ''' % (missing_pkgs, search_ref, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
@@ -422,7 +425,13 @@ class BinaryInstaller(object):
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+                if node.cant_build:
+                    msg.append("{}: Cannot build "
+                               "for this configuration: {}".format(node.conanfile,
+                                                                   node.cant_build))
+                else:
+                    msg.append("{}: Invalid ID: {}".format(node.conanfile,
+                                                           node.conanfile.info.invalid))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}
@@ -467,12 +476,7 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
 
         if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_source(package_layout.source_folder or base_path)
-            conanfile.folders.set_base_build(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_generators(package_layout.output_folder or base_path)
-            conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_folders(base_path, package_layout.output_folder)
         else:
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(None)
@@ -675,11 +679,22 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     if hasattr(conanfile, "layout"):
-                        conanfile.cpp.package.set_relative_base_folder(conanfile.package_folder)
                         # Old cpp info without defaults (the defaults are in the new one)
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
+                        # Note: Remember that this is not needed for Conan 2.x
+                        # Let's avoid losing this information.
+                        conanfile.cpp_info.version = conanfile.version
+                        conanfile.cpp_info.description = conanfile.description
+                        conanfile.cpp_info.public_deps = public_deps
+
                         if not is_editable:
+                            # IMPORTANT: Need to go first, otherwise fill_old_cppinfo() destroys
+                            # component information
+                            conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
+                            conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)
+                            conanfile.runenv_info.compose_env(conanfile.layouts.package.runenv_info)
+                            conanfile.conf_info.compose_conf(conanfile.layouts.package.conf_info)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
@@ -692,9 +707,10 @@ class BinaryInstaller(object):
                         # cppinfos inside
                         # convert directory entries to be relative to the declared folders.build
                         conanfile.cpp.build.set_relative_base_folder(conanfile.build_folder)
-
+                        conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
                         # convert directory entries to be relative to the declared folders.source
                         conanfile.cpp.source.set_relative_base_folder(conanfile.source_folder)
+                        conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                         full_editable_cppinfo = NewCppInfo()
                         full_editable_cppinfo.merge(conanfile.cpp.source)
@@ -702,6 +718,12 @@ class BinaryInstaller(object):
                         # Paste the editable cpp_info but prioritizing it, only if a
                         # variable is not declared at build/source, the package will keep the value
                         fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+                        conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
+                        conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
+                        conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                        conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
+                        conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:

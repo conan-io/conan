@@ -90,9 +90,10 @@ conan.conf
 #Generated certificate file
 cacert.pem
 
-#linux backup files
+#linux backup and vim files
 *~
-.*.swp
+.*.sw?
+Session.vim
 
 #Pyinstaller generated binaries
 /pyinstaller

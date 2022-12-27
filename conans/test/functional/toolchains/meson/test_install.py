@@ -30,8 +30,6 @@ class MesonInstall(TestMesonBase):
 
             def generate(self):
                 tc = MesonToolchain(self)
-                # https://mesonbuild.com/Release-notes-for-0-50-0.html#libdir-defaults-to-lib-when-cross-compiling
-                tc.project_options["libdir"] = "lib"
                 tc.generate()
 
             def build(self):
