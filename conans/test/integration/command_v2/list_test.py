@@ -152,20 +152,28 @@ class TestRemotes(TestListBase):
         assert expected_output in self.client.out
 
 
-class TestListUseCases(TestListBase):
-
-    def test_list_recipes(self):
-        self.client.save({
+class TestListRecipes:
+    @pytest.fixture(scope="class")
+    def client(self):
+        c = TestClient()
+        c.save({
             "zlib.py": GenConanfile("zlib", "1.0.0"),
             "zlib2.py": GenConanfile("zlib", "2.0.0"),
             "zli.py": GenConanfile("zli", "1.0.0"),
             "zlix.py": GenConanfile("zlix", "1.0.0"),
         })
-        self.client.run("export zlib.py --user=user --channel=channel")
-        self.client.run("export zlib2.py --user=user --channel=channel")
-        self.client.run("export zli.py")
-        self.client.run("export zlix.py")
-        self.client.run(f"list z*")
+        c.run("export zlib.py --user=user --channel=channel")
+        c.run("export zlib2.py --user=user --channel=channel")
+        c.run("export zli.py")
+        c.run("export zlix.py")
+        c.save({"conanfile.py": GenConanfile("test_recipe", "1.0.0").with_settings("os")})
+        c.run("export . --user=user --channel=channel")
+        c.save({"conanfile.py": GenConanfile("test_recipe", "1.0.0")})
+        c.run("export . --user=user --channel=channel")
+        return c
+
+    def test_list_recipes(self, client):
+        client.run(f"list z*")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           zlix
@@ -176,21 +184,45 @@ class TestListUseCases(TestListBase):
             zlib/2.0.0@user/channel
             zlib/1.0.0@user/channel
         """)
-        assert expected_output == self.client.out
+        assert expected_output == client.out
 
-    def test_list_latest_recipe_revision(self):
-        self.client.save({
-            "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
-        })
-        self.client.run("export . --user=user --channel=channel")
-        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list test_recipe/1.0.0@user/channel")
+    def test_list_single_latest_recipe_revision(self, client):
+        """ list only the latest recipe revision for a specific reference
+        """
+        client.run(f"list test_recipe/1.0.0@user/channel")
         expected_output = textwrap.dedent(f"""\
-        Local Cache:
-          test_recipe
-            %s .*
-        """ % rrev.repr_notime())
-        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+            Local Cache:
+              test_recipe
+                test_recipe/1.0.0@user/channel#60bd4448240d249ba9c82a762ccbed76 .*
+        """)
+        assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+
+    def test_list_multiple_latest_recipe_revision(self, client):
+        """ list only the latest recipe revision for many references
+        """
+        client.run(f"list zlib/*#latest")
+        print(client.out)
+        expected_output = textwrap.dedent(f"""\
+            Local Cache:
+              test_recipe
+                test_recipe/1.0.0@user/channel#60bd4448240d249ba9c82a762ccbed76 .*
+        """)
+        assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+
+    def test_list_all_recipe_revisions(self, client):
+        """ list all recipe revisions
+        """
+        client.run(f"list test_recipe/1.0.0@user/channel#*")
+        expected_output = textwrap.dedent(f"""\
+            Local Cache:
+              test_recipe
+                test_recipe/1.0.0@user/channel#60bd4448240d249ba9c82a762ccbed76 .*
+                test_recipe/1.0.0@user/channel#7fbffd1bc2c4ada0f7c9d234ec842f66 .*
+                """)
+        assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+
+
+class TestListUseCases(TestListBase):
 
     def test_list_latest_package_revisions(self):
         self.client.save({
