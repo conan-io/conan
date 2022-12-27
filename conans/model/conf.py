@@ -269,6 +269,8 @@ class Conf:
             return default
 
         v = conf_value.value
+        if v is None:
+            return default
         # Check type
         if check_type is not None and not isinstance(v, check_type):
             raise ConanException(f"[conf] {conf_name} must be a "

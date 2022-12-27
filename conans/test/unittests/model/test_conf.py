@@ -217,7 +217,6 @@ def test_conf_get_check_type_and_default():
     c = ConfDefinition()
     c.loads(text)
     assert c.get("user.company.cpu:jobs", check_type=int) == 5
-    assert c.get("user.company.cpu:jobs", check_type=str) == "5"  # smart conversion
     with pytest.raises(ConanException) as exc_info:
         c.get("user.company.cpu:jobs", check_type=list)
         assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
@@ -227,9 +226,7 @@ def test_conf_get_check_type_and_default():
     assert c.get("zlib:user.company.check:shared", default=[]) == []  # returning default
     assert c.get("zlib:user.company.check:shared", default=[], check_type=list) == []  # not raising exception
     assert c.get("zlib:user.company.check:shared_str") == '"False"'
-    assert c.get("zlib:user.company.check:shared_str", check_type=bool) is False  # smart conversion
     assert c.get("zlib:user.company.check:static_str") == "off"
-    assert c.get("zlib:user.company.check:static_str", check_type=bool) is False  # smart conversion
     assert c.get("user.company.list:newnames") == ["myname"]  # Placeholder is removed
 
 

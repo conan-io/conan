@@ -146,9 +146,9 @@ def test_tools_update_mode_install(tool_class, result):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
     conanfile.settings = Settings()
-    conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     for mode in ["check", "install"]:
-        conanfile.conf["tools.system.package_manager:mode"] = mode
+        conanfile.conf.define("tools.system.package_manager:mode", mode)
         with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
             context_mock.return_value = "host"
             tool = tool_class(conanfile)
