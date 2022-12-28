@@ -2,10 +2,10 @@ _conanfile = '''\
 from conan import ConanFile
 
 class BarebonesConanfile(ConanFile):
-    name = "barebone"
+    name = "barebones"
     version = "0.0"
     description = "A bare-bones recipe"
 '''
 
 
-barebone_file = {"conanfile.py": _conanfile}
+barebones_file = {"conanfile.py": _conanfile}
