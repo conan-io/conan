@@ -87,7 +87,7 @@ class ListPattern(SelectPattern):
                 # zlib:PID -> it will fail on server side! Nothing to do here
             else:
                 if self.package_id is None:
-                    # zlib/1.2.11
+                    # zlib/1.2.11 | zlib/1.2.11#latest
                     if self.is_latest_rrev:
                         return ListPatternMode.SHOW_LATEST_RREV
                     # zlib/1.2.11#RREV
@@ -100,15 +100,21 @@ class ListPattern(SelectPattern):
         else:
             if self.package_id is None:
                 # zlib/* | zlib*
-                if self.is_latest_rrev:
+                if self.is_latest_rrev and "#latest" not in self.raw:
                     return ListPatternMode.SHOW_REFS
+                # zlib/*#latest
+                elif "#latest" in self.raw:
+                    return ListPatternMode.SHOW_LATEST_RREV
                 # zlib/1.2.11#*
                 elif "*" in self.rrev:
                     return ListPatternMode.SHOW_ALL_RREVS
             else:
                 # zlib/1.2.11#latest:* | zlib/1.2.11#RREV:*
-                if self.is_latest_prev:
+                if self.is_latest_prev and "#latest" not in self.raw:
                     return ListPatternMode.SHOW_PACKAGE_IDS
+                # zlib/1.2.11:*#latest
+                elif "#latest" in self.raw:
+                    return ListPatternMode.SHOW_LATEST_PREV
                 # zlib/1.2.11#latest:*#* | zlib/1.2.11#RREV:PID#*
                 elif "*" in self.prev:
                     return ListPatternMode.SHOW_ALL_PREVS

@@ -178,7 +178,7 @@ class TestListUseCases(TestListBase):
         """)
         assert expected_output == self.client.out
 
-    def test_list_latest_recipe_revision(self):
+    def test_list_latest_recipe_revision_by_default(self):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
@@ -192,7 +192,28 @@ class TestListUseCases(TestListBase):
         """ % rrev.repr_notime())
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_list_latest_package_revisions(self):
+    def test_list_all_the_latest_recipe_revision(self):
+        self.client.save({
+            "hello1.py": GenConanfile("hello", "1.0.0").with_generator("CMakeToolchain"),  # rrev
+            "hello.py": GenConanfile("hello", "1.0.0"),  # latest rrev
+            "bye.py": GenConanfile("bye", "1.0.0")
+        })
+        self.client.run("export hello1.py --user=user --channel=channel")
+        self.client.run("export hello.py --user=user --channel=channel")
+        hello_latest_rrev = self._get_lastest_recipe_ref("hello/1.0.0@user/channel")
+        self.client.run("export bye.py --user=user --channel=channel")
+        self.client.run(f"list *#latest")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          bye
+            bye/1.0.0@user/channel#c720a82a9c904a0450ec1aa177281ea2 .*
+          hello
+            hello/1.0.0@user/channel#7a34833afbd87d791b2201882b1afb2b .*
+        """)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+        assert hello_latest_rrev.repr_notime() in expected_output
+
+    def test_list_latest_package_revisions_by_default(self):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
@@ -205,12 +226,35 @@ class TestListUseCases(TestListBase):
         Local Cache:
           test_recipe
             test_recipe/1.0.0@user/channel#ddfadce26d00a560850eb8767fe76ae4 .*
-              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709 .*
-                PREV: 9c929aed65f04337a4143311d72fc897
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_search_with_full_reference_but_package_has_no_properties(self):
+    def test_list_all_the_latest_package_revisions(self):
+        self.client.save({
+            "hello.py": GenConanfile("hello", "1.0.0").with_package_file("file.h", "0.1"),
+            "bye.py": GenConanfile("bye", "1.0.0").with_package_file("file.h", "0.1")
+        })
+        self.client.run("create hello.py --user=user --channel=channel")
+        self.client.run("create hello.py --user=user --channel=channel")  # latest prev
+        self.client.run("create bye.py --user=user --channel=channel")
+        self.client.run("create bye.py --user=user --channel=channel")   # latest prev
+        self.client.run("list *:*#latest")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          bye
+            bye/1.0.0@user/channel#51edd97e27e407a01be830282558c32a .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
+          hello
+            hello/1.0.0@user/channel#6fccfa5dd0bbb1223578c1771839eb6d .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
+        """)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+
+    def test_search_package_ids_but_empty_conan_info(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
@@ -222,7 +266,7 @@ class TestListUseCases(TestListBase):
           test_recipe
             test_recipe/1.0.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
               PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
-                No package info/revision was found.
+                Empty package information
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
