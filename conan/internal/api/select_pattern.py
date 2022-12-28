@@ -2,6 +2,7 @@ import fnmatch
 from enum import Enum
 
 from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 
 
 class SelectPattern:
@@ -24,6 +25,14 @@ class SelectPattern:
         self.rrev, _ = split(rrev, "%")
         self.package_id, prev = split(package, "#", prev)
         self.prev, _ = split(prev, "%")
+
+    def is_ref_pattern(self):
+        try:
+            ref = RecipeReference.loads(self.ref)
+            ref.validate_ref()
+            return False
+        except:
+            return True
 
     @property
     def is_latest_rrev(self):

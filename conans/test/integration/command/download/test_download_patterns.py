@@ -158,7 +158,7 @@ class TestDownloadPatterErrors:
         assert error in client.out
 
     def test_recipe_not_found(self, client):
-        error = "ERROR: Recipe 'zlib/1.2.11' not found"
+        error = "ERROR: Recipe not found: 'zlib/1.2.11@_/_'. [Remote: default]"
         self.assert_error("zlib/1.2.11", error, client)
 
     def test_rrev_not_found(self, client):
