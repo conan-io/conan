@@ -56,7 +56,6 @@ class TestListBase:
         self.client.save({'conanfile.py': GenConanfile()
                           })
         self.client.run(f"create . --name={ref.name} --version={ref.version} "
-                        f"-s os=Macos -s build_type=Release -s arch=x86_64 "
                         f"--user={ref.user} --channel={ref.channel}")
         self.client.run("upload --force -r {} {}".format(remote, ref))
 
