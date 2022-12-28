@@ -90,6 +90,7 @@ class MSBuildDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.configuration = conanfile.settings.build_type
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32

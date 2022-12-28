@@ -46,6 +46,9 @@ class CMake(object):
         :param cmake_program: Path to the custom cmake executable
         :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
+        if getattr(conanfile, "must_use_new_helpers", None):
+            raise ConanException("Using the wrong 'CMake' helper. To use CMakeDeps, CMakeToolchain "
+                                 "you should use 'from conan.tools.cmake import CMake'")
         self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings

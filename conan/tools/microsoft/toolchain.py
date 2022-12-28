@@ -45,6 +45,7 @@ class MSBuildToolchain(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.preprocessor_definitions = {}
         self.compile_options = {}
         self.cxxflags = []

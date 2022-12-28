@@ -348,7 +348,8 @@ def test_apple_own_framework_cmake_find_package_multi():
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools
+from conan.tools.cmake import CMake
 
 
 class HelloConan(ConanFile):
@@ -406,7 +407,8 @@ install(TARGETS ${PROJECT_NAME}
         """)
     test_conanfile_py = textwrap.dedent("""
 import os
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools
+from conan.tools.cmake import CMake
 
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
