@@ -20,57 +20,57 @@ value_color = Color.CYAN
 def print_list_text(results):
     info = results["results"]
     search_mode = results["search_mode"]
-    for remote, refs in info.items():
+    indentation = "  "
+
+    for remote, info_per_ref_name in info.items():
         cli_out_write(f"{remote}:", fg=remote_color)
 
-        if refs.get("error"):
-            cli_out_write(f"  ERROR: {refs.get('error')}", fg=error_color)
+        if info_per_ref_name.get("error"):
+            cli_out_write(f"  ERROR: {info_per_ref_name.get('error')}", fg=error_color)
             continue
 
-        if not refs:
+        if not info_per_ref_name:
             cli_out_write(f"  There are no matching recipe references", fg=recipe_color)
             continue
 
-        showed_ref_names = []
-        indentation = "  "
-        for ref, prefs in refs.items():
-            ref_name = ref.name
-            if ref_name not in showed_ref_names:
-                showed_ref_names.append(ref_name)
-                cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
-            cli_out_write(f"{indentation * 2}{ref.repr_humantime() if ref.timestamp else ref}",
-                          fg=recipe_color)
-            if prefs:
-                for pref, binary_info in prefs:
-                    pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp else ""
-                    if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
-                        cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
-                                      fg=reference_color)
-                        if not binary_info:
-                            cli_out_write(f"{indentation * 4}Empty package information",
+        for ref_name, refs in info_per_ref_name.items():
+            cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
+            for ref, prefs in refs.items():
+                cli_out_write(f"{indentation * 2}{ref.repr_humantime() if ref.timestamp else ref}",
+                              fg=recipe_color)
+                if prefs:
+                    for pref, binary_info in prefs:
+                        pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp \
+                                                                             else ""
+                        if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
+                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
+                                          fg=reference_color)
+                            if not binary_info:
+                                cli_out_write(f"{indentation * 4}Empty package information",
+                                              fg=field_color)
+                                continue
+                        elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
+                                             ListPatternMode.SHOW_LATEST_PREV):
+                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}",
+                                          fg=reference_color)
+                            cli_out_write(f"{indentation * 4}PREV: {pref.revision}{pref_date}",
                                           fg=field_color)
                             continue
-                    elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
-                                         ListPatternMode.SHOW_LATEST_PREV):
-                        cli_out_write(f"{indentation * 3}PID: {pref.package_id}", fg=reference_color)
-                        cli_out_write(f"{indentation * 4}PREV: {pref.revision}{pref_date}",
-                                      fg=field_color)
-                        continue
-                    for item, contents in binary_info.items():
-                        if not contents:
-                            continue
-                        cli_out_write(f"{indentation * 4}{item}:", fg=field_color)
-                        if isinstance(contents, dict):
-                            for k, v in contents.items():
-                                cli_out_write(f"{indentation * 5}{k}={v}", fg=value_color)
-                        else:
-                            for c in contents:
-                                cli_out_write(f"{indentation * 5}{c}", fg=value_color)
-            elif search_mode in (ListPatternMode.SHOW_PACKAGE_IDS,
-                                 ListPatternMode.SHOW_ALL_PREVS,
-                                 ListPatternMode.SHOW_LATEST_PREV):
-                cli_out_write(f"{indentation * 3}There are no packages for this revision.",
-                              fg=field_color)
+                        for item, contents in binary_info.items():
+                            if not contents:
+                                continue
+                            cli_out_write(f"{indentation * 4}{item}:", fg=field_color)
+                            if isinstance(contents, dict):
+                                for k, v in contents.items():
+                                    cli_out_write(f"{indentation * 5}{k}={v}", fg=value_color)
+                            else:
+                                for c in contents:
+                                    cli_out_write(f"{indentation * 5}{c}", fg=value_color)
+                elif search_mode in (ListPatternMode.SHOW_PACKAGE_IDS,
+                                     ListPatternMode.SHOW_ALL_PREVS,
+                                     ListPatternMode.SHOW_LATEST_PREV):
+                    cli_out_write(f"{indentation * 3}There are no packages for this revision.",
+                                  fg=field_color)
 
 
 def print_list_json(data):
@@ -114,7 +114,7 @@ def list(conan_api: ConanAPI, parser, *args):
             results[name] = {"error": str(e)}
         else:
             results[name] = list_bundle.serialize() if args.format in ("json", "html") \
-                else list_bundle.recipes
+                else list_bundle.ordered_recipes_by_name
     return {
         "results": results,
         "search_mode": ref_pattern.mode,
