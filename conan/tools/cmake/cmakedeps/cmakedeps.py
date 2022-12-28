@@ -17,6 +17,7 @@ class CMakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 

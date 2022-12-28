@@ -118,6 +118,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.generator = self._get_generator(generator)
         self.variables = Variables()
         # This doesn't support multi-config, they go to the same configPreset common in multi-config
