@@ -5,8 +5,7 @@ def is_mingw(conanfile):
     :return: True, if the host compiler is related to MinGW, otherwise False.
     """
     host_os = conanfile.settings.get_safe("os")
-    host_subsystem = conanfile.settings.get_safe("os.subsystem")
-    is_cygwin = host_os == "Windows" and host_subsystem == "cygwin"
+    is_cygwin = host_os == "Windows" and conanfile.settings.get_safe("os.subsystem") == "cygwin"
     host_compiler = conanfile.settings.get_safe("compiler")
     is_mingw_gcc = host_os == "Windows" and not is_cygwin and host_compiler == "gcc"
     is_mingw_clang = host_os == "Windows" and not is_cygwin and host_compiler == "clang" and \
