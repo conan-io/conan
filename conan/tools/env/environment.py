@@ -18,9 +18,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
-    bats, shs, ps1s = [], [], []
+    bats, shs, ps1s, fishes = [], [], [], []
 
-    accept = accepted_extensions or ("ps1", "bat", "sh")
+    accept = accepted_extensions or ("ps1", "bat", "fish", "sh")
     # TODO: This implemantation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)
@@ -28,6 +28,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(f) and "sh" in accept:
                 f = subsystem_path(subsystem, f)
                 shs.append(f)
+        elif f.lower().endswith(".fish"):
+            if os.path.isfile(f) and "fish" in accept:
+                fishes.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f) and "bat" in accept:
                 bats.append(f)
@@ -35,9 +38,10 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(f):
                 ps1s.append(f)
         else:  # Simple name like "conanrunenv"
-            path_bat = "{}.bat".format(f)
-            path_sh = "{}.sh".format(f)
-            path_ps1 = "{}.ps1".format(f)
+            path_bat = f"{f}.bat"
+            path_sh = f"{f}.sh"
+            path_ps1 = f"{f}.ps1"
+            path_fish = f"{f}.fish"
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
             if os.path.isfile(path_ps1) and "ps1" in accept:
@@ -45,10 +49,12 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
+            if os.path.isfile(path_fish) and "fish" in accept:
+                fishes.append(path_fish)
 
-    if bool(bats) + bool(shs) + bool(ps1s) > 1:
+    if bool(bats) + bool(shs) + bool(ps1s) + bool(fishes) > 1:
         raise ConanException("Cannot wrap command with different envs,"
-                             " {} - {} - {}".format(bats, shs, ps1s))
+                             " {} - {} - {} - {}".format(bats, shs, ps1s, fishes))
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -60,6 +66,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
         return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
+    elif fishes:
+        launchers = " && ".join('. "{}"'.format(f) for f in shs)
+        return "{} && {}".format(launchers, cmd)
     else:
         return cmd
 
@@ -486,11 +495,43 @@ class EnvVars:
         content = "\n".join(result)
         save(file_location, content)
 
+    def save_fish(self, file_location, generate_deactivate=True):
+        filepath, filename = os.path.split(file_location)
+        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        deactivate = textwrap.dedent("""\
+                   echo "echo Restoring environment" > "{deactivate_file}"
+                   for v in {vars};
+                       set is_defined true
+                       set value (printenv $v) || set is_defined "" || true
+                       if [ -n "$value" ]
+                           or [ -n "$is_defined" ];
+                           echo "set --export $v '$value'" >> "{deactivate_file}";
+                       else; echo set --erase $v >> "{deactivate_file}";
+                       end
+                   end
+                   """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
+        capture = textwrap.dedent("""\
+                      {deactivate}
+                      """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            value = value.replace('"', '\\"')
+            if value:
+                result.append('set --export {} "{}"'.format(varname, value))
+            else:
+                result.append('set --erase {}'.format(varname))
+
+        content = "\n".join(result)
+        save(file_location, content)
+
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
         If the conf "tools.env.virtualenv:powershell" is set to True it will generate powershell
         launchers if Windows.
+        If the conf "tools.env.virtualenv:fish" is set to True, it will generate fish-compatible
+        launches
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
@@ -500,20 +541,28 @@ class EnvVars:
         if ext:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
+            is_fish = ext == ".fish"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            is_fish = self._conanfile.conf.get("tools.env.virtualenv:fish", check_type=bool)
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
+            elif is_bat:
+                filename = filename + ".bat"
+            elif is_fish:
+                filename = filename + ".fish"
             else:
-                filename = filename + (".bat" if is_bat else ".sh")
+                filename = filename + ".sh"
 
         path = os.path.join(self._conanfile.generators_folder, filename)
         if is_bat:
             self.save_bat(path)
         elif is_ps1:
             self.save_ps1(path)
+        elif is_fish:
+            self.save_fish(path)
         else:
             self.save_sh(path)
 

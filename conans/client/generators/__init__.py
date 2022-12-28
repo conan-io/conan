@@ -130,12 +130,15 @@ def _generate_aggregated_env(conanfile):
         bats = []
         shs = []
         ps1s = []
+        fishes = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             if env_script.endswith(".bat"):
                 bats.append(path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".fish"):
+                fishes.append(subsystem_path(subsystem, path))
             elif env_script.endswith(".ps1"):
                 ps1s.append(path)
         if shs:
@@ -159,3 +162,12 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  ps1_content(deactivates(ps1s)))
+
+        if fishes:
+            def fish_content(files):
+                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+
+            filename = "conan{}.fish".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), fish_content(fishes))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 fish_content(deactivates(fishes)))
