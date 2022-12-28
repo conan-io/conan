@@ -10,8 +10,8 @@ from conans.model.conf import ConfDefinition
 @pytest.fixture()
 def conf_definition():
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
-        user.company.toolchain:flags=someflags
+        tools.microsoft.msbuild:verbosity="minimal"
+        user.company.toolchain:flags="someflags"
     """)
     c = ConfDefinition()
     c.loads(text)
@@ -54,9 +54,9 @@ def test_conf_update(conf_definition):
     c2.loads(text)
     c.update_conf_definition(c2)
     result = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
-        user.company.toolchain:flags=newvalue
-        user.something:key=value
+        tools.microsoft.msbuild:verbosity="minimal"
+        user.company.toolchain:flags="newvalue"
+        user.something:key="value"
     """)
     assert c.dumps() == result
 
@@ -71,8 +71,8 @@ def test_conf_rebase(conf_definition):
     c.rebase_conf_definition(c2)
     # The c profile will have precedence, and "
     result = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
-        user.company.toolchain:flags=someflags
+        tools.microsoft.msbuild:verbosity="minimal"
+        user.company.toolchain:flags="someflags"
     """)
     assert c.dumps() == result
 
@@ -109,7 +109,7 @@ def test_parse_spaces():
     ("user.company.cpu:jobs=10", 10),
     ("user.company.build:ccflags=--m superflag", "--m superflag"),
     ("zlib:user.company.check:shared=True", True),
-    ("zlib:user.company.check:shared_str='True'", '"True"'),
+    ("zlib:user.company.check:shared_str='True'", 'True'),
     ("user.company.list:objs=[1, 2, 3, 4, 'mystr', {'a': 1}]", [1, 2, 3, 4, 'mystr', {'a': 1}]),
     ("user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}",
      {'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'})
@@ -189,7 +189,7 @@ def test_compose_conf_complex():
     c.update_conf_definition(c2)
     expected_text = textwrap.dedent("""\
         user.company.cpu:jobs=5
-        user.company.build:ccflags=--m otherflag
+        user.company.build:ccflags="--m otherflag"
         user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6, {'b': 2}]
         user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         zlib:user.company.check:shared=!
@@ -225,7 +225,7 @@ def test_conf_get_check_type_and_default():
     assert c.get("zlib:user.company.check:shared") is None  # unset value
     assert c.get("zlib:user.company.check:shared", default=[]) == []  # returning default
     assert c.get("zlib:user.company.check:shared", default=[], check_type=list) == []  # not raising exception
-    assert c.get("zlib:user.company.check:shared_str") == '"False"'
+    assert c.get("zlib:user.company.check:shared_str") == 'False'
     assert c.get("zlib:user.company.check:static_str") == "off"
     assert c.get("user.company.list:newnames") == ["myname"]  # Placeholder is removed
 
@@ -245,4 +245,4 @@ def test_conf_pop():
     assert c.pop("user.company.network:proxies") == {'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
     assert c.pop("user.microsoft.msbuild:missing") is None
     assert c.pop("user.microsoft.msbuild:missing", default="fake") == "fake"
-    assert c.pop("zlib:user.company.check:shared_str") == '"False"'
+    assert c.pop("zlib:user.company.check:shared_str") == 'False'

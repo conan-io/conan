@@ -148,7 +148,8 @@ class _ConfValue(object):
             v.remove(_ConfVarPlaceHolder)
             return "{}={}".format(self._name, v)
         else:
-            return "{}={}".format(self._name, self._value)
+            return "{}={}".format(self._name, f'"{self._value}"' if isinstance(self._value, str)
+                                  else self._value)
 
     def serialize(self):
         if self._value is None:
