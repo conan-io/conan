@@ -247,7 +247,7 @@ def test_msbuildtoolchain_changing_flags_via_attributes():
     conanfile.settings = settings
     conanfile.folders.set_base_generators(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define_path("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings_build = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
