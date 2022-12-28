@@ -460,7 +460,7 @@ class WinTest(unittest.TestCase):
             os=Windows
 
             [conf]
-            tools.microsoft.msbuild:vs_version={vs_version}
+            tools.microsoft.msbuild:vs_version="{vs_version}"
             """.format(vs_version=self.vs_version))
         client.save({"myprofile": profile})
         # Build the profile according to the settings provided

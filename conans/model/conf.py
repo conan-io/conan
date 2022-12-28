@@ -592,9 +592,6 @@ class ConfDefinition:
         try:
             # Isolated eval
             parsed_value = eval(__v)
-            if isinstance(parsed_value, str):  # xxx:xxx = "my string"
-                # Let's respect the quotes introduced by any user
-                parsed_value = '"{}"'.format(parsed_value)
         except:
             # It means eval() failed because of a string without quotes
             parsed_value = __v.strip()

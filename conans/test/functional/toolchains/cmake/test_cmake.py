@@ -494,7 +494,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                 }
     client = TestClient()
     save(client.cache.new_config_path,
-         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+         'tools.microsoft.msbuild:vs_version="{}"'.format(vs_version))
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
