@@ -12,7 +12,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
@@ -353,7 +353,8 @@ class BinaryInstaller:
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 if hasattr(conanfile, "package_info"):
-                    conanfile.package_info()
+                    with conanfile_remove_attr(conanfile, ['info'], "package_info"):
+                        conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
