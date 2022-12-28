@@ -17,6 +17,7 @@ class NewAPI:
 
     @api_method
     def get_builtin_template(self, template_name):
+        from conan.internal.api.new.barebone import barebone_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
@@ -28,7 +29,8 @@ class NewAPI:
         from conan.internal.api.new.bazel_exe import bazel_exe_files
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
-        new_templates = {"cmake_lib": cmake_lib_files,
+        new_templates = {"barebone": barebone_file,
+                         "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
                          "meson_exe": meson_exe_files,
