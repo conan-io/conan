@@ -25,6 +25,23 @@ def test_get_gnu_triplet_for_cross_building():
     assert autotoolschain._build == "i686-solaris"
 
 
+def test_get_toolchain_cppstd():
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "10",
+                             "compiler.cppstd": "20",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    assert autotoolschain.cppstd == "-std=c++2a"
+    settings.values["compiler.version"] = "12"
+    autotoolschain = AutotoolsToolchain(conanfile)
+    assert autotoolschain.cppstd == "-std=c++20"
+
+
 @pytest.mark.parametrize("runtime, runtime_type, expected",
                          [("static", "Debug", "MTd"),
                           ("static", "Release", "MT"),
