@@ -34,7 +34,8 @@ def test_build_modules_alias_target():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
             name = "consumer"
@@ -103,7 +104,8 @@ def test_build_modules_components_is_not_possible():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
             name = "consumer"
