@@ -50,7 +50,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
@@ -132,7 +132,7 @@ def graph_info(conan_api, parser, subparser, *args):
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
