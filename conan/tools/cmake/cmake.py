@@ -156,10 +156,11 @@ class CMake(object):
         """
         self._build(build_type, target, cli_args, build_tool_args)
 
-    def install(self, build_type=None):
+    def install(self, build_type=None, component=None):
         """
         Equivalent to run ``cmake --build . --target=install``
 
+        :param component: The specific component to install, if any
         :param build_type: Use it only to override the value defined in the settings.build_type.
                            It can fail if the build is single configuration (e.g. Unix Makefiles),
                            as in that case the build type must be specified at configure time,
@@ -176,6 +177,8 @@ class CMake(object):
         pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
         build_folder = '"{}"'.format(self._conanfile.build_folder)
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
+        if component:
+            arg_list.extend(["--component", component])
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
