@@ -45,6 +45,7 @@ def test_four_subfolder_install(client):
     client.run(" install path/to/sub/folder")
 
 
+@pytest.mark.artifactory_ready
 def test_install_system_requirements(client):
     client.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
@@ -261,6 +262,7 @@ def test_install_anonymous(client):
     assert "pkg/0.1@lasote/testing: Package installed" in client2.out
 
 
+@pytest.mark.artifactory_ready
 def test_install_without_ref(client):
     client.save({"conanfile.py": GenConanfile("lib", "1.0")})
     client.run('create .')
@@ -281,6 +283,7 @@ def test_install_without_ref(client):
     client.run('upload lib/1.0 -c -r default')
 
 
+@pytest.mark.artifactory_ready
 def test_install_disabled_remote(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")

@@ -47,6 +47,19 @@ class TestListBase:
                         f"--user={ref.user} --channel={ref.channel}")
         self.client.run("upload --force -r {} {}".format(remote, ref))
 
+    def _upload_full_recipe_without_conaninfo(self, remote, ref):
+        self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h",
+                                                                                       "0.1")})
+        self.client.run("create . --user=user --channel=channel")
+        self.client.run("upload --force -r {} {}".format(remote, "pkg/0.1@user/channel"))
+
+        self.client.save({'conanfile.py': GenConanfile()
+                          })
+        self.client.run(f"create . --name={ref.name} --version={ref.version} "
+                        f"--user={ref.user} --channel={ref.channel}")
+        self.client.run("upload --force -r {} {}".format(remote, ref))
+
+
     @staticmethod
     def _get_fake_recipe_refence(recipe_name):
         return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
@@ -224,7 +237,28 @@ class TestListRecipes:
 
 class TestListUseCases(TestListBase):
 
-    def test_list_latest_package_revisions(self):
+    def test_list_all_the_latest_recipe_revision(self):
+        self.client.save({
+            "hello1.py": GenConanfile("hello", "1.0.0").with_generator("CMakeToolchain"),  # rrev
+            "hello.py": GenConanfile("hello", "1.0.0"),  # latest rrev
+            "bye.py": GenConanfile("bye", "1.0.0")
+        })
+        self.client.run("export hello1.py --user=user --channel=channel")
+        self.client.run("export hello.py --user=user --channel=channel")
+        hello_latest_rrev = self._get_lastest_recipe_ref("hello/1.0.0@user/channel")
+        self.client.run("export bye.py --user=user --channel=channel")
+        self.client.run(f"list *#latest")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          bye
+            bye/1.0.0@user/channel#c720a82a9c904a0450ec1aa177281ea2 .*
+          hello
+            hello/1.0.0@user/channel#7a34833afbd87d791b2201882b1afb2b .*
+        """)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+        assert hello_latest_rrev.repr_notime() in expected_output
+
+    def test_list_latest_package_revisions_by_default(self):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
@@ -237,12 +271,35 @@ class TestListUseCases(TestListBase):
         Local Cache:
           test_recipe
             test_recipe/1.0.0@user/channel#ddfadce26d00a560850eb8767fe76ae4 .*
-              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709 .*
-                PREV: 9c929aed65f04337a4143311d72fc897
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_search_with_full_reference_but_package_has_no_properties(self):
+    def test_list_all_the_latest_package_revisions(self):
+        self.client.save({
+            "hello.py": GenConanfile("hello", "1.0.0").with_package_file("file.h", "0.1"),
+            "bye.py": GenConanfile("bye", "1.0.0").with_package_file("file.h", "0.1")
+        })
+        self.client.run("create hello.py --user=user --channel=channel")
+        self.client.run("create hello.py --user=user --channel=channel")  # latest prev
+        self.client.run("create bye.py --user=user --channel=channel")
+        self.client.run("create bye.py --user=user --channel=channel")   # latest prev
+        self.client.run("list *:*#latest")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          bye
+            bye/1.0.0@user/channel#51edd97e27e407a01be830282558c32a .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
+          hello
+            hello/1.0.0@user/channel#6fccfa5dd0bbb1223578c1771839eb6d .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 9c929aed65f04337a4143311d72fc897 .*
+        """)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+
+    def test_search_package_ids_but_empty_conan_info(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
@@ -254,7 +311,7 @@ class TestListUseCases(TestListBase):
           test_recipe
             test_recipe/1.0.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
               PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
-                No package info/revision was found.
+                Empty package information
         """)
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -317,6 +374,99 @@ class TestListUseCases(TestListBase):
                   shared=False
                 requires:
                   pkg/0.1.Z@user/channel
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+
+    def test_search_all_revisions_and_package_revisions(self):
+        """Checking if RREVs and PREVs are shown correctly"""
+        remote1 = "remote1"
+        remote2 = "remote2"
+
+        self._add_remote(remote1)
+        self._upload_full_recipe_without_conaninfo(remote1,
+                                                   RecipeReference(name="test_recipe", version="1.0",
+                                                                   user="user", channel="channel"))
+        self._add_remote(remote2)
+        self._upload_full_recipe_without_conaninfo(remote2,
+                                                   RecipeReference(name="test_recipe", version="2.1",
+                                                                   user="user", channel="channel"))
+        self.client.run(f'list *#* -r="*" -c')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          test_recipe
+            test_recipe/2.1@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+          pkg
+            pkg/0.1@user/channel#44a36b797bc85fb66af6acf90cf8f539 .*
+        remote1:
+          pkg
+            pkg/0.1@user/channel#44a36b797bc85fb66af6acf90cf8f539 .*
+          test_recipe
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+        remote2:
+          pkg
+            pkg/0.1@user/channel#44a36b797bc85fb66af6acf90cf8f539 .*
+          test_recipe
+            test_recipe/2.1@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+        self.client.run(f'list test_recipe/*:*#* -r="*" -c')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          test_recipe
+            test_recipe/2.1@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 0ba8627bd47edc3a501e8f0eb9a79e5e .*
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 0ba8627bd47edc3a501e8f0eb9a79e5e .*
+        remote1:
+          test_recipe
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 0ba8627bd47edc3a501e8f0eb9a79e5e .*
+        remote2:
+          test_recipe
+            test_recipe/2.1@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 0ba8627bd47edc3a501e8f0eb9a79e5e .*
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+
+    def test_search_all_revisions_given_a_package_id(self):
+        """
+        Checking if PREVs are shown correctly given a PkgID and even though that package has no
+        configuration at all.
+        """
+        remote1 = "remote1"
+        self._add_remote(remote1)
+        self._upload_full_recipe_without_conaninfo(remote1,
+                                                   RecipeReference(name="test_recipe", version="1.0",
+                                                                   user="user", channel="channel"))
+        self.client.run(f'list *:* -r=remote1')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        remote1:
+          pkg
+            pkg/0.1@user/channel#44a36b797bc85fb66af6acf90cf8f539 .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                Empty package information
+          test_recipe
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                Empty package information
+        """)
+        assert bool(re.match(expected_output, output, re.MULTILINE))
+        self.client.run(f'list test_recipe/*:da39a3ee5e6b4b0d3255bfef95601890afd80709#* -r=remote1')
+        output = str(self.client.out)
+        expected_output = textwrap.dedent("""\
+        remote1:
+          test_recipe
+            test_recipe/1.0@user/channel#4d670581ccb765839f2239cc8dff8fbd .*
+              PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
+                PREV: 0ba8627bd47edc3a501e8f0eb9a79e5e .*
         """)
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
